@@ -56,6 +56,60 @@
   }
 }
 
+/* prefers-color-scheme는 시스템 기본값일 뿐이고, 우측 상단 토글로 명시적으로
+   고른 라이트/다크 모드(data-theme)가 있으면 그 값이 항상 우선한다. */
+:root[data-theme='light'] {
+  --background: #ffffff;
+  --foreground: #1c1e27;
+  --card: #ffffff;
+  --card-foreground: #1c1e27;
+  --popover: #ffffff;
+  --popover-foreground: #1c1e27;
+  --primary: #5b4fe8;
+  --primary-foreground: #ffffff;
+  --secondary: #f4f4f7;
+  --secondary-foreground: #1c1e27;
+  --muted: #f7f7f9;
+  --muted-foreground: #71717f;
+  --accent: #f0efff;
+  --accent-foreground: #5b4fe8;
+  --destructive: #e0453f;
+  --destructive-foreground: #ffffff;
+  --success: #16a35a;
+  --success-foreground: #ffffff;
+  --warning: #e69008;
+  --warning-foreground: #1c1e27;
+  --border: #e7e7ec;
+  --input: #e7e7ec;
+  --ring: #5b4fe8;
+}
+
+:root[data-theme='dark'] {
+  --background: #121216;
+  --foreground: #f2f2f5;
+  --card: #1b1b21;
+  --card-foreground: #f2f2f5;
+  --popover: #1b1b21;
+  --popover-foreground: #f2f2f5;
+  --primary: #8478f5;
+  --primary-foreground: #ffffff;
+  --secondary: #232329;
+  --secondary-foreground: #f2f2f5;
+  --muted: #1b1b21;
+  --muted-foreground: #9b9ba6;
+  --accent: #24223a;
+  --accent-foreground: #b6afff;
+  --destructive: #ef5c56;
+  --destructive-foreground: #ffffff;
+  --success: #34c97f;
+  --success-foreground: #0c1f14;
+  --warning: #e69008;
+  --warning-foreground: #1c1e27;
+  --border: #2a2a31;
+  --input: #2a2a31;
+  --ring: #8478f5;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
