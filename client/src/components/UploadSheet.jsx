@@ -293,7 +293,7 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
                     setPriceSearchNote('');
                   }}
                   placeholder="예: 5000"
-                  className="min-w-20 flex-1"
+                  className="w-24 min-w-0 shrink-0"
                 />
                 {!form.amount && form.name.trim() && (
                   <Button type="button" variant="outline" size="sm" onClick={handleSearchPrice} disabled={searchingPrice} className="shrink-0">
@@ -302,25 +302,14 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
                   </Button>
                 )}
                 {priceSearchNote && (
-                  <p className="max-w-[45%] shrink-0 text-xs text-muted-foreground">{priceSearchNote}</p>
+                  <p className="min-w-0 flex-1 text-xs text-muted-foreground">{priceSearchNote}</p>
                 )}
               </div>
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label>받은 사람</Label>
-              <Select value={form.owner} onValueChange={(v) => updateField('owner', v)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {OWNERS.map((o) => (
-                    <SelectItem key={o} value={o}>
-                      {o}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label htmlFor="f-expires">유효기한</Label>
+              <Input id="f-expires" type="date" value={form.expires_at} onChange={(e) => updateField('expires_at', e.target.value)} />
             </div>
 
             <div className="flex flex-col gap-1.5">
@@ -334,8 +323,19 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
             </div>
 
             <div className="col-span-2 flex flex-col gap-1.5">
-              <Label htmlFor="f-expires">유효기한</Label>
-              <Input id="f-expires" type="date" value={form.expires_at} onChange={(e) => updateField('expires_at', e.target.value)} />
+              <Label>받은 사람</Label>
+              <Select value={form.owner} onValueChange={(v) => updateField('owner', v)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {OWNERS.map((o) => (
+                    <SelectItem key={o} value={o}>
+                      {o}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="col-span-2 flex flex-col gap-1.5">
