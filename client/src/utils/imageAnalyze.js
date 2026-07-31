@@ -154,6 +154,16 @@ function extractExpiry(text) {
   return dates.reduce((latest, date) => (date.value > latest.value ? date : latest)).value;
 }
 
+// 기프티쇼처럼 "상품명 : 아이스 시그니처 초콜릿T" / "교환처 : 스타벅스"처럼
+// 라벨이 명확히 붙어 있는 형식이면, 그 라벨 뒤의 값을 최우선으로 신뢰한다.
+function extractLabeledField(text, labels) {
+  const pattern = new RegExp(`(?:${labels.join('|')})\\s*[:：]\\s*(.+)`);
+  const match = text.match(pattern);
+  if (!match) return null;
+  const value = match[1].trim();
+  return value.length > 0 ? value : null;
+}
+
 function extractCategoryAndBrand(text) {
   const lower = text.toLowerCase().replace(/\s+/g, '');
   for (const cat of CATEGORIES) {
@@ -215,10 +225,12 @@ export async function analyzeImage(file) {
   const imageUrl = URL.createObjectURL(file);
   try {
     const [barcodeResult, text] = await Promise.all([decodeBarcode(imageUrl), runOcr(imageUrl)]);
-    const { category, brand } = extractCategoryAndBrand(text);
-    const amount = extractAmount(text);
+    const { category, brand: keywordBrand } = extractCategoryAndBrand(text);
+    const brand = extractLabeledField(text, ['교환처', '상호']) || keywordBrand;
+    const labeledAmountText = extractLabeledField(text, ['금액', '권종', '가격']);
+    const amount = (labeledAmountText && extractAmount(labeledAmountText)) ?? extractAmount(text);
     const expiresAt = extractExpiry(text);
-    const name = guessName(text, brand);
+    const name = extractLabeledField(text, ['상품명']) || guessName(text, brand);
 
     return {
       code: barcodeResult.code,
