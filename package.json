@@ -3,14 +3,9 @@
   "private": true,
   "version": "1.0.0",
   "scripts": {
-    "install:all": "npm install --prefix server && npm install --prefix client",
-    "dev:server": "npm run dev --prefix server",
-    "dev:client": "npm run dev --prefix client",
-    "dev": "concurrently -n server,client -c blue,green \"npm:dev:server\" \"npm:dev:client\"",
+    "install:all": "npm install --prefix client",
+    "dev": "npm run dev --prefix client",
     "build": "npm run build --prefix client",
-    "start": "npm run build && npm run start --prefix server"
-  },
-  "devDependencies": {
-    "concurrently": "^9.1.0"
+    "preview": "npm run preview --prefix client"
   }
 }

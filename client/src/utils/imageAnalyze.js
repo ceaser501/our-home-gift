@@ -5,7 +5,7 @@ import { CATEGORIES } from '../constants';
 let ocrWorkerPromise = null;
 function getOcrWorker() {
   if (!ocrWorkerPromise) {
-    ocrWorkerPromise = createWorker('kor+eng', 1, { workerPath: '/tesseract/worker.min.js' });
+    ocrWorkerPromise = createWorker('kor+eng', 1, { workerPath: `${import.meta.env.BASE_URL}tesseract/worker.min.js` });
   }
   return ocrWorkerPromise;
 }

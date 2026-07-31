@@ -83,24 +83,20 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
       const fields = {
         name: form.name.trim(),
         category: form.category,
-        brand: form.brand || '',
-        amount: form.amount === '' ? '' : String(form.amount),
-        owner: form.owner || '',
-        code: form.code || '',
-        code_type: form.code_type || '',
-        expires_at: form.expires_at || '',
-        memo: form.memo || '',
+        brand: form.brand || null,
+        amount: form.amount,
+        owner: form.owner || null,
+        code: form.code || null,
+        code_type: form.code_type || null,
+        expires_at: form.expires_at || null,
+        memo: form.memo || null,
       };
 
       if (mode === 'create') {
-        const formData = new FormData();
-        Object.entries(fields).forEach(([key, value]) => formData.append(key, value));
-        if (file) formData.append('image', file);
-        const created = await createGifticon(formData);
+        const created = await createGifticon(fields, file);
         onSaved(created);
       } else {
-        if (file) fields.image = file;
-        const updated = await updateGifticon(initial.id, fields);
+        const updated = await updateGifticon(initial.id, fields, file);
         onSaved(updated);
       }
     } catch (err) {

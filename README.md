@@ -6,25 +6,41 @@
 ## 구조
 
 ```
-server/   Express + SQLite API 서버, 이미지 업로드 저장
-client/   React(Vite) 프론트엔드
+client/     React(Vite) 프론트엔드 — GitHub Pages로 배포되는 정적 사이트
+supabase/   Supabase(DB + 이미지 스토리지) 초기 설정 SQL
 ```
+
+백엔드 서버 없이, 프론트엔드가 [Supabase](https://supabase.com)를 직접 호출해서 기프티콘
+데이터와 이미지를 저장합니다. 나와 와이프가 같은 사이트 링크에 접속하면 같은 Supabase
+프로젝트를 보게 되므로 목록이 자동으로 공유됩니다.
+
+## 처음 한 번만: Supabase 설정
+
+1. https://supabase.com 에서 무료 프로젝트 생성
+2. 프로젝트의 **SQL Editor**에서 `supabase/schema.sql` 내용을 그대로 붙여넣고 실행
+   (기프티콘 테이블 + 이미지용 `gifticon-images` 스토리지 버킷이 만들어집니다)
+3. **Project Settings → API**에서 `Project URL`과 `anon public` 키를 확인
+4. 이 값을 다음 두 곳에 넣어야 합니다:
+   - **로컬 개발용**: `client/.env.example`을 `client/.env`로 복사하고 값 채우기
+   - **GitHub Pages 배포용**: 저장소 `Settings → Secrets and variables → Actions`에서
+     `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` 리포지토리 시크릿 등록
+
+## 처음 한 번만: GitHub Pages 켜기
+
+저장소 `Settings → Pages → Build and deployment → Source`를 **GitHub Actions**로 설정하면,
+이후로는 `main` 또는 `claude/gifticon-management-app-7ft5l9` 브랜치에 푸시할 때마다
+`.github/workflows/deploy-pages.yml`이 자동으로 빌드해서 배포합니다.
+배포된 주소는 `https://<github-계정>.github.io/OurHomeGift/` 형태입니다.
 
 ## 로컬 실행
 
 ```bash
-npm run install:all   # server, client 의존성 설치
-npm run dev            # 서버(4000) + 클라이언트(5173) 동시 실행
+npm run install:all
+npm run dev
 ```
 
-브라우저에서 `http://localhost:5173` 접속 (모바일 폭 기준으로 디자인되어 있어 개발자도구의
-모바일 뷰포트로 보는 것을 추천).
-
-프로덕션 빌드 후 서버 하나로 서빙하려면:
-
-```bash
-npm run start   # client 빌드 후 server가 정적 파일까지 서빙 (기본 4000 포트)
-```
+`http://localhost:5173` 접속 (모바일 폭 기준으로 디자인되어 있어 개발자도구의 모바일
+뷰포트로 보는 것을 추천). `client/.env`에 Supabase 값이 있어야 목록이 정상적으로 뜹니다.
 
 ## 주요 기능
 
@@ -43,10 +59,9 @@ npm run start   # client 빌드 후 server가 정적 파일까지 서빙 (기본
 
 ## 알아두면 좋은 점
 
-- 지금은 로그인/권한 없이 링크로 접속하는 형태로 만들었습니다. 실제 배포처(예: 가정용 서버,
-  Render/Fly.io 등)가 정해지면 그때 접근 제한을 추가하면 됩니다.
-- 업로드된 이미지는 `server/uploads`에, 데이터는 `server/data/gifticons.db`(SQLite)에
-  저장됩니다. 두 사람이 같은 서버 주소로 접속하면 같은 목록을 공유합니다.
+- 지금은 로그인/권한이 없습니다. Supabase 테이블의 Row Level Security도 꺼둔 상태라
+  링크와 Supabase anon 키를 아는 사람은 누구나 읽고 쓸 수 있어요. 나중에 실사용 배포처가
+  정해지면 인증을 붙이는 걸 권장합니다.
 - OCR(텍스트 자동 인식)은 최초 실행 시 tesseract 엔진/언어 데이터를 CDN에서 내려받습니다.
   인터넷이 안 되는 환경에서는 텍스트 자동 인식만 실패하고, 바코드/QR 인식과 수동 입력은
   그대로 동작합니다.
