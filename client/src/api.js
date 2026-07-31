@@ -138,7 +138,13 @@ export async function searchPrice({ brand, name }) {
   const { data, error } = await supabase.functions.invoke('search-price', {
     body: { brand, name },
   });
-  if (error) throw new Error(error.message || '가격 검색에 실패했어요.');
+  if (error) {
+    // supabase-js는 함수가 non-2xx를 돌려주면 "Edge Function returns a non-2xx status code"라는
+    // 뭉뚱그린 메시지만 주고, 우리 함수가 실제로 응답한 { error: '...' } 본문은 안 보여준다.
+    // error.context가 원본 Response라서 그 안의 진짜 메시지를 직접 꺼내온다.
+    const detail = await error.context?.json?.().catch(() => null);
+    throw new Error(detail?.error || error.message || '가격 검색에 실패했어요.');
+  }
   return data;
 }
 
