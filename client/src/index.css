@@ -2,57 +2,57 @@
 @import "tw-animate-css";
 
 :root {
-  --background: #f6f5fb;
-  --foreground: #1f2233;
+  --background: #ffffff;
+  --foreground: #1c1e27;
   --card: #ffffff;
-  --card-foreground: #1f2233;
+  --card-foreground: #1c1e27;
   --popover: #ffffff;
-  --popover-foreground: #1f2233;
-  --primary: #6c5ce7;
+  --popover-foreground: #1c1e27;
+  --primary: #5b4fe8;
   --primary-foreground: #ffffff;
-  --secondary: #f0eefc;
-  --secondary-foreground: #1f2233;
-  --muted: #f6f5fb;
-  --muted-foreground: #6b6f85;
-  --accent: #eef1ff;
-  --accent-foreground: #4b5bd6;
-  --destructive: #e64545;
+  --secondary: #f4f4f7;
+  --secondary-foreground: #1c1e27;
+  --muted: #f7f7f9;
+  --muted-foreground: #71717f;
+  --accent: #f0efff;
+  --accent-foreground: #5b4fe8;
+  --destructive: #e0453f;
   --destructive-foreground: #ffffff;
-  --success: #1bab5e;
+  --success: #16a35a;
   --success-foreground: #ffffff;
-  --warning: #f5a623;
-  --warning-foreground: #1f2233;
-  --border: #e6e4f0;
-  --input: #e6e4f0;
-  --ring: #6c5ce7;
+  --warning: #e69008;
+  --warning-foreground: #1c1e27;
+  --border: #e7e7ec;
+  --input: #e7e7ec;
+  --ring: #5b4fe8;
   --radius: 1rem;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #14141c;
-    --foreground: #f0f0f5;
-    --card: #1e1e29;
-    --card-foreground: #f0f0f5;
-    --popover: #1e1e29;
-    --popover-foreground: #f0f0f5;
-    --primary: #7c6cf0;
+    --background: #121216;
+    --foreground: #f2f2f5;
+    --card: #1b1b21;
+    --card-foreground: #f2f2f5;
+    --popover: #1b1b21;
+    --popover-foreground: #f2f2f5;
+    --primary: #8478f5;
     --primary-foreground: #ffffff;
-    --secondary: #26263a;
-    --secondary-foreground: #f0f0f5;
-    --muted: #1e1e29;
-    --muted-foreground: #9a9aae;
-    --accent: #262646;
-    --accent-foreground: #b7c1ff;
-    --destructive: #ef5a5a;
+    --secondary: #232329;
+    --secondary-foreground: #f2f2f5;
+    --muted: #1b1b21;
+    --muted-foreground: #9b9ba6;
+    --accent: #24223a;
+    --accent-foreground: #b6afff;
+    --destructive: #ef5c56;
     --destructive-foreground: #ffffff;
-    --success: #2fc978;
+    --success: #34c97f;
     --success-foreground: #0c1f14;
-    --warning: #f5a623;
-    --warning-foreground: #1f2233;
-    --border: #2c2c3a;
-    --input: #2c2c3a;
-    --ring: #7c6cf0;
+    --warning: #e69008;
+    --warning-foreground: #1c1e27;
+    --border: #2a2a31;
+    --input: #2a2a31;
+    --ring: #8478f5;
   }
 }
 
