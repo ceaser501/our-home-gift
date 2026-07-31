@@ -57,6 +57,7 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
   const [error, setError] = useState('');
   const [searchingPrice, setSearchingPrice] = useState(false);
   const [priceSearchNote, setPriceSearchNote] = useState('');
+  const [amountMissing, setAmountMissing] = useState(false);
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -98,6 +99,7 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
         setBarcodeCropFile(new File([result.barcodeCropBlob], 'barcode.png', { type: 'image/png' }));
       }
       setAutoFilled(true);
+      setAmountMissing(form.amount === '' && !result.amount);
     } catch {
       setError('이미지 자동 인식에 실패했어요. 직접 입력해주세요.');
     } finally {
@@ -145,6 +147,7 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
     setError('');
     setAutoFilled(false);
     setPriceSearchNote('');
+    setAmountMissing(false);
     if (fileInputRef.current) fileInputRef.current.value = '';
   }
 
@@ -292,7 +295,7 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
                     updateField('amount', e.target.value);
                     setPriceSearchNote('');
                   }}
-                  placeholder="예: 5000"
+                  placeholder={amountMissing ? '이미지에 금액 정보가 없습니다' : '예: 5000'}
                   className="min-w-20 flex-1"
                 />
                 {!form.amount && form.name.trim() && (
