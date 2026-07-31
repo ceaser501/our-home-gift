@@ -6,7 +6,10 @@ export async function sendMagicLink(email) {
     email,
     options: { emailRedirectTo: redirectTo },
   });
-  if (error) throw new Error(error.message || '로그인 링크 전송에 실패했어요.');
+  if (error) {
+    const usableMessage = error.message && error.message !== '{}' ? error.message : null;
+    throw new Error(usableMessage || '로그인 링크 전송에 실패했어요. 이메일 발송(SMTP) 설정을 확인해주세요.');
+  }
 }
 
 export async function signOut() {
