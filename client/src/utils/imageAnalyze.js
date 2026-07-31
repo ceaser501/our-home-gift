@@ -94,42 +94,10 @@ function loadImage(src) {
   });
 }
 
-// 기프티콘 캡처는 화면 대비 글자가 작고 흐릿한 경우가 많아서, tesseract에 넘기기
-// 전에 확대 + 흑백/대비 강조를 해두면 인식률이 눈에 띄게 올라간다(예: "T"가
-// "ㅠ"로 잘못 읽히는 것 같은 작은 글자 오인식이 줄어든다).
-function preprocessForOcr(img) {
-  const MIN_WIDTH = 1400;
-  const scale = img.naturalWidth < MIN_WIDTH ? MIN_WIDTH / img.naturalWidth : 1;
-
-  const canvas = document.createElement('canvas');
-  canvas.width = Math.round(img.naturalWidth * scale);
-  canvas.height = Math.round(img.naturalHeight * scale);
-
-  const ctx = canvas.getContext('2d');
-  ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = 'high';
-  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  const data = imageData.data;
-  for (let i = 0; i < data.length; i += 4) {
-    const gray = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
-    const contrasted = Math.min(255, Math.max(0, (gray - 128) * 1.4 + 128));
-    data[i] = contrasted;
-    data[i + 1] = contrasted;
-    data[i + 2] = contrasted;
-  }
-  ctx.putImageData(imageData, 0, 0);
-
-  return canvas.toDataURL('image/png');
-}
-
 async function runOcr(imageUrl) {
   try {
     const worker = await getOcrWorker();
-    const img = await loadImage(imageUrl);
-    const processedUrl = preprocessForOcr(img);
-    const { data } = await worker.recognize(processedUrl);
+    const { data } = await worker.recognize(imageUrl);
     return data.text || '';
   } catch {
     return '';
@@ -186,6 +154,8 @@ function extractExpiry(text) {
   return dates.reduce((latest, date) => (date.value > latest.value ? date : latest)).value;
 }
 
+const ALL_LABELS = ['상품명', '교환처', '상호', '유효기간', '유효기한', '사용기한', '금액', '권종', '가격'];
+
 // 기프티쇼처럼 "상품명 : 아이스 시그니처 초콜릿T" / "교환처 : 스타벅스"처럼
 // 라벨이 명확히 붙어 있는 형식이면, 그 라벨 뒤의 값을 최우선으로 신뢰한다.
 function extractLabeledField(text, labels) {
@@ -194,11 +164,20 @@ function extractLabeledField(text, labels) {
   if (!match) return null;
 
   let value = match[1].trim();
-  // OCR이 라벨 글자를 일부 잘못 읽어서 값 앞에 남기는 경우(예: "상호도 : 스타벅스")를
-  // 대비해, 같은 줄에 콜론이 더 있으면 마지막 콜론 뒤쪽만 값으로 쓴다.
+
+  // 줄바꿈이 사라져서 다음 라벨까지 한 줄로 붙어버린 경우(예: "아이스 시그니처
+  // 초콜릿T 교환처 : 스타벅스"), 다음 라벨이 시작되는 지점 앞까지만 값으로 쓴다.
+  for (const label of ALL_LABELS) {
+    const idx = value.indexOf(label);
+    if (idx > 0) value = value.slice(0, idx).trim();
+  }
+
+  // 그래도 라벨 글자 일부가 값 앞에 남아있는 경우(예: "상호도 : 스타벅스")를
+  // 대비해, 콜론이 남아있으면 마지막 콜론 뒤쪽만 값으로 쓴다.
   if (value.includes(':') || value.includes('：')) {
     value = value.split(/[:：]/).pop().trim();
   }
+
   return value.length > 0 ? value : null;
 }
 
