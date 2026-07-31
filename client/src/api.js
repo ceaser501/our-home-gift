@@ -4,7 +4,10 @@ function withImageUrls(row) {
   if (!row) return row;
   const paths = row.image_paths || [];
   const image_urls = paths.map((path) => supabase.storage.from(IMAGE_BUCKET).getPublicUrl(path).data.publicUrl);
-  return { ...row, image_urls, image_url: image_urls[0] || null };
+  const barcode_image_url = row.barcode_image_path
+    ? supabase.storage.from(IMAGE_BUCKET).getPublicUrl(row.barcode_image_path).data.publicUrl
+    : null;
+  return { ...row, image_urls, image_url: image_urls[0] || null, barcode_image_url };
 }
 
 async function uploadImages(files) {
@@ -47,8 +50,18 @@ export async function listGifticons(params = {}) {
   return data.map(withImageUrls);
 }
 
-export async function createGifticon(fields, files = []) {
+export async function createGifticon(fields, files = [], barcodeCropFile = null) {
   const image_paths = files.length ? await uploadImages(files) : [];
+
+  let barcode_image_path = null;
+  try {
+    if (barcodeCropFile) {
+      [barcode_image_path] = await uploadImages([barcodeCropFile]);
+    }
+  } catch (err) {
+    if (image_paths.length) await removeImages(image_paths);
+    throw err;
+  }
 
   const { data, error } = await supabase
     .from(GIFTICON_TABLE)
@@ -63,20 +76,22 @@ export async function createGifticon(fields, files = []) {
       expires_at: fields.expires_at || null,
       memo: fields.memo || null,
       image_paths,
+      barcode_image_path,
       status: 'unused',
     })
     .select()
     .single();
 
   if (error) {
-    if (image_paths.length) await removeImages(image_paths);
+    const cleanup = barcode_image_path ? [...image_paths, barcode_image_path] : image_paths;
+    if (cleanup.length) await removeImages(cleanup);
     throw new Error(error.message);
   }
   return withImageUrls(data);
 }
 
 export async function updateGifticon(id, fields, imageChanges = {}) {
-  const { addFiles = [], removePaths = [] } = imageChanges;
+  const { addFiles = [], removePaths = [], barcodeCropFile = null } = imageChanges;
   const updates = { ...fields, updated_at: new Date().toISOString() };
 
   if ('amount' in updates) {
@@ -84,29 +99,51 @@ export async function updateGifticon(id, fields, imageChanges = {}) {
   }
 
   let newPaths = [];
-  if (addFiles.length || removePaths.length) {
-    const { data: existing } = await supabase.from(GIFTICON_TABLE).select('image_paths').eq('id', id).single();
-    const currentPaths = existing?.image_paths || [];
-    newPaths = addFiles.length ? await uploadImages(addFiles) : [];
-    updates.image_paths = currentPaths.filter((p) => !removePaths.includes(p)).concat(newPaths);
+  let oldBarcodeImagePath = null;
+
+  if (addFiles.length || removePaths.length || barcodeCropFile) {
+    const { data: existing } = await supabase
+      .from(GIFTICON_TABLE)
+      .select('image_paths, barcode_image_path')
+      .eq('id', id)
+      .single();
+
+    if (addFiles.length || removePaths.length) {
+      const currentPaths = existing?.image_paths || [];
+      newPaths = addFiles.length ? await uploadImages(addFiles) : [];
+      updates.image_paths = currentPaths.filter((p) => !removePaths.includes(p)).concat(newPaths);
+    }
+
+    if (barcodeCropFile) {
+      oldBarcodeImagePath = existing?.barcode_image_path || null;
+      [updates.barcode_image_path] = await uploadImages([barcodeCropFile]);
+    }
   }
 
   const { data, error } = await supabase.from(GIFTICON_TABLE).update(updates).eq('id', id).select().single();
 
   if (error) {
-    if (newPaths.length) await removeImages(newPaths);
+    const cleanup = updates.barcode_image_path ? [...newPaths, updates.barcode_image_path] : newPaths;
+    if (cleanup.length) await removeImages(cleanup);
     throw new Error(error.message);
   }
 
-  if (removePaths.length) await removeImages(removePaths);
+  const cleanupOld = oldBarcodeImagePath ? [...removePaths, oldBarcodeImagePath] : removePaths;
+  if (cleanupOld.length) await removeImages(cleanupOld);
   return withImageUrls(data);
 }
 
 export async function deleteGifticon(id) {
-  const { data: existing } = await supabase.from(GIFTICON_TABLE).select('image_paths').eq('id', id).single();
+  const { data: existing } = await supabase
+    .from(GIFTICON_TABLE)
+    .select('image_paths, barcode_image_path')
+    .eq('id', id)
+    .single();
 
   const { error } = await supabase.from(GIFTICON_TABLE).delete().eq('id', id);
   if (error) throw new Error(error.message);
 
-  if (existing?.image_paths?.length) await removeImages(existing.image_paths);
+  const paths = [...(existing?.image_paths || [])];
+  if (existing?.barcode_image_path) paths.push(existing.barcode_image_path);
+  if (paths.length) await removeImages(paths);
 }

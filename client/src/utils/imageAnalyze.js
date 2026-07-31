@@ -1,4 +1,5 @@
 import { BrowserMultiFormatReader } from '@zxing/browser';
+import { BarcodeFormat } from '@zxing/library';
 import { createWorker } from 'tesseract.js';
 import { CATEGORIES } from '../constants';
 
@@ -15,13 +16,73 @@ async function decodeBarcode(imageUrl) {
     const reader = new BrowserMultiFormatReader();
     const img = await loadImage(imageUrl);
     const result = await reader.decodeFromImageElement(img);
+    const codeType = result.getBarcodeFormat ? BarcodeFormat[result.getBarcodeFormat()] || null : null;
+    const cropBlob = await cropBarcodeRegion(img, result.getResultPoints?.(), codeType);
     return {
       code: result.getText(),
-      codeType: result.getBarcodeFormat ? String(result.getBarcodeFormat()) : null,
+      codeType,
+      cropBlob,
     };
   } catch {
-    return { code: null, codeType: null };
+    return { code: null, codeType: null, cropBlob: null };
   }
+}
+
+// 매장에서 실제로 스캔할 바코드/QR만 잘라서 보여주기 위해, zxing이 알려주는
+// 인식 좌표를 기준으로 원본 이미지에서 해당 영역만 잘라낸다.
+// QR은 좌표 3개가 사각형 전체를 대략 감싸지만, 1D 바코드는 스캔선 좌우 두 점만
+// 주어지고 막대의 실제 높이는 알려주지 않아서, 폭을 기준으로 막대 높이와
+// 아래쪽에 인쇄된 숫자 영역까지 넉넉하게 추정해서 자른다.
+async function cropBarcodeRegion(img, points, codeType) {
+  if (!points || points.length === 0) return null;
+
+  const xs = points.map((p) => p.getX());
+  const ys = points.map((p) => p.getY());
+  const minX = Math.min(...xs);
+  const maxX = Math.max(...xs);
+  const width = Math.max(maxX - minX, 1);
+  const isQr = codeType === 'QR_CODE';
+
+  let cropX;
+  let cropY;
+  let cropW;
+  let cropH;
+
+  if (isQr) {
+    const minY = Math.min(...ys);
+    const maxY = Math.max(...ys);
+    const height = Math.max(maxY - minY, 1);
+    const padX = width * 0.3;
+    const padY = height * 0.3;
+    cropX = minX - padX;
+    cropY = minY - padY;
+    cropW = width + padX * 2;
+    cropH = height + padY * 2;
+  } else {
+    const scanY = (Math.min(...ys) + Math.max(...ys)) / 2;
+    const barHalfHeight = width * 0.14;
+    const padTop = width * 0.02;
+    const padBottom = width * 0.24;
+    const padX = width * 0.12;
+    cropX = minX - padX;
+    cropY = scanY - barHalfHeight - padTop;
+    cropW = width + padX * 2;
+    cropH = barHalfHeight * 2 + padTop + padBottom;
+  }
+
+  cropX = Math.max(0, cropX);
+  cropY = Math.max(0, cropY);
+  cropW = Math.min(img.naturalWidth - cropX, cropW);
+  cropH = Math.min(img.naturalHeight - cropY, cropH);
+  if (cropW <= 0 || cropH <= 0) return null;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = cropW;
+  canvas.height = cropH;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(img, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+
+  return new Promise((resolve) => canvas.toBlob((blob) => resolve(blob), 'image/png'));
 }
 
 function loadImage(src) {
@@ -105,13 +166,49 @@ function extractCategoryAndBrand(text) {
   return { category: '기타', brand: null };
 }
 
+const NAME_NOISE_KEYWORDS = [
+  '공유',
+  '지갑',
+  'wallet',
+  '선물정보',
+  '상세정보',
+  '주문하기',
+  '환불',
+  '취소',
+  '문의하기',
+  '상담하기',
+  '같이쓰기',
+  '고객센터',
+  '사용정보',
+];
+
+function isNoiseLine(line) {
+  const norm = line.toLowerCase().replace(/\s+/g, '');
+  return NAME_NOISE_KEYWORDS.some((kw) => norm.includes(kw.replace(/\s+/g, '').toLowerCase()));
+}
+
+// 기프티콘 화면은 보통 상호(브랜드)를 작게, 상품명을 그 아래 크게 표시한다.
+// brand와 완전히 같은 줄(상호 라벨 자체)은 상품명 후보에서 제외하고, brand를
+// 포함하면서 더 긴 줄(예: "황올반+BBQ양념반")을 상품명으로 우선 채택한다.
 function guessName(text, brand) {
   const lines = text
     .split('\n')
     .map((l) => l.trim())
-    .filter((l) => l.length >= 2 && l.length <= 20 && !/^[0-9.\-/\s]+$/.test(l));
-  const nameLine = lines.find((l) => (brand ? l.includes(brand) : true)) || lines[0];
-  return nameLine || brand || '';
+    .filter((l) => l.length >= 2 && l.length <= 30 && !/^[0-9.\-/\s]+$/.test(l) && !isNoiseLine(l));
+
+  if (lines.length === 0) return brand || '';
+  if (!brand) return lines[0];
+
+  const brandNorm = brand.toLowerCase().replace(/\s+/g, '');
+  const candidates = lines.filter((l) => l.toLowerCase().replace(/\s+/g, '') !== brandNorm);
+
+  const withBrand = candidates.find((l) => l.toLowerCase().replace(/\s+/g, '').includes(brandNorm));
+  if (withBrand) return withBrand;
+
+  const brandLineIndex = lines.findIndex((l) => l.toLowerCase().replace(/\s+/g, '') === brandNorm);
+  if (brandLineIndex !== -1 && lines[brandLineIndex + 1]) return lines[brandLineIndex + 1];
+
+  return candidates[0] || brand;
 }
 
 export async function analyzeImage(file) {
@@ -126,6 +223,7 @@ export async function analyzeImage(file) {
     return {
       code: barcodeResult.code,
       codeType: barcodeResult.codeType,
+      barcodeCropBlob: barcodeResult.cropBlob,
       category,
       brand,
       amount,
@@ -147,6 +245,7 @@ export async function analyzeImages(files) {
   const merged = {
     code: null,
     codeType: null,
+    barcodeCropBlob: null,
     category: '기타',
     brand: null,
     amount: null,
@@ -155,8 +254,11 @@ export async function analyzeImages(files) {
   };
 
   for (const result of results) {
-    if (!merged.code && result.code) merged.code = result.code;
-    if (!merged.codeType && result.codeType) merged.codeType = result.codeType;
+    if (!merged.code && result.code) {
+      merged.code = result.code;
+      merged.codeType = result.codeType;
+      merged.barcodeCropBlob = result.barcodeCropBlob;
+    }
     if (merged.category === '기타' && result.category && result.category !== '기타') merged.category = result.category;
     if (!merged.brand && result.brand) merged.brand = result.brand;
     if (merged.amount === null && result.amount !== null) merged.amount = result.amount;

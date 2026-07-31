@@ -24,6 +24,9 @@ create table if not exists public.gifticons (
 -- 여러 장 업로드를 지원하는 image_paths(배열) 컬럼으로 옮겨준다.
 alter table public.gifticons add column if not exists image_paths text[] not null default '{}';
 
+-- 바코드 보기에서 원본 사진 대신 보여줄, 바코드/숫자 부분만 잘라낸 이미지
+alter table public.gifticons add column if not exists barcode_image_path text;
+
 do $$
 begin
   if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'gifticons' and column_name = 'image_path') then

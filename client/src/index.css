@@ -21,6 +21,8 @@ html,
 body {
   margin: 0;
   padding: 0;
+  width: 100%;
+  overflow-x: hidden;
   background: var(--bg);
   color: var(--text);
   font-family: -apple-system, BlinkMacSystemFont, 'Pretendard', 'Apple SD Gothic Neo', 'Segoe UI', Roboto, sans-serif;
@@ -41,12 +43,14 @@ textarea {
 
 .app-shell {
   max-width: 480px;
+  width: 100%;
   margin: 0 auto;
   min-height: 100dvh;
   background: var(--bg);
   display: flex;
   flex-direction: column;
   position: relative;
+  overflow-x: hidden;
   padding-bottom: 88px;
 }
 
@@ -197,6 +201,7 @@ textarea {
 }
 
 .gcard {
+  position: relative;
   display: flex;
   gap: 12px;
   background: var(--surface);
@@ -210,9 +215,40 @@ textarea {
   opacity: 0.6;
 }
 
+.gcard__owner-tag {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  padding: 3px 10px;
+  border-radius: 999px;
+  z-index: 1;
+}
+
+.gcard__owner-tag--a {
+  background: #4b7bec;
+}
+
+.gcard__owner-tag--b {
+  background: #e0559f;
+}
+
+.gcard__owner-tag--etc {
+  background: var(--text-muted);
+}
+
+.gcard__thumb-col {
+  flex: none;
+  width: 76px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
 .gcard__thumb {
   position: relative;
-  flex: none;
   width: 76px;
   height: 76px;
   border-radius: 12px;
@@ -263,23 +299,32 @@ textarea {
   border-radius: 999px;
 }
 
+.gcard__thumb-actions {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.gcard__thumb-actions button {
+  border: none;
+  background: none;
+  padding: 0;
+  font-size: 11px;
+  color: var(--text-muted);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .gcard__body {
   flex: 1;
   min-width: 0;
+  padding-right: 50px;
 }
 
-.gcard__top {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.gcard__category {
   font-size: 12px;
   color: var(--text-muted);
-}
-
-.gcard__owner {
-  background: var(--bg);
-  padding: 2px 8px;
-  border-radius: 999px;
 }
 
 .gcard__name {
@@ -334,8 +379,12 @@ textarea {
 
 .gcard__actions {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  gap: 8px;
+}
+
+.gcard__actions .btn {
+  flex: 1;
+  text-align: center;
 }
 
 .btn {
@@ -353,18 +402,6 @@ textarea {
   background: var(--accent);
   border-color: var(--accent);
   color: #fff;
-}
-
-.btn--ghost {
-  background: transparent;
-  border-color: transparent;
-  color: var(--text-muted);
-  padding-left: 4px;
-  padding-right: 4px;
-}
-
-.btn--danger {
-  color: var(--danger);
 }
 
 .btn--block {
@@ -579,6 +616,12 @@ textarea {
 
 .barcode-modal__canvas {
   max-width: 100%;
+}
+
+.barcode-modal__crop {
+  width: 100%;
+  border-radius: 12px;
+  background: #fff;
 }
 
 .barcode-modal__code {

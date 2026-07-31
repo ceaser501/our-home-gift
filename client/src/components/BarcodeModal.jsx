@@ -19,6 +19,7 @@ export default function BarcodeModal({ gifticon, onClose }) {
 
   useEffect(() => {
     setRenderError(false);
+    if (gifticon?.barcode_image_url) return;
     if (!gifticon?.code || !canvasRef.current) return;
 
     const canvas = canvasRef.current;
@@ -67,7 +68,15 @@ export default function BarcodeModal({ gifticon, onClose }) {
             </div>
           </dl>
 
-          {gifticon.code && !renderError && <canvas ref={canvasRef} className="barcode-modal__canvas" />}
+          {gifticon.barcode_image_url ? (
+            <img
+              className="barcode-modal__crop"
+              src={gifticon.barcode_image_url}
+              alt={`${gifticon.brand || gifticon.name} 바코드`}
+            />
+          ) : (
+            gifticon.code && !renderError && <canvas ref={canvasRef} className="barcode-modal__canvas" />
+          )}
 
           {gifticon.code ? (
             <p className="barcode-modal__code">

@@ -38,6 +38,7 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
   const [removedPaths, setRemovedPaths] = useState([]);
   const [newFiles, setNewFiles] = useState([]);
   const [newPreviews, setNewPreviews] = useState([]);
+  const [barcodeCropFile, setBarcodeCropFile] = useState(null);
 
   const [analyzing, setAnalyzing] = useState(false);
   const [autoFilled, setAutoFilled] = useState(false);
@@ -60,6 +61,8 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
     e.target.value = '';
     if (selected.length === 0) return;
 
+    const hadCode = Boolean(form.code);
+
     setNewFiles((prev) => [...prev, ...selected]);
     setNewPreviews((prev) => [...prev, ...selected.map((f) => URL.createObjectURL(f))]);
     setError('');
@@ -78,6 +81,9 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
         code_type: prev.code_type || result.codeType || '',
         expires_at: prev.expires_at || result.expiresAt || '',
       }));
+      if (!hadCode && result.code && result.barcodeCropBlob) {
+        setBarcodeCropFile(new File([result.barcodeCropBlob], 'barcode.png', { type: 'image/png' }));
+      }
       setAutoFilled(true);
     } catch {
       setError('이미지 자동 인식에 실패했어요. 직접 입력해주세요.');
@@ -100,7 +106,7 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
   async function handleSubmit(e) {
     e.preventDefault();
     if (!form.name.trim()) {
-      setError('이름을 입력해주세요.');
+      setError('상품명을 입력해주세요.');
       return;
     }
     if (mode === 'create' && newFiles.length === 0) {
@@ -124,10 +130,14 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
       };
 
       if (mode === 'create') {
-        const created = await createGifticon(fields, newFiles);
+        const created = await createGifticon(fields, newFiles, barcodeCropFile);
         onSaved(created);
       } else {
-        const updated = await updateGifticon(initial.id, fields, { addFiles: newFiles, removePaths: removedPaths });
+        const updated = await updateGifticon(initial.id, fields, {
+          addFiles: newFiles,
+          removePaths: removedPaths,
+          barcodeCropFile,
+        });
         onSaved(updated);
       }
     } catch (err) {
@@ -193,9 +203,14 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
           {error && <p className="hint hint--error">{error}</p>}
 
           <div className="form-grid">
+            <label className="field field--full">
+              <span>상품명 *</span>
+              <input value={form.name} onChange={(e) => updateField('name', e.target.value)} placeholder="예: 황올반+BBQ양념반+콜라1.25L" required />
+            </label>
+
             <label className="field">
-              <span>이름 *</span>
-              <input value={form.name} onChange={(e) => updateField('name', e.target.value)} placeholder="예: 스타벅스 아메리카노" required />
+              <span>상호</span>
+              <input value={form.brand} onChange={(e) => updateField('brand', e.target.value)} placeholder="예: BBQ" />
             </label>
 
             <label className="field">
