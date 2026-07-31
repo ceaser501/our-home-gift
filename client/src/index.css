@@ -302,27 +302,28 @@ textarea {
 .gcard__thumb-actions {
   display: flex;
   justify-content: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .gcard__thumb-actions button {
-  border: none;
-  background: none;
-  padding: 0;
-  font-size: 11px;
+  flex: 1;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  border-radius: 6px;
+  padding: 6px 0;
+  font-size: 12px;
+  font-weight: 600;
   color: var(--text-muted);
   cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 2px;
 }
 
 .gcard__body {
   flex: 1;
   min-width: 0;
-  padding-right: 50px;
 }
 
 .gcard__category {
+  padding-right: 46px;
   font-size: 12px;
   color: var(--text-muted);
 }
@@ -331,6 +332,7 @@ textarea {
   font-size: 15px;
   font-weight: 700;
   margin: 4px 0 2px;
+  padding-right: 46px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -385,6 +387,8 @@ textarea {
 .gcard__actions .btn {
   flex: 1;
   text-align: center;
+  padding-left: 4px;
+  padding-right: 4px;
 }
 
 .btn {
@@ -394,6 +398,7 @@ textarea {
   padding: 7px 10px;
   font-size: 12px;
   font-weight: 600;
+  white-space: nowrap;
   cursor: pointer;
   color: var(--text);
 }
