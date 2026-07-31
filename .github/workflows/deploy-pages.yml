@@ -36,7 +36,7 @@ jobs:
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
-          VITE_NAVER_LOGIN_CLIENT_ID: ${{ secrets.VITE_NAVER_LOGIN_CLIENT_ID }}
+          VITE_NAVER_CLIENT_ID: ${{ secrets.VITE_NAVER_CLIENT_ID }}
         run: npm run build
 
       - uses: actions/configure-pages@v5

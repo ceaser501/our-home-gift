@@ -34,7 +34,7 @@ export async function signInWithGoogle() {
 // Edge Function이 네이버 OAuth 코드 교환 → 세션 발급까지 대신 처리한다. 이 함수는 그 흐름을
 // 시작하는 페이지 이동만 담당한다(콜백 이후 세션은 magiclink 방식과 동일하게 URL로 돌아온다).
 export function signInWithNaver() {
-  const clientId = import.meta.env.VITE_NAVER_LOGIN_CLIENT_ID;
+  const clientId = import.meta.env.VITE_NAVER_CLIENT_ID;
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
   if (!clientId) throw new Error('네이버 로그인이 아직 설정되지 않았어요.');
 
