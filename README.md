@@ -83,12 +83,14 @@ Supabase가 기본 지원하는 제공자라 어렵지 않습니다.
 네이버는 Supabase가 기본 지원하지 않아서, `supabase/functions/naver-auth` Edge Function이
 네이버 OAuth 코드 교환부터 로그인 세션 발급까지 대신 처리하도록 만들어져 있습니다.
 
-> 아래 "가격 검색 기능"과 같은 네이버 애플리케이션을 써도 됩니다 — 하나의 앱에서
-> "사용 API"로 **검색**과 **네이버 로그인**을 둘 다 체크해두면, Client ID/Secret 하나를
-> 두 기능이 같이 씁니다. (앱을 따로 만들었다면 그 앱의 Client ID/Secret을 쓰면 됩니다.)
+> 아래 "가격 검색 기능"과는 **다른 네이버 애플리케이션**을 씁니다. 한 앱에서 검색과
+> 로그인을 같이 쓰다가 서로 설정이 꼬이는 문제가 있었어서, 완전히 분리했습니다.
+> 로그인은 지금 쓰고 있는(이미 동작 확인된) 앱의 Client ID/Secret을 그대로 씁니다.
 
-1. [네이버 개발자센터](https://developers.naver.com) → 그 애플리케이션 설정에서
-   사용 API에 **네이버 로그인**을 추가로 체크 → 제공 정보 선택에서 **이메일**을 필수(또는 선택)로 체크
+1. 네이버 로그인은 지금 쓰고 있는 애플리케이션 설정을 그대로 유지하면 됩니다(이미 등록되어
+   동작 중이라면 이 단계는 다시 안 해도 됩니다). 처음 설정하는 경우:
+   [네이버 개발자센터](https://developers.naver.com) → 애플리케이션 → 사용 API에
+   **네이버 로그인** 체크 → 제공 정보 선택에서 **이메일**을 필수(또는 선택)로 체크
    → **로그인 오픈 API 서비스 환경**에 PC/모바일 웹 등록하고, **Callback URL**에
    `https://<Supabase 프로젝트ref>.supabase.co/functions/v1/naver-auth` 입력
 2. 저장소 루트에서 Edge Function 배포 (JWT 검증은 `supabase/config.toml`에서 이미 꺼둠):
@@ -96,7 +98,6 @@ Supabase가 기본 지원하는 제공자라 어렵지 않습니다.
    supabase functions deploy naver-auth
    supabase secrets set NAVER_CLIENT_ID=발급받은값 NAVER_CLIENT_SECRET=발급받은값
    ```
-   (가격 검색 때 이미 등록해뒀다면 이 명령은 다시 안 해도 됩니다 — 같은 값이니까요.)
 3. 프론트엔드 쪽에도 Client ID(비밀 아님)를 알려줘야 합니다:
    - **로컬 개발용**: `client/.env`에 `VITE_NAVER_CLIENT_ID=발급받은값` 추가
    - **GitHub Pages 배포용**: 저장소 `Settings → Secrets and variables → Actions`에
@@ -117,8 +118,12 @@ Supabase가 기본 지원하는 제공자라 어렵지 않습니다.
 그럴 때 "가격 검색" 버튼을 누르면 네이버 쇼핑 검색으로 대략적인 가격을 찾아 채워줍니다.
 이 기능은 선택 사항이고, 안 켜도 나머지 기능은 그대로 동작합니다.
 
+> 위 "네이버 로그인"과는 **다른 네이버 애플리케이션**을 씁니다(예: "아워홈 기프티콘 가격찾기").
+> 검색 전용 앱을 따로 만들어서 로그인 설정과 절대 섞이지 않게 합니다.
+
 1. [네이버 개발자센터](https://developers.naver.com) → Application → 애플리케이션 등록
-   → 사용 API에서 **검색** 선택 → 웹 서비스 URL에 배포 주소 입력 후 등록
+   (이름 예: 아워홈 기프티콘 가격찾기) → 사용 API에서 **검색** 선택 → 웹 서비스 URL에
+   배포 주소(`https://ceaser501.github.io/our-home-gift/`) 입력 후 등록
    → **Client ID / Client Secret** 발급받기
 2. [Supabase CLI](https://supabase.com/docs/guides/cli) 설치 (`npm install -g supabase` 또는 `brew install supabase/tap/supabase`)
 3. 저장소 루트에서:
@@ -126,7 +131,7 @@ Supabase가 기본 지원하는 제공자라 어렵지 않습니다.
    supabase login
    supabase link --project-ref <Supabase 프로젝트 ref>
    supabase functions deploy search-price
-   supabase secrets set NAVER_CLIENT_ID=발급받은값 NAVER_CLIENT_SECRET=발급받은값
+   supabase secrets set NAVER_SEARCH_CLIENT_ID=발급받은값 NAVER_SEARCH_CLIENT_SECRET=발급받은값
    ```
    `<Supabase 프로젝트 ref>`는 Supabase 대시보드 URL(`app.supabase.com/project/xxxxxxxx`)의
    `xxxxxxxx` 부분입니다. **Client ID/Secret은 절대 코드나 `.env`에 넣지 말고, 이 명령어로만
