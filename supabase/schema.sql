@@ -13,12 +13,26 @@ create table if not exists public.gifticons (
   code_type text,
   expires_at date,
   memo text,
-  image_path text,
+  image_paths text[] not null default '{}',
   status text not null default 'unused',
   used_at date,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+-- 예전에 이 파일을 이미 실행해서 image_path(단일) 컬럼이 있는 테이블이라면
+-- 여러 장 업로드를 지원하는 image_paths(배열) 컬럼으로 옮겨준다.
+alter table public.gifticons add column if not exists image_paths text[] not null default '{}';
+
+do $$
+begin
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'gifticons' and column_name = 'image_path') then
+    update public.gifticons
+      set image_paths = array[image_path]
+      where image_path is not null and (image_paths is null or array_length(image_paths, 1) is null);
+    alter table public.gifticons drop column image_path;
+  end if;
+end $$;
 
 alter table public.gifticons disable row level security;
 

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { CATEGORIES, OWNERS } from '../constants';
-import { analyzeImage } from '../utils/imageAnalyze';
+import { analyzeImages } from '../utils/imageAnalyze';
 import { createGifticon, updateGifticon } from '../api';
 
 const emptyForm = {
@@ -16,9 +16,29 @@ const emptyForm = {
 };
 
 export default function UploadSheet({ mode, initial, onClose, onSaved }) {
-  const [form, setForm] = useState(() => (initial ? { ...emptyForm, ...initial, amount: initial.amount ?? '' } : emptyForm));
-  const [file, setFile] = useState(null);
-  const [previewUrl, setPreviewUrl] = useState(initial?.image_url || null);
+  const [form, setForm] = useState(() =>
+    initial
+      ? {
+          ...emptyForm,
+          ...initial,
+          amount: initial.amount ?? '',
+          brand: initial.brand ?? '',
+          owner: initial.owner ?? emptyForm.owner,
+          code: initial.code ?? '',
+          code_type: initial.code_type ?? '',
+          expires_at: initial.expires_at ?? '',
+          memo: initial.memo ?? '',
+        }
+      : emptyForm
+  );
+
+  const [existingImages, setExistingImages] = useState(
+    () => (initial?.image_paths || []).map((path, i) => ({ path, url: initial.image_urls[i] }))
+  );
+  const [removedPaths, setRemovedPaths] = useState([]);
+  const [newFiles, setNewFiles] = useState([]);
+  const [newPreviews, setNewPreviews] = useState([]);
+
   const [analyzing, setAnalyzing] = useState(false);
   const [autoFilled, setAutoFilled] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -27,36 +47,36 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
 
   useEffect(() => {
     return () => {
-      if (previewUrl && previewUrl.startsWith('blob:')) URL.revokeObjectURL(previewUrl);
+      newPreviews.forEach((url) => URL.revokeObjectURL(url));
     };
-  }, [previewUrl]);
+  }, [newPreviews]);
 
   function updateField(key, value) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
   async function handleFileChange(e) {
-    const selected = e.target.files?.[0];
-    if (!selected) return;
+    const selected = Array.from(e.target.files || []);
+    e.target.value = '';
+    if (selected.length === 0) return;
 
-    setFile(selected);
-    const url = URL.createObjectURL(selected);
-    setPreviewUrl(url);
+    setNewFiles((prev) => [...prev, ...selected]);
+    setNewPreviews((prev) => [...prev, ...selected.map((f) => URL.createObjectURL(f))]);
     setError('');
     setAnalyzing(true);
     setAutoFilled(false);
 
     try {
-      const result = await analyzeImage(selected);
+      const result = await analyzeImages(selected);
       setForm((prev) => ({
         ...prev,
-        name: result.name || prev.name,
-        category: result.category || prev.category,
-        brand: result.brand || prev.brand,
-        amount: result.amount ?? prev.amount,
-        code: result.code || prev.code,
-        code_type: result.codeType || prev.code_type,
-        expires_at: result.expiresAt || prev.expires_at,
+        name: prev.name || result.name || '',
+        category: prev.category === '기타' ? result.category || '기타' : prev.category,
+        brand: prev.brand || result.brand || '',
+        amount: prev.amount === '' ? result.amount ?? '' : prev.amount,
+        code: prev.code || result.code || '',
+        code_type: prev.code_type || result.codeType || '',
+        expires_at: prev.expires_at || result.expiresAt || '',
       }));
       setAutoFilled(true);
     } catch {
@@ -66,14 +86,25 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
     }
   }
 
+  function removeExisting(path) {
+    setExistingImages((prev) => prev.filter((img) => img.path !== path));
+    setRemovedPaths((prev) => [...prev, path]);
+  }
+
+  function removeNewFile(index) {
+    URL.revokeObjectURL(newPreviews[index]);
+    setNewFiles((prev) => prev.filter((_, i) => i !== index));
+    setNewPreviews((prev) => prev.filter((_, i) => i !== index));
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     if (!form.name.trim()) {
       setError('이름을 입력해주세요.');
       return;
     }
-    if (mode === 'create' && !file) {
-      setError('기프티콘 이미지를 업로드해주세요.');
+    if (mode === 'create' && newFiles.length === 0) {
+      setError('기프티콘 이미지를 1장 이상 업로드해주세요.');
       return;
     }
 
@@ -93,10 +124,10 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
       };
 
       if (mode === 'create') {
-        const created = await createGifticon(fields, file);
+        const created = await createGifticon(fields, newFiles);
         onSaved(created);
       } else {
-        const updated = await updateGifticon(initial.id, fields, file);
+        const updated = await updateGifticon(initial.id, fields, { addFiles: newFiles, removePaths: removedPaths });
         onSaved(updated);
       }
     } catch (err) {
@@ -105,6 +136,11 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
       setSubmitting(false);
     }
   }
+
+  const thumbs = [
+    ...existingImages.map((img) => ({ kind: 'existing', path: img.path, url: img.url })),
+    ...newPreviews.map((url, i) => ({ kind: 'new', index: i, url })),
+  ];
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -117,28 +153,41 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
         </div>
 
         <form className="upload-form" onSubmit={handleSubmit}>
-          <label className="image-picker" htmlFor="gifticon-image">
-            {previewUrl ? (
-              <img src={previewUrl} alt="미리보기" />
-            ) : (
-              <div className="image-picker__placeholder">
-                <span>📷</span>
-                <span>이미지 업로드</span>
+          <p className="hint">
+            기프티콘 이미지를 여러 장 올릴 수 있어요 (예: 상품명 보이는 화면 + 금액·기한 보이는 화면). 각 이미지에서
+            찾은 정보를 자동으로 합쳐서 채워드려요.
+          </p>
+
+          <div className="image-grid">
+            {thumbs.map((thumb) => (
+              <div className="image-grid__item" key={thumb.kind === 'existing' ? thumb.path : `new-${thumb.index}`}>
+                <img src={thumb.url} alt="기프티콘 이미지" />
+                <button
+                  type="button"
+                  className="image-grid__remove"
+                  onClick={() => (thumb.kind === 'existing' ? removeExisting(thumb.path) : removeNewFile(thumb.index))}
+                  aria-label="이미지 삭제"
+                >
+                  ✕
+                </button>
               </div>
-            )}
-            {analyzing && <div className="image-picker__overlay">이미지 분석 중…</div>}
-          </label>
+            ))}
+            <button type="button" className="image-grid__add" onClick={() => fileInputRef.current?.click()}>
+              <span>＋</span>
+              <span>이미지 추가</span>
+            </button>
+          </div>
+          {analyzing && <p className="hint">이미지 분석 중…</p>}
+
           <input
             id="gifticon-image"
             ref={fileInputRef}
             type="file"
             accept="image/*"
+            multiple
             onChange={handleFileChange}
             hidden
           />
-          <button type="button" className="btn btn--block" onClick={() => fileInputRef.current?.click()}>
-            {previewUrl ? '이미지 다시 선택' : '갤러리에서 이미지 선택'}
-          </button>
 
           {autoFilled && <p className="hint hint--success">자동으로 정보를 채웠어요. 확인 후 저장해주세요.</p>}
           {error && <p className="hint hint--error">{error}</p>}

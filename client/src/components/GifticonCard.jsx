@@ -18,6 +18,7 @@ export default function GifticonCard({ gifticon, onViewCode, onToggleUsed, onEdi
           <span className="gcard__thumb-placeholder">🎫</span>
         )}
         {isUsed && <span className="gcard__used-badge">사용완료</span>}
+        {gifticon.image_urls?.length > 1 && <span className="gcard__count-badge">{gifticon.image_urls.length}</span>}
       </button>
 
       <div className="gcard__body">

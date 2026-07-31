@@ -114,3 +114,32 @@ export async function analyzeImage(file) {
     URL.revokeObjectURL(imageUrl);
   }
 }
+
+// 기프티콘은 업체마다 디자인이 달라서 상품명은 첫 장, 금액·기한은 다음 장에 있는 등
+// 정보가 여러 이미지에 나뉘어 있을 수 있다. 각 이미지를 따로 분석한 뒤, 필드별로
+// 값을 찾은 첫 번째 이미지의 결과를 채택해서 합친다.
+export async function analyzeImages(files) {
+  const results = await Promise.all(files.map((file) => analyzeImage(file)));
+
+  const merged = {
+    code: null,
+    codeType: null,
+    category: '기타',
+    brand: null,
+    amount: null,
+    expiresAt: null,
+    name: '',
+  };
+
+  for (const result of results) {
+    if (!merged.code && result.code) merged.code = result.code;
+    if (!merged.codeType && result.codeType) merged.codeType = result.codeType;
+    if (merged.category === '기타' && result.category && result.category !== '기타') merged.category = result.category;
+    if (!merged.brand && result.brand) merged.brand = result.brand;
+    if (merged.amount === null && result.amount !== null) merged.amount = result.amount;
+    if (!merged.expiresAt && result.expiresAt) merged.expiresAt = result.expiresAt;
+    if (!merged.name && result.name) merged.name = result.name;
+  }
+
+  return merged;
+}

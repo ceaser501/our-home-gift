@@ -60,18 +60,19 @@ export default function BarcodeModal({ gifticon, onClose }) {
             <canvas ref={canvasRef} className={`barcode-modal__canvas ${renderError ? 'hidden' : ''}`} />
           ) : null}
 
-          {(!gifticon.code || renderError) && gifticon.image_url && (
-            <img className="barcode-modal__image" src={gifticon.image_url} alt={gifticon.name} />
-          )}
+          {(!gifticon.code || renderError) &&
+            gifticon.image_urls?.map((url) => <img key={url} className="barcode-modal__image" src={url} alt={gifticon.name} />)}
 
           {gifticon.code && <p className="barcode-modal__code">{gifticon.code}</p>}
 
-          {!gifticon.code && !gifticon.image_url && <p>등록된 바코드/QR 정보가 없어요.</p>}
+          {!gifticon.code && !gifticon.image_urls?.length && <p>등록된 바코드/QR 정보가 없어요.</p>}
 
-          {gifticon.image_url && gifticon.code && !renderError && (
+          {gifticon.image_urls?.length > 0 && gifticon.code && !renderError && (
             <details className="barcode-modal__original">
-              <summary>원본 이미지 보기</summary>
-              <img src={gifticon.image_url} alt={gifticon.name} />
+              <summary>원본 이미지 보기 ({gifticon.image_urls.length}장)</summary>
+              {gifticon.image_urls.map((url) => (
+                <img key={url} src={url} alt={gifticon.name} />
+              ))}
             </details>
           )}
         </div>
