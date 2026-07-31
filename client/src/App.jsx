@@ -7,6 +7,7 @@ import UploadSheet from './components/UploadSheet';
 import BarcodeModal from './components/BarcodeModal';
 import { listGifticons, updateGifticon, deleteGifticon } from './api';
 import { daysUntil, todayStr } from './utils/date';
+import { useFamily } from './FamilyContext';
 
 function sortGifticons(items) {
   const unused = items.filter((g) => g.status !== 'used');
@@ -31,6 +32,7 @@ function sortGifticons(items) {
 }
 
 export default function App() {
+  const { family } = useFamily();
   const [gifticons, setGifticons] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -65,7 +67,7 @@ export default function App() {
   async function handleToggleUsed(gifticon) {
     const nextStatus = gifticon.status === 'used' ? 'unused' : 'used';
     try {
-      await updateGifticon(gifticon.id, { status: nextStatus, used_at: nextStatus === 'used' ? todayStr() : null });
+      await updateGifticon(family.id, gifticon.id, { status: nextStatus, used_at: nextStatus === 'used' ? todayStr() : null });
       fetchList();
     } catch (err) {
       alert(err.message || '상태 변경에 실패했어요.');

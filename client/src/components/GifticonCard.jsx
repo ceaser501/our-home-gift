@@ -1,17 +1,15 @@
 import { Ticket } from 'lucide-react';
-import { CATEGORIES, OWNERS } from '../constants';
+import { CATEGORIES } from '../constants';
 import { formatDday, formatDate, ddayUrgency } from '../utils/date';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { useFamily } from '../FamilyContext';
 
 function categoryLabel(key) {
   return CATEGORIES.find((c) => c.key === key)?.label ?? key;
 }
 
-const OWNER_TAG_CLASS = {
-  [OWNERS[0]]: 'bg-[#4b7bec]',
-  [OWNERS[1]]: 'bg-[#e0559f]',
-};
+const OWNER_TAG_PALETTE = ['bg-[#4b7bec]', 'bg-[#e0559f]', 'bg-[#16a35a]', 'bg-[#e69008]', 'bg-[#0891b2]', 'bg-[#c026d3]'];
 
 const DDAY_CLASS = {
   normal: 'bg-accent text-accent-foreground',
@@ -21,18 +19,16 @@ const DDAY_CLASS = {
 };
 
 export default function GifticonCard({ gifticon, onViewCode, onToggleUsed, onEdit, onDelete }) {
+  const { members } = useFamily();
   const isUsed = gifticon.status === 'used';
   const urgency = isUsed ? 'none' : ddayUrgency(gifticon.expires_at);
+  const ownerIndex = members.findIndex((m) => m.display_name === gifticon.owner);
+  const ownerTagClass = ownerIndex >= 0 ? OWNER_TAG_PALETTE[ownerIndex % OWNER_TAG_PALETTE.length] : 'bg-muted-foreground';
 
   return (
     <li className={cn('relative flex gap-3 rounded-2xl border border-border bg-card p-3 shadow-xs', isUsed && 'opacity-60')}>
       {gifticon.owner && (
-        <span
-          className={cn(
-            'absolute top-2.5 right-2.5 z-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold text-white',
-            OWNER_TAG_CLASS[gifticon.owner] || 'bg-muted-foreground'
-          )}
-        >
+        <span className={cn('absolute top-2.5 right-2.5 z-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold text-white', ownerTagClass)}>
           {gifticon.owner}
         </span>
       )}

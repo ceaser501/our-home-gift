@@ -10,12 +10,12 @@ function withImageUrls(row) {
   return { ...row, image_urls, image_url: image_urls[0] || null, barcode_image_url };
 }
 
-async function uploadImages(files) {
+async function uploadImages(familyId, files) {
   const uploaded = [];
   try {
     for (const file of files) {
       const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
-      const path = `${Date.now()}-${crypto.randomUUID()}.${ext}`;
+      const path = `${familyId}/${Date.now()}-${crypto.randomUUID()}.${ext}`;
       const { error } = await supabase.storage.from(IMAGE_BUCKET).upload(path, file, {
         cacheControl: '3600',
         upsert: false,
@@ -50,13 +50,13 @@ export async function listGifticons(params = {}) {
   return data.map(withImageUrls);
 }
 
-export async function createGifticon(fields, files = [], barcodeCropFile = null) {
-  const image_paths = files.length ? await uploadImages(files) : [];
+export async function createGifticon(familyId, fields, files = [], barcodeCropFile = null) {
+  const image_paths = files.length ? await uploadImages(familyId, files) : [];
 
   let barcode_image_path = null;
   try {
     if (barcodeCropFile) {
-      [barcode_image_path] = await uploadImages([barcodeCropFile]);
+      [barcode_image_path] = await uploadImages(familyId, [barcodeCropFile]);
     }
   } catch (err) {
     if (image_paths.length) await removeImages(image_paths);
@@ -66,6 +66,7 @@ export async function createGifticon(fields, files = [], barcodeCropFile = null)
   const { data, error } = await supabase
     .from(GIFTICON_TABLE)
     .insert({
+      family_id: familyId,
       name: fields.name,
       category: fields.category || '기타',
       brand: fields.brand || null,
@@ -90,7 +91,7 @@ export async function createGifticon(fields, files = [], barcodeCropFile = null)
   return withImageUrls(data);
 }
 
-export async function updateGifticon(id, fields, imageChanges = {}) {
+export async function updateGifticon(familyId, id, fields, imageChanges = {}) {
   const { addFiles = [], removePaths = [], barcodeCropFile = null } = imageChanges;
   const updates = { ...fields, updated_at: new Date().toISOString() };
 
@@ -110,13 +111,13 @@ export async function updateGifticon(id, fields, imageChanges = {}) {
 
     if (addFiles.length || removePaths.length) {
       const currentPaths = existing?.image_paths || [];
-      newPaths = addFiles.length ? await uploadImages(addFiles) : [];
+      newPaths = addFiles.length ? await uploadImages(familyId, addFiles) : [];
       updates.image_paths = currentPaths.filter((p) => !removePaths.includes(p)).concat(newPaths);
     }
 
     if (barcodeCropFile) {
       oldBarcodeImagePath = existing?.barcode_image_path || null;
-      [updates.barcode_image_path] = await uploadImages([barcodeCropFile]);
+      [updates.barcode_image_path] = await uploadImages(familyId, [barcodeCropFile]);
     }
   }
 

@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { Plus, RotateCcw, Search, X } from 'lucide-react';
-import { CATEGORIES, OWNERS } from '../constants';
+import { CATEGORIES } from '../constants';
 import { analyzeImages } from '../utils/imageAnalyze';
 import { createGifticon, updateGifticon, searchPrice } from '../api';
+import { useFamily } from '../FamilyContext';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,32 +12,35 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 
-const emptyForm = {
-  name: '',
-  category: '기타',
-  brand: '',
-  amount: '',
-  owner: OWNERS[0],
-  code: '',
-  code_type: '',
-  expires_at: '',
-  memo: '',
-};
+function buildEmptyForm(defaultOwner) {
+  return {
+    name: '',
+    category: '기타',
+    brand: '',
+    amount: '',
+    owner: defaultOwner || '',
+    code: '',
+    code_type: '',
+    expires_at: '',
+    memo: '',
+  };
+}
 
-function buildForm(initial) {
+function buildForm(initial, defaultOwner) {
+  const empty = buildEmptyForm(defaultOwner);
   return initial
     ? {
-        ...emptyForm,
+        ...empty,
         ...initial,
         amount: initial.amount ?? '',
         brand: initial.brand ?? '',
-        owner: initial.owner ?? emptyForm.owner,
+        owner: initial.owner ?? empty.owner,
         code: initial.code ?? '',
         code_type: initial.code_type ?? '',
         expires_at: initial.expires_at ?? '',
         memo: initial.memo ?? '',
       }
-    : emptyForm;
+    : empty;
 }
 
 function buildExistingImages(initial) {
@@ -44,7 +48,9 @@ function buildExistingImages(initial) {
 }
 
 export default function UploadSheet({ mode, initial, onClose, onSaved }) {
-  const [form, setForm] = useState(() => buildForm(initial));
+  const { family, members, user } = useFamily();
+  const myName = members.find((m) => m.user_id === user.id)?.display_name || members[0]?.display_name || '';
+  const [form, setForm] = useState(() => buildForm(initial, myName));
   const [existingImages, setExistingImages] = useState(() => buildExistingImages(initial));
   const [removedPaths, setRemovedPaths] = useState([]);
   const [newFiles, setNewFiles] = useState([]);
@@ -138,7 +144,7 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
 
   function handleReset() {
     newPreviews.forEach((url) => URL.revokeObjectURL(url));
-    setForm(buildForm(initial));
+    setForm(buildForm(initial, myName));
     setExistingImages(buildExistingImages(initial));
     setRemovedPaths([]);
     setNewFiles([]);
@@ -178,10 +184,10 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
       };
 
       if (mode === 'create') {
-        const created = await createGifticon(fields, newFiles, barcodeCropFile);
+        const created = await createGifticon(family.id, fields, newFiles, barcodeCropFile);
         onSaved(created);
       } else {
-        const updated = await updateGifticon(initial.id, fields, {
+        const updated = await updateGifticon(family.id, initial.id, fields, {
           addFiles: newFiles,
           removePaths: removedPaths,
           barcodeCropFile,
@@ -330,9 +336,9 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {OWNERS.map((o) => (
-                    <SelectItem key={o} value={o}>
-                      {o}
+                  {members.map((m) => (
+                    <SelectItem key={m.user_id} value={m.display_name}>
+                      {m.display_name}
                     </SelectItem>
                   ))}
                 </SelectContent>

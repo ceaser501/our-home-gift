@@ -12,8 +12,6 @@ export const CATEGORIES = [
 
 export const CATEGORY_KEYS = CATEGORIES.map((c) => c.key);
 
-export const OWNERS = ['태수', '보연'];
-
 export const STATUS_TABS = [
   { key: 'all', label: '전체' },
   { key: 'unused', label: '사용 전' },
