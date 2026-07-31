@@ -36,6 +36,32 @@ supabase/   Supabase(DB + 이미지 스토리지) 초기 설정 SQL
 `.github/workflows/deploy-pages.yml`이 자동으로 빌드해서 배포합니다.
 배포된 주소는 `https://ceaser501.github.io/our-home-gift/` 입니다.
 
+## 처음 한 번만: 가격 검색 기능(선택) 켜기
+
+금액이 안 찍혀 나오는 상품형 기프티콘(예: 카페 음료 1개)은 자동으로 가격을 못 채우는데,
+그럴 때 "가격 검색" 버튼을 누르면 네이버 쇼핑 검색으로 대략적인 가격을 찾아 채워줍니다.
+이 기능은 선택 사항이고, 안 켜도 나머지 기능은 그대로 동작합니다.
+
+1. [네이버 개발자센터](https://developers.naver.com) → Application → 애플리케이션 등록
+   → 사용 API에서 **검색** 선택 → 웹 서비스 URL에 배포 주소 입력 후 등록
+   → **Client ID / Client Secret** 발급받기
+2. [Supabase CLI](https://supabase.com/docs/guides/cli) 설치 (`npm install -g supabase` 또는 `brew install supabase/tap/supabase`)
+3. 저장소 루트에서:
+   ```bash
+   supabase login
+   supabase link --project-ref <Supabase 프로젝트 ref>
+   supabase functions deploy search-price
+   supabase secrets set NAVER_CLIENT_ID=발급받은값 NAVER_CLIENT_SECRET=발급받은값
+   ```
+   `<Supabase 프로젝트 ref>`는 Supabase 대시보드 URL(`app.supabase.com/project/xxxxxxxx`)의
+   `xxxxxxxx` 부분입니다. **Client ID/Secret은 절대 코드나 `.env`에 넣지 말고, 이 명령어로만
+   전달하세요** — Edge Function 안에서만 비밀값으로 보관되고 브라우저에는 노출되지 않습니다.
+4. Edge Function을 다시 배포할 때(코드 수정 시)는 3번의 `functions deploy` 줄만 다시 실행하면
+   됩니다. 시크릿은 한 번만 설정하면 유지돼요.
+
+검색으로 채운 가격은 "공식 정가"가 아니라 검색 결과에서 가져온 값이라 100% 정확하지 않을 수
+있어요. 저장 전에 확인/수정할 수 있습니다.
+
 ## 로컬 실행
 
 ```bash
@@ -64,6 +90,9 @@ npm run dev
   깨끗한 바코드/QR을 다시 그려서 보여줍니다.
 - **사용 완료 처리**: "사용완료" 버튼으로 상태와 사용일자를 기록하고, "사용취소"로 되돌릴 수
   있습니다.
+- **가격 검색(선택 기능)**: 금액이 자동으로 안 채워지면 "가격 검색" 버튼으로 네이버 쇼핑
+  검색 결과의 최저가를 가져와 채웁니다. Supabase Edge Function 설정이 필요합니다
+  (아래 "가격 검색 기능 켜기" 참고).
 
 ## 알아두면 좋은 점
 

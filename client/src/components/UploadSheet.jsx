@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { Plus, X } from 'lucide-react';
+import { Plus, Search, X } from 'lucide-react';
 import { CATEGORIES, OWNERS } from '../constants';
 import { analyzeImages } from '../utils/imageAnalyze';
-import { createGifticon, updateGifticon } from '../api';
+import { createGifticon, updateGifticon, searchPrice } from '../api';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -52,6 +52,8 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
   const [autoFilled, setAutoFilled] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [searchingPrice, setSearchingPrice] = useState(false);
+  const [priceSearchNote, setPriceSearchNote] = useState('');
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -97,6 +99,24 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
       setError('이미지 자동 인식에 실패했어요. 직접 입력해주세요.');
     } finally {
       setAnalyzing(false);
+    }
+  }
+
+  async function handleSearchPrice() {
+    setSearchingPrice(true);
+    setPriceSearchNote('');
+    try {
+      const result = await searchPrice({ brand: form.brand, name: form.name });
+      if (result.amount) {
+        updateField('amount', result.amount);
+        setPriceSearchNote(`검색으로 채웠어요 (${result.source || '검색 결과'} 기준, 실제 가격과 다를 수 있어요)`);
+      } else {
+        setPriceSearchNote('검색 결과에서 가격을 찾지 못했어요. 직접 입력해주세요.');
+      }
+    } catch (err) {
+      setPriceSearchNote(err.message || '가격 검색에 실패했어요.');
+    } finally {
+      setSearchingPrice(false);
     }
   }
 
@@ -262,9 +282,25 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
                 type="number"
                 inputMode="numeric"
                 value={form.amount}
-                onChange={(e) => updateField('amount', e.target.value)}
+                onChange={(e) => {
+                  updateField('amount', e.target.value);
+                  setPriceSearchNote('');
+                }}
                 placeholder="예: 5000"
               />
+              {!form.amount && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSearchPrice}
+                  disabled={searchingPrice || !form.name.trim()}
+                >
+                  <Search className="size-3.5" />
+                  {searchingPrice ? '검색 중…' : '가격 검색'}
+                </Button>
+              )}
+              {priceSearchNote && <p className="text-xs text-muted-foreground">{priceSearchNote}</p>}
             </div>
 
             <div className="flex flex-col gap-1.5">

@@ -133,6 +133,14 @@ export async function updateGifticon(id, fields, imageChanges = {}) {
   return withImageUrls(data);
 }
 
+export async function searchPrice({ brand, name }) {
+  const { data, error } = await supabase.functions.invoke('search-price', {
+    body: { brand, name },
+  });
+  if (error) throw new Error(error.message || '가격 검색에 실패했어요.');
+  return data;
+}
+
 export async function deleteGifticon(id) {
   const { data: existing } = await supabase
     .from(GIFTICON_TABLE)
