@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Plus, Search, X } from 'lucide-react';
+import { Plus, RotateCcw, Search, X } from 'lucide-react';
 import { CATEGORIES, OWNERS } from '../constants';
 import { analyzeImages } from '../utils/imageAnalyze';
 import { createGifticon, updateGifticon, searchPrice } from '../api';
@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 
 const emptyForm = {
@@ -23,26 +24,29 @@ const emptyForm = {
   memo: '',
 };
 
-export default function UploadSheet({ mode, initial, onClose, onSaved }) {
-  const [form, setForm] = useState(() =>
-    initial
-      ? {
-          ...emptyForm,
-          ...initial,
-          amount: initial.amount ?? '',
-          brand: initial.brand ?? '',
-          owner: initial.owner ?? emptyForm.owner,
-          code: initial.code ?? '',
-          code_type: initial.code_type ?? '',
-          expires_at: initial.expires_at ?? '',
-          memo: initial.memo ?? '',
-        }
-      : emptyForm
-  );
+function buildForm(initial) {
+  return initial
+    ? {
+        ...emptyForm,
+        ...initial,
+        amount: initial.amount ?? '',
+        brand: initial.brand ?? '',
+        owner: initial.owner ?? emptyForm.owner,
+        code: initial.code ?? '',
+        code_type: initial.code_type ?? '',
+        expires_at: initial.expires_at ?? '',
+        memo: initial.memo ?? '',
+      }
+    : emptyForm;
+}
 
-  const [existingImages, setExistingImages] = useState(
-    () => (initial?.image_paths || []).map((path, i) => ({ path, url: initial.image_urls[i] }))
-  );
+function buildExistingImages(initial) {
+  return (initial?.image_paths || []).map((path, i) => ({ path, url: initial.image_urls[i] }));
+}
+
+export default function UploadSheet({ mode, initial, onClose, onSaved }) {
+  const [form, setForm] = useState(() => buildForm(initial));
+  const [existingImages, setExistingImages] = useState(() => buildExistingImages(initial));
   const [removedPaths, setRemovedPaths] = useState([]);
   const [newFiles, setNewFiles] = useState([]);
   const [newPreviews, setNewPreviews] = useState([]);
@@ -131,6 +135,20 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
     setNewPreviews((prev) => prev.filter((_, i) => i !== index));
   }
 
+  function handleReset() {
+    newPreviews.forEach((url) => URL.revokeObjectURL(url));
+    setForm(buildForm(initial));
+    setExistingImages(buildExistingImages(initial));
+    setRemovedPaths([]);
+    setNewFiles([]);
+    setNewPreviews([]);
+    setBarcodeCropFile(null);
+    setError('');
+    setAutoFilled(false);
+    setPriceSearchNote('');
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     if (!form.name.trim()) {
@@ -183,8 +201,12 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
   return (
     <Sheet open onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="max-h-[92dvh] gap-0 overflow-y-auto pb-[max(20px,env(safe-area-inset-bottom))]">
-        <SheetHeader className="pb-3">
+        <SheetHeader className="flex-row items-center justify-between gap-2 pr-14 pb-3">
           <SheetTitle>{mode === 'create' ? '기프티콘 추가' : '기프티콘 수정'}</SheetTitle>
+          <Button type="button" variant="ghost" size="sm" onClick={handleReset} className="text-muted-foreground">
+            <RotateCcw className="size-3.5" />
+            초기화
+          </Button>
         </SheetHeader>
 
         <form className="flex flex-col gap-4 px-5" onSubmit={handleSubmit}>
@@ -288,19 +310,17 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
                 }}
                 placeholder="예: 5000"
               />
-              {!form.amount && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleSearchPrice}
-                  disabled={searchingPrice || !form.name.trim()}
-                >
-                  <Search className="size-3.5" />
-                  {searchingPrice ? '검색 중…' : '가격 검색'}
-                </Button>
+              {!form.amount && form.name.trim() && (
+                <Popover open={Boolean(priceSearchNote)} onOpenChange={(open) => !open && setPriceSearchNote('')}>
+                  <PopoverAnchor asChild>
+                    <Button type="button" variant="outline" size="sm" onClick={handleSearchPrice} disabled={searchingPrice}>
+                      <Search className="size-3.5" />
+                      {searchingPrice ? '검색 중…' : '가격 검색'}
+                    </Button>
+                  </PopoverAnchor>
+                  <PopoverContent>{priceSearchNote}</PopoverContent>
+                </Popover>
               )}
-              {priceSearchNote && <p className="text-xs text-muted-foreground">{priceSearchNote}</p>}
             </div>
 
             <div className="flex flex-col gap-1.5">
