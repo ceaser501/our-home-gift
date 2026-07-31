@@ -1,0 +1,4 @@
+# naver-auth는 네이버가 브라우저를 직접 리다이렉트시켜서 호출하는 함수라 Authorization
+# 헤더(JWT)가 없다. 기본값(true)이면 Supabase가 요청을 401로 막아버리므로 꺼둔다.
+[functions.naver-auth]
+verify_jwt = false

@@ -1,17 +1,49 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { MessageCircle } from 'lucide-react';
-import { sendMagicLink, signInWithKakao } from '../auth';
+import { sendMagicLink, signInWithGoogle, signInWithNaver } from '../auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Logo from './Logo';
+
+function GoogleIcon({ className }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
+      <path
+        fill="#4285F4"
+        d="M23.52 12.27c0-.85-.08-1.67-.22-2.45H12v4.64h6.47c-.28 1.5-1.13 2.77-2.4 3.63v3h3.88c2.27-2.09 3.57-5.17 3.57-8.82z"
+      />
+      <path
+        fill="#34A853"
+        d="M12 24c3.24 0 5.96-1.07 7.95-2.91l-3.88-3c-1.08.72-2.45 1.15-4.07 1.15-3.13 0-5.78-2.11-6.73-4.95H1.26v3.1C3.24 21.3 7.29 24 12 24z"
+      />
+      <path fill="#FBBC05" d="M5.27 14.29a7.2 7.2 0 0 1 0-4.58v-3.1H1.26a12 12 0 0 0 0 10.78z" />
+      <path
+        fill="#EA4335"
+        d="M12 4.77c1.76 0 3.34.6 4.59 1.8l3.44-3.44C17.95 1.19 15.24 0 12 0 7.29 0 3.24 2.7 1.26 6.61l4.01 3.1C6.22 6.88 8.87 4.77 12 4.77z"
+      />
+    </svg>
+  );
+}
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState('');
-  const [kakaoLoading, setKakaoLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [naverLoading, setNaverLoading] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const loginError = params.get('login_error');
+    if (loginError) {
+      setError(loginError);
+      params.delete('login_error');
+      const query = params.toString();
+      window.history.replaceState(null, '', window.location.pathname + (query ? `?${query}` : ''));
+    }
+  }, []);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -28,14 +60,25 @@ export default function LoginScreen() {
     }
   }
 
-  async function handleKakaoLogin() {
-    setKakaoLoading(true);
+  async function handleGoogleLogin() {
+    setGoogleLoading(true);
     setError('');
     try {
-      await signInWithKakao();
+      await signInWithGoogle();
     } catch (err) {
-      setError(err.message || '카카오 로그인에 실패했어요.');
-      setKakaoLoading(false);
+      setError(err.message || '구글 로그인에 실패했어요.');
+      setGoogleLoading(false);
+    }
+  }
+
+  function handleNaverLogin() {
+    setNaverLoading(true);
+    setError('');
+    try {
+      signInWithNaver();
+    } catch (err) {
+      setError(err.message || '네이버 로그인에 실패했어요.');
+      setNaverLoading(false);
     }
   }
 
@@ -57,12 +100,34 @@ export default function LoginScreen() {
           <Button
             type="button"
             size="lg"
-            onClick={handleKakaoLogin}
-            disabled={kakaoLoading}
-            className="w-full rounded-xl bg-[#FEE500] text-[#191919] hover:bg-[#FEE500]/90"
+            onClick={handleGoogleLogin}
+            disabled={googleLoading}
+            variant="outline"
+            className="w-full rounded-xl"
+          >
+            <GoogleIcon className="size-4" />
+            {googleLoading ? '연결 중…' : '구글로 로그인'}
+          </Button>
+
+          <Button
+            type="button"
+            size="lg"
+            onClick={handleNaverLogin}
+            disabled={naverLoading}
+            className="w-full rounded-xl bg-[#03C75A] text-white hover:bg-[#03C75A]/90"
+          >
+            <span className="flex size-4 items-center justify-center text-[13px] leading-none font-bold">N</span>
+            {naverLoading ? '연결 중…' : '네이버로 로그인'}
+          </Button>
+
+          <Button
+            type="button"
+            size="lg"
+            disabled
+            className="w-full rounded-xl bg-[#FEE500] text-[#191919] opacity-60 hover:bg-[#FEE500] disabled:opacity-60"
           >
             <MessageCircle className="size-4 fill-[#191919]" />
-            {kakaoLoading ? '연결 중…' : '카카오로 로그인'}
+            카카오로 로그인 (서비스 예정)
           </Button>
 
           <div className="flex items-center gap-2.5 text-xs text-muted-foreground">

@@ -59,6 +59,48 @@ Supabase **SQL Editor**에서 한 번만 실행해서 기존 데이터를 그 �
 update gifticons set family_id = '<위에서 확인한 families.id>' where family_id is null;
 ```
 
+## 처음 한 번만: 소셜 로그인(구글/네이버) 켜기
+
+이메일 매직 링크 외에 구글·네이버로도 로그인할 수 있습니다(둘 다 선택 사항, 안 켜도 이메일
+로그인은 그대로 동작). 카카오 버튼은 화면에 있지만 비활성화 상태예요 — 카카오는 이메일
+동의항목이 "비즈니스 인증"(사업자등록 필요)을 받은 앱에만 열려 있어서, 지금은 붙일 수 없습니다.
+
+### 구글 로그인
+
+Supabase가 기본 지원하는 제공자라 어렵지 않습니다.
+
+1. [Google Cloud Console](https://console.cloud.google.com) → 프로젝트 생성(또는 기존 프로젝트 사용)
+2. **APIs & Services → OAuth consent screen**: User Type은 **External**로, 앱 이름/이메일만
+   채우면 됩니다. 게시 상태를 "Testing"으로 둘 거면 **Test users**에 로그인할 가족 이메일을
+   추가해야 로그인이 허용됩니다(가족 몇 명뿐이라면 이 상태로 충분).
+3. **APIs & Services → Credentials → Create Credentials → OAuth client ID**: Application type
+   **Web application** 선택 → **Authorized redirect URIs**에
+   `https://<Supabase 프로젝트ref>.supabase.co/auth/v1/callback` 추가 → 생성 후 **Client ID/Secret** 확인
+4. Supabase 대시보드 **Authentication → Providers → Google**에서 활성화하고 위 Client ID/Secret 입력
+
+### 네이버 로그인
+
+네이버는 Supabase가 기본 지원하지 않아서, `supabase/functions/naver-auth` Edge Function이
+네이버 OAuth 코드 교환부터 로그인 세션 발급까지 대신 처리하도록 만들어져 있습니다.
+
+1. [네이버 개발자센터](https://developers.naver.com) → Application → 애플리케이션 등록
+   → 사용 API에서 **네이버 로그인** 선택 → 제공 정보 선택에서 **이메일**을 필수(또는 선택)로 체크
+   → **로그인 오픈 API 서비스 환경**에 PC/모바일 웹 등록하고, **Callback URL**에
+   `https://<Supabase 프로젝트ref>.supabase.co/functions/v1/naver-auth` 입력
+   → **Client ID / Client Secret** 발급받기
+2. 저장소 루트에서 Edge Function 배포 (JWT 검증은 `supabase/config.toml`에서 이미 꺼둠):
+   ```bash
+   supabase functions deploy naver-auth
+   supabase secrets set NAVER_CLIENT_ID=발급받은값 NAVER_CLIENT_SECRET=발급받은값
+   ```
+3. 프론트엔드 쪽에도 Client ID(비밀 아님)를 알려줘야 합니다:
+   - **로컬 개발용**: `client/.env`에 `VITE_NAVER_CLIENT_ID=발급받은값` 추가
+   - **GitHub Pages 배포용**: 저장소 `Settings → Secrets and variables → Actions`에
+     `VITE_NAVER_CLIENT_ID` 리포지토리 시크릿 등록
+
+이 값들을 안 채워두면 "네이버로 로그인" 버튼을 눌렀을 때 설정이 안 됐다는 안내만 뜨고,
+나머지 로그인 방식(이메일, 구글)에는 영향이 없습니다.
+
 ## 처음 한 번만: GitHub Pages 켜기
 
 저장소 `Settings → Pages → Build and deployment → Source`를 **GitHub Actions**로 설정하면,
@@ -103,8 +145,9 @@ npm run dev
 
 ## 주요 기능
 
-- **로그인 + 가족 그룹**: 이메일 매직 링크로 로그인하고, 가족 그룹을 만들거나 초대 코드로
-  참여합니다. 같은 가족 그룹에 속한 사람들끼리만 서로의 기프티콘을 보고 관리할 수 있습니다.
+- **로그인 + 가족 그룹**: 이메일 매직 링크, 구글, 네이버로 로그인하고(카카오는 비즈니스 인증
+  전이라 버튼만 있고 비활성화), 가족 그룹을 만들거나 초대 코드로 참여합니다. 같은 가족
+  그룹에 속한 사람들끼리만 서로의 기프티콘을 보고 관리할 수 있습니다.
 - **이미지 업로드(여러 장 가능) + 자동 인식**: 갤러리에서 기프티콘 이미지를 한 장 이상 선택하면
   브라우저에서 `@zxing/browser`로 바코드/QR 값을 읽고, `tesseract.js`(OCR)로 텍스트를 읽어
   카테고리·브랜드·이름·금액·유효기한을 추정해 폼에 미리 채워줍니다. 업체마다 기프티콘 디자인이
