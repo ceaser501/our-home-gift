@@ -9,7 +9,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 
 const emptyForm = {
@@ -281,6 +280,31 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
               </Select>
             </div>
 
+            <div className="col-span-2 flex flex-col gap-1.5">
+              <Label htmlFor="f-amount">금액(원)</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="f-amount"
+                  type="number"
+                  inputMode="numeric"
+                  value={form.amount}
+                  onChange={(e) => {
+                    updateField('amount', e.target.value);
+                    setPriceSearchNote('');
+                  }}
+                  placeholder="예: 5000"
+                  className="flex-1"
+                />
+                {!form.amount && form.name.trim() && (
+                  <Button type="button" variant="outline" size="sm" onClick={handleSearchPrice} disabled={searchingPrice}>
+                    <Search className="size-3.5" />
+                    {searchingPrice ? '검색 중…' : '가격 검색'}
+                  </Button>
+                )}
+              </div>
+              {priceSearchNote && <p className="text-xs text-muted-foreground">{priceSearchNote}</p>}
+            </div>
+
             <div className="flex flex-col gap-1.5">
               <Label>받은 사람</Label>
               <Select value={form.owner} onValueChange={(v) => updateField('owner', v)}>
@@ -298,37 +322,6 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="f-amount">금액(원)</Label>
-              <Input
-                id="f-amount"
-                type="number"
-                inputMode="numeric"
-                value={form.amount}
-                onChange={(e) => {
-                  updateField('amount', e.target.value);
-                  setPriceSearchNote('');
-                }}
-                placeholder="예: 5000"
-              />
-              {!form.amount && form.name.trim() && (
-                <Popover open={Boolean(priceSearchNote)} onOpenChange={(open) => !open && setPriceSearchNote('')}>
-                  <PopoverAnchor asChild>
-                    <Button type="button" variant="outline" size="sm" onClick={handleSearchPrice} disabled={searchingPrice}>
-                      <Search className="size-3.5" />
-                      {searchingPrice ? '검색 중…' : '가격 검색'}
-                    </Button>
-                  </PopoverAnchor>
-                  <PopoverContent>{priceSearchNote}</PopoverContent>
-                </Popover>
-              )}
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="f-expires">유효기한</Label>
-              <Input id="f-expires" type="date" value={form.expires_at} onChange={(e) => updateField('expires_at', e.target.value)} />
-            </div>
-
-            <div className="flex flex-col gap-1.5">
               <Label htmlFor="f-code">바코드/QR 값</Label>
               <Input
                 id="f-code"
@@ -336,6 +329,11 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
                 onChange={(e) => updateField('code', e.target.value)}
                 placeholder="자동 인식 또는 직접 입력"
               />
+            </div>
+
+            <div className="col-span-2 flex flex-col gap-1.5">
+              <Label htmlFor="f-expires">유효기한</Label>
+              <Input id="f-expires" type="date" value={form.expires_at} onChange={(e) => updateField('expires_at', e.target.value)} />
             </div>
 
             <div className="col-span-2 flex flex-col gap-1.5">
