@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
 import JsBarcode from 'jsbarcode';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 
 const ZXING_TO_JSBARCODE = {
   CODE_128: 'CODE128',
@@ -14,15 +15,14 @@ const ZXING_TO_JSBARCODE = {
 };
 
 export default function BarcodeModal({ gifticon, onClose }) {
-  const canvasRef = useRef(null);
+  const [canvas, setCanvas] = useState(null);
   const [renderError, setRenderError] = useState(false);
 
   useEffect(() => {
     setRenderError(false);
     if (gifticon?.barcode_image_url) return;
-    if (!gifticon?.code || !canvasRef.current) return;
+    if (!gifticon?.code || !canvas) return;
 
-    const canvas = canvasRef.current;
     const format = gifticon.code_type;
 
     if (format === 'QR_CODE') {
@@ -42,52 +42,49 @@ export default function BarcodeModal({ gifticon, onClose }) {
     } else {
       setRenderError(true);
     }
-  }, [gifticon]);
+  }, [gifticon, canvas]);
 
   if (!gifticon) return null;
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-sheet barcode-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-sheet__header">
-          <h2>{gifticon.brand || gifticon.name}</h2>
-          <button type="button" className="modal-close" onClick={onClose} aria-label="닫기">
-            ✕
-          </button>
-        </div>
+    <Sheet open onOpenChange={(open) => !open && onClose()}>
+      <SheetContent className="gap-0 pb-[max(24px,env(safe-area-inset-bottom))]">
+        <SheetHeader className="pb-2">
+          <SheetTitle>{gifticon.brand || gifticon.name}</SheetTitle>
+        </SheetHeader>
 
-        <div className="barcode-modal__body">
-          <dl className="barcode-modal__info">
-            <div>
-              <dt>상호</dt>
-              <dd>{gifticon.brand || '-'}</dd>
+        <div className="flex flex-col items-center gap-2.5 px-5 pt-2">
+          <dl className="flex w-full flex-col gap-1.5">
+            <div className="flex gap-2.5 text-sm">
+              <dt className="w-11 shrink-0 text-muted-foreground">상호</dt>
+              <dd className="m-0 font-semibold">{gifticon.brand || '-'}</dd>
             </div>
-            <div>
-              <dt>메뉴</dt>
-              <dd>{gifticon.name}</dd>
+            <div className="flex gap-2.5 text-sm">
+              <dt className="w-11 shrink-0 text-muted-foreground">메뉴</dt>
+              <dd className="m-0 font-semibold">{gifticon.name}</dd>
             </div>
           </dl>
 
           {gifticon.barcode_image_url ? (
             <img
-              className="barcode-modal__crop"
+              className="w-full rounded-xl bg-white"
               src={gifticon.barcode_image_url}
               alt={`${gifticon.brand || gifticon.name} 바코드`}
             />
           ) : (
-            gifticon.code && !renderError && <canvas ref={canvasRef} className="barcode-modal__canvas" />
+            gifticon.code && !renderError && <canvas ref={setCanvas} className="max-w-full" />
           )}
 
           {gifticon.code ? (
-            <p className="barcode-modal__code">
+            <p className="text-center font-mono text-sm tracking-wide break-all text-muted-foreground">
               바코드정보: {gifticon.code}
               {renderError && ' (이미지로 표시할 수 없어 매장에서 이 번호를 직접 입력해주세요)'}
             </p>
           ) : (
-            <p className="hint">등록된 바코드/QR 정보가 없어요. 수정에서 직접 입력할 수 있어요.</p>
+            <p className="text-xs text-muted-foreground">등록된 바코드/QR 정보가 없어요. 수정에서 직접 입력할 수 있어요.</p>
           )}
         </div>
-      </div>
-    </div>
+      </SheetContent>
+    </Sheet>
   );
 }

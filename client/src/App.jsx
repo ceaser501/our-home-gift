@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { Plus } from 'lucide-react';
 import Header from './components/Header';
 import FilterBar from './components/FilterBar';
 import GifticonList from './components/GifticonList';
@@ -87,7 +88,7 @@ export default function App() {
   }
 
   return (
-    <div className="app-shell">
+    <div className="relative mx-auto flex min-h-dvh w-full max-w-[480px] flex-col overflow-x-hidden bg-background pb-22">
       <Header />
 
       <FilterBar
@@ -99,9 +100,9 @@ export default function App() {
         onStatusTabChange={setStatusTab}
       />
 
-      <main className="app-main">
-        {loading && <p className="status-text">불러오는 중…</p>}
-        {!loading && error && <p className="status-text status-text--error">{error}</p>}
+      <main className="flex-1 px-5 pb-5">
+        {loading && <p className="py-10 text-center text-muted-foreground">불러오는 중…</p>}
+        {!loading && error && <p className="py-10 text-center text-destructive">{error}</p>}
         {!loading && !error && (
           <GifticonList
             gifticons={gifticons}
@@ -115,11 +116,12 @@ export default function App() {
 
       <button
         type="button"
-        className="fab"
         onClick={() => setSheetState({ mode: 'create', initial: null })}
         aria-label="기프티콘 추가"
+        style={{ right: 'max(20px, calc((100vw - 480px) / 2 + 20px))' }}
+        className="fixed bottom-[max(24px,env(safe-area-inset-bottom))] z-20 flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/40"
       >
-        +
+        <Plus className="size-7" />
       </button>
 
       {sheetState && (

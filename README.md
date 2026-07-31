@@ -10,6 +10,10 @@ client/     React(Vite) 프론트엔드 — GitHub Pages로 배포되는 정적 
 supabase/   Supabase(DB + 이미지 스토리지) 초기 설정 SQL
 ```
 
+스타일은 Tailwind CSS + [shadcn/ui](https://ui.shadcn.com)로 되어 있습니다. shadcn 컴포넌트는
+`client/src/components/ui/`에 소스 그대로 들어있어서 자유롭게 고칠 수 있고, 필요하면
+`npx shadcn@latest add <컴포넌트>`로 더 추가할 수 있습니다.
+
 백엔드 서버 없이, 프론트엔드가 [Supabase](https://supabase.com)를 직접 호출해서 기프티콘
 데이터와 이미지를 저장합니다. 나와 와이프가 같은 사이트 링크에 접속하면 같은 Supabase
 프로젝트를 보게 되므로 목록이 자동으로 공유됩니다.

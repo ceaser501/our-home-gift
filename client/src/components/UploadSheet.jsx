@@ -1,7 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
+import { Plus, X } from 'lucide-react';
 import { CATEGORIES, OWNERS } from '../constants';
 import { analyzeImages } from '../utils/imageAnalyze';
 import { createGifticon, updateGifticon } from '../api';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { cn } from '@/lib/utils';
 
 const emptyForm = {
   name: '',
@@ -153,120 +161,138 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
   ];
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-sheet" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-sheet__header">
-          <h2>{mode === 'create' ? '기프티콘 추가' : '기프티콘 수정'}</h2>
-          <button type="button" className="modal-close" onClick={onClose} aria-label="닫기">
-            ✕
-          </button>
-        </div>
+    <Sheet open onOpenChange={(open) => !open && onClose()}>
+      <SheetContent className="max-h-[92dvh] gap-0 overflow-y-auto pb-[max(20px,env(safe-area-inset-bottom))]">
+        <SheetHeader className="pb-3">
+          <SheetTitle>{mode === 'create' ? '기프티콘 추가' : '기프티콘 수정'}</SheetTitle>
+        </SheetHeader>
 
-        <form className="upload-form" onSubmit={handleSubmit}>
-          <p className="hint">
+        <form className="flex flex-col gap-4 px-5" onSubmit={handleSubmit}>
+          <p className="text-xs text-muted-foreground">
             기프티콘 이미지를 여러 장 올릴 수 있어요 (예: 상품명 보이는 화면 + 금액·기한 보이는 화면). 각 이미지에서
             찾은 정보를 자동으로 합쳐서 채워드려요.
           </p>
 
-          <div className="image-grid">
+          <div className="grid grid-cols-3 gap-2">
             {thumbs.map((thumb) => (
-              <div className="image-grid__item" key={thumb.kind === 'existing' ? thumb.path : `new-${thumb.index}`}>
-                <img src={thumb.url} alt="기프티콘 이미지" />
+              <div
+                key={thumb.kind === 'existing' ? thumb.path : `new-${thumb.index}`}
+                className="relative aspect-square overflow-hidden rounded-xl bg-black"
+              >
+                <img src={thumb.url} alt="기프티콘 이미지" className="h-full w-full object-cover" />
                 <button
                   type="button"
-                  className="image-grid__remove"
                   onClick={() => (thumb.kind === 'existing' ? removeExisting(thumb.path) : removeNewFile(thumb.index))}
                   aria-label="이미지 삭제"
+                  className="absolute top-1 right-1 flex size-5.5 items-center justify-center rounded-full bg-black/60 text-white"
                 >
-                  ✕
+                  <X className="size-3" />
                 </button>
               </div>
             ))}
-            <button type="button" className="image-grid__add" onClick={() => fileInputRef.current?.click()}>
-              <span>＋</span>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="flex aspect-square flex-col items-center justify-center gap-0.5 rounded-xl border border-dashed border-border bg-background text-xs text-muted-foreground"
+            >
+              <Plus className="size-5" />
               <span>이미지 추가</span>
             </button>
           </div>
-          {analyzing && <p className="hint">이미지 분석 중…</p>}
+          {analyzing && <p className="text-xs text-muted-foreground">이미지 분석 중…</p>}
 
-          <input
-            id="gifticon-image"
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            multiple
-            onChange={handleFileChange}
-            hidden
-          />
+          <input id="gifticon-image" ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleFileChange} hidden />
 
-          {autoFilled && <p className="hint hint--success">자동으로 정보를 채웠어요. 확인 후 저장해주세요.</p>}
-          {error && <p className="hint hint--error">{error}</p>}
+          {autoFilled && <p className="text-xs text-success">자동으로 정보를 채웠어요. 확인 후 저장해주세요.</p>}
+          {error && <p className="text-xs text-destructive">{error}</p>}
 
-          <div className="form-grid">
-            <label className="field field--full">
-              <span>상품명 *</span>
-              <input value={form.name} onChange={(e) => updateField('name', e.target.value)} placeholder="예: 황올반+BBQ양념반+콜라1.25L" required />
-            </label>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="col-span-2 flex flex-col gap-1.5">
+              <Label htmlFor="f-name">상품명 *</Label>
+              <Input
+                id="f-name"
+                value={form.name}
+                onChange={(e) => updateField('name', e.target.value)}
+                placeholder="예: 황올반+BBQ양념반+콜라1.25L"
+                required
+              />
+            </div>
 
-            <label className="field">
-              <span>상호</span>
-              <input value={form.brand} onChange={(e) => updateField('brand', e.target.value)} placeholder="예: BBQ" />
-            </label>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="f-brand">상호</Label>
+              <Input id="f-brand" value={form.brand} onChange={(e) => updateField('brand', e.target.value)} placeholder="예: BBQ" />
+            </div>
 
-            <label className="field">
-              <span>카테고리</span>
-              <select value={form.category} onChange={(e) => updateField('category', e.target.value)}>
-                {CATEGORIES.map((c) => (
-                  <option key={c.key} value={c.key}>
-                    {c.label}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <div className="flex flex-col gap-1.5">
+              <Label>카테고리</Label>
+              <Select value={form.category} onValueChange={(v) => updateField('category', v)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CATEGORIES.map((c) => (
+                    <SelectItem key={c.key} value={c.key}>
+                      {c.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-            <label className="field">
-              <span>받은 사람</span>
-              <select value={form.owner} onChange={(e) => updateField('owner', e.target.value)}>
-                {OWNERS.map((o) => (
-                  <option key={o} value={o}>
-                    {o}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <div className="flex flex-col gap-1.5">
+              <Label>받은 사람</Label>
+              <Select value={form.owner} onValueChange={(v) => updateField('owner', v)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {OWNERS.map((o) => (
+                    <SelectItem key={o} value={o}>
+                      {o}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-            <label className="field">
-              <span>금액(원)</span>
-              <input
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="f-amount">금액(원)</Label>
+              <Input
+                id="f-amount"
                 type="number"
                 inputMode="numeric"
                 value={form.amount}
                 onChange={(e) => updateField('amount', e.target.value)}
                 placeholder="예: 5000"
               />
-            </label>
+            </div>
 
-            <label className="field">
-              <span>유효기한</span>
-              <input type="date" value={form.expires_at} onChange={(e) => updateField('expires_at', e.target.value)} />
-            </label>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="f-expires">유효기한</Label>
+              <Input id="f-expires" type="date" value={form.expires_at} onChange={(e) => updateField('expires_at', e.target.value)} />
+            </div>
 
-            <label className="field">
-              <span>바코드/QR 값</span>
-              <input value={form.code} onChange={(e) => updateField('code', e.target.value)} placeholder="자동 인식 또는 직접 입력" />
-            </label>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="f-code">바코드/QR 값</Label>
+              <Input
+                id="f-code"
+                value={form.code}
+                onChange={(e) => updateField('code', e.target.value)}
+                placeholder="자동 인식 또는 직접 입력"
+              />
+            </div>
 
-            <label className="field field--full">
-              <span>메모</span>
-              <textarea value={form.memo} onChange={(e) => updateField('memo', e.target.value)} rows={2} />
-            </label>
+            <div className="col-span-2 flex flex-col gap-1.5">
+              <Label htmlFor="f-memo">메모</Label>
+              <Textarea id="f-memo" value={form.memo} onChange={(e) => updateField('memo', e.target.value)} rows={2} />
+            </div>
           </div>
 
-          <button type="submit" className="btn btn--primary btn--block" disabled={submitting || analyzing}>
+          <Button type="submit" size="lg" className={cn('w-full rounded-xl')} disabled={submitting || analyzing}>
             {submitting ? '저장 중…' : '저장하기'}
-          </button>
+          </Button>
         </form>
-      </div>
-    </div>
+      </SheetContent>
+    </Sheet>
   );
 }
