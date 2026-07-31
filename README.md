@@ -83,20 +83,27 @@ Supabase가 기본 지원하는 제공자라 어렵지 않습니다.
 네이버는 Supabase가 기본 지원하지 않아서, `supabase/functions/naver-auth` Edge Function이
 네이버 OAuth 코드 교환부터 로그인 세션 발급까지 대신 처리하도록 만들어져 있습니다.
 
+> ⚠️ **아래 "가격 검색 기능"과는 완전히 다른 네이버 애플리케이션을 새로 만들어야 합니다.**
+> 가격 검색은 "검색" API 앱, 로그인은 "네이버 로그인" API 앱으로 서로 다른 Client ID/Secret을
+> 씁니다. 시크릿 이름도 겹치지 않게 `NAVER_LOGIN_CLIENT_ID`/`NAVER_LOGIN_CLIENT_SECRET`로
+> 따로 등록하세요 — 가격 검색 쪽 `NAVER_CLIENT_ID`/`NAVER_CLIENT_SECRET`을 실수로 덮어쓰면
+> 가격 검색이 깨집니다.
+
 1. [네이버 개발자센터](https://developers.naver.com) → Application → 애플리케이션 등록
-   → 사용 API에서 **네이버 로그인** 선택 → 제공 정보 선택에서 **이메일**을 필수(또는 선택)로 체크
+   → 이름은 다르게 짓기(예: "아워홈 기프티콘 로그인") → 사용 API에서 **네이버 로그인** 선택
+   → 제공 정보 선택에서 **이메일**을 필수(또는 선택)로 체크
    → **로그인 오픈 API 서비스 환경**에 PC/모바일 웹 등록하고, **Callback URL**에
    `https://<Supabase 프로젝트ref>.supabase.co/functions/v1/naver-auth` 입력
    → **Client ID / Client Secret** 발급받기
 2. 저장소 루트에서 Edge Function 배포 (JWT 검증은 `supabase/config.toml`에서 이미 꺼둠):
    ```bash
    supabase functions deploy naver-auth
-   supabase secrets set NAVER_CLIENT_ID=발급받은값 NAVER_CLIENT_SECRET=발급받은값
+   supabase secrets set NAVER_LOGIN_CLIENT_ID=발급받은값 NAVER_LOGIN_CLIENT_SECRET=발급받은값
    ```
 3. 프론트엔드 쪽에도 Client ID(비밀 아님)를 알려줘야 합니다:
-   - **로컬 개발용**: `client/.env`에 `VITE_NAVER_CLIENT_ID=발급받은값` 추가
+   - **로컬 개발용**: `client/.env`에 `VITE_NAVER_LOGIN_CLIENT_ID=발급받은값` 추가
    - **GitHub Pages 배포용**: 저장소 `Settings → Secrets and variables → Actions`에
-     `VITE_NAVER_CLIENT_ID` 리포지토리 시크릿 등록
+     `VITE_NAVER_LOGIN_CLIENT_ID` 리포지토리 시크릿 등록
 
 이 값들을 안 채워두면 "네이버로 로그인" 버튼을 눌렀을 때 설정이 안 됐다는 안내만 뜨고,
 나머지 로그인 방식(이메일, 구글)에는 영향이 없습니다.
@@ -112,6 +119,10 @@ Supabase가 기본 지원하는 제공자라 어렵지 않습니다.
 금액이 안 찍혀 나오는 상품형 기프티콘(예: 카페 음료 1개)은 자동으로 가격을 못 채우는데,
 그럴 때 "가격 검색" 버튼을 누르면 네이버 쇼핑 검색으로 대략적인 가격을 찾아 채워줍니다.
 이 기능은 선택 사항이고, 안 켜도 나머지 기능은 그대로 동작합니다.
+
+> ⚠️ 아래 "네이버 로그인" 설정과는 다른 네이버 애플리케이션입니다. 로그인용 앱을 만들면서
+> 여기 쓰이는 `NAVER_CLIENT_ID`/`NAVER_CLIENT_SECRET`을 덮어쓰지 않도록, 로그인 쪽은
+> `NAVER_LOGIN_CLIENT_ID`/`NAVER_LOGIN_CLIENT_SECRET`라는 다른 이름을 씁니다.
 
 1. [네이버 개발자센터](https://developers.naver.com) → Application → 애플리케이션 등록
    → 사용 API에서 **검색** 선택 → 웹 서비스 URL에 배포 주소 입력 후 등록

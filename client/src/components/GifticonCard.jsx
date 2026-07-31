@@ -18,7 +18,7 @@ const DDAY_CLASS = {
   expired: 'bg-muted text-muted-foreground',
 };
 
-export default function GifticonCard({ gifticon, onViewCode, onToggleUsed, onEdit, onDelete }) {
+export default function GifticonCard({ gifticon, onViewCode, onViewImage, onToggleUsed, onEdit, onDelete }) {
   const { members } = useFamily();
   const isUsed = gifticon.status === 'used';
   const urgency = isUsed ? 'none' : ddayUrgency(gifticon.expires_at);
@@ -37,8 +37,8 @@ export default function GifticonCard({ gifticon, onViewCode, onToggleUsed, onEdi
         <button
           type="button"
           className="relative h-19 w-19 overflow-hidden rounded-xl bg-accent"
-          onClick={() => onViewCode(gifticon)}
-          aria-label="바코드/QR 보기"
+          onClick={() => onViewImage(gifticon)}
+          aria-label="업로드한 이미지 보기"
         >
           {gifticon.image_url ? (
             <img src={gifticon.image_url} alt={gifticon.name} className="h-full w-full object-cover" />

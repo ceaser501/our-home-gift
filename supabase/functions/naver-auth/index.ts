@@ -37,8 +37,10 @@ Deno.serve(async (req) => {
     return redirectWithError(redirectTo, '네이버 로그인 요청이 올바르지 않아요.');
   }
 
-  const clientId = Deno.env.get('NAVER_CLIENT_ID');
-  const clientSecret = Deno.env.get('NAVER_CLIENT_SECRET');
+  // 가격검색(search-price) 함수가 쓰는 네이버 "검색 API" 앱과는 완전히 다른 앱이라서
+  // NAVER_CLIENT_ID/NAVER_CLIENT_SECRET과 겹치지 않게 별도 이름을 쓴다.
+  const clientId = Deno.env.get('NAVER_LOGIN_CLIENT_ID');
+  const clientSecret = Deno.env.get('NAVER_LOGIN_CLIENT_SECRET');
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 

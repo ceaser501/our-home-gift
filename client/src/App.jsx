@@ -5,6 +5,7 @@ import FilterBar from './components/FilterBar';
 import GifticonList from './components/GifticonList';
 import UploadSheet from './components/UploadSheet';
 import BarcodeModal from './components/BarcodeModal';
+import ImageViewerModal from './components/ImageViewerModal';
 import { listGifticons, updateGifticon, deleteGifticon } from './api';
 import { daysUntil, todayStr } from './utils/date';
 import { useFamily } from './FamilyContext';
@@ -43,6 +44,7 @@ export default function App() {
 
   const [sheetState, setSheetState] = useState(null); // { mode, initial }
   const [codeTarget, setCodeTarget] = useState(null);
+  const [imageTarget, setImageTarget] = useState(null);
 
   const fetchList = useCallback(async () => {
     setLoading(true);
@@ -109,6 +111,7 @@ export default function App() {
           <GifticonList
             gifticons={gifticons}
             onViewCode={setCodeTarget}
+            onViewImage={setImageTarget}
             onToggleUsed={handleToggleUsed}
             onEdit={(g) => setSheetState({ mode: 'edit', initial: g })}
             onDelete={handleDelete}
@@ -136,6 +139,7 @@ export default function App() {
       )}
 
       {codeTarget && <BarcodeModal gifticon={codeTarget} onClose={() => setCodeTarget(null)} />}
+      {imageTarget && <ImageViewerModal gifticon={imageTarget} onClose={() => setImageTarget(null)} />}
     </div>
   );
 }
