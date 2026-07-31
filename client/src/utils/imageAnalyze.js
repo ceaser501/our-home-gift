@@ -104,6 +104,18 @@ async function runOcr(imageUrl) {
   }
 }
 
+// 카카오톡 선물하기의 "저장" 이미지처럼 zxing이 바코드 막대를 못 읽는 경우를 대비한
+// 보조 수단. 바코드 밑에 인쇄된 숫자는 보통 4자리씩 띄어서 찍혀 있어서
+// (예: "9350 6503 1487 8741"), 그 특징적인 모양만 매칭해 오탐(주문번호, 전화번호 등)을 피한다.
+const BARCODE_NUMBER_RE = /(\d{3,4}[\s-]\d{3,4}[\s-]\d{3,4}[\s-]\d{2,4})(?!\d)/;
+
+function extractBarcodeNumber(text) {
+  const match = text.match(BARCODE_NUMBER_RE);
+  if (!match) return null;
+  const digits = match[1].replace(/[\s-]/g, '');
+  return digits.length >= 10 ? digits : null;
+}
+
 const AMOUNT_WON_RE = /([0-9]{1,3}(?:,[0-9]{3})+|[0-9]{4,7})\s*원/;
 const AMOUNT_MAN_RE = /([0-9]{1,3})\s*만\s*원/;
 
@@ -207,6 +219,8 @@ const NAME_NOISE_KEYWORDS = [
   '같이쓰기',
   '고객센터',
   '사용정보',
+  '카카오톡',
+  '선물하기',
 ];
 
 function isNoiseLine(line) {
@@ -214,28 +228,56 @@ function isNoiseLine(line) {
   return NAME_NOISE_KEYWORDS.some((kw) => norm.includes(kw.replace(/\s+/g, '').toLowerCase()));
 }
 
-// 기프티콘 화면은 보통 상호(브랜드)를 작게, 상품명을 그 아래 크게 표시한다.
-// brand와 완전히 같은 줄(상호 라벨 자체)은 상품명 후보에서 제외하고, brand를
-// 포함하면서 더 긴 줄(예: "황올반+BBQ양념반")을 상품명으로 우선 채택한다.
+// 상품명 후보를 훑다가 이 라벨들이 나오면 거기서부터는 더 이상 상품명이 아니라
+// "교환처: OO", "유효기간: OO" 같은 안내 항목이 시작된 것으로 보고 멈춘다.
+const NAME_STOP_WORDS = [...ALL_LABELS, '주문번호', '결제', '구매처', '사용방법'].map((w) => w.toLowerCase().replace(/\s+/g, ''));
+
+function isStopLine(line) {
+  const norm = line.toLowerCase().replace(/\s+/g, '');
+  return NAME_STOP_WORDS.some((w) => norm.includes(w));
+}
+
+// 상호 이름 자체(또는 "투썸플레이스"처럼 상호+가맹점 접미어 정도)만 있는 줄인지 확인한다.
+// 이런 줄은 상품명이 아니라 "브랜드를 표시하는 줄"이므로 상품명 후보에서 건너뛴다.
+function isBrandOnlyLine(line, brandNorm) {
+  if (!brandNorm) return false;
+  const norm = line.toLowerCase().replace(/\s+/g, '');
+  if (!norm.includes(brandNorm)) return false;
+  return norm.replace(brandNorm, '').length <= 6;
+}
+
+// 기프티콘 화면은 보통 상호(브랜드)를 작게, 상품명을 그 아래 크게 표시한다(카카오톡
+// 선물하기 저장 이미지는 상품명이 두 줄로 줄바꿈되기도 한다). 상호만 있는 줄은
+// 건너뛰고, 그다음에 이어지는 실제 상품명 줄(들)을 상품명으로 합쳐서 쓴다.
 function guessName(text, brand) {
   const lines = text
     .split('\n')
     .map((l) => l.trim())
-    .filter((l) => l.length >= 2 && l.length <= 30 && !/^[0-9.\-/\s]+$/.test(l) && !isNoiseLine(l));
+    .filter((l) => l.length >= 2 && l.length <= 40 && !/^[0-9.\-/\s]+$/.test(l) && !isNoiseLine(l));
 
   if (lines.length === 0) return brand || '';
-  if (!brand) return lines[0];
+  if (!brand) return lines.find((l) => !isStopLine(l)) || lines[0];
 
   const brandNorm = brand.toLowerCase().replace(/\s+/g, '');
-  const candidates = lines.filter((l) => l.toLowerCase().replace(/\s+/g, '') !== brandNorm);
 
-  const withBrand = candidates.find((l) => l.toLowerCase().replace(/\s+/g, '').includes(brandNorm));
+  const brandLineIndex = lines.findIndex((l) => isBrandOnlyLine(l, brandNorm));
+  if (brandLineIndex !== -1) {
+    const nameParts = [];
+    for (let i = brandLineIndex + 1; i < lines.length; i++) {
+      const line = lines[i];
+      if (isStopLine(line) || (isBrandOnlyLine(line, brandNorm) && nameParts.length > 0)) break;
+      nameParts.push(line);
+      if (nameParts.length >= 2) break;
+    }
+    if (nameParts.length > 0) return nameParts.join(' ');
+  }
+
+  // 상호만 있는 별도 줄을 못 찾았다면, 상품명 자체에 브랜드가 포함된 경우다
+  // (예: "황올반+BBQ양념반+콜라1.25L").
+  const withBrand = lines.find((l) => !isStopLine(l) && l.toLowerCase().replace(/\s+/g, '') !== brandNorm && l.toLowerCase().replace(/\s+/g, '').includes(brandNorm));
   if (withBrand) return withBrand;
 
-  const brandLineIndex = lines.findIndex((l) => l.toLowerCase().replace(/\s+/g, '') === brandNorm);
-  if (brandLineIndex !== -1 && lines[brandLineIndex + 1]) return lines[brandLineIndex + 1];
-
-  return candidates[0] || brand;
+  return lines.find((l) => !isStopLine(l) && l.toLowerCase().replace(/\s+/g, '') !== brandNorm) || brand;
 }
 
 export async function analyzeImage(file) {
@@ -253,9 +295,23 @@ export async function analyzeImage(file) {
     const expiresAt = extractExpiry(text);
     const name = extractLabeledField(text, ['상품명']) || guessName(text, brand);
 
+    // zxing이 바코드 막대 자체를 못 읽었을 때(카카오톡 선물하기 저장 이미지 등에서
+    // 종종 발생), 바코드 아래 인쇄된 숫자를 OCR 텍스트에서 대신 뽑아 쓴다.
+    // 이 경우 원본에서 잘라낸 크롭 이미지는 없으니 바코드/QR을 새로 그려서 보여줘야 하고,
+    // 국내 기프티콘은 이 형식 번호가 거의 CODE_128이라 그걸 기본값으로 둔다.
+    let code = barcodeResult.code;
+    let codeType = barcodeResult.codeType;
+    if (!code) {
+      const ocrCode = extractBarcodeNumber(text);
+      if (ocrCode) {
+        code = ocrCode;
+        codeType = 'CODE_128';
+      }
+    }
+
     return {
-      code: barcodeResult.code,
-      codeType: barcodeResult.codeType,
+      code,
+      codeType,
       barcodeCropBlob: barcodeResult.cropBlob,
       category,
       brand,

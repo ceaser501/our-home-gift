@@ -50,6 +50,17 @@ export async function listGifticons(params = {}) {
   return data.map(withImageUrls);
 }
 
+// 같은 바코드/QR 값을 가진 기프티콘이 이미 등록돼 있는지 확인한다(중복 등록 방지 안내용).
+export async function findGifticonByCode(familyId, code, excludeId) {
+  if (!code) return null;
+  let query = supabase.from(GIFTICON_TABLE).select('id, name').eq('family_id', familyId).eq('code', code).limit(1);
+  if (excludeId) query = query.neq('id', excludeId);
+
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+  return data?.[0] || null;
+}
+
 export async function createGifticon(familyId, fields, files = [], barcodeCropFile = null) {
   const image_paths = files.length ? await uploadImages(familyId, files) : [];
 
