@@ -12,6 +12,15 @@ export async function sendMagicLink(email) {
   }
 }
 
+export async function signInWithKakao() {
+  const redirectTo = `${window.location.origin}${import.meta.env.BASE_URL}`;
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: 'kakao',
+    options: { redirectTo },
+  });
+  if (error) throw new Error(error.message || '카카오 로그인에 실패했어요.');
+}
+
 export async function signOut() {
   const { error } = await supabase.auth.signOut();
   if (error) throw new Error(error.message);
