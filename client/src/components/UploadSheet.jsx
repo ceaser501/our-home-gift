@@ -282,7 +282,7 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
 
             <div className="col-span-2 flex flex-col gap-1.5">
               <Label htmlFor="f-amount">금액(원)</Label>
-              <div className="flex gap-2">
+              <div className="flex items-center gap-2">
                 <Input
                   id="f-amount"
                   type="number"
@@ -293,16 +293,18 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
                     setPriceSearchNote('');
                   }}
                   placeholder="예: 5000"
-                  className="flex-1"
+                  className="min-w-20 flex-1"
                 />
                 {!form.amount && form.name.trim() && (
-                  <Button type="button" variant="outline" size="sm" onClick={handleSearchPrice} disabled={searchingPrice}>
+                  <Button type="button" variant="outline" size="sm" onClick={handleSearchPrice} disabled={searchingPrice} className="shrink-0">
                     <Search className="size-3.5" />
                     {searchingPrice ? '검색 중…' : '가격 검색'}
                   </Button>
                 )}
+                {priceSearchNote && (
+                  <p className="max-w-[45%] shrink-0 text-xs text-muted-foreground">{priceSearchNote}</p>
+                )}
               </div>
-              {priceSearchNote && <p className="text-xs text-muted-foreground">{priceSearchNote}</p>}
             </div>
 
             <div className="flex flex-col gap-1.5">
