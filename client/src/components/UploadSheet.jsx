@@ -293,7 +293,7 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
                     setPriceSearchNote('');
                   }}
                   placeholder="예: 5000"
-                  className="w-24 min-w-0 shrink-0"
+                  className="min-w-20 flex-1"
                 />
                 {!form.amount && form.name.trim() && (
                   <Button type="button" variant="outline" size="sm" onClick={handleSearchPrice} disabled={searchingPrice} className="shrink-0">
@@ -301,10 +301,8 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
                     {searchingPrice ? '검색 중…' : '가격 검색'}
                   </Button>
                 )}
-                {priceSearchNote && (
-                  <p className="min-w-0 flex-1 text-xs text-muted-foreground">{priceSearchNote}</p>
-                )}
               </div>
+              {priceSearchNote && <p className="text-xs text-muted-foreground">{priceSearchNote}</p>}
             </div>
 
             <div className="flex flex-col gap-1.5">
