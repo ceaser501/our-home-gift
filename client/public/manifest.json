@@ -1,0 +1,14 @@
+{
+  "name": "아워홈 기프티콘",
+  "short_name": "아워홈 기프티콘",
+  "description": "가족과 기프티콘을 함께 관리하는 사이트",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#5B4FE8",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
