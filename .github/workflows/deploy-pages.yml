@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - claude/gifticon-management-app-7ft5l9
   workflow_dispatch:
 
 permissions:

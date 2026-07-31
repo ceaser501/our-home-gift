@@ -32,9 +32,8 @@ supabase/   Supabase(DB + 이미지 스토리지) 초기 설정 SQL
 ## 처음 한 번만: GitHub Pages 켜기
 
 저장소 `Settings → Pages → Build and deployment → Source`를 **GitHub Actions**로 설정하면,
-이후로는 `main` 또는 `claude/gifticon-management-app-7ft5l9` 브랜치에 푸시할 때마다
-`.github/workflows/deploy-pages.yml`이 자동으로 빌드해서 배포합니다.
-배포된 주소는 `https://ceaser501.github.io/our-home-gift/` 입니다.
+이후로는 `main` 브랜치에 푸시할 때마다 `.github/workflows/deploy-pages.yml`이 자동으로
+빌드해서 배포합니다. 배포된 주소는 `https://ceaser501.github.io/our-home-gift/` 입니다.
 
 ## 처음 한 번만: 가격 검색 기능(선택) 켜기
 
