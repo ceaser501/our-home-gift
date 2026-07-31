@@ -25,9 +25,8 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: '상품명이 필요해요.' }), { status: 400, headers: jsonHeaders });
     }
 
-    // 네이버 로그인이 쓰는 앱(NAVER_CLIENT_ID/SECRET)과는 다른, 검색 전용 앱의 키.
-    const clientId = Deno.env.get('NAVER_SEARCH_CLIENT_ID');
-    const clientSecret = Deno.env.get('NAVER_SEARCH_CLIENT_SECRET');
+    const clientId = Deno.env.get('NAVER_CLIENT_ID');
+    const clientSecret = Deno.env.get('NAVER_CLIENT_SECRET');
     if (!clientId || !clientSecret) {
       return new Response(JSON.stringify({ error: '네이버 API 키가 설정되지 않았어요.' }), {
         status: 500,
