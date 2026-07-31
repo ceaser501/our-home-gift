@@ -49,31 +49,33 @@ export default function BarcodeModal({ gifticon, onClose }) {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-sheet barcode-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-sheet__header">
-          <h2>{gifticon.name}</h2>
+          <h2>{gifticon.brand || gifticon.name}</h2>
           <button type="button" className="modal-close" onClick={onClose} aria-label="닫기">
             ✕
           </button>
         </div>
 
         <div className="barcode-modal__body">
+          <dl className="barcode-modal__info">
+            <div>
+              <dt>상호</dt>
+              <dd>{gifticon.brand || '-'}</dd>
+            </div>
+            <div>
+              <dt>메뉴</dt>
+              <dd>{gifticon.name}</dd>
+            </div>
+          </dl>
+
+          {gifticon.code && !renderError && <canvas ref={canvasRef} className="barcode-modal__canvas" />}
+
           {gifticon.code ? (
-            <canvas ref={canvasRef} className={`barcode-modal__canvas ${renderError ? 'hidden' : ''}`} />
-          ) : null}
-
-          {(!gifticon.code || renderError) &&
-            gifticon.image_urls?.map((url) => <img key={url} className="barcode-modal__image" src={url} alt={gifticon.name} />)}
-
-          {gifticon.code && <p className="barcode-modal__code">{gifticon.code}</p>}
-
-          {!gifticon.code && !gifticon.image_urls?.length && <p>등록된 바코드/QR 정보가 없어요.</p>}
-
-          {gifticon.image_urls?.length > 0 && gifticon.code && !renderError && (
-            <details className="barcode-modal__original">
-              <summary>원본 이미지 보기 ({gifticon.image_urls.length}장)</summary>
-              {gifticon.image_urls.map((url) => (
-                <img key={url} src={url} alt={gifticon.name} />
-              ))}
-            </details>
+            <p className="barcode-modal__code">
+              바코드정보: {gifticon.code}
+              {renderError && ' (이미지로 표시할 수 없어 매장에서 이 번호를 직접 입력해주세요)'}
+            </p>
+          ) : (
+            <p className="hint">등록된 바코드/QR 정보가 없어요. 수정에서 직접 입력할 수 있어요.</p>
           )}
         </div>
       </div>

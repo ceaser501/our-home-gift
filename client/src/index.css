@@ -552,21 +552,33 @@ textarea {
   padding: 10px 0 4px;
 }
 
+.barcode-modal__info {
+  width: 100%;
+  margin: 0 0 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.barcode-modal__info > div {
+  display: flex;
+  gap: 10px;
+  font-size: 14px;
+}
+
+.barcode-modal__info dt {
+  flex: none;
+  width: 44px;
+  color: var(--text-muted);
+}
+
+.barcode-modal__info dd {
+  margin: 0;
+  font-weight: 600;
+}
+
 .barcode-modal__canvas {
   max-width: 100%;
-}
-
-.barcode-modal__canvas.hidden {
-  display: none;
-}
-
-.barcode-modal__image {
-  width: 100%;
-  border-radius: 12px;
-}
-
-.barcode-modal__image + .barcode-modal__image {
-  margin-top: 8px;
 }
 
 .barcode-modal__code {
@@ -576,26 +588,6 @@ textarea {
   color: var(--text-muted);
   word-break: break-all;
   text-align: center;
-}
-
-.barcode-modal__original {
-  width: 100%;
-}
-
-.barcode-modal__original summary {
-  cursor: pointer;
-  font-size: 13px;
-  color: var(--text-muted);
-  margin-bottom: 8px;
-}
-
-.barcode-modal__original img {
-  width: 100%;
-  border-radius: 12px;
-}
-
-.barcode-modal__original img + img {
-  margin-top: 8px;
 }
 
 @media (prefers-color-scheme: dark) {

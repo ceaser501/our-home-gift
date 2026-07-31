@@ -45,8 +45,30 @@ async function runOcr(imageUrl) {
 
 const AMOUNT_WON_RE = /([0-9]{1,3}(?:,[0-9]{3})+|[0-9]{4,7})\s*원/;
 const AMOUNT_MAN_RE = /([0-9]{1,3})\s*만\s*원/;
-const DATE_RE = /(20[0-9]{2})[.\-/](0?[1-9]|1[0-2])[.\-/](0?[1-9]|[12][0-9]|3[01])/;
-const DATE_SHORT_RE = /(?<!\d)([0-9]{2})[.\-/](0?[1-9]|1[0-2])[.\-/](0?[1-9]|[12][0-9]|3[01])(?!\d)/;
+
+const DATE_DOT_RE = /(20[0-9]{2})[.\-/](0?[1-9]|1[0-2])[.\-/](0?[1-9]|[12][0-9]|3[01])(?!\d)/g;
+const DATE_KOREAN_RE = /(20[0-9]{2})년\s*(0?[1-9]|1[0-2])월\s*(0?[1-9]|[12][0-9]|3[01])일/g;
+const DATE_SHORT_RE = /(?<!\d)([0-9]{2})[.\-/](0?[1-9]|1[0-2])[.\-/](0?[1-9]|[12][0-9]|3[01])(?!\d)/g;
+
+const EXPIRY_KEYWORDS = ['유효기간', '유효기한', '사용기한', '만료일', '까지', '기한'];
+
+function pad2(n) {
+  return String(n).padStart(2, '0');
+}
+
+function findAllDates(text) {
+  const dates = [];
+  for (const m of text.matchAll(DATE_DOT_RE)) {
+    dates.push({ index: m.index, value: `${m[1]}-${pad2(m[2])}-${pad2(m[3])}` });
+  }
+  for (const m of text.matchAll(DATE_KOREAN_RE)) {
+    dates.push({ index: m.index, value: `${m[1]}-${pad2(m[2])}-${pad2(m[3])}` });
+  }
+  for (const m of text.matchAll(DATE_SHORT_RE)) {
+    dates.push({ index: m.index, value: `20${m[1]}-${pad2(m[2])}-${pad2(m[3])}` });
+  }
+  return dates;
+}
 
 function extractAmount(text) {
   const manMatch = text.match(AMOUNT_MAN_RE);
@@ -56,18 +78,19 @@ function extractAmount(text) {
   return null;
 }
 
+// 기프티콘 한 장에 발행일/유효기간처럼 날짜가 여러 개 찍혀 있는 경우가 많다.
+// "유효기간", "까지" 같은 단어 바로 옆에 있는 날짜를 우선하고, 그런 단서가
+// 없으면 가장 나중 날짜(발행일보다는 유효기간이 미래일 가능성이 높음)를 쓴다.
 function extractExpiry(text) {
-  const full = text.match(DATE_RE);
-  if (full) {
-    const [, y, m, d] = full;
-    return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  const dates = findAllDates(text);
+  if (dates.length === 0) return null;
+
+  for (const date of dates) {
+    const before = text.slice(Math.max(0, date.index - 12), date.index);
+    if (EXPIRY_KEYWORDS.some((kw) => before.includes(kw))) return date.value;
   }
-  const short = text.match(DATE_SHORT_RE);
-  if (short) {
-    const [, y, m, d] = short;
-    return `20${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-  }
-  return null;
+
+  return dates.reduce((latest, date) => (date.value > latest.value ? date : latest)).value;
 }
 
 function extractCategoryAndBrand(text) {
