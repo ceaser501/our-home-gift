@@ -94,10 +94,42 @@ function loadImage(src) {
   });
 }
 
+// 기프티콘 캡처는 화면 대비 글자가 작고 흐릿한 경우가 많아서, tesseract에 넘기기
+// 전에 확대 + 흑백/대비 강조를 해두면 인식률이 눈에 띄게 올라간다(예: "T"가
+// "ㅠ"로 잘못 읽히는 것 같은 작은 글자 오인식이 줄어든다).
+function preprocessForOcr(img) {
+  const MIN_WIDTH = 1400;
+  const scale = img.naturalWidth < MIN_WIDTH ? MIN_WIDTH / img.naturalWidth : 1;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(img.naturalWidth * scale);
+  canvas.height = Math.round(img.naturalHeight * scale);
+
+  const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const data = imageData.data;
+  for (let i = 0; i < data.length; i += 4) {
+    const gray = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+    const contrasted = Math.min(255, Math.max(0, (gray - 128) * 1.4 + 128));
+    data[i] = contrasted;
+    data[i + 1] = contrasted;
+    data[i + 2] = contrasted;
+  }
+  ctx.putImageData(imageData, 0, 0);
+
+  return canvas.toDataURL('image/png');
+}
+
 async function runOcr(imageUrl) {
   try {
     const worker = await getOcrWorker();
-    const { data } = await worker.recognize(imageUrl);
+    const img = await loadImage(imageUrl);
+    const processedUrl = preprocessForOcr(img);
+    const { data } = await worker.recognize(processedUrl);
     return data.text || '';
   } catch {
     return '';
@@ -160,7 +192,13 @@ function extractLabeledField(text, labels) {
   const pattern = new RegExp(`(?:${labels.join('|')})\\s*[:：]\\s*(.+)`);
   const match = text.match(pattern);
   if (!match) return null;
-  const value = match[1].trim();
+
+  let value = match[1].trim();
+  // OCR이 라벨 글자를 일부 잘못 읽어서 값 앞에 남기는 경우(예: "상호도 : 스타벅스")를
+  // 대비해, 같은 줄에 콜론이 더 있으면 마지막 콜론 뒤쪽만 값으로 쓴다.
+  if (value.includes(':') || value.includes('：')) {
+    value = value.split(/[:：]/).pop().trim();
+  }
   return value.length > 0 ? value : null;
 }
 
@@ -226,7 +264,11 @@ export async function analyzeImage(file) {
   try {
     const [barcodeResult, text] = await Promise.all([decodeBarcode(imageUrl), runOcr(imageUrl)]);
     const { category, brand: keywordBrand } = extractCategoryAndBrand(text);
-    const brand = extractLabeledField(text, ['교환처', '상호']) || keywordBrand;
+    // 알려진 브랜드(카테고리 키워드에 등록된 상호)는 항상 깨끗한 키워드 매칭값을
+    // 우선한다. "교환처/상호" 라벨 값은 OCR이 라벨 글자를 살짝 잘못 읽어도
+    // (예: "상호" → "상포도") 콜론 뒤 전체를 그대로 값으로 잡아버릴 수 있어서,
+    // 목록에 없는 상호일 때 보조로만 사용한다.
+    const brand = keywordBrand || extractLabeledField(text, ['교환처', '상호']);
     const labeledAmountText = extractLabeledField(text, ['금액', '권종', '가격']);
     const amount = (labeledAmountText && extractAmount(labeledAmountText)) ?? extractAmount(text);
     const expiresAt = extractExpiry(text);
