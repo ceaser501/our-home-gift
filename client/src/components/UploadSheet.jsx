@@ -64,7 +64,6 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
   const [searchingPrice, setSearchingPrice] = useState(false);
   const [priceSearchNote, setPriceSearchNote] = useState('');
   const [amountMissing, setAmountMissing] = useState(false);
-  const [duplicateWarning, setDuplicateWarning] = useState('');
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -75,19 +74,6 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
 
   function updateField(key, value) {
     setForm((prev) => ({ ...prev, [key]: value }));
-  }
-
-  async function checkDuplicateCode(code) {
-    if (!code) {
-      setDuplicateWarning('');
-      return;
-    }
-    try {
-      const existing = await findGifticonByCode(family.id, code, mode === 'edit' ? initial.id : undefined);
-      setDuplicateWarning(existing ? `이미 등록된 기프티콘이에요 (${existing.name})` : '');
-    } catch {
-      // 중복 확인은 네트워크 문제로 실패해도 저장 자체를 막지 않는다.
-    }
   }
 
   async function handleFileChange(e) {
@@ -120,7 +106,6 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
       }
       setAutoFilled(true);
       setAmountMissing(form.amount === '' && !result.amount);
-      if (!hadCode && result.code) checkDuplicateCode(result.code);
     } catch {
       setError('이미지 자동 인식에 실패했어요. 직접 입력해주세요.');
     } finally {
@@ -169,7 +154,6 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
     setAutoFilled(false);
     setPriceSearchNote('');
     setAmountMissing(false);
-    setDuplicateWarning('');
     if (fileInputRef.current) fileInputRef.current.value = '';
   }
 
@@ -187,6 +171,15 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
     setSubmitting(true);
     setError('');
     try {
+      if (form.code) {
+        const existing = await findGifticonByCode(family.id, form.code, mode === 'edit' ? initial.id : undefined);
+        if (existing) {
+          setError('이미 등록된 기프티콘이에요.');
+          setSubmitting(false);
+          return;
+        }
+      }
+
       const fields = {
         name: form.name.trim(),
         category: form.category,
@@ -340,14 +333,9 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
               <Input
                 id="f-code"
                 value={form.code}
-                onChange={(e) => {
-                  updateField('code', e.target.value);
-                  setDuplicateWarning('');
-                }}
-                onBlur={(e) => checkDuplicateCode(e.target.value.trim())}
+                onChange={(e) => updateField('code', e.target.value)}
                 placeholder="자동 인식 또는 직접 입력"
               />
-              {duplicateWarning && <p className="text-xs text-destructive">{duplicateWarning}</p>}
             </div>
 
             <div className="col-span-2 flex flex-col gap-1.5">
