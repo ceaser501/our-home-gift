@@ -48,8 +48,8 @@ export default function BarcodeModal({ gifticon, onClose }) {
 
   return (
     <Sheet open onOpenChange={(open) => !open && onClose()}>
-      <SheetContent className="gap-0 pb-[max(24px,env(safe-area-inset-bottom))]">
-        <SheetHeader className="pb-2">
+      <SheetContent className="max-h-[92dvh] gap-0 overflow-y-auto pb-[max(24px,env(safe-area-inset-bottom))]">
+        <SheetHeader className="pr-14 pb-2">
           <SheetTitle>{gifticon.brand || gifticon.name}</SheetTitle>
         </SheetHeader>
 
