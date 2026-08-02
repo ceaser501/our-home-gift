@@ -15,8 +15,16 @@ export function isPushSupported() {
   return typeof window !== 'undefined' && 'serviceWorker' in navigator && 'PushManager' in window;
 }
 
+// 서비스워커를 등록하고, 실제로 활성화(active)될 때까지 기다린 등록 객체를 돌려준다.
+// 등록 직후에는 아직 installing/waiting 상태일 수 있어서 바로 showNotification을 부르면
+// 실패할 수 있기 때문에 navigator.serviceWorker.ready로 활성화를 기다린다.
+export async function ensureServiceWorker() {
+  await navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`);
+  return navigator.serviceWorker.ready;
+}
+
 async function getRegistration() {
-  return navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`);
+  return ensureServiceWorker();
 }
 
 export async function getExistingSubscription() {

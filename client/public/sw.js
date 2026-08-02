@@ -1,5 +1,7 @@
+const BASE = new URL('./', self.registration.scope).pathname;
+
 self.addEventListener('push', (event) => {
-  let data = { title: '아워홈 기프티콘', body: '유효기한이 곧 만료되는 기프티콘이 있어요.' };
+  let data = { title: '유효기한이 곧 만료돼요', body: '유효기한이 얼마 안 남은 기프티콘이 있어요.' };
   try {
     if (event.data) data = { ...data, ...event.data.json() };
   } catch {
@@ -9,8 +11,12 @@ self.addEventListener('push', (event) => {
   event.waitUntil(
     self.registration.showNotification(data.title, {
       body: data.body,
-      icon: 'icon-192.png',
-      badge: 'icon-192.png',
+      icon: `${BASE}icon-192.png`,
+      // badge는 안드로이드가 흰색 실루엣으로 렌더링하는 작은 아이콘이라 별도 이미지를 쓴다.
+      // 컬러 앱 아이콘을 그대로 넣으면 큰 아이콘이 두 개 나온 것처럼 보인다.
+      badge: `${BASE}badge-96.png`,
+      tag: 'gifticon-expiry',
+      renotify: true,
     })
   );
 });
@@ -22,7 +28,7 @@ self.addEventListener('notificationclick', (event) => {
       for (const client of clientList) {
         if ('focus' in client) return client.focus();
       }
-      if (self.clients.openWindow) return self.clients.openWindow('./');
+      if (self.clients.openWindow) return self.clients.openWindow(BASE);
     })
   );
 });

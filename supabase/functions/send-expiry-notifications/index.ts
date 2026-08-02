@@ -88,9 +88,11 @@ Deno.serve(async (req) => {
     if (familySubs.length === 0) continue; // 아직 아무도 알림을 안 켜뒀으면 나중에 다시 시도
 
     const dday = daysUntil(gifticon.expires_at, today);
+    const [, month, day] = gifticon.expires_at.split('-');
+    const remaining = dday === 0 ? '오늘까지예요' : `${dday}일 남았어요`;
     const payload = JSON.stringify({
       title: '유효기한이 곧 만료돼요',
-      body: `${gifticon.brand ? `[${gifticon.brand}] ` : ''}${gifticon.name} · D-${dday} · ${gifticon.expires_at}까지`,
+      body: `${gifticon.brand ? `${gifticon.brand} · ` : ''}${gifticon.name}\n${Number(month)}월 ${Number(day)}일까지 · ${remaining}`,
     });
 
     for (const sub of familySubs) {
