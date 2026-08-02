@@ -142,6 +142,41 @@ Supabase가 기본 지원하는 제공자라 어렵지 않습니다.
 검색으로 채운 가격은 "공식 정가"가 아니라 검색 결과에서 가져온 값이라 100% 정확하지 않을 수
 있어요. 저장 전에 확인/수정할 수 있습니다.
 
+## 처음 한 번만: 유효기한 임박 푸시 알림(선택) 켜기
+
+사용 전 기프티콘 중에 유효기한이 오늘부터 7주(49일) 이내로 남은 게 있으면, 하루 두 번
+(오전 9시 / 오후 3시, 한국시간) 그 가족 구성원들의 브라우저로 푸시 알림을 보냅니다. 같은
+기프티콘은 한 번만 알려주고(수정해서 유효기한이 바뀌면 다시 알려줌), 안 켜도 나머지 기능은
+그대로 동작합니다.
+
+1. **VAPID 키**(웹푸시 발신자 인증용, 한 쌍만 있으면 됨)는 이미 만들어서 공개키는
+   `client/src/push.js`에 코드로 박아뒀어요. 개인키는 절대 코드에 넣으면 안 되는 값이라
+   저와 대화로만 전달받으셨을 거예요 — 그 값으로 아래 명령을 실행하세요.
+2. 저장소 루트에서 Edge Function 배포 + 시크릿 등록 (JWT 검증은 `supabase/config.toml`에서
+   이미 꺼둠):
+   ```bash
+   supabase functions deploy send-expiry-notifications
+   supabase secrets set VAPID_PUBLIC_KEY=공개키값 VAPID_PRIVATE_KEY=개인키값 CRON_SECRET=아무거나_정한_비밀값
+   ```
+   `CRON_SECRET`은 이 함수를 외부에서 아무나 못 부르게 막는 용도로, 원하는 문자열을 직접
+   정해서 넣으면 됩니다(예: 긴 랜덤 문자열).
+3. Supabase 대시보드 **Database → Extensions**에서 **pg_cron**, **pg_net** 확장 켜기
+4. `supabase/push-cron.sql` 파일을 열어서 `<프로젝트ref>`와 `<CRON_SECRET>`을 위에서 정한
+   값으로 바꾼 뒤, 그 내용을 SQL Editor에서 실행 (하루 두 번 자동 호출되도록 예약됨)
+5. `supabase/schema.sql`을 다시 실행 (`push_subscriptions` 테이블과
+   `gifticons.expiry_notified` 컬럼이 이번에 추가됨)
+
+설정이 끝나면 앱 헤더의 종 모양 아이콘을 눌러서 알림을 켤 수 있어요. **아이폰(사파리)은
+"홈 화면에 추가"로 설치해서 그 아이콘으로 실행했을 때만 푸시가 옵니다** — 사파리 탭으로 그냥
+열어서 쓰면 알림이 안 와요. 안드로이드는 이런 제약 없이 바로 됩니다.
+
+### 테스트용 가짜 데이터
+
+`supabase/mock-data.sql`을 SQL Editor에서 실행하면, 유효기한이 각각 D-5/D-20/D-45(알림
+대상)와 D-90(비교용, 대상 아님)인 가짜 기프티콘 몇 개가 만들어져요. `send-expiry-notifications`
+함수를 Supabase 대시보드에서 수동으로 한 번 실행(Invoke)해보면 예약 시간을 안 기다리고
+바로 테스트할 수 있습니다.
+
 ## 로컬 실행
 
 ```bash

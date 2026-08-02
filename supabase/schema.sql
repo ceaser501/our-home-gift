@@ -236,3 +236,46 @@ create policy "gifticon-images delete"
     bucket_id = 'gifticon-images'
     and public.is_family_member(public.storage_folder_family_id(name))
   );
+
+-- ===================== 유효기한 임박 푸시 알림 =====================
+
+-- 브라우저 Push 구독 정보(기기별 1개). 한 사람이 여러 기기에서 알림을 켤 수도 있으니
+-- user_id 기준 여러 행이 있을 수 있다.
+create table if not exists public.push_subscriptions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  family_id uuid not null references public.families(id) on delete cascade,
+  endpoint text not null unique,
+  p256dh text not null,
+  auth text not null,
+  created_at timestamptz not null default now()
+);
+
+alter table public.push_subscriptions enable row level security;
+
+drop policy if exists "push_subscriptions manage own" on public.push_subscriptions;
+create policy "push_subscriptions manage own" on public.push_subscriptions
+  for all to authenticated
+  using (user_id = auth.uid())
+  with check (user_id = auth.uid() and public.is_family_member(family_id));
+
+-- 유효기한이 임박했다고 이미 알림을 보냈는지 표시. expires_at이 바뀌면(수정/재등록)
+-- 다시 알려줘야 하니 아래 트리거로 자동으로 false로 되돌린다.
+alter table public.gifticons add column if not exists expiry_notified boolean not null default false;
+
+create or replace function public.reset_expiry_notified()
+returns trigger
+language plpgsql
+as $$
+begin
+  if new.expires_at is distinct from old.expires_at then
+    new.expiry_notified := false;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_reset_expiry_notified on public.gifticons;
+create trigger trg_reset_expiry_notified
+  before update on public.gifticons
+  for each row execute function public.reset_expiry_notified();

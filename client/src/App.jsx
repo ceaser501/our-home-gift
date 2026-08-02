@@ -6,6 +6,7 @@ import GifticonList from './components/GifticonList';
 import UploadSheet from './components/UploadSheet';
 import BarcodeModal from './components/BarcodeModal';
 import ImageViewerModal from './components/ImageViewerModal';
+import PushTestButton from './components/PushTestButton';
 import { listGifticons, updateGifticon, deleteGifticon } from './api';
 import { daysUntil, todayStr } from './utils/date';
 import { useFamily } from './FamilyContext';
@@ -118,6 +119,8 @@ export default function App() {
           />
         )}
       </main>
+
+      <PushTestButton />
 
       <button
         type="button"

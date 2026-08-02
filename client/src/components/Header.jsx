@@ -1,6 +1,7 @@
 import { LogOut } from 'lucide-react';
 import Logo from './Logo';
 import ThemeToggle from './ThemeToggle';
+import NotificationToggle from './NotificationToggle';
 import { useFamily } from '../FamilyContext';
 
 export default function Header() {
@@ -11,6 +12,7 @@ export default function Header() {
       <div className="flex items-center gap-2.5">
         <Logo className="size-7 shrink-0" />
         <h1 className="m-0 flex-1 text-xl font-bold text-foreground">아워홈 기프티콘</h1>
+        <NotificationToggle />
         <ThemeToggle />
         <button
           type="button"

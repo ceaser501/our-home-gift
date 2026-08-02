@@ -173,3 +173,23 @@ export async function deleteGifticon(id) {
   if (existing?.barcode_image_path) paths.push(existing.barcode_image_path);
   if (paths.length) await removeImages(paths);
 }
+
+export async function savePushSubscription({ userId, familyId, subscription }) {
+  const json = subscription.toJSON();
+  const { error } = await supabase.from('push_subscriptions').upsert(
+    {
+      user_id: userId,
+      family_id: familyId,
+      endpoint: json.endpoint,
+      p256dh: json.keys.p256dh,
+      auth: json.keys.auth,
+    },
+    { onConflict: 'endpoint' }
+  );
+  if (error) throw new Error(error.message);
+}
+
+export async function deletePushSubscription(endpoint) {
+  const { error } = await supabase.from('push_subscriptions').delete().eq('endpoint', endpoint);
+  if (error) throw new Error(error.message);
+}
