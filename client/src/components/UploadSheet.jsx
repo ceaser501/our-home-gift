@@ -174,7 +174,7 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
       if (form.code) {
         const existing = await findGifticonByCode(family.id, form.code, mode === 'edit' ? initial.id : undefined);
         if (existing) {
-          setError('이미 등록된 기프티콘이에요.');
+          alert('이미 등록된 기프티콘이에요.');
           setSubmitting(false);
           return;
         }
