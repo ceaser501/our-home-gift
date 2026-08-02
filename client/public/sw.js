@@ -12,9 +12,8 @@ self.addEventListener('push', (event) => {
     self.registration.showNotification(data.title, {
       body: data.body,
       icon: `${BASE}icon-192.png`,
-      // badge는 안드로이드가 흰색 실루엣으로 렌더링하는 작은 아이콘이라 별도 이미지를 쓴다.
-      // 컬러 앱 아이콘을 그대로 넣으면 큰 아이콘이 두 개 나온 것처럼 보인다.
-      badge: `${BASE}badge-96.png`,
+      // badge는 일부러 지정하지 않는다. 지정하면 큰 아이콘 옆에 작은 아이콘이 하나 더
+      // 붙어서 보기 지저분해서, 큰 아이콘 하나만 나오도록 뒀다.
       tag: 'gifticon-expiry',
       renotify: true,
     })

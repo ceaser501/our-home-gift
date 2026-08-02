@@ -31,7 +31,6 @@ export default function PushTestButton() {
           .showNotification('유효기한이 곧 만료돼요', {
             body: '스타벅스 · 아이스 아메리카노 T\n7일 남았어요 (테스트 알림)',
             icon: `${import.meta.env.BASE_URL}icon-192.png`,
-            badge: `${import.meta.env.BASE_URL}badge-96.png`,
             tag: 'gifticon-expiry',
             renotify: true,
           })
