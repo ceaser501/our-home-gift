@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { BellRing } from 'lucide-react';
 import { isPushSupported, ensureServiceWorker } from '../push';
 
-const TEST_DELAY_MS = 10000;
+const TEST_DELAY_MS = 5000;
 
 // 실제 발송(하루 2번 예약)을 기다리지 않고, 알림이 제대로 뜨는지 바로 확인해보기 위한
 // 테스트 버튼. 서버를 거치지 않고 브라우저에서 직접 알림을 띄운다.
@@ -24,7 +24,7 @@ export default function PushTestButton() {
       const registration = await ensureServiceWorker();
 
       setPending(true);
-      alert('10초 뒤에 테스트 알림이 도착해요. 이 화면을 켜둔 채로 기다려주세요.');
+      alert('5초 뒤에 테스트 알림이 도착해요. 이 화면을 켜둔 채로 기다려주세요.');
 
       setTimeout(() => {
         registration
@@ -53,7 +53,7 @@ export default function PushTestButton() {
       className="fixed bottom-[max(24px,env(safe-area-inset-bottom))] z-20 flex items-center gap-1.5 rounded-full border border-border bg-card px-3.5 py-2.5 text-xs font-semibold text-muted-foreground shadow-lg disabled:opacity-50"
     >
       <BellRing className="size-3.5" />
-      {pending ? '10초 후 도착…' : '푸시 테스트'}
+      {pending ? '5초 후 도착…' : '푸시 테스트'}
     </button>
   );
 }
