@@ -61,6 +61,38 @@ create table if not exists public.family_members (
 -- 기프티콘을 어느 가족 소유로 볼지 표시하는 컬럼
 alter table public.gifticons add column if not exists family_id uuid references public.families(id);
 
+-- 카드에 붙는 이름표 색(0부터 시작하는 팔레트 번호). 예전에는 화면에서 "가족 목록의 몇 번째
+-- 사람인가"로 색을 정했는데, 누가 빠지면 남은 사람들 색이 통째로 밀리는 문제가 있었다.
+-- 그래서 가족에 들어오는 시점에 번호를 받아 두고, 그 뒤로는 바뀌지 않게 한다.
+alter table public.family_members add column if not exists tag_color smallint;
+
+-- 이미 있는 멤버는 지금까지 화면에 보이던 색(가입 순서)을 그대로 굳혀서 채운다.
+with numbered as (
+  select id, (row_number() over (partition by family_id order by created_at) - 1) as idx
+  from public.family_members
+  where tag_color is null
+)
+update public.family_members fm
+set tag_color = numbered.idx
+from numbered
+where fm.id = numbered.id;
+
+-- 그 가족에서 아직 안 쓴 가장 작은 색 번호. 여섯 색을 다 쓰면 처음(0)부터 다시 돌려쓴다.
+-- 색 개수는 화면 쪽 팔레트(client/src/components/GifticonCard.jsx)와 맞춰야 한다.
+create or replace function public.next_tag_color(fid uuid)
+returns smallint
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select coalesce(min(candidate), 0)::smallint
+  from generate_series(0, 5) as candidate
+  where candidate not in (
+    select coalesce(tag_color, -1) from public.family_members where family_id = fid
+  );
+$$;
+
 -- 내가 이 family에 속해 있는지 확인하는 헬퍼 함수.
 -- security definer라서 family_members 자체에 RLS가 걸려 있어도(재귀 없이) 안전하게 조회한다.
 create or replace function public.is_family_member(fid uuid)
@@ -107,8 +139,9 @@ begin
     end;
   end loop;
 
-  insert into public.family_members (family_id, user_id, display_name)
-  values (new_family.id, auth.uid(), member_name);
+  -- 가족을 만든 사람이 첫 멤버라 이름표 색은 항상 0번.
+  insert into public.family_members (family_id, user_id, display_name, tag_color)
+  values (new_family.id, auth.uid(), member_name, 0);
 
   return new_family;
 end;
@@ -133,8 +166,9 @@ begin
     raise exception '초대 코드를 찾을 수 없어요.';
   end if;
 
-  insert into public.family_members (family_id, user_id, display_name)
-  values (found_family.id, auth.uid(), member_name)
+  -- 이름표 색은 처음 들어올 때 한 번만 정한다(다시 참여해도 쓰던 색 그대로).
+  insert into public.family_members (family_id, user_id, display_name, tag_color)
+  values (found_family.id, auth.uid(), member_name, public.next_tag_color(found_family.id))
   on conflict (family_id, user_id) do update set display_name = excluded.display_name;
 
   return found_family;

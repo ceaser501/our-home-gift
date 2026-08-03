@@ -1,15 +1,43 @@
-// 네이버 쇼핑 검색으로 "브랜드 + 상품명"을 찾아 최저가를 돌려주는 함수.
-// 금액이 안 찍혀 나오는 상품형 기프티콘(예: 카페 음료 1개)에서, 사용자가
-// "가격 검색" 버튼을 눌렀을 때만 호출된다. 네이버 API 키는 브라우저에
-// 노출되면 안 되므로 이 서버(Edge Function) 쪽 비밀값으로만 갖고 있는다.
+// "가격 검색" 버튼을 눌렀을 때, 상품형 기프티콘(금액이 인쇄돼 있지 않은 것)의
+// 현재 판매가를 찾아주는 함수.
+//
+// 예전에는 네이버 쇼핑 검색 결과 열 개의 중앙값을 썼는데, 쇼핑 검색은 기프티콘 시세를
+// 위한 것이 아니라서 상품명으로 검색하면 소스·굿즈·묶음 상품이 섞여 들어왔고 그 중앙값은
+// 실제 가격과 상관없는 숫자가 되곤 했다. 그래서 모델에게 웹 검색을 맡기고, 검색 결과를
+// 읽어 "이 상품의 판매가"만 골라내도록 바꿨다.
+//
+// 필요한 비밀값: supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
+
+import Anthropic from 'npm:@anthropic-ai/sdk@0.115.0';
+
+const MODEL = 'claude-haiku-4-5';
+// 웹 검색 도구는 모델 세대에 따라 쓸 수 있는 버전이 다르다. haiku-4-5는 기본형을 쓴다.
+const WEB_SEARCH_TOOL = { type: 'web_search_20250305', name: 'web_search', max_uses: 4 };
+// 서버 쪽 도구 사용이 한 번에 안 끝나면 pause_turn으로 잠시 멈춘다. 그때 이어서 요청한다.
+const MAX_CONTINUATIONS = 3;
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-function stripHtml(text) {
-  return text.replace(/<\/?b>/g, '').replace(/&amp;/g, '&').replace(/&quot;/g, '"');
+const SYSTEM_PROMPT = `너는 한국에서 파는 상품의 현재 판매가를 찾아주는 도구다.
+
+- 웹 검색으로 그 상품의 정가 또는 일반적인 판매가를 확인한다.
+- 기프티콘·모바일 상품권으로 판매되는 가격을 우선한다. 중고 거래가, 할인 쿠폰가,
+  묶음 상품 가격은 쓰지 않는다.
+- 확실하지 않으면 추측하지 말고 금액을 비워 둔다.
+- 마지막 답변은 아래 형식의 JSON 하나만 쓴다. 다른 말은 덧붙이지 않는다.
+  {"amount": 숫자 또는 null, "source": "근거로 삼은 곳(가게·사이트 이름)"}`;
+
+function extractJson(text) {
+  const match = text.match(/\{[\s\S]*\}/);
+  if (!match) return null;
+  try {
+    return JSON.parse(match[0]);
+  } catch {
+    return null;
+  }
 }
 
 Deno.serve(async (req) => {
@@ -25,62 +53,51 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: '상품명이 필요해요.' }), { status: 400, headers: jsonHeaders });
     }
 
-    const clientId = Deno.env.get('NAVER_CLIENT_ID');
-    const clientSecret = Deno.env.get('NAVER_CLIENT_SECRET');
-    if (!clientId || !clientSecret) {
-      return new Response(JSON.stringify({ error: '네이버 API 키가 설정되지 않았어요.' }), {
+    const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
+    if (!apiKey) {
+      return new Response(JSON.stringify({ error: '가격 검색 서버 설정이 아직 완료되지 않았어요.' }), {
         status: 500,
         headers: jsonHeaders,
       });
     }
 
     const query = [brand, name].filter(Boolean).join(' ').trim();
-    const url = `https://openapi.naver.com/v1/search/shop.json?query=${encodeURIComponent(query)}&display=10&sort=sim`;
+    const client = new Anthropic({ apiKey });
+    const request = {
+      model: MODEL,
+      max_tokens: 2048,
+      system: SYSTEM_PROMPT,
+      tools: [WEB_SEARCH_TOOL],
+    };
 
-    const naverRes = await fetch(url, {
-      headers: {
-        'X-Naver-Client-Id': clientId,
-        'X-Naver-Client-Secret': clientSecret,
-      },
-    });
+    const messages = [{ role: 'user', content: `"${query}"의 현재 판매가를 찾아줘.` }];
+    let response = await client.messages.create({ ...request, messages });
 
-    if (!naverRes.ok) {
-      return new Response(JSON.stringify({ error: `네이버 검색 실패 (${naverRes.status})` }), {
-        status: 502,
-        headers: jsonHeaders,
-      });
+    // 검색이 한 번에 안 끝나면 pause_turn으로 잠시 멈춘다. 지금까지의 답을 그대로 붙여
+    // 다시 요청하면 서버가 이어서 진행한다("계속해줘" 같은 말을 덧붙이면 안 된다).
+    for (let i = 0; i < MAX_CONTINUATIONS && response.stop_reason === 'pause_turn'; i++) {
+      messages.push({ role: 'assistant', content: response.content });
+      response = await client.messages.create({ ...request, messages });
     }
 
-    const data = await naverRes.json();
-    const items = (data.items || [])
-      .map((item) => ({
-        title: stripHtml(item.title || ''),
-        price: Number(item.lprice),
-        mall: item.mallName,
-        link: item.link,
-      }))
-      .filter((item) => Number.isFinite(item.price) && item.price > 0);
+    const text = response.content
+      .filter((block) => block.type === 'text')
+      .map((block) => block.text)
+      .join('\n');
 
-    if (items.length === 0) {
-      return new Response(JSON.stringify({ amount: null, query, items: [] }), { headers: jsonHeaders });
-    }
-
-    items.sort((a, b) => a.price - b.price);
-    const median = items[Math.floor(items.length / 2)];
+    const parsed = extractJson(text);
+    const amount = Number(String(parsed?.amount ?? '').replace(/\D/g, ''));
 
     return new Response(
       JSON.stringify({
-        amount: median.price,
-        source: median.title,
+        amount: Number.isFinite(amount) && amount > 0 ? amount : null,
+        source: parsed?.source || null,
         query,
-        items: items.slice(0, 5),
       }),
       { headers: jsonHeaders }
     );
   } catch (err) {
-    return new Response(JSON.stringify({ error: err instanceof Error ? err.message : '알 수 없는 오류' }), {
-      status: 500,
-      headers: jsonHeaders,
-    });
+    const message = err instanceof Error ? err.message : '가격 검색에 실패했어요.';
+    return new Response(JSON.stringify({ error: message }), { status: 500, headers: jsonHeaders });
   }
 });

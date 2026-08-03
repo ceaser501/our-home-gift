@@ -22,8 +22,12 @@ export default function GifticonCard({ gifticon, onViewCode, onViewImage, onTogg
   const { members } = useFamily();
   const isUsed = gifticon.status === 'used';
   const urgency = isUsed ? 'none' : ddayUrgency(gifticon.expires_at);
+  // 이름표 색은 가족에 들어올 때 정해진 번호(tag_color)를 쓴다. 목록에서 몇 번째냐로
+  // 정하면 누가 빠졌을 때 남은 사람들 색이 밀린다. 아직 번호가 없는(예전) 데이터는
+  // 예전과 같은 순서 기준으로 보여준다.
   const ownerIndex = members.findIndex((m) => m.display_name === gifticon.owner);
-  const ownerTagClass = ownerIndex >= 0 ? OWNER_TAG_PALETTE[ownerIndex % OWNER_TAG_PALETTE.length] : 'bg-muted-foreground';
+  const colorIndex = members[ownerIndex]?.tag_color ?? ownerIndex;
+  const ownerTagClass = colorIndex >= 0 ? OWNER_TAG_PALETTE[colorIndex % OWNER_TAG_PALETTE.length] : 'bg-muted-foreground';
 
   return (
     <li className={cn('relative flex gap-3 rounded-2xl border border-border bg-card p-3 shadow-xs', isUsed && 'opacity-60')}>

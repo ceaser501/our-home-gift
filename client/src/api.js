@@ -152,6 +152,19 @@ export async function updateGifticon(familyId, id, fields, imageChanges = {}) {
   return withImageUrls(data);
 }
 
+// 기프티콘 이미지를 서버로 보내 상품명·상호·금액·유효기간을 받아온다.
+// (모델 API 키가 브라우저에 노출되면 안 되므로 Edge Function을 거친다.)
+export async function analyzeGifticonImages(images, categories) {
+  const { data, error } = await supabase.functions.invoke('analyze-gifticon', {
+    body: { images, categories },
+  });
+  if (error) {
+    const detail = await error.context?.json?.().catch(() => null);
+    throw new Error(detail?.error || error.message || '이미지 인식에 실패했어요.');
+  }
+  return data;
+}
+
 export async function searchPrice({ brand, name }) {
   const { data, error } = await supabase.functions.invoke('search-price', {
     body: { brand, name },

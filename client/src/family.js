@@ -9,7 +9,11 @@ export async function getMyFamily() {
 
   const [{ data: family, error: familyError }, { data: members, error: membersError }] = await Promise.all([
     supabase.from('families').select('*').eq('id', family_id).single(),
-    supabase.from('family_members').select('user_id, display_name, created_at').eq('family_id', family_id).order('created_at'),
+    supabase
+      .from('family_members')
+      .select('user_id, display_name, created_at, tag_color')
+      .eq('family_id', family_id)
+      .order('created_at'),
   ]);
   if (familyError) throw new Error(familyError.message);
   if (membersError) throw new Error(membersError.message);
