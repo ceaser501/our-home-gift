@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Logo from './Logo';
 import InstallPrompt from './InstallPrompt';
+import ResetAllDataButton from './ResetAllDataButton';
 
 function GoogleIcon({ className }) {
   return (
@@ -160,6 +161,8 @@ export default function LoginScreen() {
           </form>
         </div>
       )}
+
+      <ResetAllDataButton />
     </div>
   );
 }

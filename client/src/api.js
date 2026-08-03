@@ -193,3 +193,15 @@ export async function deletePushSubscription(endpoint) {
   const { error } = await supabase.from('push_subscriptions').delete().eq('endpoint', endpoint);
   if (error) throw new Error(error.message);
 }
+
+// ⚠️ 테스트 전용: 가족/구성원/기프티콘/이미지/가입계정을 전부 지운다.
+export async function resetAllData() {
+  const { data, error } = await supabase.functions.invoke('reset-all-data', {
+    body: { token: import.meta.env.VITE_RESET_TOKEN },
+  });
+  if (error) {
+    const detail = await error.context?.json?.().catch(() => null);
+    throw new Error(detail?.error || error.message || '초기화에 실패했어요.');
+  }
+  return data;
+}
