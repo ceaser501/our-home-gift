@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Bell, BellOff } from 'lucide-react';
-import { isPushSupported, getExistingSubscription, subscribeToPush, unsubscribeFromPush } from '../push';
+import { isPushSupported, isPushEnabled, subscribeToPush, unsubscribeFromPush } from '../push';
 import { useFamily } from '../FamilyContext';
 
 export default function NotificationToggle({ asRow = false }) {
@@ -10,7 +10,9 @@ export default function NotificationToggle({ asRow = false }) {
 
   useEffect(() => {
     if (!isPushSupported()) return;
-    getExistingSubscription().then((sub) => setEnabled(Boolean(sub)));
+    isPushEnabled()
+      .then(setEnabled)
+      .catch(() => setEnabled(false));
   }, []);
 
   if (!isPushSupported()) return null;
@@ -19,7 +21,7 @@ export default function NotificationToggle({ asRow = false }) {
     setLoading(true);
     try {
       if (enabled) {
-        await unsubscribeFromPush();
+        await unsubscribeFromPush(user.id);
         setEnabled(false);
       } else {
         await subscribeToPush({ userId: user.id, familyId: family.id });

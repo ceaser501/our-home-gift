@@ -237,8 +237,22 @@ export async function savePushSubscription({ userId, familyId, subscription }) {
   if (error) throw new Error(error.message);
 }
 
-export async function deletePushSubscription(endpoint) {
-  const { error } = await supabase.from('push_subscriptions').delete().eq('endpoint', endpoint);
+// 이 브라우저의 구독이 실제로 "보내는 목록"에 들어 있는지. 알림 버튼의 켜짐/꺼짐은
+// 브라우저에 구독이 있는지가 아니라 이 목록에 있는지로 판단해야 실제 동작과 어긋나지 않는다.
+export async function hasPushSubscription(endpoint) {
+  const { count, error } = await supabase
+    .from('push_subscriptions')
+    .select('id', { count: 'exact', head: true })
+    .eq('endpoint', endpoint);
+  if (error) throw new Error(error.message);
+  return (count ?? 0) > 0;
+}
+
+// 알림을 끌 때는 이 계정으로 등록된 구독을 전부 지운다.
+// 앱을 다시 설치하거나 브라우저가 구독을 갱신하면 주소(endpoint)가 새로 생기는데,
+// 지금 주소 하나만 지우면 예전 주소가 목록에 남아 그쪽으로 알림이 계속 갔다.
+export async function deleteMyPushSubscriptions(userId) {
+  const { error } = await supabase.from('push_subscriptions').delete().eq('user_id', userId);
   if (error) throw new Error(error.message);
 }
 

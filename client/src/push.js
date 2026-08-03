@@ -1,4 +1,4 @@
-import { savePushSubscription, deletePushSubscription } from './api';
+import { savePushSubscription, deleteMyPushSubscriptions, hasPushSubscription } from './api';
 
 // 이 앱 전용 VAPID 공개키. 비밀값이 아니라(브라우저에 항상 노출되는 값) 그대로 커밋해도 된다.
 // 짝이 되는 개인키(VAPID_PRIVATE_KEY)만 Supabase Edge Function 비밀값으로 따로 보관한다.
@@ -50,10 +50,16 @@ export async function subscribeToPush({ userId, familyId }) {
   return subscription;
 }
 
-export async function unsubscribeFromPush() {
+export async function unsubscribeFromPush(userId) {
   const subscription = await getExistingSubscription();
-  if (!subscription) return;
-  const endpoint = subscription.endpoint;
-  await subscription.unsubscribe();
-  await deletePushSubscription(endpoint);
+  if (subscription) await subscription.unsubscribe();
+  // 브라우저 구독만 끊으면 서버에 남은 예전 주소로 알림이 계속 나간다. 목록에서도 지운다.
+  await deleteMyPushSubscriptions(userId);
+}
+
+// 지금 이 브라우저로 알림이 실제로 오는 상태인지. 브라우저 구독과 서버 목록이 모두 있어야 한다.
+export async function isPushEnabled() {
+  const subscription = await getExistingSubscription();
+  if (!subscription) return false;
+  return hasPushSubscription(subscription.endpoint);
 }

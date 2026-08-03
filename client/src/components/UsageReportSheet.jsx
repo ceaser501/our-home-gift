@@ -46,8 +46,11 @@ export default function UsageReportSheet({ onClose }) {
     <Sheet open onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="max-h-[92dvh] gap-0 overflow-y-auto pb-[max(24px,env(safe-area-inset-bottom))]">
         <SheetHeader className="pr-14 pb-1">
-          <SheetTitle>사용 내역</SheetTitle>
+          <SheetTitle>가족 사용 내역</SheetTitle>
         </SheetHeader>
+        <p className="m-0 px-5 pb-1 text-xs text-muted-foreground">
+          {family.name} 구성원이 사용 완료로 표시한 기프티콘이 모두 보여요.
+        </p>
 
         <div className="flex flex-col gap-3 px-5 pt-2">
           {loading && <p className="py-8 text-center text-sm text-muted-foreground">불러오는 중…</p>}

@@ -92,7 +92,14 @@ export default function GifticonCard({ gifticon, onViewCode, onViewImage, onTogg
             {formatDday(gifticon.expires_at)} · {formatDate(gifticon.expires_at)}까지
           </p>
         )}
-        {isUsed && gifticon.used_at && <p className="mt-0.5 mb-2 text-xs text-muted-foreground">{formatDate(gifticon.used_at)} 사용</p>}
+        {/* 누가 썼는지 목록에서 바로 보이게 한다("이거 누가 썼어?"를 굳이 안 물어보게). */}
+        {isUsed && (gifticon.used_at || gifticon.used_by_name) && (
+          <p className="mt-0.5 mb-2 text-xs text-muted-foreground">
+            {[gifticon.used_at && `${formatDate(gifticon.used_at)} 사용`, gifticon.used_by_name && `${gifticon.used_by_name}님이 씀`]
+              .filter(Boolean)
+              .join(' · ')}
+          </p>
+        )}
 
         <div className="flex gap-2">
           <Button size="sm" className="flex-1 px-1" onClick={() => onViewCode(gifticon)} disabled={codeLocked}>
