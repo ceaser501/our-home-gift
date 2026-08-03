@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
+import ImageSourcePicker from './ImageSourcePicker';
 
 function buildEmptyForm(defaultOwner) {
   return {
@@ -64,6 +65,9 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
   const [searchingPrice, setSearchingPrice] = useState(false);
   const [priceSearchNote, setPriceSearchNote] = useState('');
   const [amountMissing, setAmountMissing] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const photoInputRef = useRef(null);
+  const cameraInputRef = useRef(null);
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -76,10 +80,23 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
+  function handlePick(source) {
+    setPickerOpen(false);
+    const ref = source === 'camera' ? cameraInputRef : source === 'file' ? fileInputRef : photoInputRef;
+    ref.current?.click();
+  }
+
   async function handleFileChange(e) {
-    const selected = Array.from(e.target.files || []);
+    const picked = Array.from(e.target.files || []);
     e.target.value = '';
-    if (selected.length === 0) return;
+    if (picked.length === 0) return;
+
+    // "파일"로 고르면 이미지가 아닌 것도 집을 수 있어서 여기서 걸러낸다.
+    const selected = picked.filter((f) => f.type.startsWith('image/'));
+    if (selected.length === 0) {
+      setError('이미지 파일만 올릴 수 있어요.');
+      return;
+    }
 
     const hadCode = Boolean(form.code);
 
@@ -154,7 +171,10 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
     setAutoFilled(false);
     setPriceSearchNote('');
     setAmountMissing(false);
-    if (fileInputRef.current) fileInputRef.current.value = '';
+    setPickerOpen(false);
+    [photoInputRef, cameraInputRef, fileInputRef].forEach((ref) => {
+      if (ref.current) ref.current.value = '';
+    });
   }
 
   async function handleSubmit(e) {
@@ -217,7 +237,14 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
 
   return (
     <Sheet open onOpenChange={(open) => !open && onClose()}>
-      <SheetContent className="max-h-[92dvh] gap-0 overflow-y-auto pb-[max(20px,env(safe-area-inset-bottom))]">
+      <SheetContent
+        className="max-h-[92dvh] gap-0 overflow-y-auto pb-[max(20px,env(safe-area-inset-bottom))]"
+        // 이미지 추가 시트는 이 시트 밖(body)에 그려지므로, 그걸 누른 걸
+        // "바깥 클릭"으로 보고 입력하던 내용까지 닫아버리지 않게 막는다.
+        onInteractOutside={(e) => {
+          if (pickerOpen) e.preventDefault();
+        }}
+      >
         <SheetHeader className="flex-row items-center justify-between gap-2 pr-14 pb-3">
           <SheetTitle>{mode === 'create' ? '기프티콘 추가' : '기프티콘 수정'}</SheetTitle>
           <Button type="button" variant="ghost" size="sm" onClick={handleReset} className="text-muted-foreground">
@@ -251,7 +278,7 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
             ))}
             <button
               type="button"
-              onClick={() => fileInputRef.current?.click()}
+              onClick={() => setPickerOpen(true)}
               className="flex aspect-square flex-col items-center justify-center gap-0.5 rounded-xl border border-dashed border-border bg-background text-xs text-muted-foreground"
             >
               <Plus className="size-5" />
@@ -260,7 +287,31 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
           </div>
           {analyzing && <p className="text-xs text-muted-foreground">이미지 분석 중…</p>}
 
-          <input id="gifticon-image" ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleFileChange} hidden />
+          {/*
+            "사진"은 이미지만 여러 장 요청해서 갤러리(사진 선택 도구)가 열리게 하고,
+            "파일"은 종류를 제한하지 않아 파일 관리자가 열리게 한다. 둘을 나눠두면
+            작업 선택 창에 파일 앱이 두 개씩 겹쳐 나오는 상황을 피할 수 있다.
+          */}
+          <input
+            id="gifticon-image"
+            ref={photoInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={handleFileChange}
+            hidden
+          />
+          <input
+            ref={cameraInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            onChange={handleFileChange}
+            hidden
+          />
+          <input ref={fileInputRef} type="file" multiple onChange={handleFileChange} hidden />
+
+          {pickerOpen && <ImageSourcePicker onPick={handlePick} onClose={() => setPickerOpen(false)} />}
 
           {autoFilled && <p className="text-xs text-success">자동으로 정보를 채웠어요. 확인 후 저장해주세요.</p>}
           {error && <p className="text-xs text-destructive">{error}</p>}
