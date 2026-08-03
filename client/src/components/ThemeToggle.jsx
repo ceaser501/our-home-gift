@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Moon, Sun } from 'lucide-react';
 
+// 실제 테마는 index.html의 인라인 스크립트가 앱이 그려지기 전에 정해둔다.
+// 여기서는 그 값을 그대로 읽어와서 버튼 아이콘만 맞춘다.
 function getInitialTheme() {
-  const stored = localStorage.getItem('theme');
-  if (stored === 'light' || stored === 'dark') return stored;
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  return document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
 }
 
 export default function ThemeToggle() {

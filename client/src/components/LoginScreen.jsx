@@ -85,9 +85,7 @@ export default function LoginScreen() {
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col items-center justify-center gap-6 bg-background px-6">
-      <div className="-mx-6 w-full">
-        <InstallPrompt />
-      </div>
+      <InstallPrompt />
 
       <div className="flex flex-col items-center gap-3">
         <Logo className="size-12" />

@@ -64,7 +64,7 @@ export default function InstallPrompt() {
     : '홈 화면에 추가하면 앱처럼 바로 열 수 있어요.';
 
   return (
-    <div className="mx-5 mb-2 flex flex-col gap-2 rounded-xl border border-border bg-accent/60 p-3">
+    <div className="mb-2 flex w-full flex-col gap-2 rounded-xl border border-border bg-accent/60 p-3">
       <div className="flex items-center gap-2.5">
         {inApp ? (
           <ExternalLink className="size-4 shrink-0 text-primary" />
