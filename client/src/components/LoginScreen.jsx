@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Logo from './Logo';
+import InstallPrompt from './InstallPrompt';
 
 function GoogleIcon({ className }) {
   return (
@@ -84,6 +85,10 @@ export default function LoginScreen() {
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col items-center justify-center gap-6 bg-background px-6">
+      <div className="-mx-6 w-full">
+        <InstallPrompt />
+      </div>
+
       <div className="flex flex-col items-center gap-3">
         <Logo className="size-12" />
         <h1 className="m-0 text-xl font-bold text-foreground">모아콘</h1>

@@ -43,9 +43,10 @@ export default function InAppBrowserNotice({ inApp, onSkip }) {
       </div>
 
       <div className="flex flex-col items-center gap-2 text-center">
-        <p className="m-0 text-sm font-semibold text-foreground">{label}에서는 정상적으로 이용하기 어려워요.</p>
+        <p className="m-0 text-sm font-semibold text-foreground">{label}에서는 앱 설치가 안 돼요.</p>
         <p className="m-0 text-xs leading-relaxed text-muted-foreground">
-          크롬이나 사파리로 열면 로그인도 잘 되고, 홈 화면에 추가해서 앱처럼 쓸 수 있어요.
+          브라우저로 열면 홈 화면에 추가해서 앱처럼 쓸 수 있어요.
+          <br />한 번 설치해두면 다음부터는 아이콘으로 바로 열려요.
         </p>
       </div>
 
