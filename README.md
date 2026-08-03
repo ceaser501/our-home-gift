@@ -105,6 +105,28 @@ Supabase가 기본 지원하는 제공자라 어렵지 않습니다.
 이 값들을 안 채워두면 "네이버로 로그인" 버튼을 눌렀을 때 설정이 안 됐다는 안내만 뜨고,
 나머지 로그인 방식(이메일, 구글)에는 영향이 없습니다.
 
+#### `wrong client id/client secret pair` 오류가 뜬다면
+
+네이버 토큰 발급 단계에서 보낸 Client ID와 Secret이 한 애플리케이션의 짝이 아닐 때 나는
+메시지입니다. 아래 순서로 확인하세요.
+
+1. **네이버 개발자센터 → 애플리케이션 → 내 애플리케이션 → 개요**에서 Client ID와
+   Client Secret을 다시 확인합니다(Secret은 재발급하면 값이 바뀝니다).
+2. Supabase에 들어간 값과 같은지 확인합니다.
+   ```bash
+   supabase secrets list   # 이름과 해시만 보이므로, 의심되면 그냥 다시 설정하세요
+   supabase secrets set NAVER_CLIENT_ID=발급받은값 NAVER_CLIENT_SECRET=발급받은값
+   ```
+   복사할 때 앞뒤 공백이나 줄바꿈이 섞이면 같은 오류가 납니다. 여러 Supabase 프로젝트를
+   쓰고 있다면 `supabase link` 된 프로젝트가 Edge Function을 배포한 그 프로젝트인지도
+   확인하세요.
+3. **화면 쪽 `VITE_NAVER_CLIENT_ID`가 같은 애플리케이션 값인지** 확인합니다
+   (로컬은 `client/.env`, 배포는 저장소 Actions 시크릿). 인가 코드는 화면이 보낸 Client ID
+   앞으로 발급되기 때문에, 서버가 다른 애플리케이션의 ID/Secret으로 토큰을 요청하면 같은
+   오류가 납니다. 이 경우에는 로그인 화면에 어느 값이 서로 다른지 안내가 표시됩니다.
+   시크릿을 바꿨다면 GitHub Actions에서 배포를 다시 돌려야 반영됩니다.
+4. 값을 고쳤으면 `supabase functions deploy naver-auth`로 함수를 다시 배포합니다.
+
 ## 처음 한 번만: GitHub Pages 켜기
 
 저장소 `Settings → Pages → Build and deployment → Source`를 **GitHub Actions**로 설정하면,

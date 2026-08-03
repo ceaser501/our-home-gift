@@ -41,11 +41,16 @@ export function signInWithNaver() {
   const redirectTo = `${window.location.origin}${import.meta.env.BASE_URL}`;
   const callbackUrl = `${supabaseUrl}/functions/v1/naver-auth`;
 
+  // state에는 로그인 후 돌아갈 주소와 함께, 이 화면이 쓴 Client ID도 실어 보낸다.
+  // Edge Function이 가진 NAVER_CLIENT_ID와 서로 다르면 네이버가 "wrong client id/client
+  // secret pair"만 돌려줘서 원인을 알기 어려운데, 미리 비교해서 알려주기 위해서다.
+  const state = btoa(JSON.stringify({ r: redirectTo, c: clientId }));
+
   const authorizeUrl = new URL('https://nid.naver.com/oauth2.0/authorize');
   authorizeUrl.searchParams.set('response_type', 'code');
   authorizeUrl.searchParams.set('client_id', clientId);
   authorizeUrl.searchParams.set('redirect_uri', callbackUrl);
-  authorizeUrl.searchParams.set('state', redirectTo);
+  authorizeUrl.searchParams.set('state', state);
 
   window.location.href = authorizeUrl.toString();
 }

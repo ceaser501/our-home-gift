@@ -13,6 +13,21 @@
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
+// state에는 base64로 { r: 돌아갈 주소, c: 브라우저가 쓴 Client ID }가 들어온다.
+// 예전 버전은 돌아갈 주소를 그대로 넣었기 때문에, 파싱에 실패하면 그 형식으로 취급한다.
+function parseState(rawState) {
+  if (!rawState) return { redirectTo: null, browserClientId: null };
+  try {
+    const decoded = JSON.parse(atob(rawState));
+    if (decoded && typeof decoded.r === 'string') {
+      return { redirectTo: decoded.r, browserClientId: typeof decoded.c === 'string' ? decoded.c : null };
+    }
+  } catch {
+    // 아래에서 옛 형식으로 처리한다.
+  }
+  return { redirectTo: rawState, browserClientId: null };
+}
+
 function redirectWithError(fallbackUrl, message) {
   const target = new URL(fallbackUrl);
   target.searchParams.set('login_error', message);
@@ -25,7 +40,8 @@ Deno.serve(async (req) => {
   const state = url.searchParams.get('state');
   const naverError = url.searchParams.get('error_description') || url.searchParams.get('error');
 
-  const redirectTo = state || Deno.env.get('NAVER_LOGIN_FALLBACK_REDIRECT');
+  const { redirectTo: stateRedirect, browserClientId } = parseState(state);
+  const redirectTo = stateRedirect || Deno.env.get('NAVER_LOGIN_FALLBACK_REDIRECT');
   if (!redirectTo) {
     return new Response('로그인 후 돌아갈 주소(state)가 없어요.', { status: 400 });
   }
@@ -48,6 +64,15 @@ Deno.serve(async (req) => {
     return redirectWithError(redirectTo, '네이버 로그인 서버 설정이 아직 완료되지 않았어요.');
   }
 
+  // 인가 코드는 브라우저가 쓴 Client ID 앞으로 발급된다. 서버가 다른 애플리케이션의
+  // ID/Secret으로 토큰을 요청하면 네이버는 "wrong client id/client secret pair"만 돌려준다.
+  if (browserClientId && browserClientId !== clientId) {
+    return redirectWithError(
+      redirectTo,
+      `네이버 Client ID가 서로 달라요. 화면 쪽 VITE_NAVER_CLIENT_ID(${browserClientId})와 서버 쪽 NAVER_CLIENT_ID(${clientId})를 같은 애플리케이션 값으로 맞춰주세요.`,
+    );
+  }
+
   try {
     const tokenUrl = new URL('https://nid.naver.com/oauth2.0/token');
     tokenUrl.searchParams.set('grant_type', 'authorization_code');
@@ -59,7 +84,14 @@ Deno.serve(async (req) => {
     const tokenRes = await fetch(tokenUrl.toString());
     const tokenData = await tokenRes.json();
     if (!tokenData.access_token) {
-      throw new Error(tokenData.error_description || '네이버 토큰 발급에 실패했어요.');
+      // 네이버가 돌려준 원인을 그대로 보여준다. 대표적으로 "wrong client id/client secret
+      // pair"는 Supabase에 넣어둔 NAVER_CLIENT_SECRET이 네이버 개발자센터 값과 다를 때 난다.
+      const detail = [tokenData.error, tokenData.error_description].filter(Boolean).join(': ');
+      throw new Error(
+        detail
+          ? `네이버 토큰 발급 실패 (${detail}). Supabase의 NAVER_CLIENT_ID/NAVER_CLIENT_SECRET을 확인해주세요.`
+          : '네이버 토큰 발급에 실패했어요.',
+      );
     }
 
     const profileRes = await fetch('https://openapi.naver.com/v1/nid/me', {
