@@ -11,13 +11,48 @@ function getOcrWorker() {
   return ocrWorkerPromise;
 }
 
-async function decodeBarcode(imageUrl) {
+// 요즘 폰 사진은 1200만 화소가 넘어서, 원본 그대로 디코딩+OCR을 돌리면 메모리를
+// 크게 잡아먹는다. 여러 장을 한 번에 올리면 브라우저가 페이지를 통째로 종료해버려서
+// (설치한 앱에서는 앱이 튕긴 것처럼 보인다) 분석용으로는 이 크기까지 줄여서 쓴다.
+// 기프티콘 바코드/글자는 이 해상도면 충분히 읽힌다.
+const MAX_ANALYZE_EDGE = 2000;
+
+async function toAnalyzeCanvas(file) {
+  let source;
+  let width;
+  let height;
+
+  if (typeof createImageBitmap === 'function') {
+    source = await createImageBitmap(file);
+    width = source.width;
+    height = source.height;
+  } else {
+    const url = URL.createObjectURL(file);
+    try {
+      source = await loadImage(url);
+      width = source.naturalWidth;
+      height = source.naturalHeight;
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  }
+
+  const scale = Math.min(1, MAX_ANALYZE_EDGE / Math.max(width, height));
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, Math.round(width * scale));
+  canvas.height = Math.max(1, Math.round(height * scale));
+  canvas.getContext('2d').drawImage(source, 0, 0, canvas.width, canvas.height);
+  source.close?.();
+
+  return canvas;
+}
+
+async function decodeBarcode(canvas) {
   try {
     const reader = new BrowserMultiFormatReader();
-    const img = await loadImage(imageUrl);
-    const result = await reader.decodeFromImageElement(img);
+    const result = await reader.decodeFromCanvas(canvas);
     const codeType = result.getBarcodeFormat ? BarcodeFormat[result.getBarcodeFormat()] || null : null;
-    const cropBlob = await cropBarcodeRegion(img, result.getResultPoints?.(), codeType);
+    const cropBlob = await cropBarcodeRegion(canvas, result.getResultPoints?.(), codeType);
     return {
       code: result.getText(),
       codeType,
@@ -33,7 +68,7 @@ async function decodeBarcode(imageUrl) {
 // QR은 좌표 3개가 사각형 전체를 대략 감싸지만, 1D 바코드는 스캔선 좌우 두 점만
 // 주어지고 막대의 실제 높이는 알려주지 않아서, 폭을 기준으로 막대 높이와
 // 아래쪽에 인쇄된 숫자 영역까지 넉넉하게 추정해서 자른다.
-async function cropBarcodeRegion(img, points, codeType) {
+async function cropBarcodeRegion(source, points, codeType) {
   if (!points || points.length === 0) return null;
 
   const xs = points.map((p) => p.getX());
@@ -72,15 +107,15 @@ async function cropBarcodeRegion(img, points, codeType) {
 
   cropX = Math.max(0, cropX);
   cropY = Math.max(0, cropY);
-  cropW = Math.min(img.naturalWidth - cropX, cropW);
-  cropH = Math.min(img.naturalHeight - cropY, cropH);
+  cropW = Math.min(source.width - cropX, cropW);
+  cropH = Math.min(source.height - cropY, cropH);
   if (cropW <= 0 || cropH <= 0) return null;
 
   const canvas = document.createElement('canvas');
   canvas.width = cropW;
   canvas.height = cropH;
   const ctx = canvas.getContext('2d');
-  ctx.drawImage(img, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+  ctx.drawImage(source, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
 
   return new Promise((resolve) => canvas.toBlob((blob) => resolve(blob), 'image/png'));
 }
@@ -94,13 +129,27 @@ function loadImage(src) {
   });
 }
 
-async function runOcr(imageUrl) {
+async function runOcr(canvas) {
   try {
     const worker = await getOcrWorker();
-    const { data } = await worker.recognize(imageUrl);
+    const { data } = await worker.recognize(canvas);
     return data.text || '';
   } catch {
     return '';
+  }
+}
+
+// OCR 워커는 한글 학습 데이터까지 올려두느라 메모리를 꽤 차지한다. 분석이 끝나면
+// 정리해서, 다음에 파일 선택 화면을 오갈 때 브라우저가 페이지를 종료하지 않게 한다.
+async function releaseOcrWorker() {
+  if (!ocrWorkerPromise) return;
+  const pending = ocrWorkerPromise;
+  ocrWorkerPromise = null;
+  try {
+    const worker = await pending;
+    await worker.terminate();
+  } catch {
+    // 이미 정리됐거나 만들다 실패한 경우라 무시해도 된다.
   }
 }
 
@@ -281,9 +330,11 @@ function guessName(text, brand) {
 }
 
 export async function analyzeImage(file) {
-  const imageUrl = URL.createObjectURL(file);
+  const canvas = await toAnalyzeCanvas(file);
   try {
-    const [barcodeResult, text] = await Promise.all([decodeBarcode(imageUrl), runOcr(imageUrl)]);
+    // 바코드 인식과 OCR을 동시에 돌리면 순간 메모리 사용량이 두 배가 되므로 차례로 돌린다.
+    const barcodeResult = await decodeBarcode(canvas);
+    const text = await runOcr(canvas);
     const { category, brand: keywordBrand } = extractCategoryAndBrand(text);
     // 알려진 브랜드(카테고리 키워드에 등록된 상호)는 항상 깨끗한 키워드 매칭값을
     // 우선한다. "교환처/상호" 라벨 값은 OCR이 라벨 글자를 살짝 잘못 읽어도
@@ -321,7 +372,9 @@ export async function analyzeImage(file) {
       rawText: text,
     };
   } finally {
-    URL.revokeObjectURL(imageUrl);
+    // 분석이 끝난 캔버스가 메모리에 남지 않게 크기를 0으로 줄여 비워둔다.
+    canvas.width = 0;
+    canvas.height = 0;
   }
 }
 
@@ -329,7 +382,16 @@ export async function analyzeImage(file) {
 // 정보가 여러 이미지에 나뉘어 있을 수 있다. 각 이미지를 따로 분석한 뒤, 필드별로
 // 값을 찾은 첫 번째 이미지의 결과를 채택해서 합친다.
 export async function analyzeImages(files) {
-  const results = await Promise.all(files.map((file) => analyzeImage(file)));
+  // 여러 장을 동시에 분석하면 사진 수만큼 메모리를 한꺼번에 쓰게 되어 위험하다.
+  // 한 장씩 끝내고 다음 장으로 넘어간다.
+  const results = [];
+  try {
+    for (const file of files) {
+      results.push(await analyzeImage(file));
+    }
+  } finally {
+    await releaseOcrWorker();
+  }
 
   const merged = {
     code: null,
