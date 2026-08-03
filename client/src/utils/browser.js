@@ -6,6 +6,10 @@ export function isIos() {
   return /iphone|ipad|ipod/i.test(window.navigator.userAgent);
 }
 
+export function isAndroid() {
+  return /android/i.test(window.navigator.userAgent);
+}
+
 // 카카오톡/네이버/인스타 등에서 링크를 누르면 각 앱의 자체 웹뷰(인앱 브라우저)로 열린다.
 // 인앱 브라우저에는 "홈 화면에 추가" 기능이 없고 구글 로그인도 막히는 경우가 많아서,
 // 크롬/사파리로 옮겨가야 정상적으로 쓸 수 있다.

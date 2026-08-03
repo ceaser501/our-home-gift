@@ -9,8 +9,9 @@
     <link rel="manifest" href="manifest.json" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
     <!-- 크롬의 "웹사이트 자동 어둡게" 기능이 색을 뒤집지 않도록 라이트 전용임을 미리 알린다.
-         (CSS가 로드되기 전부터 적용되어야 해서 여기에도 둔다.) -->
-    <meta name="color-scheme" content="light" />
+         값이 반드시 "only light"여야 한다. 그냥 "light"는 선호하는 색만 알려줄 뿐이라
+         자동 어둡게가 그대로 적용된다. CSS보다 먼저 읽혀서 잠깐 어두워지는 것도 막아준다. -->
+    <meta name="color-scheme" content="only light" />
     <meta name="theme-color" content="#5B4FE8" />
     <title>모아콘</title>
     <meta name="description" content="가족·친구와 기프티콘을 모아서 함께 관리하는 사이트" />
@@ -21,8 +22,22 @@
       (function () {
         var isDark = localStorage.getItem('theme') === 'dark';
         document.documentElement.dataset.theme = isDark ? 'dark' : 'light';
-        document.querySelector('meta[name="color-scheme"]').content = isDark ? 'dark' : 'light';
+        document.querySelector('meta[name="color-scheme"]').content = isDark ? 'only dark' : 'only light';
       })();
+
+      // 크롬은 페이지가 뜨자마자 설치 가능 여부를 판단해 beforeinstallprompt를 던진다.
+      // 리액트가 그려지기 전에 이벤트가 지나가버리면 설치 버튼을 영영 띄울 수 없으므로
+      // (스플래시가 끝나고 로그인 화면이 뜰 때쯤이면 이미 늦다) 여기서 미리 붙잡아 둔다.
+      window.__installPromptEvent = null;
+      window.addEventListener('beforeinstallprompt', function (e) {
+        e.preventDefault();
+        window.__installPromptEvent = e;
+        window.dispatchEvent(new Event('installpromptready'));
+      });
+      window.addEventListener('appinstalled', function () {
+        window.__installPromptEvent = null;
+        window.dispatchEvent(new Event('installpromptready'));
+      });
     </script>
   </head>
   <body>
