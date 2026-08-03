@@ -1,23 +1,17 @@
 import { useEffect, useState } from 'react';
 import { Download, Share, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { isStandalone, isIos } from '../utils/browser';
 
 const DISMISS_KEY = 'install-prompt-dismissed';
-
-function isStandalone() {
-  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-}
-
-function isIos() {
-  return /iphone|ipad|ipod/i.test(window.navigator.userAgent);
-}
 
 // 크롬(안드로이드/데스크톱)은 beforeinstallprompt 이벤트를 잡아뒀다가 버튼을 눌렀을 때
 // 네이티브 설치창을 띄울 수 있다. 아이폰 사파리는 이 이벤트를 지원하지 않아서
 // "공유 → 홈 화면에 추가"를 직접 안내하는 수밖에 없다.
+// (카카오톡 등 인앱 브라우저는 진입 시점에 InAppBrowserNotice가 따로 안내한다.)
 export default function InstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
-  const [showIosGuide, setShowIosGuide] = useState(false);
+  const [showGuide, setShowGuide] = useState(false);
   const [dismissed, setDismissed] = useState(() => localStorage.getItem(DISMISS_KEY) === '1');
 
   useEffect(() => {
@@ -33,8 +27,7 @@ export default function InstallPrompt() {
   if (dismissed || isStandalone()) return null;
 
   const canPrompt = Boolean(deferredPrompt);
-  const iosNeedsGuide = isIos();
-  if (!canPrompt && !iosNeedsGuide) return null;
+  if (!canPrompt && !isIos()) return null;
 
   function handleDismiss() {
     localStorage.setItem(DISMISS_KEY, '1');
@@ -49,7 +42,7 @@ export default function InstallPrompt() {
       if (outcome === 'accepted') setDismissed(true);
       return;
     }
-    setShowIosGuide((v) => !v);
+    setShowGuide((v) => !v);
   }
 
   return (
@@ -60,12 +53,12 @@ export default function InstallPrompt() {
         <Button type="button" size="sm" onClick={handleInstall} className="shrink-0">
           설치
         </Button>
-        <button type="button" onClick={handleDismiss} aria-label="설치 안내 닫기" className="shrink-0 text-muted-foreground">
+        <button type="button" onClick={handleDismiss} aria-label="안내 닫기" className="shrink-0 text-muted-foreground">
           <X className="size-4" />
         </button>
       </div>
 
-      {showIosGuide && (
+      {showGuide && (
         <p className="m-0 flex items-start gap-1.5 text-xs leading-relaxed text-muted-foreground">
           <Share className="mt-0.5 size-3.5 shrink-0" />
           <span>
