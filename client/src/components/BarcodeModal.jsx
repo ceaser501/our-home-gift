@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
 import JsBarcode from 'jsbarcode';
+import { StickyNote } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { useFamily } from '../FamilyContext';
 
 const ZXING_TO_JSBARCODE = {
   CODE_128: 'CODE128',
@@ -15,8 +17,13 @@ const ZXING_TO_JSBARCODE = {
 };
 
 export default function BarcodeModal({ gifticon, onClose }) {
+  const { members } = useFamily();
   const [canvas, setCanvas] = useState(null);
   const [renderError, setRenderError] = useState(false);
+
+  // 메모를 남긴 사람. 등록자를 모르는 예전 기프티콘은 받은 사람으로 대신 표시한다.
+  const memoWriter =
+    members.find((m) => m.user_id === gifticon?.created_by)?.display_name || gifticon?.owner || null;
 
   // 기프티콘이 바뀌면 다시 그려볼 수 있게 실패 표시를 되돌린다.
   // (아래 그리기 효과 안에서 되돌리면 canvas가 붙었다 떨어졌다 하며 무한 반복이 된다.)
@@ -83,11 +90,17 @@ export default function BarcodeModal({ gifticon, onClose }) {
           </dl>
 
           {/* 등록할 때 적어둔 메모. "엄마, 아래 바코드를 매장에서 보여주세요" 같은 안내를
-              바코드 바로 위에서 읽을 수 있게 한다. 메모가 없으면 아무것도 보이지 않는다. */}
+              바코드 바로 위에서 읽을 수 있게 한다. 그냥 글만 있으면 이게 안내문인지
+              앱이 하는 말인지 헷갈려서, 누가 남긴 메모인지 이름표를 함께 보여준다.
+              메모가 없으면 아무것도 보이지 않는다. */}
           {gifticon.memo?.trim() && (
-            <p className="m-0 w-full rounded-xl bg-accent px-3.5 py-2.5 text-sm leading-relaxed break-keep whitespace-pre-wrap text-accent-foreground">
-              {gifticon.memo}
-            </p>
+            <div className="w-full rounded-xl border border-warning/30 bg-warning/10 px-3.5 py-2.5">
+              <p className="m-0 mb-1 flex items-center gap-1.5 text-xs font-semibold text-warning">
+                <StickyNote className="size-3.5" />
+                {memoWriter ? `${memoWriter}님이 남긴 메모` : '남긴 메모'}
+              </p>
+              <p className="m-0 text-sm leading-relaxed break-keep whitespace-pre-wrap text-foreground">{gifticon.memo}</p>
+            </div>
           )}
 
           {gifticon.code && !renderError ? (
