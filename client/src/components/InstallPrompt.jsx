@@ -65,8 +65,9 @@ export default function InstallPrompt() {
 
   // 한글은 기본값(break-word)이면 "브라우저"처럼 단어 중간에서 잘리므로 단어 단위로 끊는다.
 
+  // 화면 좌우 끝까지 꽉 채우는 상단 알림 바. 안쪽 여백은 본문(px-5)과 맞춘다.
   return (
-    <div className="mb-2 flex w-full flex-col gap-2 rounded-xl border border-border bg-accent/60 p-3">
+    <div className="flex w-full flex-col gap-2 border-b border-border bg-accent/60 px-5 py-3">
       <div className="flex items-center gap-2.5">
         {inApp ? (
           <ExternalLink className="size-4 shrink-0 text-primary" />

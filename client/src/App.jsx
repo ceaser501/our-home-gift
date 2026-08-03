@@ -97,9 +97,7 @@ export default function App() {
     <div className="relative mx-auto flex min-h-dvh w-full max-w-[480px] flex-col overflow-x-hidden bg-background pb-22">
       <Header />
 
-      <div className="px-5">
-        <InstallPrompt />
-      </div>
+      <InstallPrompt />
 
       <FilterBar
         search={search}

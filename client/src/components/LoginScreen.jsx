@@ -85,9 +85,12 @@ export default function LoginScreen() {
   }
 
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col items-center justify-center gap-6 bg-background px-6">
-      <InstallPrompt />
+    <div className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col bg-background">
+      <div className="pt-[env(safe-area-inset-top)]">
+        <InstallPrompt />
+      </div>
 
+      <div className="flex flex-1 flex-col items-center justify-center gap-6 px-6 py-8">
       <div className="flex flex-col items-center gap-3">
         <Logo className="size-12" />
         <h1 className="m-0 text-xl font-bold text-foreground">모아콘</h1>
@@ -162,7 +165,8 @@ export default function LoginScreen() {
         </div>
       )}
 
-      <ResetAllDataButton />
+        <ResetAllDataButton />
+      </div>
     </div>
   );
 }
