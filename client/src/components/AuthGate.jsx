@@ -54,9 +54,16 @@ export default function AuthGate({ children }) {
     return onAuthStateChange(setSession);
   }, []);
 
+  // 카메라·갤러리·파일 앱을 다녀오면 화면이 다시 보이는 순간 supabase가 세션을 점검하고,
+  // 내용은 같지만 "새로운 세션 객체"로 알려준다. 그 객체가 바뀔 때마다 가족 정보를 다시
+  // 불러오면 그동안 화면 전체가 로딩 화면으로 바뀌면서 App이 통째로 새로 마운트되고,
+  // 사진을 골라둔 기프티콘 입력창까지 사라진다(앱이 튕긴 것처럼 보인다).
+  // 그래서 실제로 사람이 바뀌었을 때(로그인/로그아웃)만 다시 불러온다.
+  const userId = session === undefined ? undefined : (session?.user?.id ?? null);
+
   useEffect(() => {
-    if (session === undefined) return;
-    if (!session) {
+    if (userId === undefined) return;
+    if (userId === null) {
       setFamilyState(null);
       return;
     }
@@ -72,7 +79,7 @@ export default function AuthGate({ children }) {
     return () => {
       cancelled = true;
     };
-  }, [session]);
+  }, [userId]);
 
   function refetchFamily() {
     setFamilyState(undefined);
