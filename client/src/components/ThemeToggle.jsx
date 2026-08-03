@@ -12,6 +12,9 @@ export default function ThemeToggle() {
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
+    // 크롬의 자동 어둡게 기능이 다시 끼어들지 않도록 meta도 같이 맞춰준다.
+    const meta = document.querySelector('meta[name="color-scheme"]');
+    if (meta) meta.content = theme;
     localStorage.setItem('theme', theme);
   }, [theme]);
 

@@ -8,6 +8,9 @@
     <link rel="apple-touch-icon" href="icon.png" />
     <link rel="manifest" href="manifest.json" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
+    <!-- 크롬의 "웹사이트 자동 어둡게" 기능이 색을 뒤집지 않도록 라이트 전용임을 미리 알린다.
+         (CSS가 로드되기 전부터 적용되어야 해서 여기에도 둔다.) -->
+    <meta name="color-scheme" content="light" />
     <meta name="theme-color" content="#5B4FE8" />
     <title>모아콘</title>
     <meta name="description" content="가족·친구와 기프티콘을 모아서 함께 관리하는 사이트" />
@@ -15,7 +18,11 @@
       // 테마는 앱이 그려지기 전에 정해둔다. (예전에는 헤더 안에서 정하다 보니 로그인
       // 화면에서는 테마가 없는 채로 폰 시스템 설정을 그대로 따라갔다.)
       // 사용자가 직접 다크를 고른 적이 없으면 항상 화이트를 기본으로 쓴다.
-      document.documentElement.dataset.theme = localStorage.getItem('theme') === 'dark' ? 'dark' : 'light';
+      (function () {
+        var isDark = localStorage.getItem('theme') === 'dark';
+        document.documentElement.dataset.theme = isDark ? 'dark' : 'light';
+        document.querySelector('meta[name="color-scheme"]').content = isDark ? 'dark' : 'light';
+      })();
     </script>
   </head>
   <body>

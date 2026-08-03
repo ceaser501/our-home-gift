@@ -2,6 +2,11 @@
 @import "tw-animate-css";
 
 :root {
+  /* 안드로이드 크롬의 "웹사이트 자동 어둡게(Auto Dark Theme)" 기능이 우리 색을
+     제멋대로 뒤집어 탁한 회색으로 만들지 않도록, 이 페이지는 라이트 전용임을 밝힌다.
+     다크 모드를 직접 고른 경우에만 아래에서 dark로 바꿔준다. */
+  color-scheme: only light;
+
   --background: #ffffff;
   --foreground: #1c1e27;
   --card: #ffffff;
@@ -33,6 +38,8 @@
    @media (prefers-color-scheme: dark) 규칙이 있어서, HTML이 캐시돼 있거나 테마
    스크립트가 늦게 붙으면 의도치 않게 어둡게 보이는 문제가 있었다. */
 :root[data-theme='light'] {
+  color-scheme: only light;
+
   --background: #ffffff;
   --foreground: #1c1e27;
   --card: #ffffff;
@@ -59,6 +66,8 @@
 }
 
 :root[data-theme='dark'] {
+  color-scheme: only dark;
+
   --background: #121216;
   --foreground: #f2f2f5;
   --card: #1b1b21;

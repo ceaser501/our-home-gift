@@ -7,7 +7,7 @@ import FamilyOnboarding from './FamilyOnboarding';
 import SplashScreen from './SplashScreen';
 
 // 스플래시가 깜빡이고 사라지면 오히려 산만해서, 한 번 뜨면 최소 이 시간만큼은 보여준다.
-const MIN_SPLASH_MS = 900;
+const MIN_SPLASH_MS = 1800;
 
 export default function AuthGate({ children }) {
   const [session, setSession] = useState(undefined);
