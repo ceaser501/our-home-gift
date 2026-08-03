@@ -260,13 +260,7 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
           </div>
           {analyzing && <p className="text-xs text-muted-foreground">이미지 분석 중…</p>}
 
-          {/*
-            multiple을 붙이면 안드로이드가 "여러 장을 한 번에 넘길 수 있는 앱"만 작업 선택
-            목록에 남겨서, 갤러리가 빠지고 카메라·파일 관리자만 뜨는 기기가 있다.
-            한 장씩 요청하면 갤러리가 목록에 나오고, 이미지 추가를 다시 눌러 여러 장을
-            쌓는 건 그대로 된다(선택한 파일은 기존 목록에 이어붙인다).
-          */}
-          <input id="gifticon-image" ref={fileInputRef} type="file" accept="image/*" onChange={handleFileChange} hidden />
+          <input id="gifticon-image" ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleFileChange} hidden />
 
           {autoFilled && <p className="text-xs text-success">자동으로 정보를 채웠어요. 확인 후 저장해주세요.</p>}
           {error && <p className="text-xs text-destructive">{error}</p>}
