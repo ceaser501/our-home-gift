@@ -63,6 +63,8 @@ export default function InstallPrompt() {
     ? `${IN_APP_LABEL[inApp] || '이 앱'}에서는 설치가 안 돼요. 브라우저로 열어주세요.`
     : '홈 화면에 추가하면 앱처럼 바로 열 수 있어요.';
 
+  // 한글은 기본값(break-word)이면 "브라우저"처럼 단어 중간에서 잘리므로 단어 단위로 끊는다.
+
   return (
     <div className="mb-2 flex w-full flex-col gap-2 rounded-xl border border-border bg-accent/60 p-3">
       <div className="flex items-center gap-2.5">
@@ -71,7 +73,7 @@ export default function InstallPrompt() {
         ) : (
           <Download className="size-4 shrink-0 text-primary" />
         )}
-        <p className="m-0 flex-1 text-xs text-foreground">{message}</p>
+        <p className="m-0 flex-1 text-xs break-keep text-foreground">{message}</p>
         <Button type="button" size="sm" onClick={handleAction} className="shrink-0">
           {inApp ? '열기' : '설치'}
         </Button>
@@ -81,7 +83,7 @@ export default function InstallPrompt() {
       </div>
 
       {showGuide && (
-        <p className="m-0 flex items-start gap-1.5 text-xs leading-relaxed text-muted-foreground">
+        <p className="m-0 flex items-start gap-1.5 text-xs leading-relaxed break-keep text-muted-foreground">
           <Share className="mt-0.5 size-3.5 shrink-0" />
           <span>
             {inApp ? (
