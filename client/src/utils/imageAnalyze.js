@@ -1,12 +1,24 @@
 import { BrowserMultiFormatReader } from '@zxing/browser';
 import { BarcodeFormat } from '@zxing/library';
 import { createWorker } from 'tesseract.js';
-import { CATEGORIES } from '../constants';
+import { BRAND_DISPLAY, CATEGORIES, GENERIC_KEYWORDS } from '../constants';
 
 let ocrWorkerPromise = null;
 function getOcrWorker() {
   if (!ocrWorkerPromise) {
-    ocrWorkerPromise = createWorker('kor+eng', 1, { workerPath: `${import.meta.env.BASE_URL}tesseract/worker.min.js` });
+    ocrWorkerPromise = createWorker('kor+eng', 1, {
+      workerPath: `${import.meta.env.BASE_URL}tesseract/worker.min.js`,
+    }).then(async (worker) => {
+      // 기프티콘 화면은 상호·상품명·안내문이 한 칸에 위아래로 쌓인 형태라, 글자 크기가
+      // 제각각인 한 단(段)으로 보고 읽으면(PSM 4) 자동 판단보다 줄이 덜 깨진다.
+      // DPI를 알려주면 화면 캡처처럼 메타 정보가 없는 이미지에서 글자 크기 추정이 안정된다.
+      await worker.setParameters({
+        tessedit_pageseg_mode: '4',
+        preserve_interword_spaces: '1',
+        user_defined_dpi: '300',
+      });
+      return worker;
+    });
   }
   return ocrWorkerPromise;
 }
@@ -16,6 +28,15 @@ function getOcrWorker() {
 // (설치한 앱에서는 앱이 튕긴 것처럼 보인다) 분석용으로는 이 크기까지 줄여서 쓴다.
 // 기프티콘 바코드/글자는 이 해상도면 충분히 읽힌다.
 const MAX_ANALYZE_EDGE = 2000;
+// 반대로 너무 작은 이미지(작게 저장된 캡처 등)는 글자가 뭉개져서 인식률이 떨어진다.
+// 이 정도까지는 키워서 읽는다(원본보다 2배까지만).
+const MIN_ANALYZE_EDGE = 1600;
+
+function analyzeScale(longEdge) {
+  if (longEdge > MAX_ANALYZE_EDGE) return MAX_ANALYZE_EDGE / longEdge;
+  if (longEdge < MIN_ANALYZE_EDGE) return Math.min(2, MIN_ANALYZE_EDGE / longEdge);
+  return 1;
+}
 
 async function toAnalyzeCanvas(file) {
   let source;
@@ -37,11 +58,14 @@ async function toAnalyzeCanvas(file) {
     }
   }
 
-  const scale = Math.min(1, MAX_ANALYZE_EDGE / Math.max(width, height));
+  const scale = analyzeScale(Math.max(width, height));
   const canvas = document.createElement('canvas');
   canvas.width = Math.max(1, Math.round(width * scale));
   canvas.height = Math.max(1, Math.round(height * scale));
-  canvas.getContext('2d').drawImage(source, 0, 0, canvas.width, canvas.height);
+  const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(source, 0, 0, canvas.width, canvas.height);
   source.close?.();
 
   return canvas;
@@ -129,14 +153,82 @@ function loadImage(src) {
   });
 }
 
+// 글자 인식 신뢰도가 이 값에 못 미치는 줄은 버린다. 기프티콘 이미지에는 배경 무늬나
+// 로고 위의 장식 글자가 섞여 있어서, 그대로 두면 "MESH?" 같은 엉뚱한 값이 상품명으로 들어간다.
+const MIN_LINE_CONFIDENCE = 45;
+const NAME_MIN_CONFIDENCE = 62;
+
+function median(numbers) {
+  if (numbers.length === 0) return 0;
+  const sorted = [...numbers].sort((a, b) => a - b);
+  return sorted[Math.floor(sorted.length / 2)];
+}
+
+// 줄 단위 인식 결과(글자 크기·신뢰도 포함)를 뽑아둔다. 상품명은 "가장 큰 글씨"라는
+// 단서가 가장 정확해서, 글자 높이를 알아야 제대로 고를 수 있다.
+function collectLines(page) {
+  const lines = [];
+  for (const block of page?.blocks || []) {
+    for (const paragraph of block.paragraphs || []) {
+      for (const line of paragraph.lines || []) {
+        const text = (line.text || '').replace(/\s+/g, ' ').trim();
+        if (!text) continue;
+        const heights = (line.words || []).map((w) => w.bbox.y1 - w.bbox.y0).filter((h) => h > 0);
+        lines.push({
+          text,
+          confidence: line.confidence ?? 0,
+          height: median(heights),
+          top: line.bbox?.y0 ?? 0,
+        });
+      }
+    }
+  }
+  return lines;
+}
+
 async function runOcr(canvas) {
   try {
     const worker = await getOcrWorker();
-    const { data } = await worker.recognize(canvas);
-    return data.text || '';
+    const { data } = await worker.recognize(canvas, {}, { text: true, blocks: true });
+    const lines = collectLines(data);
+    if (lines.length === 0) return { text: data.text || '', lines: [] };
+    const text = lines
+      .filter((l) => l.confidence >= MIN_LINE_CONFIDENCE)
+      .map((l) => l.text)
+      .join('\n');
+    return { text: text || data.text || '', lines };
   } catch {
-    return '';
+    return { text: '', lines: [] };
   }
+}
+
+// 기프티콘은 상품명을 가장 크게 인쇄한다. 그래서 안내문·라벨·상호줄을 걷어낸 뒤
+// 남은 줄 중에서 글자가 가장 큰 줄을 상품명으로 본다. 두 줄로 접힌 상품명은
+// 바로 아래에 비슷한 크기로 이어지므로 함께 붙인다.
+function pickNameByFontSize(lines, brandNorm) {
+  const candidates = lines
+    .filter((l) => {
+      const t = l.text;
+      if (t.length < 2 || t.length > 40) return false;
+      if (l.confidence < NAME_MIN_CONFIDENCE) return false;
+      if (!/[가-힣a-zA-Z]{2,}/.test(t)) return false;
+      if (/^[0-9.\-/\s]+$/.test(t)) return false;
+      return !isNoiseLine(t) && !isStopLine(t) && !isBrandOnlyLine(t, brandNorm);
+    })
+    .sort((a, b) => a.top - b.top);
+
+  if (candidates.length === 0) return null;
+
+  const maxHeight = Math.max(...candidates.map((l) => l.height));
+  if (maxHeight <= 0) return null;
+
+  const firstIndex = candidates.findIndex((l) => l.height >= maxHeight * 0.9);
+  const first = candidates[firstIndex];
+  const next = candidates[firstIndex + 1];
+  const wrapped =
+    next && next.height >= first.height * 0.8 && next.top - first.top < first.height * 2.6 ? `${first.text} ${next.text}` : first.text;
+
+  return wrapped.trim();
 }
 
 // OCR 워커는 한글 학습 데이터까지 올려두느라 메모리를 꽤 차지한다. 분석이 끝나면
@@ -242,16 +334,23 @@ function extractLabeledField(text, labels) {
   return value.length > 0 ? value : null;
 }
 
+// 키워드가 여러 개 걸리면 가장 긴 것을 택한다. "메가커피"가 걸렸는데 '커피'로 잡히거나,
+// 상호가 아닌 일반 단어('치킨', '커피')가 상호 자리에 들어가는 걸 막기 위해서다.
 function extractCategoryAndBrand(text) {
   const lower = text.toLowerCase().replace(/\s+/g, '');
+  let best = null;
+
   for (const cat of CATEGORIES) {
     for (const kw of cat.keywords) {
-      if (lower.includes(kw.replace(/\s+/g, '').toLowerCase())) {
-        return { category: cat.key, brand: kw };
-      }
+      const norm = kw.replace(/\s+/g, '').toLowerCase();
+      if (!lower.includes(norm)) continue;
+      if (!best || norm.length > best.norm.length) best = { category: cat.key, keyword: kw, norm };
     }
   }
-  return { category: '기타', brand: null };
+
+  if (!best) return { category: '기타', brand: null };
+  const brand = GENERIC_KEYWORDS.has(best.keyword) ? null : BRAND_DISPLAY[best.norm] || best.keyword;
+  return { category: best.category, brand };
 }
 
 const NAME_NOISE_KEYWORDS = [
@@ -334,7 +433,7 @@ export async function analyzeImage(file) {
   try {
     // 바코드 인식과 OCR을 동시에 돌리면 순간 메모리 사용량이 두 배가 되므로 차례로 돌린다.
     const barcodeResult = await decodeBarcode(canvas);
-    const text = await runOcr(canvas);
+    const { text, lines } = await runOcr(canvas);
     const { category, brand: keywordBrand } = extractCategoryAndBrand(text);
     // 알려진 브랜드(카테고리 키워드에 등록된 상호)는 항상 깨끗한 키워드 매칭값을
     // 우선한다. "교환처/상호" 라벨 값은 OCR이 라벨 글자를 살짝 잘못 읽어도
@@ -344,7 +443,8 @@ export async function analyzeImage(file) {
     const labeledAmountText = extractLabeledField(text, ['금액', '권종', '가격']);
     const amount = (labeledAmountText && extractAmount(labeledAmountText)) ?? extractAmount(text);
     const expiresAt = extractExpiry(text);
-    const name = extractLabeledField(text, ['상품명']) || guessName(text, brand);
+    const brandNorm = brand ? brand.toLowerCase().replace(/\s+/g, '') : null;
+    const name = extractLabeledField(text, ['상품명']) || pickNameByFontSize(lines, brandNorm) || guessName(text, brand);
 
     // zxing이 바코드 막대 자체를 못 읽었을 때(카카오톡 선물하기 저장 이미지 등에서
     // 종종 발생), 바코드 아래 인쇄된 숫자를 OCR 텍스트에서 대신 뽑아 쓴다.

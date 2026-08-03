@@ -1,4 +1,5 @@
 import { supabase, GIFTICON_TABLE, IMAGE_BUCKET } from './supabaseClient';
+import { LEGACY_CATEGORIES, normalizeCategory } from './constants';
 
 function withImageUrls(row) {
   if (!row) return row;
@@ -7,7 +8,7 @@ function withImageUrls(row) {
   const barcode_image_url = row.barcode_image_path
     ? supabase.storage.from(IMAGE_BUCKET).getPublicUrl(row.barcode_image_path).data.publicUrl
     : null;
-  return { ...row, image_urls, image_url: image_urls[0] || null, barcode_image_url };
+  return { ...row, category: normalizeCategory(row.category), image_urls, image_url: image_urls[0] || null, barcode_image_url };
 }
 
 async function uploadImages(familyId, files) {
@@ -38,7 +39,13 @@ async function removeImages(paths) {
 export async function listGifticons(params = {}) {
   let query = supabase.from(GIFTICON_TABLE).select('*').order('created_at', { ascending: false });
 
-  if (params.category) query = query.eq('category', params.category);
+  if (params.category) {
+    // 합쳐진 카테고리를 고를 때는 예전 이름으로 저장된 것도 같이 보여준다.
+    const legacyKeys = Object.keys(LEGACY_CATEGORIES).filter((old) => LEGACY_CATEGORIES[old] === params.category);
+    query = legacyKeys.length
+      ? query.in('category', [params.category, ...legacyKeys])
+      : query.eq('category', params.category);
+  }
   if (params.status) query = query.eq('status', params.status);
   if (params.search) {
     const term = params.search.replace(/[%,]/g, '');
