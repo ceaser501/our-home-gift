@@ -28,36 +28,10 @@
   --radius: 1rem;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #121216;
-    --foreground: #f2f2f5;
-    --card: #1b1b21;
-    --card-foreground: #f2f2f5;
-    --popover: #1b1b21;
-    --popover-foreground: #f2f2f5;
-    --primary: #8478f5;
-    --primary-foreground: #ffffff;
-    --secondary: #232329;
-    --secondary-foreground: #f2f2f5;
-    --muted: #1b1b21;
-    --muted-foreground: #9b9ba6;
-    --accent: #24223a;
-    --accent-foreground: #b6afff;
-    --destructive: #ef5c56;
-    --destructive-foreground: #ffffff;
-    --success: #34c97f;
-    --success-foreground: #0c1f14;
-    --warning: #e69008;
-    --warning-foreground: #1c1e27;
-    --border: #2a2a31;
-    --input: #2a2a31;
-    --ring: #8478f5;
-  }
-}
-
-/* prefers-color-scheme는 시스템 기본값일 뿐이고, 우측 상단 토글로 명시적으로
-   고른 라이트/다크 모드(data-theme)가 있으면 그 값이 항상 우선한다. */
+/* 폰이 다크모드여도 앱은 항상 화이트가 기본이다. 헤더의 토글로 직접 다크를
+   고른 경우에만(data-theme="dark") 어두워진다. 예전에는 시스템 설정을 따라가는
+   @media (prefers-color-scheme: dark) 규칙이 있어서, HTML이 캐시돼 있거나 테마
+   스크립트가 늦게 붙으면 의도치 않게 어둡게 보이는 문제가 있었다. */
 :root[data-theme='light'] {
   --background: #ffffff;
   --foreground: #1c1e27;
@@ -167,4 +141,24 @@
 
 .no-scrollbar {
   scrollbar-width: none;
+}
+
+/* 진입 화면(스플래시)에서 로고가 살짝 떠오르며 나타나는 효과 */
+@keyframes splash-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.animate-splash-in {
+  animation: splash-in 0.45s ease-out both;
+}
+
+.animate-splash-in-delayed {
+  animation: splash-in 0.45s ease-out 0.12s both;
 }

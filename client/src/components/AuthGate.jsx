@@ -4,18 +4,20 @@ import { getMyFamily } from '../family';
 import { FamilyContext } from '../FamilyContext';
 import LoginScreen from './LoginScreen';
 import FamilyOnboarding from './FamilyOnboarding';
+import SplashScreen from './SplashScreen';
 
-function CenteredMessage({ text }) {
-  return (
-    <div className="flex min-h-dvh w-full items-center justify-center bg-background">
-      <p className="text-sm text-muted-foreground">{text}</p>
-    </div>
-  );
-}
+// 스플래시가 깜빡이고 사라지면 오히려 산만해서, 한 번 뜨면 최소 이 시간만큼은 보여준다.
+const MIN_SPLASH_MS = 900;
 
 export default function AuthGate({ children }) {
   const [session, setSession] = useState(undefined);
   const [familyState, setFamilyState] = useState(undefined);
+  const [splashDone, setSplashDone] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setSplashDone(true), MIN_SPLASH_MS);
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     getSession().then(setSession);
@@ -49,9 +51,9 @@ export default function AuthGate({ children }) {
       .catch(() => setFamilyState(null));
   }
 
-  if (session === undefined) return <CenteredMessage text="불러오는 중…" />;
+  if (!splashDone || session === undefined) return <SplashScreen />;
   if (!session) return <LoginScreen />;
-  if (familyState === undefined) return <CenteredMessage text="불러오는 중…" />;
+  if (familyState === undefined) return <SplashScreen />;
   if (!familyState) return <FamilyOnboarding userEmail={session.user.email} onDone={refetchFamily} />;
 
   return (
