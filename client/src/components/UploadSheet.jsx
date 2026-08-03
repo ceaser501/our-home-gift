@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Camera, Image as ImageIcon, Images, Plus, RotateCcw, Search, X } from 'lucide-react';
+import { Plus, RotateCcw, Search, X } from 'lucide-react';
 import { CATEGORIES } from '../constants';
 import { analyzeImages } from '../utils/imageAnalyze';
 import { createGifticon, updateGifticon, searchPrice, findGifticonByCode } from '../api';
@@ -64,13 +64,7 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
   const [searchingPrice, setSearchingPrice] = useState(false);
   const [priceSearchNote, setPriceSearchNote] = useState('');
   const [amountMissing, setAmountMissing] = useState(false);
-  // 사진을 어디서 가져올지 앱 안에서 먼저 고르게 한다. 안드로이드는 여러 장 선택(multiple)을
-  // 요구하면 다중 선택을 지원하지 않는 앱(갤러리 등)을 "작업 선택" 목록에서 빼버려서,
-  // 카메라·파일 관리자만 남는 경우가 있다. 그래서 한 장씩 고르는 입력을 따로 둔다.
-  const [sourceOpen, setSourceOpen] = useState(false);
-  const galleryInputRef = useRef(null);
-  const singleInputRef = useRef(null);
-  const cameraInputRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     return () => {
@@ -80,11 +74,6 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
 
   function updateField(key, value) {
     setForm((prev) => ({ ...prev, [key]: value }));
-  }
-
-  function pickFrom(ref) {
-    setSourceOpen(false);
-    ref.current?.click();
   }
 
   async function handleFileChange(e) {
@@ -165,10 +154,7 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
     setAutoFilled(false);
     setPriceSearchNote('');
     setAmountMissing(false);
-    setSourceOpen(false);
-    [galleryInputRef, singleInputRef, cameraInputRef].forEach((ref) => {
-      if (ref.current) ref.current.value = '';
-    });
+    if (fileInputRef.current) fileInputRef.current.value = '';
   }
 
   async function handleSubmit(e) {
@@ -265,73 +251,16 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
             ))}
             <button
               type="button"
-              onClick={() => setSourceOpen((v) => !v)}
-              aria-expanded={sourceOpen}
+              onClick={() => fileInputRef.current?.click()}
               className="flex aspect-square flex-col items-center justify-center gap-0.5 rounded-xl border border-dashed border-border bg-background text-xs text-muted-foreground"
             >
               <Plus className="size-5" />
               <span>이미지 추가</span>
             </button>
           </div>
-
-          {sourceOpen && (
-            <div className="flex flex-col gap-1 rounded-xl border border-border bg-card p-1.5">
-              <button
-                type="button"
-                onClick={() => pickFrom(galleryInputRef)}
-                className="flex items-center gap-2.5 rounded-lg px-2.5 py-2.5 text-left text-sm text-foreground active:bg-accent"
-              >
-                <Images className="size-4 shrink-0 text-muted-foreground" />
-                <span className="flex flex-col">
-                  갤러리에서 여러 장
-                  <span className="text-xs text-muted-foreground">사진을 한 번에 여러 장 고를 때</span>
-                </span>
-              </button>
-              <button
-                type="button"
-                onClick={() => pickFrom(singleInputRef)}
-                className="flex items-center gap-2.5 rounded-lg px-2.5 py-2.5 text-left text-sm text-foreground active:bg-accent"
-              >
-                <ImageIcon className="size-4 shrink-0 text-muted-foreground" />
-                <span className="flex flex-col">
-                  갤러리에서 한 장
-                  <span className="text-xs text-muted-foreground">앱 목록에 갤러리가 안 보일 때 이걸로</span>
-                </span>
-              </button>
-              <button
-                type="button"
-                onClick={() => pickFrom(cameraInputRef)}
-                className="flex items-center gap-2.5 rounded-lg px-2.5 py-2.5 text-left text-sm text-foreground active:bg-accent"
-              >
-                <Camera className="size-4 shrink-0 text-muted-foreground" />
-                <span className="flex flex-col">
-                  카메라로 촬영
-                  <span className="text-xs text-muted-foreground">바로 카메라가 열려요</span>
-                </span>
-              </button>
-            </div>
-          )}
-
           {analyzing && <p className="text-xs text-muted-foreground">이미지 분석 중…</p>}
 
-          <input
-            id="gifticon-image"
-            ref={galleryInputRef}
-            type="file"
-            accept="image/*"
-            multiple
-            onChange={handleFileChange}
-            hidden
-          />
-          <input ref={singleInputRef} type="file" accept="image/*" onChange={handleFileChange} hidden />
-          <input
-            ref={cameraInputRef}
-            type="file"
-            accept="image/*"
-            capture="environment"
-            onChange={handleFileChange}
-            hidden
-          />
+          <input id="gifticon-image" ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleFileChange} hidden />
 
           {autoFilled && <p className="text-xs text-success">자동으로 정보를 채웠어요. 확인 후 저장해주세요.</p>}
           {error && <p className="text-xs text-destructive">{error}</p>}
