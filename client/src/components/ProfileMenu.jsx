@@ -1,9 +1,11 @@
 import { useState } from 'react';
-import { ChevronRight, DoorOpen, LogOut, Receipt } from 'lucide-react';
+import { BellRing, ChevronRight, DoorOpen, LogOut, Receipt } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import ThemeToggle from './ThemeToggle';
 import NotificationToggle from './NotificationToggle';
 import UsageReportSheet from './UsageReportSheet';
+import AlertDialog from './AlertDialog';
+import { sendTestNotification } from '../api';
 import { useFamily } from '../FamilyContext';
 import { leaveFamily } from '../family';
 import { OWNER_TAG_PALETTE, memberTagColorClass } from '../utils/tagColor';
@@ -15,6 +17,38 @@ export default function ProfileMenu({ onClose }) {
 
   const [reportOpen, setReportOpen] = useState(false);
   const [leaving, setLeaving] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [notice, setNotice] = useState(null);
+
+  async function handleTestNotification() {
+    setTesting(true);
+    try {
+      const result = await sendTestNotification();
+      if (result?.sent > 0) {
+        setNotice({
+          tone: 'success',
+          title: '알림을 보냈어요',
+          description: `'${result.gifticon}' 기준으로 보냈어요. 잠시 뒤 도착해요.`,
+        });
+      } else if (result?.reason === 'notifications_off') {
+        setNotice({
+          tone: 'info',
+          title: '알림이 꺼져 있어요',
+          description: '꺼둔 상태라 아무것도 보내지 않았어요. 위에서 켠 뒤 다시 눌러보세요.',
+        });
+      } else {
+        setNotice({
+          tone: 'info',
+          title: '알릴 기프티콘이 없어요',
+          description: '유효기한이 남아 있는 사용 전 기프티콘이 있어야 보낼 수 있어요.',
+        });
+      }
+    } catch (err) {
+      setNotice({ tone: 'warning', title: '알림 테스트에 실패했어요', description: err.message });
+    } finally {
+      setTesting(false);
+    }
+  }
 
   async function handleLeave() {
     const message =
@@ -60,6 +94,18 @@ export default function ProfileMenu({ onClose }) {
           <ThemeToggle asRow />
           <NotificationToggle asRow />
 
+          {/* 실제 발송과 같은 길로 보내보는 테스트. 알림을 꺼뒀으면 아무것도 오지 않는다. */}
+          <button
+            type="button"
+            onClick={handleTestNotification}
+            disabled={testing}
+            className="flex w-full items-center gap-3 px-1 py-3 text-left text-sm disabled:opacity-50"
+          >
+            <BellRing className="size-4.5 text-muted-foreground" />
+            <span className="flex-1 text-foreground">알림 테스트</span>
+            <span className="text-xs text-muted-foreground">{testing ? '보내는 중…' : '5초 뒤 도착'}</span>
+          </button>
+
           <p className="m-0 pt-3 pb-1 text-xs font-semibold text-muted-foreground">기록</p>
           <button
             type="button"
@@ -94,6 +140,7 @@ export default function ProfileMenu({ onClose }) {
         </div>
 
         {reportOpen && <UsageReportSheet onClose={() => setReportOpen(false)} />}
+        {notice && <AlertDialog {...notice} onClose={() => setNotice(null)} />}
       </SheetContent>
     </Sheet>
   );

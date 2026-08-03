@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
+import AlertDialog from './AlertDialog';
 
 function buildEmptyForm(defaultOwner) {
   return {
@@ -81,6 +82,7 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
   const [error, setError] = useState('');
   const [searchingPrice, setSearchingPrice] = useState(false);
   const [priceSearchNote, setPriceSearchNote] = useState('');
+  const [duplicateName, setDuplicateName] = useState(null);
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -196,7 +198,7 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
       if (form.code) {
         const existing = await findGifticonByCode(family.id, form.code, mode === 'edit' ? initial.id : undefined);
         if (existing) {
-          alert('이미 등록된 기프티콘이에요.');
+          setDuplicateName(existing.name);
           setSubmitting(false);
           return;
         }
@@ -380,6 +382,15 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
             {submitting ? '저장 중…' : '저장하기'}
           </Button>
         </form>
+
+        {duplicateName && (
+          <AlertDialog
+            tone="warning"
+            title="이미 등록된 기프티콘이에요"
+            description={`같은 바코드로 '${duplicateName}'이(가) 이미 목록에 있어요.`}
+            onClose={() => setDuplicateName(null)}
+          />
+        )}
       </SheetContent>
     </Sheet>
   );

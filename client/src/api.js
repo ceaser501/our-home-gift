@@ -237,6 +237,17 @@ export async function savePushSubscription({ userId, familyId, subscription }) {
   if (error) throw new Error(error.message);
 }
 
+// 실제 발송과 같은 길(서버 → 저장된 구독 목록 → 웹푸시)로 알림을 한 번 보내본다.
+// 알림을 꺼둔 상태면 보낼 곳이 없어서 아무것도 오지 않는다(그게 확인하려는 것).
+export async function sendTestNotification() {
+  const { data, error } = await supabase.functions.invoke('send-test-notification');
+  if (error) {
+    const detail = await error.context?.json?.().catch(() => null);
+    throw new Error(detail?.error || error.message || '알림 테스트에 실패했어요.');
+  }
+  return data;
+}
+
 // 이 브라우저의 구독이 실제로 "보내는 목록"에 들어 있는지. 알림 버튼의 켜짐/꺼짐은
 // 브라우저에 구독이 있는지가 아니라 이 목록에 있는지로 판단해야 실제 동작과 어긋나지 않는다.
 export async function hasPushSubscription(endpoint) {
