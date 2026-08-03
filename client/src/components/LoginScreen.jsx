@@ -86,7 +86,7 @@ export default function LoginScreen() {
     <div className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col items-center justify-center gap-6 bg-background px-6">
       <div className="flex flex-col items-center gap-3">
         <Logo className="size-12" />
-        <h1 className="m-0 text-xl font-bold text-foreground">아워홈 기프티콘</h1>
+        <h1 className="m-0 text-xl font-bold text-foreground">모아콘</h1>
         <p className="m-0 text-center text-sm text-muted-foreground">가족과 기프티콘을 함께 관리해보세요.</p>
       </div>
 

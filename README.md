@@ -1,4 +1,4 @@
-# 아워홈 기프티콘
+# 모아콘 (기프티콘 모아보기)
 
 가족끼리 함께 쓰는 기프티콘 관리 사이트. 카카오톡/문자로 받은 기프티콘 이미지를 업로드하면
 바코드·QR·이름·금액·유효기한을 자동으로 인식해 채워주고, 만료일이 얼마 안 남은 순서로 목록을 보여줍니다.
@@ -122,7 +122,7 @@ Supabase가 기본 지원하는 제공자라 어렵지 않습니다.
 > 추가하는 형태로 진행하면, Client ID/Secret 하나를 두 기능이 같이 씁니다.
 
 1. [네이버 검색 API 신청 페이지](https://developers.naver.com/products/service-api/search/search.md)로 이동
-   → 페이지 아래 **"오픈 API 이용 신청"** 버튼 클릭 → 기존 애플리케이션(아워홈-기프티콘)에
+   → 페이지 아래 **"오픈 API 이용 신청"** 버튼 클릭 → 기존 애플리케이션에
    검색 API 추가 → 웹 서비스 URL에 배포 주소(`https://ceaser501.github.io/our-home-gift/`) 입력
 2. [Supabase CLI](https://supabase.com/docs/guides/cli) 설치 (`npm install -g supabase` 또는 `brew install supabase/tap/supabase`)
 3. 저장소 루트에서:

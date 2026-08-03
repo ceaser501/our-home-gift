@@ -11,7 +11,7 @@ export default function Header() {
     <header className="flex flex-col gap-1 px-5 pt-[max(16px,env(safe-area-inset-top))] pb-2">
       <div className="flex items-center gap-2.5">
         <Logo className="size-7 shrink-0" />
-        <h1 className="m-0 flex-1 text-xl font-bold text-foreground">아워홈 기프티콘</h1>
+        <h1 className="m-0 flex-1 text-xl font-bold text-foreground">모아콘</h1>
         <NotificationToggle />
         <ThemeToggle />
         <button
