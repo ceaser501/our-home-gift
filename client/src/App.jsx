@@ -7,6 +7,7 @@ import UploadSheet from './components/UploadSheet';
 import BarcodeModal from './components/BarcodeModal';
 import ImageViewerModal from './components/ImageViewerModal';
 import PushTestButton from './components/PushTestButton';
+import InstallPrompt from './components/InstallPrompt';
 import { listGifticons, updateGifticon, deleteGifticon } from './api';
 import { daysUntil, todayStr } from './utils/date';
 import { useFamily } from './FamilyContext';
@@ -95,6 +96,8 @@ export default function App() {
   return (
     <div className="relative mx-auto flex min-h-dvh w-full max-w-[480px] flex-col overflow-x-hidden bg-background pb-22">
       <Header />
+
+      <InstallPrompt />
 
       <FilterBar
         search={search}
