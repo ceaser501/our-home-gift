@@ -17,6 +17,7 @@ export default function ProfileMenu({ onClose }) {
 
   const [reportOpen, setReportOpen] = useState(false);
   const [leaving, setLeaving] = useState(false);
+  const [leaveAsking, setLeaveAsking] = useState(false);
   const [testing, setTesting] = useState(false);
   const [notice, setNotice] = useState(null);
 
@@ -51,19 +52,18 @@ export default function ProfileMenu({ onClose }) {
   }
 
   async function handleLeave() {
-    const message =
-      `'${family.name}'에서 나갈까요?\n\n` +
-      `내가 등록했거나 내 앞으로 되어 있는 기프티콘은 남은 가족에게 보이지 않게 돼요.\n` +
-      `(지워지는 건 아니라서, 다시 참여하면 관리자가 되살릴 수 있어요.)`;
-    if (!confirm(message)) return;
-
+    setLeaveAsking(false);
     setLeaving(true);
     try {
       await leaveFamily(family.id);
       onClose();
       refetchFamily();
     } catch (err) {
-      alert(err.message || '가족에서 나가지 못했어요.');
+      setNotice({
+        tone: 'warning',
+        title: '가족에서 나가지 못했어요',
+        description: err.message,
+      });
       setLeaving(false);
     }
   }
@@ -121,7 +121,7 @@ export default function ProfileMenu({ onClose }) {
 
           <button
             type="button"
-            onClick={handleLeave}
+            onClick={() => setLeaveAsking(true)}
             disabled={leaving}
             className="flex w-full items-center gap-3 px-1 py-3 text-left text-sm text-destructive disabled:opacity-50"
           >
@@ -140,6 +140,21 @@ export default function ProfileMenu({ onClose }) {
         </div>
 
         {reportOpen && <UsageReportSheet onClose={() => setReportOpen(false)} />}
+
+        {leaveAsking && (
+          <AlertDialog
+            tone="danger"
+            title={`'${family.name}'에서 나갈까요?`}
+            description={
+              '내가 등록했거나 내 앞으로 되어 있는 기프티콘은 남은 가족에게 보이지 않게 돼요.\n' +
+              '(지워지는 건 아니라서, 다시 참여하면 되살릴 수 있어요.)'
+            }
+            confirmLabel="나가기"
+            onConfirm={handleLeave}
+            onClose={() => setLeaveAsking(false)}
+          />
+        )}
+
         {notice && <AlertDialog {...notice} onClose={() => setNotice(null)} />}
       </SheetContent>
     </Sheet>

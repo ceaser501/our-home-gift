@@ -95,8 +95,6 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
   const [priceSearchNote, setPriceSearchNote] = useState('');
   const [duplicateName, setDuplicateName] = useState(null);
   const [progress, setProgress] = useState(null);
-  // 이미지 분석이 채워 넣은 칸들. 새 이미지를 올리면 이 칸들만 새 결과로 갈아끼운다.
-  const autoFilledFields = useRef(new Set());
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -106,8 +104,6 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
   }, [newPreviews]);
 
   function updateField(key, value) {
-    // 사람이 직접 고친 칸은 다음 이미지 분석 때 덮어쓰지 않는다.
-    autoFilledFields.current.delete(key);
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
@@ -133,35 +129,26 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
     try {
       const result = await analyzeImages(selected, { onProgress: setProgress });
 
-      // 새 이미지를 올리면 그 이미지에 맞게 아래 내용도 다시 채운다.
-      // 다만 사람이 직접 고쳐 쓴 칸은 건드리지 않는다(자동으로 채웠던 칸만 갈아끼운다).
-      setForm((prev) => {
-        const next = { ...prev };
-        const fill = (key, value) => {
-          if (value === null || value === undefined || value === '') return;
-          if (prev[key] === '' || prev[key] === null || autoFilledFields.current.has(key)) {
-            next[key] = value;
-            autoFilledFields.current.add(key);
-          }
-        };
+      // 이미지를 새로 올리는 건 "이 기프티콘으로 바꾸겠다"는 뜻이라, 기프티콘을 설명하는
+      // 칸들은 직접 고쳐둔 값까지 포함해서 새 이미지 결과로 통째로 바꾼다.
+      // 못 읽은 항목은 비워서 예전 기프티콘 값이 남지 않게 한다.
+      // 받은 사람과 메모는 이미지에서 읽는 값이 아니라 사람이 정하는 값이라 그대로 둔다.
+      setForm((prev) => ({
+        ...prev,
+        name: result.name || '',
+        brand: result.brand || '',
+        amount: result.amount ?? '',
+        category: result.category || '기타',
+        code: result.code || '',
+        code_type: result.codeType || '',
+        expires_at: result.expiresAt || '',
+      }));
 
-        fill('name', result.name);
-        fill('brand', result.brand);
-        fill('amount', result.amount);
-        fill('code', result.code);
-        fill('code_type', result.codeType);
-        fill('expires_at', result.expiresAt);
-        // 카테고리는 빈 값이 없고 '기타'가 기본값이라 따로 본다.
-        if (result.category && (prev.category === '기타' || autoFilledFields.current.has('category'))) {
-          next.category = result.category;
-          autoFilledFields.current.add('category');
-        }
-        return next;
-      });
-
-      if (result.code && result.barcodeCropBlob) {
-        setBarcodeCropFile(new File([result.barcodeCropBlob], 'barcode.png', { type: 'image/png' }));
-      }
+      setBarcodeCropFile(
+        result.code && result.barcodeCropBlob
+          ? new File([result.barcodeCropBlob], 'barcode.png', { type: 'image/png' })
+          : null
+      );
       setAutoFilled(true);
     } catch {
       setError('이미지 자동 인식에 실패했어요. 직접 입력해주세요.');
@@ -212,7 +199,6 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
     setAutoFilled(false);
     setPriceSearchNote('');
     setProgress(null);
-    autoFilledFields.current.clear();
     if (fileInputRef.current) fileInputRef.current.value = '';
   }
 

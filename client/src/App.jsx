@@ -7,6 +7,7 @@ import UploadSheet from './components/UploadSheet';
 import BarcodeModal from './components/BarcodeModal';
 import ImageViewerModal from './components/ImageViewerModal';
 import InstallPrompt from './components/InstallPrompt';
+import AlertDialog from './components/AlertDialog';
 import { listGifticons, updateGifticon, deleteGifticon } from './api';
 import { daysUntil, todayStr } from './utils/date';
 import { useFamily } from './FamilyContext';
@@ -47,6 +48,8 @@ export default function App() {
   const [sheetState, setSheetState] = useState(null); // { mode, initial }
   const [codeTarget, setCodeTarget] = useState(null);
   const [imageTarget, setImageTarget] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [notice, setNotice] = useState(null);
 
   const fetchList = useCallback(async () => {
     setLoading(true);
@@ -82,17 +85,18 @@ export default function App() {
       });
       fetchList();
     } catch (err) {
-      alert(err.message || '상태 변경에 실패했어요.');
+      setNotice({ tone: 'warning', title: '상태를 바꾸지 못했어요', description: err.message });
     }
   }
 
-  async function handleDelete(gifticon) {
-    if (!confirm(`'${gifticon.name}' 기프티콘을 삭제할까요?`)) return;
+  async function handleConfirmDelete() {
+    const target = deleteTarget;
+    setDeleteTarget(null);
     try {
-      await deleteGifticon(gifticon.id);
+      await deleteGifticon(target.id);
       fetchList();
     } catch (err) {
-      alert(err.message || '삭제에 실패했어요.');
+      setNotice({ tone: 'warning', title: '삭제하지 못했어요', description: err.message });
     }
   }
 
@@ -126,7 +130,7 @@ export default function App() {
             onViewImage={setImageTarget}
             onToggleUsed={handleToggleUsed}
             onEdit={(g) => setSheetState({ mode: 'edit', initial: g })}
-            onDelete={handleDelete}
+            onDelete={setDeleteTarget}
           />
         )}
       </main>
@@ -152,6 +156,19 @@ export default function App() {
 
       {codeTarget && <BarcodeModal gifticon={codeTarget} onClose={() => setCodeTarget(null)} />}
       {imageTarget && <ImageViewerModal gifticon={imageTarget} onClose={() => setImageTarget(null)} />}
+
+      {deleteTarget && (
+        <AlertDialog
+          tone="danger"
+          title="이 기프티콘을 삭제할까요?"
+          description={`'${deleteTarget.name}'이(가) 목록에서 사라져요. 되돌릴 수 없어요.`}
+          confirmLabel="삭제"
+          onConfirm={handleConfirmDelete}
+          onClose={() => setDeleteTarget(null)}
+        />
+      )}
+
+      {notice && <AlertDialog {...notice} onClose={() => setNotice(null)} />}
     </div>
   );
 }
