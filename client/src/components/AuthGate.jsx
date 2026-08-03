@@ -4,8 +4,6 @@ import { getMyFamily } from '../family';
 import { FamilyContext } from '../FamilyContext';
 import LoginScreen from './LoginScreen';
 import FamilyOnboarding from './FamilyOnboarding';
-import InAppBrowserNotice from './InAppBrowserNotice';
-import { detectInAppBrowser } from '../utils/browser';
 
 function CenteredMessage({ text }) {
   return (
@@ -18,8 +16,6 @@ function CenteredMessage({ text }) {
 export default function AuthGate({ children }) {
   const [session, setSession] = useState(undefined);
   const [familyState, setFamilyState] = useState(undefined);
-  const [inApp] = useState(() => detectInAppBrowser());
-  const [skippedInAppNotice, setSkippedInAppNotice] = useState(false);
 
   useEffect(() => {
     getSession().then(setSession);
@@ -51,12 +47,6 @@ export default function AuthGate({ children }) {
     getMyFamily()
       .then(setFamilyState)
       .catch(() => setFamilyState(null));
-  }
-
-  // 카카오톡 등 인앱 브라우저는 로그인부터 막히는 경우가 많아서, 로그인 화면보다 먼저
-  // 크롬/사파리로 옮겨가도록 안내한다.
-  if (inApp && !skippedInAppNotice) {
-    return <InAppBrowserNotice inApp={inApp} onSkip={() => setSkippedInAppNotice(true)} />;
   }
 
   if (session === undefined) return <CenteredMessage text="불러오는 중…" />;
