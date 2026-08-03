@@ -35,7 +35,8 @@ function sortGifticons(items) {
 }
 
 export default function App() {
-  const { family } = useFamily();
+  const { family, members, user } = useFamily();
+  const myName = members.find((m) => m.user_id === user.id)?.display_name || null;
   const [gifticons, setGifticons] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -70,8 +71,16 @@ export default function App() {
 
   async function handleToggleUsed(gifticon) {
     const nextStatus = gifticon.status === 'used' ? 'unused' : 'used';
+    const used = nextStatus === 'used';
     try {
-      await updateGifticon(family.id, gifticon.id, { status: nextStatus, used_at: nextStatus === 'used' ? todayStr() : null });
+      // 누가 썼는지 남긴다. 이름은 나중에 그 사람이 가족에서 나가도 사용 내역에 보여야 해서
+      // 아이디와 별개로 그때의 이름을 그대로 적어둔다.
+      await updateGifticon(family.id, gifticon.id, {
+        status: nextStatus,
+        used_at: used ? todayStr() : null,
+        used_by: used ? user.id : null,
+        used_by_name: used ? myName : null,
+      });
       fetchList();
     } catch (err) {
       alert(err.message || '상태 변경에 실패했어요.');

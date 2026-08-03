@@ -7,7 +7,7 @@ function getInitialTheme() {
   return document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
 }
 
-export default function ThemeToggle() {
+export default function ThemeToggle({ asRow = false }) {
   const [theme, setTheme] = useState(getInitialTheme);
 
   useEffect(() => {
@@ -19,14 +19,29 @@ export default function ThemeToggle() {
     localStorage.setItem('theme', theme);
   }, [theme]);
 
+  const isDark = theme === 'dark';
+  const toggle = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'));
+
+  if (asRow) {
+    return (
+      <button type="button" onClick={toggle} className="flex w-full items-center gap-3 px-1 py-3 text-left text-sm">
+        {isDark ? <Sun className="size-4.5 text-muted-foreground" /> : <Moon className="size-4.5 text-muted-foreground" />}
+        <span className="flex-1 text-foreground">다크 모드</span>
+        <span className={isDark ? 'text-xs font-semibold text-primary' : 'text-xs text-muted-foreground'}>
+          {isDark ? '켜짐' : '꺼짐'}
+        </span>
+      </button>
+    );
+  }
+
   return (
     <button
       type="button"
-      onClick={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
-      aria-label={theme === 'dark' ? '라이트 모드로 전환' : '다크 모드로 전환'}
+      onClick={toggle}
+      aria-label={isDark ? '라이트 모드로 전환' : '다크 모드로 전환'}
       className="flex size-8 shrink-0 items-center justify-center rounded-full border border-border bg-card text-muted-foreground"
     >
-      {theme === 'dark' ? <Sun className="size-4" /> : <Moon className="size-4" />}
+      {isDark ? <Sun className="size-4" /> : <Moon className="size-4" />}
     </button>
   );
 }

@@ -1,6 +1,7 @@
 import { Ticket } from 'lucide-react';
 import { CATEGORIES } from '../constants';
 import { formatDday, formatDate, ddayUrgency } from '../utils/date';
+import { tagColorClass } from '../utils/tagColor';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useFamily } from '../FamilyContext';
@@ -8,8 +9,6 @@ import { useFamily } from '../FamilyContext';
 function categoryLabel(key) {
   return CATEGORIES.find((c) => c.key === key)?.label ?? key;
 }
-
-const OWNER_TAG_PALETTE = ['bg-[#4b7bec]', 'bg-[#e0559f]', 'bg-[#16a35a]', 'bg-[#e69008]', 'bg-[#0891b2]', 'bg-[#c026d3]'];
 
 const DDAY_CLASS = {
   normal: 'bg-accent text-accent-foreground',
@@ -26,8 +25,11 @@ export default function GifticonCard({ gifticon, onViewCode, onViewImage, onTogg
   // 정하면 누가 빠졌을 때 남은 사람들 색이 밀린다. 아직 번호가 없는(예전) 데이터는
   // 예전과 같은 순서 기준으로 보여준다.
   const ownerIndex = members.findIndex((m) => m.display_name === gifticon.owner);
-  const colorIndex = members[ownerIndex]?.tag_color ?? ownerIndex;
-  const ownerTagClass = colorIndex >= 0 ? OWNER_TAG_PALETTE[colorIndex % OWNER_TAG_PALETTE.length] : 'bg-muted-foreground';
+  const ownerTagClass = tagColorClass(members[ownerIndex]?.tag_color ?? ownerIndex) || 'bg-muted-foreground';
+
+  // 이미 쓴 것과 기한이 지난 것은 매장에서 쓸 수 없으니 바코드를 열지 않는다.
+  const isExpired = urgency === 'expired';
+  const codeLocked = isUsed || isExpired;
 
   return (
     <li className={cn('relative flex gap-3 rounded-2xl border border-border bg-card p-3 shadow-xs', isUsed && 'opacity-60')}>
@@ -93,8 +95,8 @@ export default function GifticonCard({ gifticon, onViewCode, onViewImage, onTogg
         {isUsed && gifticon.used_at && <p className="mt-0.5 mb-2 text-xs text-muted-foreground">{formatDate(gifticon.used_at)} 사용</p>}
 
         <div className="flex gap-2">
-          <Button size="sm" className="flex-1 px-1" onClick={() => onViewCode(gifticon)}>
-            바코드 보기
+          <Button size="sm" className="flex-1 px-1" onClick={() => onViewCode(gifticon)} disabled={codeLocked}>
+            {isUsed ? '사용완료' : isExpired ? '기한 만료' : '바코드 보기'}
           </Button>
           <Button size="sm" variant="outline" className="flex-1 px-1" onClick={() => onToggleUsed(gifticon)}>
             {isUsed ? '사용취소' : '사용완료'}

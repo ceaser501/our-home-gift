@@ -82,6 +82,14 @@ export default function BarcodeModal({ gifticon, onClose }) {
             </div>
           </dl>
 
+          {/* 등록할 때 적어둔 메모. "엄마, 아래 바코드를 매장에서 보여주세요" 같은 안내를
+              바코드 바로 위에서 읽을 수 있게 한다. 메모가 없으면 아무것도 보이지 않는다. */}
+          {gifticon.memo?.trim() && (
+            <p className="m-0 w-full rounded-xl bg-accent px-3.5 py-2.5 text-sm leading-relaxed break-keep whitespace-pre-wrap text-accent-foreground">
+              {gifticon.memo}
+            </p>
+          )}
+
           {gifticon.code && !renderError ? (
             // 새로 그린 바코드. 화면 폭에 맞춰 최대한 크게 보여줘야 리더기가 잘 읽는다.
             <canvas ref={setCanvas} className="w-full rounded-xl bg-white p-2 [image-rendering:pixelated]" />

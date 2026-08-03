@@ -27,6 +27,12 @@ export async function createFamily(familyName, memberName) {
   return data;
 }
 
+// 가족에서 나가기. 내가 등록했거나 내 앞으로 된 기프티콘은 남은 가족에게 안 보이게 감춰진다.
+export async function leaveFamily(familyId) {
+  const { error } = await supabase.rpc('leave_family', { fid: familyId });
+  if (error) throw new Error(error.message || '가족에서 나가지 못했어요.');
+}
+
 export async function joinFamily(code, memberName) {
   const { data, error } = await supabase.rpc('join_family', { code, member_name: memberName });
   if (error) throw new Error(error.message || '초대 코드로 참여하지 못했어요.');

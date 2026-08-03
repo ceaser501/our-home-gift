@@ -3,7 +3,7 @@ import { Bell, BellOff } from 'lucide-react';
 import { isPushSupported, getExistingSubscription, subscribeToPush, unsubscribeFromPush } from '../push';
 import { useFamily } from '../FamilyContext';
 
-export default function NotificationToggle() {
+export default function NotificationToggle({ asRow = false }) {
   const { user, family } = useFamily();
   const [enabled, setEnabled] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -30,6 +30,23 @@ export default function NotificationToggle() {
     } finally {
       setLoading(false);
     }
+  }
+
+  if (asRow) {
+    return (
+      <button
+        type="button"
+        onClick={handleToggle}
+        disabled={loading}
+        className="flex w-full items-center gap-3 px-1 py-3 text-left text-sm disabled:opacity-50"
+      >
+        {enabled ? <Bell className="size-4.5 text-muted-foreground" /> : <BellOff className="size-4.5 text-muted-foreground" />}
+        <span className="flex-1 text-foreground">유효기한 임박 알림</span>
+        <span className={enabled ? 'text-xs font-semibold text-primary' : 'text-xs text-muted-foreground'}>
+          {enabled ? '켜짐' : '꺼짐'}
+        </span>
+      </button>
+    );
   }
 
   return (

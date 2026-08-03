@@ -29,6 +29,19 @@ alter table public.gifticons add column if not exists image_paths text[] not nul
 -- 바코드 보기에서 원본 사진 대신 보여줄, 바코드/숫자 부분만 잘라낸 이미지
 alter table public.gifticons add column if not exists barcode_image_path text;
 
+-- 누가 등록했고 누가 썼는지. used_by_name은 사용한 사람의 이름을 그대로 적어두는 칸인데,
+-- 나중에 그 사람이 가족에서 나가도 사용 내역에 이름이 남아야 하기 때문에 따로 둔다.
+alter table public.gifticons add column if not exists created_by uuid references auth.users(id);
+alter table public.gifticons add column if not exists used_by uuid references auth.users(id);
+alter table public.gifticons add column if not exists used_by_name text;
+
+-- 가족에서 나간 사람의 기프티콘을 감추는 표시. 지우지는 않고 목록에서만 빼둔다.
+alter table public.gifticons add column if not exists hidden_at timestamptz;
+
+-- 이 컬럼이 생기기 전에 이미 "사용 완료"로 표시된 것들은 사용한 사람을 알 수 없으니,
+-- 받은 사람 이름으로 채워둔다.
+update public.gifticons set used_by_name = owner where status = 'used' and used_by_name is null;
+
 do $$
 begin
   if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'gifticons' and column_name = 'image_path') then
@@ -175,8 +188,39 @@ begin
 end;
 $$;
 
+-- 가족에서 나가기. 내가 등록했거나 내 앞으로 되어 있는 기프티콘은 남은 가족에게 안 보이도록
+-- 감춘 뒤(지우지는 않는다) 구성원 목록에서 빠진다. 다시 초대 코드로 들어올 수는 있지만,
+-- 감춘 기프티콘이 저절로 되살아나지는 않는다.
+create or replace function public.leave_family(fid uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  my_name text;
+begin
+  select display_name into my_name
+  from public.family_members
+  where family_id = fid and user_id = auth.uid();
+
+  if my_name is null then
+    raise exception '이 가족의 구성원이 아니에요.';
+  end if;
+
+  update public.gifticons
+  set hidden_at = now()
+  where family_id = fid
+    and hidden_at is null
+    and (created_by = auth.uid() or owner = my_name);
+
+  delete from public.family_members where family_id = fid and user_id = auth.uid();
+end;
+$$;
+
 grant execute on function public.create_family(text, text) to authenticated;
 grant execute on function public.join_family(text, text) to authenticated;
+grant execute on function public.leave_family(uuid) to authenticated;
 
 alter table public.families enable row level security;
 alter table public.family_members enable row level security;

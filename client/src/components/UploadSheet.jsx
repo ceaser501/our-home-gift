@@ -215,7 +215,8 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
       };
 
       if (mode === 'create') {
-        const created = await createGifticon(family.id, fields, newFiles, barcodeCropFile);
+        // 등록한 사람은 새로 만들 때만 적는다(남의 기프티콘을 수정해도 등록자가 안 바뀌게).
+        const created = await createGifticon(family.id, { ...fields, created_by: user.id }, newFiles, barcodeCropFile);
         onSaved(created);
       } else {
         const updated = await updateGifticon(family.id, initial.id, fields, {

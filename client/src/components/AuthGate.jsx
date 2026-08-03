@@ -104,6 +104,7 @@ export default function AuthGate({ children }) {
         user: session.user,
         family: familyState.family,
         members: familyState.members,
+        refetchFamily,
         signOut,
       }}
     >

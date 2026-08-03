@@ -25,9 +25,10 @@ export function ddayUrgency(dateStr) {
   return 'normal';
 }
 
+// '2026-01-31' 같은 날짜와 '2026-01-31T09:00:00+09:00' 같은 시각을 모두 받는다.
 export function formatDate(dateStr) {
   if (!dateStr) return '';
-  const d = new Date(`${dateStr}T00:00:00`);
+  const d = new Date(String(dateStr).includes('T') ? dateStr : `${dateStr}T00:00:00`);
   if (Number.isNaN(d.getTime())) return dateStr;
   return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
 }

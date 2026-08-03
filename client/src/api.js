@@ -36,8 +36,24 @@ async function removeImages(paths) {
   await supabase.storage.from(IMAGE_BUCKET).remove(paths);
 }
 
+// 검색어를 PostgREST의 or() 문법에 안전하게 끼워 넣는다.
+// 값에 점·쉼표·괄호·띄어쓰기가 들어가면(예: "황올반+BBQ양념반+콜라1.25L") 따옴표로 감싸지
+// 않는 한 필터 문법이 깨져서 검색이 아무것도 안 걸리거나 엉뚱하게 동작한다.
+// 큰따옴표와 역슬래시는 그 따옴표 자체를 깨뜨리므로 지운다.
+// (%와 _는 LIKE의 와일드카드로 남겨둔다. 검색어에 거의 안 쓰이고, 들어와도 더 넓게 찾을 뿐이다.)
+function searchFilter(term) {
+  const escaped = term.trim().replace(/["\\]/g, '');
+  const pattern = `"%${escaped}%"`;
+  return `name.ilike.${pattern},brand.ilike.${pattern},memo.ilike.${pattern}`;
+}
+
 export async function listGifticons(params = {}) {
-  let query = supabase.from(GIFTICON_TABLE).select('*').order('created_at', { ascending: false });
+  let query = supabase
+    .from(GIFTICON_TABLE)
+    .select('*')
+    // 가족에서 나간 사람의 기프티콘은 목록에 넣지 않는다.
+    .is('hidden_at', null)
+    .order('created_at', { ascending: false });
 
   if (params.category) {
     // 합쳐진 카테고리를 고를 때는 예전 이름으로 저장된 것도 같이 보여준다.
@@ -47,14 +63,24 @@ export async function listGifticons(params = {}) {
       : query.eq('category', params.category);
   }
   if (params.status) query = query.eq('status', params.status);
-  if (params.search) {
-    const term = params.search.replace(/[%,]/g, '');
-    query = query.or(`name.ilike.%${term}%,brand.ilike.%${term}%,memo.ilike.%${term}%`);
-  }
+  if (params.search?.trim()) query = query.or(searchFilter(params.search));
 
   const { data, error } = await query;
   if (error) throw new Error(error.message);
   return data.map(withImageUrls);
+}
+
+// 사용 내역(누가 어떤 기프티콘을 언제 썼는지). 가족에서 나간 사람이 쓴 것도 남는다.
+export async function listUsageHistory(familyId) {
+  const { data, error } = await supabase
+    .from(GIFTICON_TABLE)
+    .select('id, name, brand, amount, owner, used_at, used_by_name, updated_at')
+    .eq('family_id', familyId)
+    .eq('status', 'used')
+    .order('used_at', { ascending: false, nullsFirst: false })
+    .order('updated_at', { ascending: false });
+  if (error) throw new Error(error.message);
+  return data;
 }
 
 // 같은 바코드/QR 값을 가진 기프티콘이 이미 등록돼 있는지 확인한다(중복 등록 방지 안내용).
@@ -94,6 +120,8 @@ export async function createGifticon(familyId, fields, files = [], barcodeCropFi
       code_type: fields.code_type || null,
       expires_at: fields.expires_at || null,
       memo: fields.memo || null,
+      // 등록한 사람. 가족에서 나갈 때 이 사람의 기프티콘을 감추는 기준이 된다.
+      created_by: fields.created_by || null,
       image_paths,
       barcode_image_path,
       status: 'unused',
