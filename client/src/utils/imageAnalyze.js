@@ -163,11 +163,15 @@ async function cropBarcodeRegion(source, points, codeType) {
 
 // 기프티콘 한 건을 여러 장으로 나눠 올릴 수 있다(예: 상품명 화면 + 유효기간 화면).
 // 바코드는 장마다 따로 읽고, 글자 정보는 여러 장을 한 번에 서버로 보내 합쳐서 받는다.
-export async function analyzeImages(files) {
+// onProgress로 지금 어느 단계인지 알려준다. 분석이 몇 초 걸리는데 화면에 아무 변화가
+// 없으면 멈춘 것처럼 보이기 때문에, 화면 쪽에서 진행 상황을 표시할 수 있게 한다.
+export async function analyzeImages(files, { onProgress } = {}) {
+  const report = (step, extra) => onProgress?.({ step, total: files.length, ...extra });
   const barcode = { code: null, codeType: null, cropBlob: null };
   const uploads = [];
 
-  for (const file of files) {
+  for (const [index, file] of files.entries()) {
+    report('barcode', { current: index + 1 });
     const canvas = await toAnalyzeCanvas(file);
     try {
       if (!barcode.code) {
@@ -182,7 +186,9 @@ export async function analyzeImages(files) {
     }
   }
 
+  report('reading');
   const info = await analyzeGifticonImages(uploads, CATEGORY_KEYS);
+  report('done');
 
   // 바코드 막대를 못 읽었을 때는 이미지에 인쇄된 번호를 대신 쓴다.
   // 이 경우 잘라낸 이미지가 없으니 화면에서 바코드를 새로 그려 보여준다.

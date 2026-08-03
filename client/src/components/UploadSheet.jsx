@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Plus, RotateCcw, Search, X } from 'lucide-react';
+import { Loader2, Plus, RotateCcw, Search, X } from 'lucide-react';
 import { CATEGORIES } from '../constants';
 import { analyzeImages } from '../utils/imageAnalyze';
 import { createGifticon, updateGifticon, searchPrice, findGifticonByCode } from '../api';
@@ -62,6 +62,17 @@ function membersWithMeFirst(members, myName) {
   return [...me, ...others];
 }
 
+// 분석이 어느 단계인지 사람이 읽을 수 있는 문구로 바꾼다.
+function progressLabel(progress) {
+  if (!progress) return '이미지를 준비하고 있어요';
+  if (progress.step === 'barcode') {
+    const count = progress.total > 1 ? ` (${progress.current}/${progress.total})` : '';
+    return `바코드를 읽고 있어요${count}`;
+  }
+  if (progress.step === 'reading') return '상품명·금액·유효기한을 읽고 있어요';
+  return '거의 다 됐어요';
+}
+
 function buildExistingImages(initial) {
   return (initial?.image_paths || []).map((path, i) => ({ path, url: initial.image_urls[i] }));
 }
@@ -83,6 +94,9 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
   const [searchingPrice, setSearchingPrice] = useState(false);
   const [priceSearchNote, setPriceSearchNote] = useState('');
   const [duplicateName, setDuplicateName] = useState(null);
+  const [progress, setProgress] = useState(null);
+  // 이미지 분석이 채워 넣은 칸들. 새 이미지를 올리면 이 칸들만 새 결과로 갈아끼운다.
+  const autoFilledFields = useRef(new Set());
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -92,6 +106,8 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
   }, [newPreviews]);
 
   function updateField(key, value) {
+    // 사람이 직접 고친 칸은 다음 이미지 분석 때 덮어쓰지 않는다.
+    autoFilledFields.current.delete(key);
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
@@ -107,27 +123,43 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
       return;
     }
 
-    const hadCode = Boolean(form.code);
-
     setNewFiles((prev) => [...prev, ...selected]);
     setNewPreviews((prev) => [...prev, ...selected.map((f) => URL.createObjectURL(f))]);
     setError('');
     setAnalyzing(true);
+    setProgress({ step: 'barcode', current: 1, total: selected.length });
     setAutoFilled(false);
 
     try {
-      const result = await analyzeImages(selected);
-      setForm((prev) => ({
-        ...prev,
-        name: prev.name || result.name || '',
-        category: prev.category === '기타' ? result.category || '기타' : prev.category,
-        brand: prev.brand || result.brand || '',
-        amount: prev.amount === '' ? result.amount ?? '' : prev.amount,
-        code: prev.code || result.code || '',
-        code_type: prev.code_type || result.codeType || '',
-        expires_at: prev.expires_at || result.expiresAt || '',
-      }));
-      if (!hadCode && result.code && result.barcodeCropBlob) {
+      const result = await analyzeImages(selected, { onProgress: setProgress });
+
+      // 새 이미지를 올리면 그 이미지에 맞게 아래 내용도 다시 채운다.
+      // 다만 사람이 직접 고쳐 쓴 칸은 건드리지 않는다(자동으로 채웠던 칸만 갈아끼운다).
+      setForm((prev) => {
+        const next = { ...prev };
+        const fill = (key, value) => {
+          if (value === null || value === undefined || value === '') return;
+          if (prev[key] === '' || prev[key] === null || autoFilledFields.current.has(key)) {
+            next[key] = value;
+            autoFilledFields.current.add(key);
+          }
+        };
+
+        fill('name', result.name);
+        fill('brand', result.brand);
+        fill('amount', result.amount);
+        fill('code', result.code);
+        fill('code_type', result.codeType);
+        fill('expires_at', result.expiresAt);
+        // 카테고리는 빈 값이 없고 '기타'가 기본값이라 따로 본다.
+        if (result.category && (prev.category === '기타' || autoFilledFields.current.has('category'))) {
+          next.category = result.category;
+          autoFilledFields.current.add('category');
+        }
+        return next;
+      });
+
+      if (result.code && result.barcodeCropBlob) {
         setBarcodeCropFile(new File([result.barcodeCropBlob], 'barcode.png', { type: 'image/png' }));
       }
       setAutoFilled(true);
@@ -135,6 +167,7 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
       setError('이미지 자동 인식에 실패했어요. 직접 입력해주세요.');
     } finally {
       setAnalyzing(false);
+      setProgress(null);
     }
   }
 
@@ -178,6 +211,8 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
     setError('');
     setAutoFilled(false);
     setPriceSearchNote('');
+    setProgress(null);
+    autoFilledFields.current.clear();
     if (fileInputRef.current) fileInputRef.current.value = '';
   }
 
@@ -283,7 +318,20 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
               <span>이미지 추가</span>
             </button>
           </div>
-          {analyzing && <p className="text-xs text-muted-foreground">이미지 분석 중…</p>}
+          {/* 분석은 몇 초 걸린다. 작은 글씨 한 줄만 있으면 멈춘 것처럼 보여서,
+              지금 무슨 단계인지와 진행 중이라는 걸 눈에 띄게 보여준다. */}
+          {analyzing && (
+            <div className="flex flex-col gap-2 rounded-xl border border-primary/30 bg-primary/5 px-3.5 py-3">
+              <div className="flex items-center gap-2.5">
+                <Loader2 className="size-4 shrink-0 animate-spin text-primary" />
+                <span className="flex-1 text-sm font-semibold text-foreground">{progressLabel(progress)}</span>
+              </div>
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-primary/15">
+                <div className="animate-progress-indeterminate h-full w-2/5 rounded-full bg-primary" />
+              </div>
+              <p className="m-0 text-xs text-muted-foreground">잠시만 기다려주세요. 몇 초 정도 걸려요.</p>
+            </div>
+          )}
 
           <input id="gifticon-image" ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleFileChange} hidden />
 
