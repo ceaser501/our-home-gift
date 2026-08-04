@@ -261,7 +261,7 @@ export default function StoreDetailSheet({ store, origin, onClose }) {
               </Button>
             )}
             {store.placeUrl && (
-              <Button asChild variant="ghost" className="flex-1 rounded-xl text-muted-foreground">
+              <Button asChild variant="outline" className="flex-1 rounded-xl">
                 <a href={store.placeUrl} target="_blank" rel="noopener noreferrer">
                   <ExternalLink className="size-4" /> 카카오맵
                 </a>
