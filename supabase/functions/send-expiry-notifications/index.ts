@@ -64,19 +64,42 @@ Deno.serve(async (req) => {
   }
 
   const familyIds = [...new Set(gifticons.map((g) => g.family_id))];
+
+  // 한 사람이 여러 가족에 속할 수 있어서, 알림을 보낼 곳은 구독에 적힌 가족이 아니라
+  // "지금 이 가족에 누가 있는지"로 정한다. 구독은 기기 하나당 하나이고 사람에게 딸린 것이라,
+  // 그 사람이 속한 모든 가족의 알림이 그 기기로 간다.
+  const [{ data: memberships, error: memberError }, { data: families, error: familyError }] = await Promise.all([
+    admin.from('family_members').select('family_id, user_id').in('family_id', familyIds),
+    admin.from('families').select('id, name').in('id', familyIds),
+  ]);
+  if (memberError || familyError) {
+    return new Response(JSON.stringify({ error: (memberError || familyError).message }), { status: 500 });
+  }
+
+  const familyNames = new Map((families || []).map((f) => [f.id, f.name]));
+  const userIds = [...new Set((memberships || []).map((m) => m.user_id))];
+
   const { data: subscriptions, error: subError } = await admin
     .from('push_subscriptions')
-    .select('id, family_id, endpoint, p256dh, auth')
-    .in('family_id', familyIds);
+    .select('id, user_id, endpoint, p256dh, auth')
+    .in('user_id', userIds);
 
   if (subError) {
     return new Response(JSON.stringify({ error: subError.message }), { status: 500 });
   }
 
-  const subsByFamily = new Map();
+  const subsByUser = new Map();
   for (const sub of subscriptions || []) {
-    if (!subsByFamily.has(sub.family_id)) subsByFamily.set(sub.family_id, []);
-    subsByFamily.get(sub.family_id).push(sub);
+    if (!subsByUser.has(sub.user_id)) subsByUser.set(sub.user_id, []);
+    subsByUser.get(sub.user_id).push(sub);
+  }
+
+  const subsByFamily = new Map();
+  for (const membership of memberships || []) {
+    const mine = subsByUser.get(membership.user_id);
+    if (!mine) continue;
+    if (!subsByFamily.has(membership.family_id)) subsByFamily.set(membership.family_id, []);
+    subsByFamily.get(membership.family_id).push(...mine);
   }
 
   let sentCount = 0;
@@ -90,8 +113,10 @@ Deno.serve(async (req) => {
     const dday = daysUntil(gifticon.expires_at, today);
     const [, month, day] = gifticon.expires_at.split('-');
     const remaining = dday === 0 ? '오늘까지예요' : `${dday}일 남았어요`;
+    // 여러 가족에 속해 있으면 어느 가족 기프티콘인지가 중요해서 제목에 가족 이름을 붙인다.
+    const familyName = familyNames.get(gifticon.family_id);
     const payload = JSON.stringify({
-      title: '유효기한이 곧 만료돼요',
+      title: `${familyName ? `${familyName} · ` : ''}유효기한이 곧 만료돼요`,
       body: `${gifticon.brand ? `${gifticon.brand} · ` : ''}${gifticon.name}\n${Number(month)}월 ${Number(day)}일까지 · ${remaining}`,
     });
 

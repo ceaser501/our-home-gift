@@ -54,7 +54,7 @@ Deno.serve(async (req) => {
 
   const { data: subscriptions, error: subError } = await admin
     .from('push_subscriptions')
-    .select('id, family_id, endpoint, p256dh, auth')
+    .select('id, endpoint, p256dh, auth')
     .eq('user_id', user.id);
   if (subError) return reply({ error: subError.message }, 500);
 
@@ -63,12 +63,23 @@ Deno.serve(async (req) => {
     return reply({ sent: 0, reason: 'notifications_off' });
   }
 
+  // 한 사람이 여러 가족에 속할 수 있어서, 내가 속한 가족 전체에서 가장 임박한 한 건을 고른다.
+  const { data: memberships, error: memberError } = await admin
+    .from('family_members')
+    .select('family_id')
+    .eq('user_id', user.id);
+  if (memberError) return reply({ error: memberError.message }, 500);
+  if (!memberships || memberships.length === 0) return reply({ sent: 0, reason: 'no_gifticon' });
+
   // 실제 발송과 같은 기준(미사용 + 유효기한 있는 것) 중 가장 임박한 한 건으로 보낸다.
   const today = todayDateStr();
   const { data: gifticons, error: gifticonError } = await admin
     .from('gifticons')
-    .select('name, brand, expires_at')
-    .eq('family_id', subscriptions[0].family_id)
+    .select('name, brand, expires_at, family_id')
+    .in(
+      'family_id',
+      memberships.map((m) => m.family_id)
+    )
     .eq('status', 'unused')
     .is('hidden_at', null)
     .not('expires_at', 'is', null)
@@ -80,10 +91,12 @@ Deno.serve(async (req) => {
   const target = gifticons?.[0];
   if (!target) return reply({ sent: 0, reason: 'no_gifticon' });
 
+  const { data: family } = await admin.from('families').select('name').eq('id', target.family_id).single();
+
   const dday = daysUntil(target.expires_at, today);
   const [, month, day] = target.expires_at.split('-');
   const payload = JSON.stringify({
-    title: '유효기한이 곧 만료돼요',
+    title: `${family?.name ? `${family.name} · ` : ''}유효기한이 곧 만료돼요`,
     body: `${target.brand ? `${target.brand} · ` : ''}${target.name}\n${Number(month)}월 ${Number(day)}일까지 · ${
       dday === 0 ? '오늘까지예요' : `${dday}일 남았어요`
     }`,
