@@ -15,6 +15,22 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// 카카오가 돌려준 오류를 사람이 읽을 한국어로 바꾼다. 원문(JSON)을 그대로 내보내면
+// 화면에 영어 에러가 떠서 무슨 말인지 알 수 없다. 설정 문제(관리자가 고쳐야 하는 것)와
+// 일시적인 문제(다시 시도하면 되는 것)를 구분해서 알려준다.
+function friendlyKakaoError(status: number, detail: string): string {
+  if (detail.includes('OPEN_MAP_AND_LOCAL')) {
+    return '카카오 설정이 아직 안 끝났어요. 카카오 개발자센터 → 내 애플리케이션 → 제품 설정 → 카카오맵에서 "활성화"를 켜면 바로 돼요.';
+  }
+  if (status === 401 || detail.includes('InvalidAppKey')) {
+    return '카카오 API 키가 올바르지 않아요. KAKAO_REST_API_KEY 값을 다시 확인해주세요.';
+  }
+  if (status === 429) {
+    return '오늘 검색할 수 있는 횟수를 다 썼어요. 내일 다시 시도해주세요.';
+  }
+  return `주변 매장 검색이 잠시 안 되고 있어요. 조금 뒤 다시 시도해주세요. (카카오 오류 ${status})`;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
@@ -46,8 +62,7 @@ Deno.serve(async (req) => {
     const res = await fetch(url.toString(), { headers: { Authorization: `KakaoAK ${apiKey}` } });
     if (!res.ok) {
       const detail = await res.text().catch(() => '');
-      const hint = res.status === 401 ? ' KAKAO_REST_API_KEY 값을 확인해주세요.' : '';
-      return reply({ error: `매장 검색에 실패했어요 (카카오 ${res.status}).${hint} ${detail}`.trim() }, 502);
+      return reply({ error: friendlyKakaoError(res.status, detail) }, 502);
     }
 
     const data = await res.json();
