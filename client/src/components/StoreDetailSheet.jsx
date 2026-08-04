@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { Car, Clock, ExternalLink, Info, MapPin, Maximize2, Minimize2, Navigation, Phone } from 'lucide-react';
+import { Car, Clock, ExternalLink, Footprints, Info, MapPin, Maximize2, Minimize2, Navigation, Phone } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { fetchDrivingRoute } from '../api';
+import { fetchRoute } from '../api';
 import { loadKakaoMap } from '../utils/kakaoMap';
+import { openTmapRoute } from '../utils/tmap';
 
 // 매장 하나의 상세. 지도·주소·거리·전화는 앱 안에서 바로 보여준다.
 // 영업시간·평점·리뷰는 카카오가 API로 주지 않아서(카카오맵 페이지에만 있다)
@@ -40,7 +41,8 @@ export default function StoreDetailSheet({ store, origin, onClose }) {
   const mapRef = useRef(null);
   // loading: SDK 받는 중 / ready: 지도 표시됨 / none: 키가 없거나 로드 실패(지도 없이 정보만)
   const [mapState, setMapState] = useState('loading');
-  const [showRoute, setShowRoute] = useState(false);
+  // null이면 경로를 감춘 상태. 'car'는 카카오, 'walk'는 티맵에서 받아온다.
+  const [routeMode, setRouteMode] = useState(null);
   const [mapExpanded, setMapExpanded] = useState(false);
   // { state: 'loading' | 'done' | 'error', distance, duration, message }
   const [route, setRoute] = useState(null);
@@ -88,9 +90,9 @@ export default function StoreDetailSheet({ store, origin, onClose }) {
     };
   }, [store]);
 
-  // 내 위치에서 매장까지 도로를 따라가는 자동차 경로를 그린다. 두 점을 직선으로 이으면
-  // 건물과 강을 가로질러서 실제로는 쓸모가 없기 때문에, 서버에서 받아온 도로 좌표를
-  // 그대로 잇는다. (도보 경로는 카카오가 공개 API로 주지 않아 자동차 기준이다.)
+  // 내 위치에서 매장까지 길을 따라가는 경로를 그린다. 두 점을 직선으로 이으면 건물과
+  // 강을 가로질러서 실제로는 쓸모가 없기 때문에, 서버에서 받아온 길 좌표를 그대로 잇는다.
+  // 자동차는 카카오, 걸어가는 길은 티맵에서 받아온다(카카오는 도보를 주지 않는다).
   useEffect(() => {
     const kakao = kakaoRef.current;
     const map = mapObjRef.current;
@@ -100,7 +102,7 @@ export default function StoreDetailSheet({ store, origin, onClose }) {
     routeShapesRef.current = [];
     routePointsRef.current = null;
 
-    if (!showRoute || !origin) {
+    if (!routeMode || !origin) {
       fitTo(kakao, map, null, store);
       return undefined;
     }
@@ -108,7 +110,7 @@ export default function StoreDetailSheet({ store, origin, onClose }) {
     let cancelled = false;
     setRoute({ state: 'loading' });
 
-    fetchDrivingRoute({ origin, destination: { lat: store.lat, lng: store.lng } })
+    fetchRoute({ mode: routeMode, origin, destination: { lat: store.lat, lng: store.lng } })
       .then((result) => {
         if (cancelled) return;
         const points = result.path.map((p) => new kakao.maps.LatLng(p.lat, p.lng));
@@ -118,7 +120,8 @@ export default function StoreDetailSheet({ store, origin, onClose }) {
           strokeWeight: 5,
           strokeColor: '#5b4fe8',
           strokeOpacity: 0.9,
-          strokeStyle: 'solid',
+          // 걸어가는 길은 점선으로 그려서 차로 가는 길과 한눈에 구분되게 한다.
+          strokeStyle: routeMode === 'walk' ? 'shortdash' : 'solid',
         });
         line.setMap(map);
 
@@ -145,7 +148,7 @@ export default function StoreDetailSheet({ store, origin, onClose }) {
     return () => {
       cancelled = true;
     };
-  }, [showRoute, origin, store, mapState]);
+  }, [routeMode, origin, store, mapState]);
 
   // 지도 칸의 크기가 바뀌면 카카오 지도에 다시 재라고 알려줘야 한다. 안 그러면 늘어난
   // 자리가 회색으로 비거나 보던 위치가 어긋난다. 높이 애니메이션이 끝난 뒤에 잰다.
@@ -162,11 +165,8 @@ export default function StoreDetailSheet({ store, origin, onClose }) {
   }, [mapExpanded, mapState, store]);
 
   const phoneHref = store.phone ? `tel:${store.phone.replace(/[^\d+]/g, '')}` : null;
-  // 카카오맵 길찾기 링크. 지도 SDK 없이도 동작하고, 폰에 카카오맵 앱이 있으면 앱으로 열린다.
-  const routeUrl =
-    store.lat != null && store.lng != null
-      ? `https://map.kakao.com/link/to/${encodeURIComponent(store.name)},${store.lat},${store.lng}`
-      : null;
+  // 길안내는 티맵 앱으로 넘긴다(도보·자동차·대중교통을 거기서 고를 수 있다).
+  const canOpenNavigation = store.lat != null && store.lng != null;
 
   return (
     <Sheet open onOpenChange={(open) => !open && onClose()}>
@@ -206,15 +206,15 @@ export default function StoreDetailSheet({ store, origin, onClose }) {
                 {mapExpanded ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
               </button>
             )}
-            {/* 걸어가는 길이 아니라 차로 가는 길임을 분명히 적어둔다. */}
-            {mapState === 'ready' && showRoute && route && (
+            {/* 차로 가는 길인지 걸어가는 길인지 분명히 적어둔다. 거리와 시간이 크게 달라진다. */}
+            {mapState === 'ready' && routeMode && route && (
               <span className="absolute bottom-2 left-1/2 z-1 flex max-w-[92%] -translate-x-1/2 items-center gap-1.5 rounded-full bg-black/70 px-2.5 py-1 text-[11px] font-semibold text-white">
                 {route.state === 'loading' && '경로를 그리는 중…'}
                 {route.state === 'done' && (
                   <>
-                    <Car className="size-3.5 shrink-0" />
+                    {routeMode === 'walk' ? <Footprints className="size-3.5 shrink-0" /> : <Car className="size-3.5 shrink-0" />}
                     <span>
-                      차량 {formatDistance(route.distance)}
+                      {routeMode === 'walk' ? '도보' : '차량'} {formatDistance(route.distance)}
                       {route.duration != null && ` · 약 ${formatDuration(route.duration)}`}
                     </span>
                   </>
@@ -241,30 +241,37 @@ export default function StoreDetailSheet({ store, origin, onClose }) {
           </div>
 
           <div className="flex flex-col rounded-xl border border-border">
-            {store.distance != null &&
-              (canShowRoute && mapState === 'ready' ? (
-                <button
-                  type="button"
-                  onClick={() => setShowRoute((on) => !on)}
-                  className="flex items-center gap-2.5 border-b border-border px-3.5 py-2.5 text-left text-sm"
-                >
-                  <Navigation className="size-4 shrink-0 text-primary" />
-                  <span className="flex-1 text-foreground">
-                    내 위치에서 <span className="font-bold text-primary">{formatDistance(store.distance)}</span>
+            {store.distance != null && (
+              <div className="flex items-center gap-2.5 border-b border-border px-3.5 py-2.5 text-sm">
+                <Navigation className="size-4 shrink-0 text-primary" />
+                <span className="min-w-0 flex-1 text-foreground">
+                  내 위치에서 <span className="font-bold text-primary">{formatDistance(store.distance)}</span>
+                </span>
+                {/* 같은 곳이라도 차로 갈 때와 걸어갈 때 길이 달라서, 눌러서 각각 볼 수 있게 한다. */}
+                {canShowRoute && mapState === 'ready' && (
+                  <span className="flex shrink-0 gap-1">
+                    {[
+                      { key: 'car', label: '차', Icon: Car },
+                      { key: 'walk', label: '도보', Icon: Footprints },
+                    ].map(({ key, label, Icon }) => (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => setRouteMode((prev) => (prev === key ? null : key))}
+                        aria-pressed={routeMode === key}
+                        className={cn(
+                          'flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold transition-colors',
+                          routeMode === key ? 'bg-primary text-primary-foreground' : 'bg-accent text-accent-foreground'
+                        )}
+                      >
+                        <Icon className="size-3.5" />
+                        {label}
+                      </button>
+                    ))}
                   </span>
-                  <span className="flex shrink-0 items-center gap-1 rounded-full bg-accent px-2.5 py-1 text-xs font-semibold text-accent-foreground">
-                    <Car className="size-3.5" />
-                    {showRoute ? '접기' : '차 경로'}
-                  </span>
-                </button>
-              ) : (
-                <p className="m-0 flex items-center gap-2.5 border-b border-border px-3.5 py-2.5 text-sm">
-                  <Navigation className="size-4 shrink-0 text-primary" />
-                  <span className="text-foreground">
-                    내 위치에서 <span className="font-bold text-primary">{formatDistance(store.distance)}</span>
-                  </span>
-                </p>
-              ))}
+                )}
+              </div>
+            )}
             {store.address && (
               <p className="m-0 flex items-center gap-2.5 border-b border-border px-3.5 py-2.5 text-sm">
                 <MapPin className="size-4 shrink-0 text-muted-foreground" />
@@ -300,11 +307,13 @@ export default function StoreDetailSheet({ store, origin, onClose }) {
                 </a>
               </Button>
             )}
-            {routeUrl && (
-              <Button asChild variant={phoneHref ? 'outline' : 'default'} className="flex-1 rounded-xl">
-                <a href={routeUrl} target="_blank" rel="noopener noreferrer">
-                  <Navigation className="size-4" /> 길찾기
-                </a>
+            {canOpenNavigation && (
+              <Button
+                variant={phoneHref ? 'outline' : 'default'}
+                className="flex-1 rounded-xl"
+                onClick={() => openTmapRoute({ name: store.name, lat: store.lat, lng: store.lng })}
+              >
+                <Navigation className="size-4" /> 길찾기
               </Button>
             )}
             {store.placeUrl && (

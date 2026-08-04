@@ -95,6 +95,76 @@ async function handleRoute(
   });
 }
 
+// 내 위치 → 매장까지 걸어가는 길. 카카오는 도보 경로를 공개 API로 주지 않아서
+// 이것만 티맵(SK open API)에서 받아온다. 지도와 자동차 경로는 그대로 카카오를 쓴다.
+// 필요한 비밀값: supabase secrets set TMAP_APP_KEY=...
+async function handleWalkRoute(
+  body: Record<string, { lat: number; lng: number } | undefined>,
+  reply: (body: unknown, status?: number) => Response,
+) {
+  const appKey = Deno.env.get('TMAP_APP_KEY');
+  if (!appKey) {
+    return reply({ error: '도보 경로 설정이 아직 안 됐어요. 티맵 앱키(TMAP_APP_KEY)를 등록해주세요.' }, 200);
+  }
+
+  const { origin, destination } = body;
+  if (!origin || !destination || typeof origin.lat !== 'number' || typeof destination.lat !== 'number') {
+    return reply({ error: '출발지와 도착지가 필요해요.' }, 400);
+  }
+
+  const res = await fetch('https://apis.openapi.sk.com/tmap/routes/pedestrian?version=1', {
+    method: 'POST',
+    headers: { appKey, 'Content-Type': 'application/json', accept: 'application/json' },
+    body: JSON.stringify({
+      startX: origin.lng,
+      startY: origin.lat,
+      endX: destination.lng,
+      endY: destination.lat,
+      // 이름은 URL 인코딩해서 넘겨야 한다(티맵 규격).
+      startName: encodeURIComponent('내 위치'),
+      endName: encodeURIComponent('매장'),
+      reqCoordType: 'WGS84GEO',
+      resCoordType: 'WGS84GEO',
+      searchOption: '0',
+    }),
+  });
+
+  if (!res.ok) {
+    const detail = await res.text().catch(() => '');
+    if (res.status === 401 || res.status === 403) {
+      return reply({ error: '티맵 앱키가 올바르지 않아요. TMAP_APP_KEY 값을 확인해주세요.' }, 200);
+    }
+    if (res.status === 429) {
+      return reply({ error: '오늘 도보 경로를 찾을 수 있는 횟수를 다 썼어요.' }, 200);
+    }
+    return reply({ error: `도보 경로를 불러오지 못했어요. (티맵 ${res.status}) ${detail}`.trim() }, 200);
+  }
+
+  const data = await res.json();
+  const features = data.features || [];
+
+  // 걸어가는 길은 LineString 조각 여러 개로 쪼개져서 온다. 순서대로 이어 붙인다.
+  const path: { lat: number; lng: number }[] = [];
+  for (const feature of features) {
+    if (feature?.geometry?.type !== 'LineString') continue;
+    for (const [lng, lat] of feature.geometry.coordinates || []) {
+      path.push({ lat, lng });
+    }
+  }
+
+  if (path.length === 0) {
+    return reply({ error: '이 매장까지 걸어가는 길을 찾지 못했어요.' }, 200);
+  }
+
+  // 총 거리·시간은 첫 지점(Point)에 들어 있다.
+  const summary = features.find((f: { properties?: { totalDistance?: number } }) => f?.properties?.totalDistance != null);
+  return reply({
+    path,
+    distance: summary?.properties?.totalDistance ?? null,
+    duration: summary?.properties?.totalTime ?? null,
+  });
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
@@ -110,6 +180,7 @@ Deno.serve(async (req) => {
 
     const payload = await req.json();
     if (payload?.mode === 'route') return handleRoute(payload, apiKey, reply);
+    if (payload?.mode === 'walk') return handleWalkRoute(payload, reply);
 
     const { query, lat, lng } = payload;
     if (!query || !String(query).trim()) {

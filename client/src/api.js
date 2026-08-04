@@ -220,10 +220,11 @@ export async function searchNearbyStores({ query, lat, lng }) {
   return data.stores || [];
 }
 
-// 내 위치에서 매장까지 도로를 따라가는 자동차 경로(좌표 목록·거리·소요시간).
-export async function fetchDrivingRoute({ origin, destination }) {
+// 내 위치에서 매장까지 가는 길(좌표 목록·거리·소요시간).
+// mode: 'car'는 카카오 길찾기, 'walk'는 티맵 보행자 경로에서 받아온다.
+export async function fetchRoute({ mode, origin, destination }) {
   const { data, error } = await supabase.functions.invoke('search-places', {
-    body: { mode: 'route', origin, destination },
+    body: { mode: mode === 'walk' ? 'walk' : 'route', origin, destination },
   });
   const detail = error ? await error.context?.json?.().catch(() => null) : null;
   const message = detail?.error || data?.error || (error ? error.message : null);
