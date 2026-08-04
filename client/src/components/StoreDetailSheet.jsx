@@ -72,16 +72,27 @@ export default function StoreDetailSheet({ store, onClose }) {
         </SheetHeader>
 
         <div className="flex flex-col gap-3 px-5 pt-2">
-          {mapState !== 'none' && (
-            <div className="relative h-45 w-full overflow-hidden rounded-xl border border-border bg-muted">
-              <div ref={mapRef} className="h-full w-full" />
-              {mapState === 'loading' && (
-                <p className="absolute inset-0 m-0 flex items-center justify-center text-xs text-muted-foreground">
-                  지도를 불러오는 중…
-                </p>
-              )}
-            </div>
-          )}
+          {/* 지도를 못 그릴 때도 자리를 비워두지 않고 이유를 보여준다. 조용히 사라지면
+              설정이 빠진 건지 원래 없는 건지 알 수 없어서 고치기도 어렵다. */}
+          <div className="relative h-45 w-full overflow-hidden rounded-xl border border-border bg-muted">
+            <div ref={mapRef} className="h-full w-full" />
+            {mapState !== 'ready' && (
+              <p className="absolute inset-0 m-0 flex flex-col items-center justify-center gap-1 px-6 text-center text-xs text-muted-foreground">
+                {mapState === 'loading' ? (
+                  '지도를 불러오는 중…'
+                ) : (
+                  <>
+                    <span className="font-semibold text-foreground">지도를 표시할 수 없어요</span>
+                    <span>
+                      {store.lat == null
+                        ? '매장 위치 정보가 없어요. 서버 함수(search-places)를 최신으로 다시 배포하면 나와요.'
+                        : '카카오 JavaScript 키(VITE_KAKAO_JS_KEY)와 Web 플랫폼 도메인 등록이 필요해요.'}
+                    </span>
+                  </>
+                )}
+              </p>
+            )}
+          </div>
 
           <div className="flex flex-col rounded-xl border border-border">
             {store.distance != null && (
