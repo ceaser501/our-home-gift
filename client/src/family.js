@@ -60,6 +60,12 @@ export async function renameFamily(familyId, newName) {
 export async function requestJoinFamily(code, memberName) {
   const { data, error } = await supabase.rpc('request_join_family', { code, member_name: memberName });
   if (error) throw new Error(error.message || '참여 신청을 하지 못했어요.');
+
+  // 신청이 들어온 걸 알려주지 않으면, 승인해줄 사람이 앱을 열어볼 때까지 계속 기다리게 된다.
+  // 알림이 안 가더라도 신청 자체는 이미 접수됐으니 여기서 실패로 되돌리지는 않는다.
+  if (data?.status === 'pending') {
+    await supabase.functions.invoke('notify-join-request', { body: { familyId: data.family_id } }).catch(() => {});
+  }
   return data;
 }
 

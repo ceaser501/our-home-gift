@@ -13,7 +13,9 @@ self.addEventListener('push', (event) => {
       body: data.body,
       // icon/badge는 일부러 지정하지 않는다. 안드로이드가 왼쪽에 앱 아이콘을 자동으로
       // 붙여주는데, 여기서 icon까지 주면 오른쪽에 같은 아이콘이 하나 더 붙어서 지저분해진다.
-      tag: 'gifticon-expiry',
+      // 같은 꼬리표끼리는 서로 덮어쓴다. 유효기한 알림과 참여 신청 알림은 성격이 달라서
+      // 보내는 쪽에서 꼬리표를 따로 정해 보낸다(안 보내면 유효기한 알림으로 본다).
+      tag: data.tag || 'gifticon-expiry',
       renotify: true,
     })
   );

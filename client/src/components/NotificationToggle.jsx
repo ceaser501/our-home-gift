@@ -48,7 +48,8 @@ export default function NotificationToggle({ asRow = false }) {
           className="flex w-full items-center gap-3 px-1 py-3 text-left text-sm disabled:opacity-50"
         >
           {enabled ? <Bell className="size-4.5 text-muted-foreground" /> : <BellOff className="size-4.5 text-muted-foreground" />}
-          <span className="flex-1 text-foreground">유효기한 임박 알림</span>
+          {/* 이 스위치 하나로 이 앱의 알림을 모두 끄고 켠다(유효기한 임박, 가족 참여 신청). */}
+          <span className="flex-1 text-foreground">알림 받기</span>
           <span className={enabled ? 'text-xs font-semibold text-primary' : 'text-xs text-muted-foreground'}>
             {enabled ? '켜짐' : '꺼짐'}
           </span>
@@ -64,7 +65,7 @@ export default function NotificationToggle({ asRow = false }) {
         type="button"
         onClick={handleToggle}
         disabled={loading}
-        aria-label={enabled ? '유효기한 임박 알림 끄기' : '유효기한 임박 알림 켜기'}
+        aria-label={enabled ? '알림 끄기' : '알림 켜기'}
         className="flex size-8 shrink-0 items-center justify-center rounded-full border border-border bg-card text-muted-foreground disabled:opacity-50"
       >
         {enabled ? <Bell className="size-4 text-primary" /> : <BellOff className="size-4" />}
