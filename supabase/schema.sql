@@ -441,3 +441,21 @@ drop trigger if exists trg_reset_expiry_notified on public.gifticons;
 create trigger trg_reset_expiry_notified
   before update on public.gifticons
   for each row execute function public.reset_expiry_notified();
+
+-- ===================== 실시간 반영 =====================
+
+-- 가족 중 누가 기프티콘을 올리거나 고치면, 다른 사람 화면에도 새로고침 없이 바로 보이게 한다.
+-- 이 publication에 테이블을 넣어둬야 Supabase가 변경 사실을 앱으로 알려준다.
+-- (누가 무엇을 받아볼지는 위의 RLS 정책이 그대로 판단하므로, 남의 가족 것은 오지 않는다.)
+-- 이미 들어 있으면 다시 넣을 때 오류가 나므로 확인하고 넣는다.
+do $$
+begin
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime')
+     and not exists (
+       select 1 from pg_publication_tables
+       where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'gifticons'
+     )
+  then
+    alter publication supabase_realtime add table public.gifticons;
+  end if;
+end $$;

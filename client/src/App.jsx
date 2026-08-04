@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Plus } from 'lucide-react';
 import Header from './components/Header';
 import FilterBar from './components/FilterBar';
@@ -10,6 +10,7 @@ import InstallPrompt from './components/InstallPrompt';
 import AlertDialog from './components/AlertDialog';
 import PullToRefresh from './components/PullToRefresh';
 import { listGifticons, updateGifticon, deleteGifticon } from './api';
+import { subscribeToGifticons } from './realtime';
 import { daysUntil, todayStr } from './utils/date';
 import { useFamily } from './FamilyContext';
 
@@ -76,6 +77,37 @@ export default function App() {
     const timer = setTimeout(() => fetchList(), search ? 300 : 0);
     return () => clearTimeout(timer);
   }, [fetchList, search]);
+
+  // 검색어를 한 글자 칠 때마다 fetchList가 새로 만들어지는데, 그때마다 구독을 끊었다 다시
+  // 맺으면 낭비라서 최신 함수만 여기에 담아두고 구독은 가족이 바뀔 때만 다시 맺는다.
+  const fetchListRef = useRef(fetchList);
+  fetchListRef.current = fetchList;
+
+  // 가족이 기프티콘을 올리거나 고치면 새로고침 없이 바로 목록에 나타나게 한다.
+  useEffect(() => {
+    let timer = null;
+    // 한 번 저장할 때 이미지 여러 장과 함께 여러 신호가 잇달아 오기도 해서, 잠깐 모았다가
+    // 한 번만 다시 불러온다.
+    function reload() {
+      clearTimeout(timer);
+      timer = setTimeout(() => fetchListRef.current({ silent: true }), 300);
+    }
+    const unsubscribe = subscribeToGifticons(family.id, reload);
+    return () => {
+      clearTimeout(timer);
+      unsubscribe();
+    };
+  }, [family.id]);
+
+  // 폰이 잠들거나 다른 앱에 다녀오는 동안에는 연결이 끊겨서 그사이 바뀐 것을 놓친다.
+  // 앱이 다시 화면에 나오면 한 번 맞춰본다.
+  useEffect(() => {
+    function onVisible() {
+      if (!document.hidden) fetchListRef.current({ silent: true });
+    }
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, []);
 
   async function handleToggleUsed(gifticon) {
     const nextStatus = gifticon.status === 'used' ? 'unused' : 'used';
