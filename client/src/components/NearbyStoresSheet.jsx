@@ -39,6 +39,8 @@ export default function NearbyStoresSheet({ gifticon, onClose }) {
   const [error, setError] = useState(null); // { title, description, retriable }
   const [attempt, setAttempt] = useState(0);
   const [detail, setDetail] = useState(null);
+  // 매장 상세에서 "내 위치 → 매장" 선을 그릴 때 쓴다.
+  const [origin, setOrigin] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -49,6 +51,7 @@ export default function NearbyStoresSheet({ gifticon, onClose }) {
       try {
         const coords = await getPosition();
         if (cancelled) return;
+        setOrigin({ lat: coords.latitude, lng: coords.longitude });
         setPhase('searching');
         const found = await searchNearbyStores({
           query,
@@ -163,7 +166,7 @@ export default function NearbyStoresSheet({ gifticon, onClose }) {
           <p className="m-0 px-5 pt-3 text-center text-[11px] text-muted-foreground">장소 정보 제공: 카카오</p>
         )}
 
-        {detail && <StoreDetailSheet store={detail} onClose={() => setDetail(null)} />}
+        {detail && <StoreDetailSheet store={detail} origin={origin} onClose={() => setDetail(null)} />}
       </SheetContent>
     </Sheet>
   );

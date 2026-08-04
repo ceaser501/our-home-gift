@@ -220,6 +220,19 @@ export async function searchNearbyStores({ query, lat, lng }) {
   return data.stores || [];
 }
 
+// 내 위치에서 매장까지 도로를 따라가는 자동차 경로(좌표 목록·거리·소요시간).
+export async function fetchDrivingRoute({ origin, destination }) {
+  const { data, error } = await supabase.functions.invoke('search-places', {
+    body: { mode: 'route', origin, destination },
+  });
+  if (error) {
+    const detail = await error.context?.json?.().catch(() => null);
+    throw new Error(detail?.error || error.message || '경로를 불러오지 못했어요.');
+  }
+  if (data?.error) throw new Error(data.error);
+  return data;
+}
+
 export async function deleteGifticon(id) {
   const { data: existing } = await supabase
     .from(GIFTICON_TABLE)

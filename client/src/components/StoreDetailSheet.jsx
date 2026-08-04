@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { Clock, ExternalLink, MapPin, Navigation, Phone } from 'lucide-react';
+import { Car, Clock, ExternalLink, MapPin, Navigation, Phone } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
+import { fetchDrivingRoute } from '../api';
 import { loadKakaoMap } from '../utils/kakaoMap';
 
 // 매장 하나의 상세. 지도·주소·거리·전화는 앱 안에서 바로 보여준다.
@@ -14,10 +15,28 @@ function formatDistance(meters) {
   return `${(meters / 1000).toFixed(1)}km`;
 }
 
-export default function StoreDetailSheet({ store, onClose }) {
+function formatDuration(seconds) {
+  if (seconds == null) return null;
+  const minutes = Math.max(1, Math.round(seconds / 60));
+  if (minutes < 60) return `${minutes}분`;
+  return `${Math.floor(minutes / 60)}시간 ${minutes % 60}분`;
+}
+
+export default function StoreDetailSheet({ store, origin, onClose }) {
   const mapRef = useRef(null);
   // loading: SDK 받는 중 / ready: 지도 표시됨 / none: 키가 없거나 로드 실패(지도 없이 정보만)
   const [mapState, setMapState] = useState('loading');
+  const [showRoute, setShowRoute] = useState(false);
+  // { state: 'loading' | 'done' | 'error', distance, duration, message }
+  const [route, setRoute] = useState(null);
+
+  // 지도와 SDK는 다시 그릴 때마다 필요해서 들고 있는다.
+  const kakaoRef = useRef(null);
+  const mapObjRef = useRef(null);
+  // 경로를 켰다 껐다 할 때 지워야 하는 것들(선, 내 위치 표시).
+  const routeShapesRef = useRef([]);
+
+  const canShowRoute = store.lat != null && origin != null;
 
   useEffect(() => {
     let cancelled = false;
@@ -36,6 +55,8 @@ export default function StoreDetailSheet({ store, onClose }) {
       const center = new kakao.maps.LatLng(store.lat, store.lng);
       const map = new kakao.maps.Map(mapRef.current, { center, level: 4 });
       new kakao.maps.Marker({ map, position: center });
+      kakaoRef.current = kakao;
+      mapObjRef.current = map;
       setMapState('ready');
       // 시트가 아래에서 올라오는 애니메이션 중에 만들면 크기를 잘못 재서 회색으로 뜬다.
       // 자리를 잡은 뒤 한 번 다시 재고 중심을 되돌린다.
@@ -49,6 +70,68 @@ export default function StoreDetailSheet({ store, onClose }) {
       cancelled = true;
     };
   }, [store]);
+
+  // 내 위치에서 매장까지 도로를 따라가는 자동차 경로를 그린다. 두 점을 직선으로 이으면
+  // 건물과 강을 가로질러서 실제로는 쓸모가 없기 때문에, 서버에서 받아온 도로 좌표를
+  // 그대로 잇는다. (도보 경로는 카카오가 공개 API로 주지 않아 자동차 기준이다.)
+  useEffect(() => {
+    const kakao = kakaoRef.current;
+    const map = mapObjRef.current;
+    if (!kakao || !map) return undefined;
+
+    routeShapesRef.current.forEach((shape) => shape.setMap(null));
+    routeShapesRef.current = [];
+
+    const target = new kakao.maps.LatLng(store.lat, store.lng);
+
+    if (!showRoute || !origin) {
+      map.setLevel(4);
+      map.setCenter(target);
+      return undefined;
+    }
+
+    let cancelled = false;
+    setRoute({ state: 'loading' });
+
+    fetchDrivingRoute({ origin, destination: { lat: store.lat, lng: store.lng } })
+      .then((result) => {
+        if (cancelled) return;
+        const points = result.path.map((p) => new kakao.maps.LatLng(p.lat, p.lng));
+
+        const line = new kakao.maps.Polyline({
+          path: points,
+          strokeWeight: 5,
+          strokeColor: '#5b4fe8',
+          strokeOpacity: 0.9,
+          strokeStyle: 'solid',
+        });
+        line.setMap(map);
+
+        // 매장 마커와 구분되게, 출발지(내 위치)는 파란 점으로 표시한다.
+        const dot = new kakao.maps.CustomOverlay({
+          position: new kakao.maps.LatLng(origin.lat, origin.lng),
+          content:
+            '<div style="width:14px;height:14px;border-radius:50%;background:#2f6fed;border:3px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.2)"></div>',
+        });
+        dot.setMap(map);
+
+        routeShapesRef.current = [line, dot];
+
+        // 경로 전체가 화면에 들어오도록 범위를 맞춘다.
+        const bounds = new kakao.maps.LatLngBounds();
+        points.forEach((p) => bounds.extend(p));
+        map.setBounds(bounds, 30, 30, 30, 30);
+
+        setRoute({ state: 'done', distance: result.distance, duration: result.duration });
+      })
+      .catch((err) => {
+        if (!cancelled) setRoute({ state: 'error', message: err.message });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [showRoute, origin, store, mapState]);
 
   const phoneHref = store.phone ? `tel:${store.phone.replace(/[^\d+]/g, '')}` : null;
   // 카카오맵 길찾기 링크. 지도 SDK 없이도 동작하고, 폰에 카카오맵 앱이 있으면 앱으로 열린다.
@@ -76,6 +159,22 @@ export default function StoreDetailSheet({ store, onClose }) {
               설정이 빠진 건지 원래 없는 건지 알 수 없어서 고치기도 어렵다. */}
           <div className="relative h-45 w-full overflow-hidden rounded-xl border border-border bg-muted">
             <div ref={mapRef} className="h-full w-full" />
+            {/* 걸어가는 길이 아니라 차로 가는 길임을 분명히 적어둔다. */}
+            {mapState === 'ready' && showRoute && route && (
+              <span className="absolute bottom-2 left-1/2 z-1 flex max-w-[92%] -translate-x-1/2 items-center gap-1.5 rounded-full bg-black/70 px-2.5 py-1 text-[11px] font-semibold text-white">
+                {route.state === 'loading' && '경로를 그리는 중…'}
+                {route.state === 'done' && (
+                  <>
+                    <Car className="size-3.5 shrink-0" />
+                    <span>
+                      차량 {formatDistance(route.distance)}
+                      {route.duration != null && ` · 약 ${formatDuration(route.duration)}`}
+                    </span>
+                  </>
+                )}
+                {route.state === 'error' && <span className="text-center">{route.message}</span>}
+              </span>
+            )}
             {mapState !== 'ready' && (
               <p className="absolute inset-0 m-0 flex flex-col items-center justify-center gap-1 px-6 text-center text-xs text-muted-foreground">
                 {mapState === 'loading' ? (
@@ -95,14 +194,30 @@ export default function StoreDetailSheet({ store, onClose }) {
           </div>
 
           <div className="flex flex-col rounded-xl border border-border">
-            {store.distance != null && (
-              <p className="m-0 flex items-center gap-2.5 border-b border-border px-3.5 py-2.5 text-sm">
-                <Navigation className="size-4 shrink-0 text-primary" />
-                <span className="text-foreground">
-                  내 위치에서 <span className="font-bold text-primary">{formatDistance(store.distance)}</span>
-                </span>
-              </p>
-            )}
+            {store.distance != null &&
+              (canShowRoute && mapState === 'ready' ? (
+                <button
+                  type="button"
+                  onClick={() => setShowRoute((on) => !on)}
+                  className="flex items-center gap-2.5 border-b border-border px-3.5 py-2.5 text-left text-sm"
+                >
+                  <Navigation className="size-4 shrink-0 text-primary" />
+                  <span className="flex-1 text-foreground">
+                    내 위치에서 <span className="font-bold text-primary">{formatDistance(store.distance)}</span>
+                  </span>
+                  <span className="flex shrink-0 items-center gap-1 rounded-full bg-accent px-2.5 py-1 text-xs font-semibold text-accent-foreground">
+                    <Car className="size-3.5" />
+                    {showRoute ? '접기' : '차 경로'}
+                  </span>
+                </button>
+              ) : (
+                <p className="m-0 flex items-center gap-2.5 border-b border-border px-3.5 py-2.5 text-sm">
+                  <Navigation className="size-4 shrink-0 text-primary" />
+                  <span className="text-foreground">
+                    내 위치에서 <span className="font-bold text-primary">{formatDistance(store.distance)}</span>
+                  </span>
+                </p>
+              ))}
             {store.address && (
               <p className="m-0 flex items-center gap-2.5 border-b border-border px-3.5 py-2.5 text-sm">
                 <MapPin className="size-4 shrink-0 text-muted-foreground" />
