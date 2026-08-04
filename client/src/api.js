@@ -225,11 +225,15 @@ export async function fetchDrivingRoute({ origin, destination }) {
   const { data, error } = await supabase.functions.invoke('search-places', {
     body: { mode: 'route', origin, destination },
   });
-  if (error) {
-    const detail = await error.context?.json?.().catch(() => null);
-    throw new Error(detail?.error || error.message || '경로를 불러오지 못했어요.');
+  const detail = error ? await error.context?.json?.().catch(() => null) : null;
+  const message = detail?.error || data?.error || (error ? error.message : null);
+
+  // 길찾기를 모르는 옛 함수는 이 요청을 매장 검색으로 읽고 "브랜드 이름이 없다"고 답한다.
+  // 그대로 보여주면 원인을 짐작할 수 없어서, 무엇을 해야 하는지로 바꿔준다.
+  if (message?.includes('브랜드 이름')) {
+    throw new Error('길찾기가 서버에 아직 반영되지 않았어요. search-places 함수를 다시 배포해주세요.');
   }
-  if (data?.error) throw new Error(data.error);
+  if (message) throw new Error(message);
   return data;
 }
 
