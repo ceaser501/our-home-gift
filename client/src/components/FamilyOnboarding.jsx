@@ -1,14 +1,13 @@
 import { useState } from 'react';
 import { Users } from 'lucide-react';
 import { createFamily, joinFamily } from '../family';
-import { seedSampleGifticon } from '../sampleData';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { signOut } from '../auth';
 
-export default function FamilyOnboarding({ userEmail, userId, onDone }) {
+export default function FamilyOnboarding({ userEmail, onDone }) {
   const [mode, setMode] = useState('create');
   const [familyName, setFamilyName] = useState('우리 가족');
   const [memberName, setMemberName] = useState('');
@@ -24,9 +23,6 @@ export default function FamilyOnboarding({ userEmail, userId, onDone }) {
     setError('');
     try {
       const family = await createFamily(familyName.trim(), memberName.trim());
-      // 테스트 빌드에서만 샘플 기프티콘을 하나 넣어준다. 초기화할 때마다 SQL을 다시
-      // 실행하지 않아도 되도록.
-      await seedSampleGifticon({ familyId: family.id, ownerName: memberName.trim(), userId });
       setCreated(family);
     } catch (err) {
       setError(err.message || '가족 그룹 생성에 실패했어요.');

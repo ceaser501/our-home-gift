@@ -12,6 +12,7 @@ import AlertDialog from './components/AlertDialog';
 import PullToRefresh from './components/PullToRefresh';
 import { listGifticons, updateGifticon, deleteGifticon } from './api';
 import { subscribeToGifticons, subscribeToFamily } from './realtime';
+import { ensureSampleGifticon } from './sampleData';
 import { daysUntil, todayStr } from './utils/date';
 import { useFamily } from './FamilyContext';
 
@@ -102,6 +103,19 @@ export default function App() {
       unsubscribeFamily();
     };
   }, [family.id]);
+
+  // ⚠️ 테스트 빌드에서만: 이 가족에 샘플 기프티콘이 없으면 하나 넣어준다.
+  // 전체 초기화를 하면 가족과 계정까지 지워져서 기프티콘이 남을 수 없기 때문에,
+  // 화면을 열 때마다 확인해서 채워 넣는다. 누가 언제 들어와도 같은 샘플을 보게 된다.
+  useEffect(() => {
+    let cancelled = false;
+    ensureSampleGifticon({ familyId: family.id, ownerName: myName, userId: user.id }).then((added) => {
+      if (added && !cancelled) refreshRef.current();
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [family.id, myName, user.id]);
 
   // 폰이 잠들거나 다른 앱에 다녀오는 동안에는 연결이 끊겨서 그사이 바뀐 것을 놓친다.
   // 앱이 다시 화면에 나오면 한 번 맞춰본다.
