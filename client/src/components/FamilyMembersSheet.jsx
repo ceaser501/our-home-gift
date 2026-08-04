@@ -1,16 +1,31 @@
+import { useState } from 'react';
+import { Pencil } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import RenameSheet from './RenameSheet';
 import { useFamily } from '../FamilyContext';
+import { renameFamily } from '../family';
 import { OWNER_TAG_PALETTE, memberTagColorClass } from '../utils/tagColor';
 import { formatDate } from '../utils/date';
 
 export default function FamilyMembersSheet({ onClose }) {
-  const { family, members, user } = useFamily();
+  const { family, members, user, refreshFamily } = useFamily();
+  const [renameOpen, setRenameOpen] = useState(false);
 
   return (
     <Sheet open onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="max-h-[92dvh] gap-0 overflow-y-auto pb-[max(24px,env(safe-area-inset-bottom))]">
         <SheetHeader className="pr-14 pb-1">
-          <SheetTitle>{family.name}</SheetTitle>
+          <SheetTitle className="flex items-center gap-1">
+            <span className="min-w-0 truncate">{family.name}</span>
+            <button
+              type="button"
+              onClick={() => setRenameOpen(true)}
+              aria-label="가족 이름 바꾸기"
+              className="shrink-0 rounded-full p-1.5 text-muted-foreground"
+            >
+              <Pencil className="size-4" />
+            </button>
+          </SheetTitle>
         </SheetHeader>
 
         <div className="px-5 pb-2">
@@ -40,6 +55,21 @@ export default function FamilyMembersSheet({ onClose }) {
             </li>
           ))}
         </ul>
+
+        {renameOpen && (
+          <RenameSheet
+            title="가족 이름 바꾸기"
+            label="가족 이름"
+            description="가족 모두에게 보이는 이름이에요."
+            initialValue={family.name}
+            placeholder="예: 우리 가족"
+            onSubmit={async (name) => {
+              await renameFamily(family.id, name);
+              await refreshFamily();
+            }}
+            onClose={() => setRenameOpen(false)}
+          />
+        )}
       </SheetContent>
     </Sheet>
   );

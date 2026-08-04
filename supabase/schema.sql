@@ -218,9 +218,93 @@ begin
 end;
 $$;
 
+-- 내 이름 바꾸기. 기프티콘의 "받은 사람"과 사용 내역에는 이름이 글자 그대로 적혀 있어서,
+-- 구성원 이름만 바꾸면 예전 기록이 남남처럼 떨어져 나간다(카드의 이름표 색도 안 맞게 된다).
+-- 그래서 이 가족 안에 남아 있는 내 이름들을 같이 옮겨준다.
+create or replace function public.rename_member(fid uuid, new_name text)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  clean_name text := btrim(new_name);
+  old_name text;
+begin
+  if auth.uid() is null then
+    raise exception '로그인이 필요해요.';
+  end if;
+  if clean_name = '' then
+    raise exception '이름을 입력해주세요.';
+  end if;
+  if char_length(clean_name) > 20 then
+    raise exception '이름은 20자까지 쓸 수 있어요.';
+  end if;
+
+  select display_name into old_name
+  from public.family_members
+  where family_id = fid and user_id = auth.uid();
+
+  if old_name is null then
+    raise exception '이 가족의 구성원이 아니에요.';
+  end if;
+  if old_name = clean_name then
+    return;
+  end if;
+
+  -- 같은 이름이 둘이면 "받은 사람"이 누구인지 구분할 수 없다.
+  if exists (
+    select 1 from public.family_members
+    where family_id = fid and user_id <> auth.uid() and display_name = clean_name
+  ) then
+    raise exception '가족 중에 같은 이름을 쓰는 사람이 있어요.';
+  end if;
+
+  update public.family_members
+  set display_name = clean_name
+  where family_id = fid and user_id = auth.uid();
+
+  update public.gifticons
+  set owner = clean_name
+  where family_id = fid and owner = old_name;
+
+  update public.gifticons
+  set used_by_name = clean_name
+  where family_id = fid and used_by = auth.uid();
+end;
+$$;
+
+-- 가족 이름 바꾸기. 가족 안에서는 서로 같은 권한이라 구성원이면 누구나 바꿀 수 있다.
+create or replace function public.rename_family(fid uuid, new_name text)
+returns public.families
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  clean_name text := btrim(new_name);
+  updated public.families;
+begin
+  if not public.is_family_member(fid) then
+    raise exception '이 가족의 구성원이 아니에요.';
+  end if;
+  if clean_name = '' then
+    raise exception '가족 이름을 입력해주세요.';
+  end if;
+  if char_length(clean_name) > 20 then
+    raise exception '가족 이름은 20자까지 쓸 수 있어요.';
+  end if;
+
+  update public.families set name = clean_name where id = fid returning * into updated;
+  return updated;
+end;
+$$;
+
 grant execute on function public.create_family(text, text) to authenticated;
 grant execute on function public.join_family(text, text) to authenticated;
 grant execute on function public.leave_family(uuid) to authenticated;
+grant execute on function public.rename_member(uuid, text) to authenticated;
+grant execute on function public.rename_family(uuid, text) to authenticated;
 
 alter table public.families enable row level security;
 alter table public.family_members enable row level security;

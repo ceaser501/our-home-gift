@@ -33,6 +33,17 @@ export async function leaveFamily(familyId) {
   if (error) throw new Error(error.message || '가족에서 나가지 못했어요.');
 }
 
+// 내 이름 바꾸기. 기프티콘에 적힌 "받은 사람"·사용 내역의 내 이름도 서버에서 함께 옮겨진다.
+export async function renameMember(familyId, newName) {
+  const { error } = await supabase.rpc('rename_member', { fid: familyId, new_name: newName });
+  if (error) throw new Error(error.message || '이름을 바꾸지 못했어요.');
+}
+
+export async function renameFamily(familyId, newName) {
+  const { error } = await supabase.rpc('rename_family', { fid: familyId, new_name: newName });
+  if (error) throw new Error(error.message || '가족 이름을 바꾸지 못했어요.');
+}
+
 export async function joinFamily(code, memberName) {
   const { data, error } = await supabase.rpc('join_family', { code, member_name: memberName });
   if (error) throw new Error(error.message || '초대 코드로 참여하지 못했어요.');

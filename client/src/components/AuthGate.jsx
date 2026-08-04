@@ -36,6 +36,7 @@ function markSplashShown() {
 export default function AuthGate({ children }) {
   const [session, setSession] = useState(undefined);
   const [familyState, setFamilyState] = useState(undefined);
+  const [dataVersion, setDataVersion] = useState(0);
   // 이번 화면 로드 이전에 이미 인트로를 봤는지(= 로그인 리다이렉트 등으로 돌아온 상황인지).
   const [introShownBefore] = useState(readSplashShown);
   const [splashDone, setSplashDone] = useState(introShownBefore);
@@ -88,6 +89,18 @@ export default function AuthGate({ children }) {
       .catch(() => setFamilyState(null));
   }
 
+  // 이름을 바꾼 뒤처럼 화면은 그대로 두고 가족 정보만 다시 읽어오는 경우.
+  // refetchFamily와 달리 로딩 화면으로 갈아끼우지 않아서, 열어둔 창이 닫히지 않는다.
+  // dataVersion은 "가족 정보가 바뀌었다"는 신호라, 기프티콘 목록도 같이 다시 불러오게 한다
+  // (이름을 바꾸면 카드에 적힌 받은 사람 이름도 서버에서 함께 바뀌기 때문).
+  async function refreshFamily() {
+    const next = await getMyFamily();
+    if (next) {
+      setFamilyState(next);
+      setDataVersion((v) => v + 1);
+    }
+  }
+
   // 앱을 처음 켠 순간에는 준비가 끝날 때까지 인트로를 계속 보여주고(화면이 갈아끼워지지 않게),
   // 그 뒤의 대기 상황에서는 조용한 로딩 화면만 쓴다.
   const waitingScreen = introShownBefore ? <LoadingScreen /> : <SplashScreen />;
@@ -104,7 +117,9 @@ export default function AuthGate({ children }) {
         user: session.user,
         family: familyState.family,
         members: familyState.members,
+        dataVersion,
         refetchFamily,
+        refreshFamily,
         signOut,
       }}
     >

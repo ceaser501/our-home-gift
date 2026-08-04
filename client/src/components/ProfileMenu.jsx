@@ -1,20 +1,22 @@
 import { useState } from 'react';
-import { BellRing, ChevronRight, DoorOpen, LogOut, Receipt } from 'lucide-react';
+import { BellRing, ChevronRight, DoorOpen, LogOut, Receipt, UserRound } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import ThemeToggle from './ThemeToggle';
 import NotificationToggle from './NotificationToggle';
 import UsageReportSheet from './UsageReportSheet';
 import AlertDialog from './AlertDialog';
+import RenameSheet from './RenameSheet';
 import { sendTestNotification } from '../api';
 import { useFamily } from '../FamilyContext';
-import { leaveFamily } from '../family';
+import { leaveFamily, renameMember } from '../family';
 import { OWNER_TAG_PALETTE, memberTagColorClass } from '../utils/tagColor';
 
 export default function ProfileMenu({ onClose }) {
-  const { family, members, user, refetchFamily, signOut } = useFamily();
+  const { family, members, user, refetchFamily, refreshFamily, signOut } = useFamily();
   const me = members.find((m) => m.user_id === user.id);
   const myName = me?.display_name || '나';
 
+  const [renameOpen, setRenameOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const [leaveAsking, setLeaveAsking] = useState(false);
@@ -90,7 +92,19 @@ export default function ProfileMenu({ onClose }) {
         </div>
 
         <div className="flex flex-col px-5">
-          <p className="m-0 pb-1 text-xs font-semibold text-muted-foreground">설정</p>
+          <p className="m-0 pb-1 text-xs font-semibold text-muted-foreground">내 정보</p>
+          <button
+            type="button"
+            onClick={() => setRenameOpen(true)}
+            className="flex w-full items-center gap-3 px-1 py-3 text-left text-sm"
+          >
+            <UserRound className="size-4.5 text-muted-foreground" />
+            <span className="flex-1 text-foreground">내 이름</span>
+            <span className="max-w-[40%] truncate text-xs text-muted-foreground">{myName}</span>
+            <ChevronRight className="size-4 text-muted-foreground" />
+          </button>
+
+          <p className="m-0 pt-3 pb-1 text-xs font-semibold text-muted-foreground">설정</p>
           <ThemeToggle asRow />
           <NotificationToggle asRow />
 
@@ -138,6 +152,21 @@ export default function ProfileMenu({ onClose }) {
             <span className="flex-1">로그아웃</span>
           </button>
         </div>
+
+        {renameOpen && (
+          <RenameSheet
+            title="내 이름 바꾸기"
+            label="내 이름"
+            description="기프티콘에 적힌 받은 사람·사용한 사람 이름도 새 이름으로 함께 바뀌어요."
+            initialValue={myName}
+            placeholder="예: 태수"
+            onSubmit={async (name) => {
+              await renameMember(family.id, name);
+              await refreshFamily();
+            }}
+            onClose={() => setRenameOpen(false)}
+          />
+        )}
 
         {reportOpen && <UsageReportSheet onClose={() => setReportOpen(false)} />}
 
