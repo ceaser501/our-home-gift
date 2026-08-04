@@ -238,7 +238,7 @@ export default function StoreDetailSheet({ store, origin, onClose }) {
             {/* 같은 브랜드라도 가맹점마다 받는 기프티콘이 다르다. 헛걸음하지 않도록 미리 알려준다. */}
             <p className="m-0 flex items-center gap-2.5 px-3.5 py-2.5 text-sm">
               <Info className="size-4 shrink-0 text-muted-foreground" />
-              <span className="break-keep text-muted-foreground">기프티콘을 쓸 수 있는지는 매장에 전화로 확인해주세요</span>
+              <span className="break-keep text-muted-foreground">기프티콘 사용가능여부는 매장에 확인해주세요</span>
             </p>
           </div>
 
