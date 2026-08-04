@@ -79,8 +79,11 @@ export default function FamilyMembersSheet({ onClose }) {
           </div>
         )}
 
+        {/* 대표는 "가장 먼저 들어온 사람"이다(목록은 들어온 순서대로 온다). 가족을 만든 사람이
+            늘 첫 번째라 평소에는 만든 사람이지만, 그 사람이 나가면 다음으로 먼저 들어온
+            사람이 자연히 대표가 된다. 따로 넘겨주는 기능은 없다. */}
         <ul className="m-0 flex list-none flex-col gap-1 px-5 pt-2">
-          {members.map((member) => (
+          {members.map((member, index) => (
             <li key={member.user_id} className="flex items-center gap-3 rounded-xl px-1 py-2.5">
               <span
                 className={`flex size-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white ${
@@ -93,8 +96,8 @@ export default function FamilyMembersSheet({ onClose }) {
                 <span className="truncate text-sm font-semibold text-foreground">
                   {member.display_name}
                   {member.user_id === user.id && <span className="ml-1.5 text-xs font-normal text-primary">나</span>}
-                  {/* 가족을 처음 만든 사람. 권한이 더 있는 건 아니고 누가 만들었는지만 알려준다. */}
-                  {member.user_id === family.created_by && (
+                  {/* 권한이 더 있는 건 아니고, 누구에게 물어보면 되는지 알려주는 표시다. */}
+                  {index === 0 && (
                     <span className="ml-1.5 rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-bold text-accent-foreground">
                       대표
                     </span>

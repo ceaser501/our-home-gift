@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import { removeImages } from './api';
 
 // 한 사람이 여러 가족에 속할 수 있다(연인끼리 하나, 부모님과 하나). 내가 들어가 있는
 // 가족을 모두 가져온다.
@@ -39,9 +40,16 @@ export async function createFamily(familyName, memberName) {
 }
 
 // 가족에서 나가기. 내가 등록했거나 내 앞으로 된 기프티콘은 남은 가족에게 안 보이게 감춰진다.
+// 내가 마지막 한 사람이었으면 그 가족은 통째로 없어지고, 남은 사진 파일 경로가 돌아온다.
 export async function leaveFamily(familyId) {
-  const { error } = await supabase.rpc('leave_family', { fid: familyId });
+  const { data, error } = await supabase.rpc('leave_family', { fid: familyId });
   if (error) throw new Error(error.message || '가족에서 나가지 못했어요.');
+
+  // 사진을 못 지워도 나가는 일은 이미 끝났다. 여기서 실패로 되돌리면 오히려 상태가 어긋난다.
+  if (data?.image_paths?.length) {
+    await removeImages(data.image_paths).catch(() => {});
+  }
+  return data;
 }
 
 // 내 이름 바꾸기. 기프티콘에 적힌 "받은 사람"·사용 내역의 내 이름도 서버에서 함께 옮겨진다.

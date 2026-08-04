@@ -160,45 +160,53 @@ begin
 end;
 $$;
 
--- 초대 코드로 가족 참여. 이미 그 가족에 속해 있으면 표시 이름만 갱신한다.
-create or replace function public.join_family(code text, member_name text)
-returns public.families
-language plpgsql
-security definer
-set search_path = public
-as $$
+-- 초대 코드로 가족에 들어오는 일은 request_join_family()(승인 필요)로만 한다.
+--
+-- 예전의 join_family()는 코드만 맞으면 승인 없이 바로 넣어줬다. 화면에서 부르지 않게 고쳐도
+-- 함수가 데이터베이스에 남아 있으면 소용이 없다. 로그인만 했으면 누구나 REST로 직접
+-- (POST /rest/v1/rpc/join_family) 부를 수 있어서, 코드를 아는 사람은 승인 절차를 통째로
+-- 건너뛸 수 있다. 그래서 함수 자체를 지운다. 인자 조합이 다른 옛 버전이 남아 있을 수도 있어
+-- 이름이 같은 것을 모두 지운다.
+--
+-- 파일 앞쪽에서 지우는 이유: 뒤에서 오류가 나 스크립트가 중간에 멈추더라도, 우회로만은
+-- 확실히 막혀 있어야 하기 때문이다.
+do $$
 declare
-  found_family public.families;
+  victim record;
 begin
-  if auth.uid() is null then
-    raise exception '로그인이 필요해요.';
-  end if;
-
-  select * into found_family from public.families where invite_code = upper(code);
-  if not found then
-    raise exception '초대 코드를 찾을 수 없어요.';
-  end if;
-
-  -- 이름표 색은 처음 들어올 때 한 번만 정한다(다시 참여해도 쓰던 색 그대로).
-  insert into public.family_members (family_id, user_id, display_name, tag_color)
-  values (found_family.id, auth.uid(), member_name, public.next_tag_color(found_family.id))
-  on conflict (family_id, user_id) do update set display_name = excluded.display_name;
-
-  return found_family;
-end;
-$$;
+  for victim in
+    select p.oid::regprocedure as sig
+    from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public' and p.proname = 'join_family'
+  loop
+    execute format('drop function if exists %s', victim.sig);
+  end loop;
+end $$;
 
 -- 가족에서 나가기. 내가 등록했거나 내 앞으로 되어 있는 기프티콘은 남은 가족에게 안 보이도록
 -- 감춘 뒤(지우지는 않는다) 구성원 목록에서 빠진다. 다시 초대 코드로 들어올 수는 있지만,
 -- 감춘 기프티콘이 저절로 되살아나지는 않는다.
+--
+-- 마지막 한 사람이 나가면 그 가족은 통째로 지운다. 빈 가족을 남겨두면 아무도 볼 수 없는
+-- 기프티콘만 쌓이고, 초대 코드는 그대로 살아 있는데 승인해줄 사람이 없어서 그 코드를 아는
+-- 사람은 누구나 승인 없이 들어와진다(request_join_family의 "구성원 0명" 예외).
+--
+-- 지워진 기프티콘의 사진 파일 경로를 돌려준다. 스토리지 파일은 SQL에서 지울 수 없어서
+-- 부른 쪽이 이어서 지운다.
+-- 예전에는 아무것도 돌려주지 않던 함수라, 돌려주는 값이 생긴 지금은 지웠다 다시 만들어야 한다
+-- (create or replace로는 반환 타입을 바꿀 수 없다).
+drop function if exists public.leave_family(uuid);
 create or replace function public.leave_family(fid uuid)
-returns void
+returns json
 language plpgsql
 security definer
 set search_path = public
 as $$
 declare
   my_name text;
+  orphan_paths text[] := '{}';
+  family_deleted boolean := false;
 begin
   select display_name into my_name
   from public.family_members
@@ -208,13 +216,29 @@ begin
     raise exception '이 가족의 구성원이 아니에요.';
   end if;
 
-  update public.gifticons
-  set hidden_at = now()
-  where family_id = fid
-    and hidden_at is null
-    and (created_by = auth.uid() or owner = my_name);
-
   delete from public.family_members where family_id = fid and user_id = auth.uid();
+
+  if exists (select 1 from public.family_members where family_id = fid) then
+    update public.gifticons
+    set hidden_at = now()
+    where family_id = fid
+      and hidden_at is null
+      and (created_by = auth.uid() or owner = my_name);
+  else
+    select coalesce(array_agg(p), '{}') into orphan_paths
+    from (
+      select unnest(image_paths) as p from public.gifticons where family_id = fid
+      union all
+      select barcode_image_path from public.gifticons where family_id = fid and barcode_image_path is not null
+    ) t;
+
+    delete from public.gifticons where family_id = fid;
+    -- family_members / family_join_requests / push_subscriptions는 따라서 지워진다.
+    delete from public.families where id = fid;
+    family_deleted := true;
+  end if;
+
+  return json_build_object('family_deleted', family_deleted, 'image_paths', orphan_paths);
 end;
 $$;
 
@@ -301,7 +325,6 @@ end;
 $$;
 
 grant execute on function public.create_family(text, text) to authenticated;
-grant execute on function public.join_family(text, text) to authenticated;
 grant execute on function public.leave_family(uuid) to authenticated;
 grant execute on function public.rename_member(uuid, text) to authenticated;
 grant execute on function public.rename_family(uuid, text) to authenticated;
@@ -321,7 +344,7 @@ create policy "family_members select own family" on public.family_members
   using (public.is_family_member(family_id));
 
 -- family_members에 직접 insert하는 정책은 열어두지 않는다. 가입은 항상
--- create_family()/join_family() 함수(security definer)를 통해서만 이뤄진다.
+-- create_family()/approve_join_request() 함수(security definer)를 통해서만 이뤄진다.
 
 drop policy if exists "gifticons select family" on public.gifticons;
 create policy "gifticons select family" on public.gifticons
@@ -413,13 +436,37 @@ create table if not exists public.push_subscriptions (
   created_at timestamptz not null default now()
 );
 
+-- 구독은 기기 하나에 하나이고 사람에게 딸린 것이다. family_id는 처음 알림을 켠 가족을
+-- 적어둔 것뿐이라(실제 발송 대상은 family_members로 정한다), 그 가족이 없어졌다고 해서
+-- 구독까지 같이 지워지면 다른 가족의 알림까지 끊긴다. 비워두는 것으로 바꾼다.
+alter table public.push_subscriptions alter column family_id drop not null;
+
+do $$
+declare
+  fk_name text;
+begin
+  select conname into fk_name
+  from pg_constraint
+  where conrelid = 'public.push_subscriptions'::regclass
+    and contype = 'f'
+    and confrelid = 'public.families'::regclass;
+
+  if fk_name is not null then
+    execute format('alter table public.push_subscriptions drop constraint %I', fk_name);
+  end if;
+
+  alter table public.push_subscriptions
+    add constraint push_subscriptions_family_id_fkey
+    foreign key (family_id) references public.families(id) on delete set null;
+end $$;
+
 alter table public.push_subscriptions enable row level security;
 
 drop policy if exists "push_subscriptions manage own" on public.push_subscriptions;
 create policy "push_subscriptions manage own" on public.push_subscriptions
   for all to authenticated
   using (user_id = auth.uid())
-  with check (user_id = auth.uid() and public.is_family_member(family_id));
+  with check (user_id = auth.uid() and (family_id is null or public.is_family_member(family_id)));
 
 -- 유효기한이 임박했다고 이미 알림을 보냈는지 표시. expires_at이 바뀌면(수정/재등록)
 -- 다시 알려줘야 하니 아래 트리거로 자동으로 false로 되돌린다.
@@ -477,7 +524,6 @@ as $$
 declare
   found_family public.families;
   clean_name text := btrim(member_name);
-  member_count int;
 begin
   if auth.uid() is null then
     raise exception '로그인이 필요해요.';
@@ -501,13 +547,13 @@ begin
     return json_build_object('status', 'joined', 'family_id', found_family.id, 'family_name', found_family.name);
   end if;
 
-  select count(*) into member_count from public.family_members where family_id = found_family.id;
-
-  -- 아무도 남지 않은 가족은 승인해줄 사람이 없어서 그대로 들어간다(영영 못 들어가지 않도록).
-  if member_count = 0 then
-    insert into public.family_members (family_id, user_id, display_name, tag_color)
-    values (found_family.id, auth.uid(), clean_name, public.next_tag_color(found_family.id));
-    return json_build_object('status', 'joined', 'family_id', found_family.id, 'family_name', found_family.name);
+  -- 예전에는 "구성원이 0명이면 승인해줄 사람이 없으니 그냥 들여보낸다"는 예외가 있었다.
+  -- 그런데 가족을 나가도 가족은 남아 있었기 때문에, 다들 나가고 빈 껍데기만 남은 가족은
+  -- 코드를 아는 사람이면 누구나 승인 없이 들어가는 문이 됐다. 지금은 마지막 사람이 나가면
+  -- 가족을 통째로 지우므로(leave_family) 구성원 0명인 가족은 아예 존재하지 않는다.
+  -- 만에 하나 남아 있더라도 승인 없이 들여보내지는 않는다.
+  if not exists (select 1 from public.family_members where family_id = found_family.id) then
+    raise exception '이 가족에는 아무도 없어서 승인해줄 사람이 없어요. 새 가족을 만들어주세요.';
   end if;
 
   insert into public.family_join_requests (family_id, user_id, display_name)
@@ -583,8 +629,90 @@ grant execute on function public.request_join_family(text, text) to authenticate
 grant execute on function public.approve_join_request(uuid) to authenticated;
 grant execute on function public.reject_join_request(uuid) to authenticated;
 
--- 예전 함수는 승인 없이 바로 들어가게 해줘서 승인 절차를 우회할 수 있다. 없앤다.
-drop function if exists public.join_family(text, text);
+-- 이 파일을 처음 실행하는 시점까지 이미 만들어져 있던 "구성원 0명인 가족"을 정리한다.
+-- 예전에는 마지막 사람이 나가도 가족이 남았고, 남은 가족은 초대 코드만 알면 승인 없이
+-- 들어갈 수 있는 문이었다(위 request_join_family의 옛 예외). 그 문을 닫아도 이미 생긴
+-- 빈 가족은 그대로 남으니 여기서 함께 지운다.
+-- 사진 파일은 SQL에서 지울 수 없어 스토리지에 남는다(아무도 볼 수 없는 파일이 된다).
+delete from public.gifticons
+where family_id is not null
+  and not exists (select 1 from public.family_members fm where fm.family_id = gifticons.family_id);
+
+delete from public.families f
+where not exists (select 1 from public.family_members fm where fm.family_id = f.id);
+
+-- ===================== 계정 탈퇴 =====================
+
+-- '가족 나가기'와 다르다. 가족 나가기는 그 가족에서만 빠지고 계정과 다른 가족은 그대로지만,
+-- 탈퇴는 계정 자체를 없앤다. 그래서 감추는 게 아니라 실제로 지운다.
+--
+-- 여기서는 데이터만 지운다. auth.users 행은 이 함수의 권한으로 지울 수 없어서,
+-- supabase/functions/delete-account가 이 함수를 부른 뒤 사진 파일과 계정을 마저 지운다.
+--
+-- 남는 것: 다른 가족이 올린 기프티콘(그건 그 가족의 것이다)과, 내가 쓴 사용 내역의 줄.
+-- 사용 내역은 가족이 "언제 뭘 썼나"를 보는 기록이라 통째로 지우면 가족 쪽 기록이 비는데,
+-- 이름은 남기지 않도록 '탈퇴한 구성원'으로 바꾼다.
+create or replace function public.purge_my_data()
+returns json
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  uid uuid := auth.uid();
+  dead_families uuid[] := '{}';
+  doomed bigint[] := '{}';
+  paths text[] := '{}';
+begin
+  if uid is null then
+    raise exception '로그인이 필요해요.';
+  end if;
+
+  -- 나 혼자 남아 있던 가족은 내가 빠지면 아무도 없으니 통째로 없어진다(가족 나가기와 같다).
+  select coalesce(array_agg(fm.family_id), '{}') into dead_families
+  from public.family_members fm
+  where fm.user_id = uid
+    and (select count(*) from public.family_members x where x.family_id = fm.family_id) = 1;
+
+  -- 지울 기프티콘: 내가 올렸거나 내 앞으로 된 것, 그리고 없어질 가족에 남아 있는 것 전부.
+  select coalesce(array_agg(g.id), '{}') into doomed
+  from public.gifticons g
+  where g.family_id = any(dead_families)
+     or g.created_by = uid
+     or exists (
+       select 1 from public.family_members fm
+       where fm.family_id = g.family_id and fm.user_id = uid and fm.display_name = g.owner
+     );
+
+  select coalesce(array_agg(p), '{}') into paths
+  from (
+    select unnest(image_paths) as p from public.gifticons where id = any(doomed)
+    union all
+    select barcode_image_path from public.gifticons where id = any(doomed) and barcode_image_path is not null
+  ) t;
+
+  delete from public.gifticons where id = any(doomed);
+
+  -- 남는 기프티콘에서 나를 가리키는 것들을 끊는다(계정이 지워지면 이 참조 때문에 막힌다).
+  update public.gifticons set used_by = null, used_by_name = '탈퇴한 구성원' where used_by = uid;
+  update public.gifticons set created_by = null where created_by = uid;
+
+  delete from public.push_subscriptions where user_id = uid;
+  delete from public.family_join_requests where user_id = uid;
+  update public.family_join_requests set decided_by = null where decided_by = uid;
+  delete from public.family_members where user_id = uid;
+  delete from public.families where id = any(dead_families);
+  update public.families set created_by = null where created_by = uid;
+
+  return json_build_object(
+    'image_paths', paths,
+    'deleted_gifticons', coalesce(array_length(doomed, 1), 0),
+    'deleted_families', coalesce(array_length(dead_families, 1), 0)
+  );
+end;
+$$;
+
+grant execute on function public.purge_my_data() to authenticated;
 
 -- ===================== 실시간 반영 =====================
 

@@ -60,6 +60,20 @@ export async function signOut() {
   if (error) throw new Error(error.message);
 }
 
+// 계정 탈퇴. 가족 나가기와 달리 계정 자체가 없어진다.
+// 서버가 데이터·사진·계정을 지운 뒤, 이 기기에 남은 로그인 정보를 정리한다.
+export async function deleteAccount() {
+  const { data, error } = await supabase.functions.invoke('delete-account');
+  if (error) {
+    const detail = await error.context?.json?.().catch(() => null);
+    throw new Error(detail?.error || error.message || '계정을 지우지 못했어요.');
+  }
+
+  // 계정이 이미 없어서 서버에 로그아웃을 물으면 거절당한다. 이 기기 것만 지운다.
+  await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+  return data;
+}
+
 export async function getSession() {
   const { data, error } = await supabase.auth.getSession();
   if (error) throw new Error(error.message);

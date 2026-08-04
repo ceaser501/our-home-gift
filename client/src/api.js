@@ -31,7 +31,7 @@ async function uploadImages(familyId, files) {
   }
 }
 
-async function removeImages(paths) {
+export async function removeImages(paths) {
   if (!paths || paths.length === 0) return;
   await supabase.storage.from(IMAGE_BUCKET).remove(paths);
 }

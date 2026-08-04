@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BellRing, ChevronRight, DoorOpen, LogOut, Receipt, UserRound } from 'lucide-react';
+import { BellRing, ChevronRight, DoorOpen, LogOut, Receipt, UserRound, UserRoundX } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import ThemeToggle from './ThemeToggle';
 import NotificationToggle from './NotificationToggle';
@@ -7,6 +7,7 @@ import UsageReportSheet from './UsageReportSheet';
 import AlertDialog from './AlertDialog';
 import RenameSheet from './RenameSheet';
 import { sendTestNotification } from '../api';
+import { deleteAccount } from '../auth';
 import { useFamily } from '../FamilyContext';
 import { leaveFamily, renameMember } from '../family';
 import { OWNER_TAG_PALETTE, memberTagColorClass } from '../utils/tagColor';
@@ -22,6 +23,9 @@ export default function ProfileMenu({ onClose }) {
   const [leaveAsking, setLeaveAsking] = useState(false);
   const [testing, setTesting] = useState(false);
   const [notice, setNotice] = useState(null);
+  // 탈퇴는 되돌릴 수 없어서 두 번 묻는다. null → 'what'(무엇이 없어지는지) → 'sure'(정말로).
+  const [deleteStep, setDeleteStep] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   async function handleTestNotification() {
     setTesting(true);
@@ -67,6 +71,19 @@ export default function ProfileMenu({ onClose }) {
         description: err.message,
       });
       setLeaving(false);
+    }
+  }
+
+  async function handleDeleteAccount() {
+    setDeleteStep(null);
+    setDeleting(true);
+    try {
+      await deleteAccount();
+      // 계정이 없어지면 로그인 상태도 풀려서 앱이 알아서 첫 화면으로 돌아간다.
+      onClose();
+    } catch (err) {
+      setNotice({ tone: 'warning', title: '계정을 지우지 못했어요', description: err.message });
+      setDeleting(false);
     }
   }
 
@@ -151,6 +168,20 @@ export default function ProfileMenu({ onClose }) {
             <LogOut className="size-4.5 text-muted-foreground" />
             <span className="flex-1">로그아웃</span>
           </button>
+
+          {/* 가족 나가기와 헷갈리기 쉬워서 따로 떼어놓고, 무엇이 다른지 오른쪽에 적어둔다. */}
+          <div className="my-2 h-px bg-border" />
+
+          <button
+            type="button"
+            onClick={() => setDeleteStep('what')}
+            disabled={deleting}
+            className="flex w-full items-center gap-3 px-1 py-3 text-left text-sm text-destructive disabled:opacity-50"
+          >
+            <UserRoundX className="size-4.5" />
+            <span className="flex-1">{deleting ? '지우는 중…' : '계정 삭제(탈퇴)'}</span>
+            <span className="text-xs text-muted-foreground">계정이 없어져요</span>
+          </button>
         </div>
 
         {renameOpen && (
@@ -181,6 +212,34 @@ export default function ProfileMenu({ onClose }) {
             confirmLabel="나가기"
             onConfirm={handleLeave}
             onClose={() => setLeaveAsking(false)}
+          />
+        )}
+
+        {deleteStep === 'what' && (
+          <AlertDialog
+            tone="danger"
+            title="계정을 삭제할까요?"
+            description={
+              "'가족 나가기'와는 달라요. 가족 나가기는 그 가족에서만 빠지고 계정은 그대로지만,\n" +
+              '계정 삭제는 이 계정 자체가 없어져서 같은 이메일로 다시 로그인할 수 없어요.\n\n' +
+              '· 속한 가족에서 모두 빠져요. 나 혼자였던 가족은 없어져요.\n' +
+              '· 내가 올렸거나 내 앞으로 된 기프티콘은 사진까지 지워져요(되살릴 수 없어요).\n' +
+              '· 가족의 사용 내역에 내 이름 대신 \'탈퇴한 구성원\'으로 남아요.'
+            }
+            confirmLabel="계속"
+            onConfirm={() => setDeleteStep('sure')}
+            onClose={() => setDeleteStep(null)}
+          />
+        )}
+
+        {deleteStep === 'sure' && (
+          <AlertDialog
+            tone="danger"
+            title="정말 탈퇴할까요?"
+            description={'한 번 지우면 되돌릴 수 없어요.\n정말 계정을 지우시겠어요?'}
+            confirmLabel="탈퇴하기"
+            onConfirm={handleDeleteAccount}
+            onClose={() => setDeleteStep(null)}
           />
         )}
 
