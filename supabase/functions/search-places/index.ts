@@ -130,14 +130,21 @@ async function handleWalkRoute(
   });
 
   if (!res.ok) {
-    const detail = await res.text().catch(() => '');
-    if (res.status === 401 || res.status === 403) {
-      return reply({ error: '티맵 앱키가 올바르지 않아요. TMAP_APP_KEY 값을 확인해주세요.' }, 200);
+    // 티맵이 돌려준 설명을 조금 붙여준다. "키가 틀렸다"와 "이 API를 아직 쓸 수 없다"는
+    // 둘 다 401/403으로 오는데, 무엇을 고쳐야 하는지가 완전히 달라서 구분이 필요하다.
+    const raw = await res.text().catch(() => '');
+    const detail = raw.replace(/\s+/g, ' ').slice(0, 200);
+
+    let hint = '도보 경로를 불러오지 못했어요.';
+    if (res.status === 401) {
+      hint = '티맵 앱키가 아직 통하지 않아요. 키 값이 맞는지, 발급 직후라면 잠시 뒤 다시 시도해보세요.';
+    } else if (res.status === 403) {
+      hint =
+        '이 앱키로는 보행자 경로를 쓸 수 없어요. SK open API에서 이 앱에 "경로안내" 상품이 신청돼 있는지 확인해주세요.';
+    } else if (res.status === 429) {
+      hint = '오늘 도보 경로를 찾을 수 있는 횟수를 다 썼어요.';
     }
-    if (res.status === 429) {
-      return reply({ error: '오늘 도보 경로를 찾을 수 있는 횟수를 다 썼어요.' }, 200);
-    }
-    return reply({ error: `도보 경로를 불러오지 못했어요. (티맵 ${res.status}) ${detail}`.trim() }, 200);
+    return reply({ error: `${hint} (티맵 ${res.status}${detail ? ` · ${detail}` : ''})` }, 200);
   }
 
   const data = await res.json();

@@ -4,6 +4,13 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { Button } from '@/components/ui/button';
 import StoreDetailSheet from './StoreDetailSheet';
 import { searchNearbyStores } from '../api';
+import {
+  SIGNIFICANT_MOVE_M,
+  distanceBetween,
+  getFreshPosition,
+  readCachedPosition,
+  saveCachedPosition,
+} from '../utils/geolocation';
 
 // "이 기프티콘 어디서 쓰지?"를 보여주는 창. 현재 위치 주변의 브랜드 매장을 가까운 순으로
 // 늘어놓는다. 매장을 누르면 앱 안 상세(지도·주소·거리·전화·길찾기)가 열리고,
@@ -13,31 +20,6 @@ function formatDistance(meters) {
   if (meters == null) return null;
   if (meters < 1000) return `${meters}m`;
   return `${(meters / 1000).toFixed(1)}km`;
-}
-
-function locate(options) {
-  return new Promise((resolve, reject) => {
-    if (!navigator.geolocation) {
-      reject(Object.assign(new Error('이 기기에서는 위치를 확인할 수 없어요.'), { code: 'unsupported' }));
-      return;
-    }
-    navigator.geolocation.getCurrentPosition((pos) => resolve(pos.coords), reject, options);
-  });
-}
-
-// 창을 처음 열었을 때만 위치를 못 잡고, 껐다 다시 열면 바로 잡히는 일이 있었다.
-// 기기에 저장된 위치가 없으면 새로 잡느라 10초를 넘기는데 그때 실패로 끝나버렸고,
-// 그 사이 기기가 잡아둔 위치 덕분에 두 번째부터는 즉시 성공한 것이다.
-//
-// 그래서 두 번에 나눠 물어본다. 먼저 조금 오래된 값이라도 있으면 그대로 쓰고
-// (몇 분 사이에 멀리 이동하지는 않아서 주변 매장을 찾기에 충분하다),
-// 없으면 시간을 넉넉히 주고 새로 잡는다.
-function getPosition() {
-  return locate({ enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 }).catch((err) => {
-    // 권한을 거부한 경우(1)는 다시 물어봐야 소용이 없다.
-    if (err?.code === 1 || err?.code === 'unsupported') throw err;
-    return locate({ enableHighAccuracy: false, timeout: 20000, maximumAge: 0 });
-  });
 }
 
 export default function NearbyStoresSheet({ gifticon, onClose }) {
@@ -55,24 +37,43 @@ export default function NearbyStoresSheet({ gifticon, onClose }) {
   useEffect(() => {
     let cancelled = false;
 
+    async function search(at) {
+      const found = await searchNearbyStores({ query, lat: at.lat, lng: at.lng });
+      if (cancelled) return;
+      setOrigin(at);
+      setStores(found);
+      setPhase('done');
+    }
+
     async function run() {
-      setPhase('locating');
       setError(null);
+
+      // 지난번 위치가 있으면 기다리지 않고 그것으로 먼저 찾아 보여준다.
+      const cached = readCachedPosition();
+      setPhase(cached ? 'searching' : 'locating');
+      const shown = cached ? search(cached).catch(() => {}) : null;
+
       try {
-        const coords = await getPosition();
+        const fresh = await getFreshPosition();
         if (cancelled) return;
-        setOrigin({ lat: coords.latitude, lng: coords.longitude });
-        setPhase('searching');
-        const found = await searchNearbyStores({
-          query,
-          lat: coords.latitude,
-          lng: coords.longitude,
-        });
-        if (cancelled) return;
-        setStores(found);
-        setPhase('done');
+        saveCachedPosition(fresh);
+
+        // 지난번 위치로 이미 보여준 목록이 지금 자리와 크게 어긋날 때만 다시 찾는다.
+        if (cached && distanceBetween(cached, fresh) < SIGNIFICANT_MOVE_M) {
+          await shown;
+          if (!cancelled) setOrigin(fresh);
+          return;
+        }
+
+        if (!cached) setPhase('searching');
+        await search(fresh);
       } catch (err) {
         if (cancelled) return;
+        // 지난번 위치로 이미 보여줬으면 새 위치를 못 잡아도 그대로 두는 게 낫다.
+        if (cached) {
+          await shown;
+          return;
+        }
         // 1 = PERMISSION_DENIED: 사용자가 위치를 허용하지 않은 경우라 안내가 다르다.
         if (err?.code === 1) {
           setError({
