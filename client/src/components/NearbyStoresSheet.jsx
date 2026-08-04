@@ -2,12 +2,12 @@ import { useEffect, useState } from 'react';
 import { ChevronRight, Loader2, LocateFixed, MapPin, Phone } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
+import StoreDetailSheet from './StoreDetailSheet';
 import { searchNearbyStores } from '../api';
 
 // "이 기프티콘 어디서 쓰지?"를 보여주는 창. 현재 위치 주변의 브랜드 매장을 가까운 순으로
-// 늘어놓는다. 매장을 누르면 카카오맵 장소 상세(지도·영업시간·전화·평점·길찾기)가 열린다.
-// 지도가 있는 상세 화면을 앱 안에 또 하나 만들면 창이 겹겹이 쌓이는데(사용자도 그걸 걱정했다),
-// 카카오맵 페이지가 우리가 만들 수 있는 것보다 정확하고 늘 최신이라 그쪽으로 보낸다.
+// 늘어놓는다. 매장을 누르면 앱 안 상세(지도·주소·거리·전화·길찾기)가 열리고,
+// 영업시간·리뷰처럼 카카오가 API로 주지 않는 정보만 거기서 카카오맵으로 잇는다.
 
 function formatDistance(meters) {
   if (meters == null) return null;
@@ -38,6 +38,7 @@ export default function NearbyStoresSheet({ gifticon, onClose }) {
   const [stores, setStores] = useState([]);
   const [error, setError] = useState(null); // { title, description, retriable }
   const [attempt, setAttempt] = useState(0);
+  const [detail, setDetail] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -85,9 +86,6 @@ export default function NearbyStoresSheet({ gifticon, onClose }) {
     };
   }, [query, attempt]);
 
-  function openPlace(store) {
-    if (store.placeUrl) window.open(store.placeUrl, '_blank', 'noopener');
-  }
 
   return (
     <Sheet open onOpenChange={(open) => !open && onClose()}>
@@ -96,7 +94,7 @@ export default function NearbyStoresSheet({ gifticon, onClose }) {
           <SheetTitle>{query} 주변 매장</SheetTitle>
         </SheetHeader>
         <p className="m-0 px-5 pb-3 text-xs text-muted-foreground">
-          현재 위치에서 가까운 순이에요. 매장을 누르면 지도·영업시간이 열려요.
+          현재 위치에서 가까운 순이에요. 매장을 누르면 지도와 자세한 정보가 열려요.
         </p>
 
         {(phase === 'locating' || phase === 'searching') && (
@@ -136,7 +134,7 @@ export default function NearbyStoresSheet({ gifticon, onClose }) {
           <ul className="m-0 flex list-none flex-col p-0 px-5">
             {stores.map((store) => (
               <li key={store.id} className="flex items-center gap-2 border-b border-border py-3 last:border-b-0">
-                <button type="button" onClick={() => openPlace(store)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
+                <button type="button" onClick={() => setDetail(store)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
                   <span className="flex w-13 shrink-0 flex-col items-center">
                     <span className="text-sm font-bold text-primary">{formatDistance(store.distance) ?? '?'}</span>
                   </span>
@@ -164,6 +162,8 @@ export default function NearbyStoresSheet({ gifticon, onClose }) {
         {phase === 'done' && (
           <p className="m-0 px-5 pt-3 text-center text-[11px] text-muted-foreground">장소 정보 제공: 카카오</p>
         )}
+
+        {detail && <StoreDetailSheet store={detail} onClose={() => setDetail(null)} />}
       </SheetContent>
     </Sheet>
   );

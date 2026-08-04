@@ -73,9 +73,12 @@ Deno.serve(async (req) => {
       address: d.road_address_name || d.address_name || null,
       // 카카오가 계산해준 현재 위치와의 거리(미터). 정렬도 이 값 기준으로 이미 돼 있다.
       distance: d.distance ? Number(d.distance) : null,
-      // 카카오맵 장소 상세 페이지(지도·영업시간·전화·평점·길찾기가 다 있다)
+      // 카카오맵 장소 상세 페이지(영업시간·평점·리뷰는 API가 안 줘서 여기서만 볼 수 있다)
       placeUrl: d.place_url || null,
       category: d.category_name ? d.category_name.split('>').pop()!.trim() : null,
+      // 앱 안에서 지도를 그릴 때 쓸 좌표
+      lat: d.y ? Number(d.y) : null,
+      lng: d.x ? Number(d.x) : null,
     }));
 
     return reply({ stores });
