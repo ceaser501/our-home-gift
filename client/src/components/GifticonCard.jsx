@@ -11,15 +11,16 @@ function categoryLabel(key) {
   return CATEGORIES.find((c) => c.key === key)?.label ?? key;
 }
 
+// 유효기한이 일주일 안으로 남은 것만 붉은색을 가진다. 나머지는 천천히 써도 되는 것들이라
+// 회색으로 조용히 둔다. 목록에 색이 하나뿐이라야 급한 게 눈에 바로 들어온다.
 const DDAY_CLASS = {
-  normal: 'bg-accent text-accent-foreground',
-  soon: 'bg-warning/15 text-warning',
+  normal: 'bg-secondary text-foreground/70',
+  soon: 'bg-destructive/15 text-destructive',
   urgent: 'bg-destructive/15 text-destructive',
   expired: 'bg-muted text-muted-foreground',
 };
 
-// 카드 아래 한 줄로 붙는 버튼들. 폭을 똑같이 나눠 가져서 누르기 쉽고,
-// 채운 색은 대표 동작(바코드) 하나에만 쓴다.
+// 카드 아래 한 줄로 붙는 버튼들. 폭을 똑같이 나눠 가져서 누르기 쉽다.
 const BAR_BUTTON = 'flex flex-1 items-center justify-center gap-1.5 py-2.5 text-xs font-semibold';
 
 export default function GifticonCard({ gifticon, onViewCode, onViewImage, onToggleUsed, onEdit, onDelete, onFindStores }) {
@@ -107,7 +108,8 @@ export default function GifticonCard({ gifticon, onViewCode, onViewImage, onTogg
         {codeLocked ? (
           <span className={cn(BAR_BUTTON, 'text-muted-foreground')}>{isUsed ? '사용완료' : '기한 만료'}</span>
         ) : (
-          <button type="button" onClick={() => onViewCode(gifticon)} className={cn(BAR_BUTTON, 'bg-primary text-primary-foreground')}>
+          // 유효기한 칩이 회색이 되면서, 이제 카드에서 색을 가진 곳은 이 버튼 하나다.
+          <button type="button" onClick={() => onViewCode(gifticon)} className={cn(BAR_BUTTON, 'bg-accent text-accent-foreground')}>
             <Barcode className="size-4" />
             바코드
           </button>
