@@ -62,7 +62,7 @@ export default function App() {
     if (!silent) setLoading(true);
     setError('');
     try {
-      const params = { search, category };
+      const params = { familyId: family.id, search, category };
       if (statusTab !== 'all') params.status = statusTab;
       const data = await listGifticons(params);
       setGifticons(sortGifticons(data));
@@ -74,7 +74,7 @@ export default function App() {
     // dataVersion은 이름 바꾸기처럼 목록에 적힌 이름까지 서버에서 바뀐 뒤 다시 읽어오게 하는 신호다.
     // 함수 안에서 쓰이지는 않지만, 값이 바뀌면 목록을 다시 불러와야 해서 의존성에 넣어둔다.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, category, statusTab, dataVersion]);
+  }, [family.id, search, category, statusTab, dataVersion]);
 
   useEffect(() => {
     const timer = setTimeout(() => fetchList(), search ? 300 : 0);

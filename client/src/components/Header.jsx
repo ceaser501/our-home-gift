@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Users } from 'lucide-react';
 import Logo from './Logo';
 import FamilyMembersSheet from './FamilyMembersSheet';
+import FamilySwitcherSheet from './FamilySwitcherSheet';
 import ProfileMenu from './ProfileMenu';
 import { useFamily } from '../FamilyContext';
 import { OWNER_TAG_PALETTE, memberTagColorClass } from '../utils/tagColor';
@@ -12,6 +13,7 @@ export default function Header() {
   const myName = me?.display_name || '나';
 
   const [membersOpen, setMembersOpen] = useState(false);
+  const [switcherOpen, setSwitcherOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
 
   return (
@@ -19,14 +21,24 @@ export default function Header() {
       <div className="flex items-center gap-2.5">
         <Logo className="size-7 shrink-0" />
 
-        {/* 가족 이름을 누르면 구성원 목록을 보여준다. */}
+        {/* 가족 이름을 누르면 보는 가족을 바꾼다(여러 가족에 속할 수 있다). */}
         <button
           type="button"
-          onClick={() => setMembersOpen(true)}
-          className="flex min-w-0 flex-1 items-center gap-1 text-left"
+          onClick={() => setSwitcherOpen(true)}
+          className="flex min-w-0 items-center gap-1 text-left"
         >
           <h1 className="m-0 truncate text-xl font-bold text-foreground">{family.name}</h1>
           <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
+        </button>
+
+        {/* 구성원 목록은 따로 뗀다. 이름은 "가족 바꾸기", 이 아이콘은 "누가 있나". */}
+        <button
+          type="button"
+          onClick={() => setMembersOpen(true)}
+          aria-label="가족 구성원 보기"
+          className="mr-auto flex size-7 shrink-0 items-center justify-center rounded-full text-muted-foreground"
+        >
+          <Users className="size-4.5" />
         </button>
 
         {/* 내 이름 버튼: 설정·가족 나가기·로그아웃이 여기 모여 있다. */}
@@ -46,6 +58,7 @@ export default function Header() {
         가족 {members.length}명 · 초대코드 {family.invite_code}
       </p>
 
+      {switcherOpen && <FamilySwitcherSheet onClose={() => setSwitcherOpen(false)} />}
       {membersOpen && <FamilyMembersSheet onClose={() => setMembersOpen(false)} />}
       {profileOpen && <ProfileMenu onClose={() => setProfileOpen(false)} />}
     </header>

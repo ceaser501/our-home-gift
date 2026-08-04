@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { getSession, onAuthStateChange, signOut } from '../auth';
-import { getMyFamily } from '../family';
+import { getFamilyMembers, getMyFamilies } from '../family';
 import { FamilyContext } from '../FamilyContext';
 import LoginScreen from './LoginScreen';
 import FamilyOnboarding from './FamilyOnboarding';
@@ -33,10 +33,33 @@ function markSplashShown() {
   }
 }
 
+// 여러 가족에 속해 있을 수 있어서, 마지막으로 보던 가족을 기억해뒀다가 다음에도 그대로 연다.
+const LAST_FAMILY_KEY = 'moacon:family-id';
+
+function readLastFamilyId() {
+  try {
+    return localStorage.getItem(LAST_FAMILY_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function rememberFamilyId(id) {
+  try {
+    localStorage.setItem(LAST_FAMILY_KEY, id);
+  } catch {
+    // 저장 못 해도 이번 실행 동안은 그대로 쓴다.
+  }
+}
+
 // 가족 이름·구성원이 실제로 달라졌는지 비교하기 위한 요약 문자열.
 function familySignature(state) {
   if (!state) return '';
-  return [state.family.name, ...state.members.map((m) => `${m.user_id}:${m.display_name}`)].join('|');
+  return [
+    state.family.name,
+    ...state.families.map((f) => `${f.id}:${f.name}`),
+    ...state.members.map((m) => `${m.user_id}:${m.display_name}`),
+  ].join('|');
 }
 
 export default function AuthGate({ children }) {
@@ -71,6 +94,22 @@ export default function AuthGate({ children }) {
   // 그래서 실제로 사람이 바뀌었을 때(로그인/로그아웃)만 다시 불러온다.
   const userId = session === undefined ? undefined : (session?.user?.id ?? null);
 
+  // 내가 속한 가족을 모두 읽고, 그중 하나를 골라 그 구성원까지 함께 가져온다.
+  // wantedId를 주면 그 가족을, 없으면 마지막으로 보던 가족을, 그것도 없으면 첫 번째를 연다.
+  const loadFamilies = useCallback(
+    async (wantedId) => {
+      const families = await getMyFamilies(userId);
+      if (families.length === 0) return null;
+
+      const wanted = wantedId ?? readLastFamilyId();
+      const family = families.find((f) => f.id === wanted) ?? families[0];
+      rememberFamilyId(family.id);
+
+      return { families, family, members: await getFamilyMembers(family.id) };
+    },
+    [userId]
+  );
+
   useEffect(() => {
     if (userId === undefined) return;
     if (userId === null) {
@@ -79,9 +118,9 @@ export default function AuthGate({ children }) {
     }
     let cancelled = false;
     setFamilyState(undefined);
-    getMyFamily()
-      .then((f) => {
-        if (!cancelled) setFamilyState(f);
+    loadFamilies()
+      .then((next) => {
+        if (!cancelled) setFamilyState(next);
       })
       .catch(() => {
         if (!cancelled) setFamilyState(null);
@@ -89,11 +128,11 @@ export default function AuthGate({ children }) {
     return () => {
       cancelled = true;
     };
-  }, [userId]);
+  }, [userId, loadFamilies]);
 
   function refetchFamily() {
     setFamilyState(undefined);
-    getMyFamily()
+    loadFamilies()
       .then(setFamilyState)
       .catch(() => setFamilyState(null));
   }
@@ -101,7 +140,7 @@ export default function AuthGate({ children }) {
   // 이름을 바꾼 뒤나 새 구성원이 들어온 뒤처럼, 화면은 그대로 두고 가족 정보만 다시 읽어온다.
   // refetchFamily와 달리 로딩 화면으로 갈아끼우지 않아서 열어둔 창이 닫히지 않는다.
   async function refreshFamily() {
-    const next = await getMyFamily();
+    const next = await loadFamilies(familyRef.current?.family?.id);
     if (!next) return;
 
     const changed = familySignature(familyRef.current) !== familySignature(next);
@@ -109,6 +148,13 @@ export default function AuthGate({ children }) {
     // 이름이 달라졌으면 기프티콘에 적힌 받은 사람·사용한 사람 이름도 서버에서 함께 바뀌었을
     // 테니 목록도 다시 불러오게 한다. 달라진 게 없으면 괜히 두 번 부르지 않는다.
     if (changed) setDataVersion((v) => v + 1);
+  }
+
+  // 보는 가족을 바꾼다. 새로 만들거나 초대 코드로 들어온 직후에도 이걸로 그 가족을 연다.
+  // 화면을 로딩으로 갈아끼우지 않아서, 가족을 고른 창이 그대로 있는 채로 내용만 바뀐다.
+  async function switchFamily(familyId) {
+    const next = await loadFamilies(familyId);
+    if (next) setFamilyState(next);
   }
 
   // 앱을 처음 켠 순간에는 준비가 끝날 때까지 인트로를 계속 보여주고(화면이 갈아끼워지지 않게),
@@ -126,8 +172,10 @@ export default function AuthGate({ children }) {
       value={{
         user: session.user,
         family: familyState.family,
+        families: familyState.families,
         members: familyState.members,
         dataVersion,
+        switchFamily,
         refetchFamily,
         refreshFamily,
         signOut,

@@ -51,6 +51,9 @@ export async function listGifticons(params = {}) {
   let query = supabase
     .from(GIFTICON_TABLE)
     .select('*')
+    // 한 사람이 여러 가족에 속할 수 있어서 반드시 지금 보는 가족으로 걸러야 한다.
+    // RLS는 "내가 속한 가족의 것"까지 모두 허용하므로, 이게 없으면 다른 가족 것이 섞인다.
+    .eq('family_id', params.familyId)
     // 가족에서 나간 사람의 기프티콘은 목록에 넣지 않는다.
     .is('hidden_at', null)
     .order('created_at', { ascending: false });

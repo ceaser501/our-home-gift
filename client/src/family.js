@@ -1,24 +1,35 @@
 import { supabase } from './supabaseClient';
 
-export async function getMyFamily() {
-  const { data: memberships, error } = await supabase.from('family_members').select('family_id, display_name').limit(1);
+// 한 사람이 여러 가족에 속할 수 있다(연인끼리 하나, 부모님과 하나). 내가 들어가 있는
+// 가족을 모두 가져온다.
+//
+// user_id로 걸러야 하는 이유: 내가 속한 가족의 구성원 명단은 나까지 포함해 전부 보이므로,
+// 거르지 않으면 남의 가입 기록까지 섞여 들어온다.
+export async function getMyFamilies(userId) {
+  const { data: memberships, error } = await supabase.from('family_members').select('family_id').eq('user_id', userId);
   if (error) throw new Error(error.message);
-  if (!memberships || memberships.length === 0) return null;
+  if (!memberships || memberships.length === 0) return [];
 
-  const { family_id } = memberships[0];
-
-  const [{ data: family, error: familyError }, { data: members, error: membersError }] = await Promise.all([
-    supabase.from('families').select('*').eq('id', family_id).single(),
-    supabase
-      .from('family_members')
-      .select('user_id, display_name, created_at, tag_color')
-      .eq('family_id', family_id)
-      .order('created_at'),
-  ]);
+  const { data: families, error: familyError } = await supabase
+    .from('families')
+    .select('*')
+    .in(
+      'id',
+      memberships.map((m) => m.family_id)
+    )
+    .order('created_at');
   if (familyError) throw new Error(familyError.message);
-  if (membersError) throw new Error(membersError.message);
+  return families ?? [];
+}
 
-  return { family, members };
+export async function getFamilyMembers(familyId) {
+  const { data, error } = await supabase
+    .from('family_members')
+    .select('user_id, display_name, created_at, tag_color')
+    .eq('family_id', familyId)
+    .order('created_at');
+  if (error) throw new Error(error.message);
+  return data ?? [];
 }
 
 export async function createFamily(familyName, memberName) {
