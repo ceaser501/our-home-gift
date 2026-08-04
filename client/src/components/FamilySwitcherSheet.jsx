@@ -137,12 +137,14 @@ export default function FamilySwitcherSheet({ onClose }) {
             {mode === 'create' ? (
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="switch-fam-name">가족 이름</Label>
+                {/* autoComplete="off": 예전에 적었던 값이 아래로 뜨지 않게 한다. */}
                 <Input
                   id="switch-fam-name"
                   value={familyName}
                   onChange={(e) => setFamilyName(e.target.value)}
                   placeholder="예: 부모님댁"
                   maxLength={20}
+                  autoComplete="off"
                   autoFocus
                   required
                 />
@@ -171,6 +173,7 @@ export default function FamilySwitcherSheet({ onClose }) {
                 onChange={(e) => setMemberName(e.target.value)}
                 placeholder="예: 태수"
                 maxLength={20}
+                autoComplete="off"
                 required
               />
             </div>

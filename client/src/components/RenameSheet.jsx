@@ -46,12 +46,16 @@ export default function RenameSheet({ title, label, description, initialValue = 
         <form onSubmit={handleSubmit} className="flex flex-col gap-3 px-5 pt-3">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="rename-input">{label}</Label>
+            {/* 예전에 적었던 이름이 아래로 주르륵 뜨는 걸 막는다. 브라우저가 입력칸마다
+                지난 값을 기억해뒀다 보여주는 기능인데, 이름은 몇 개 되지도 않고
+                가족끼리 쓰는 화면이라 지난 값이 보이는 쪽이 성가시다. */}
             <Input
               id="rename-input"
               value={value}
               onChange={(e) => setValue(e.target.value)}
               placeholder={placeholder}
               maxLength={MAX_LENGTH}
+              autoComplete="off"
               autoFocus
               required
             />

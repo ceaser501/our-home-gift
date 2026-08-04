@@ -125,11 +125,26 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
         <form onSubmit={handleCreate} className="flex flex-col gap-3">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="fam-name">가족 이름</Label>
-            <Input id="fam-name" value={familyName} onChange={(e) => setFamilyName(e.target.value)} placeholder="예: 우리 가족" required />
+            {/* autoComplete="off": 예전에 적었던 값이 아래로 뜨지 않게 한다. */}
+            <Input
+              id="fam-name"
+              value={familyName}
+              onChange={(e) => setFamilyName(e.target.value)}
+              placeholder="예: 우리 가족"
+              autoComplete="off"
+              required
+            />
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="fam-my-name">내 이름</Label>
-            <Input id="fam-my-name" value={memberName} onChange={(e) => setMemberName(e.target.value)} placeholder="예: 태수" required />
+            <Input
+              id="fam-my-name"
+              value={memberName}
+              onChange={(e) => setMemberName(e.target.value)}
+              placeholder="예: 태수"
+              autoComplete="off"
+              required
+            />
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
           <Button type="submit" size="lg" className="w-full rounded-xl" disabled={submitting}>
@@ -152,7 +167,14 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="fam-join-name">내 이름</Label>
-            <Input id="fam-join-name" value={memberName} onChange={(e) => setMemberName(e.target.value)} placeholder="예: 보연" required />
+            <Input
+              id="fam-join-name"
+              value={memberName}
+              onChange={(e) => setMemberName(e.target.value)}
+              placeholder="예: 보연"
+              autoComplete="off"
+              required
+            />
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
           <Button type="submit" size="lg" className="w-full rounded-xl" disabled={submitting}>
