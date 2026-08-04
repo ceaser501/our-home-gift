@@ -119,7 +119,7 @@ export default function AuthGate({ children }) {
   if (session === undefined) return waitingScreen;
   if (!session) return <LoginScreen />;
   if (familyState === undefined) return waitingScreen;
-  if (!familyState) return <FamilyOnboarding userEmail={session.user.email} onDone={refetchFamily} />;
+  if (!familyState) return <FamilyOnboarding userEmail={session.user.email} userId={session.user.id} onDone={refetchFamily} />;
 
   return (
     <FamilyContext.Provider
