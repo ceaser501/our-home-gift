@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { Car, Clock, ExternalLink, Info, MapPin, Navigation, Phone } from 'lucide-react';
+import { Car, Clock, ExternalLink, Info, MapPin, Maximize2, Minimize2, Navigation, Phone } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { fetchDrivingRoute } from '../api';
 import { loadKakaoMap } from '../utils/kakaoMap';
 
@@ -22,11 +23,25 @@ function formatDuration(seconds) {
   return `${Math.floor(minutes / 60)}시간 ${minutes % 60}분`;
 }
 
+// 지도를 보기 좋은 자리에 맞춘다. 경로가 그려져 있으면 경로 전체가 들어오게,
+// 아니면 매장을 가운데에 둔다.
+function fitTo(kakao, map, points, store) {
+  if (points?.length) {
+    const bounds = new kakao.maps.LatLngBounds();
+    points.forEach((p) => bounds.extend(p));
+    map.setBounds(bounds, 30, 30, 30, 30);
+    return;
+  }
+  map.setLevel(4);
+  map.setCenter(new kakao.maps.LatLng(store.lat, store.lng));
+}
+
 export default function StoreDetailSheet({ store, origin, onClose }) {
   const mapRef = useRef(null);
   // loading: SDK 받는 중 / ready: 지도 표시됨 / none: 키가 없거나 로드 실패(지도 없이 정보만)
   const [mapState, setMapState] = useState('loading');
   const [showRoute, setShowRoute] = useState(false);
+  const [mapExpanded, setMapExpanded] = useState(false);
   // { state: 'loading' | 'done' | 'error', distance, duration, message }
   const [route, setRoute] = useState(null);
 
@@ -35,6 +50,8 @@ export default function StoreDetailSheet({ store, origin, onClose }) {
   const mapObjRef = useRef(null);
   // 경로를 켰다 껐다 할 때 지워야 하는 것들(선, 내 위치 표시).
   const routeShapesRef = useRef([]);
+  // 지도 크기가 바뀌었을 때 경로 전체가 다시 들어오도록 좌표를 들고 있는다.
+  const routePointsRef = useRef(null);
 
   const canShowRoute = store.lat != null && origin != null;
 
@@ -81,12 +98,10 @@ export default function StoreDetailSheet({ store, origin, onClose }) {
 
     routeShapesRef.current.forEach((shape) => shape.setMap(null));
     routeShapesRef.current = [];
-
-    const target = new kakao.maps.LatLng(store.lat, store.lng);
+    routePointsRef.current = null;
 
     if (!showRoute || !origin) {
-      map.setLevel(4);
-      map.setCenter(target);
+      fitTo(kakao, map, null, store);
       return undefined;
     }
 
@@ -116,11 +131,10 @@ export default function StoreDetailSheet({ store, origin, onClose }) {
         dot.setMap(map);
 
         routeShapesRef.current = [line, dot];
+        routePointsRef.current = points;
 
         // 경로 전체가 화면에 들어오도록 범위를 맞춘다.
-        const bounds = new kakao.maps.LatLngBounds();
-        points.forEach((p) => bounds.extend(p));
-        map.setBounds(bounds, 30, 30, 30, 30);
+        fitTo(kakao, map, points, store);
 
         setRoute({ state: 'done', distance: result.distance, duration: result.duration });
       })
@@ -132,6 +146,20 @@ export default function StoreDetailSheet({ store, origin, onClose }) {
       cancelled = true;
     };
   }, [showRoute, origin, store, mapState]);
+
+  // 지도 칸의 크기가 바뀌면 카카오 지도에 다시 재라고 알려줘야 한다. 안 그러면 늘어난
+  // 자리가 회색으로 비거나 보던 위치가 어긋난다. 높이 애니메이션이 끝난 뒤에 잰다.
+  useEffect(() => {
+    const kakao = kakaoRef.current;
+    const map = mapObjRef.current;
+    if (!kakao || !map) return undefined;
+
+    const timer = setTimeout(() => {
+      map.relayout();
+      fitTo(kakao, map, routePointsRef.current, store);
+    }, 320);
+    return () => clearTimeout(timer);
+  }, [mapExpanded, mapState, store]);
 
   const phoneHref = store.phone ? `tel:${store.phone.replace(/[^\d+]/g, '')}` : null;
   // 카카오맵 길찾기 링크. 지도 SDK 없이도 동작하고, 폰에 카카오맵 앱이 있으면 앱으로 열린다.
@@ -157,8 +185,27 @@ export default function StoreDetailSheet({ store, origin, onClose }) {
         <div className="flex flex-col gap-3 px-5 pt-2">
           {/* 지도를 못 그릴 때도 자리를 비워두지 않고 이유를 보여준다. 조용히 사라지면
               설정이 빠진 건지 원래 없는 건지 알 수 없어서 고치기도 어렵다. */}
-          <div className="relative h-45 w-full overflow-hidden rounded-xl border border-border bg-muted">
+          {/* 지도를 크게 볼 때도 새 창을 띄우지 않는다. 이 창 자체가 이미 목록 위에 겹쳐
+              떠 있어서, 한 겹을 더 쌓으면 어디까지 닫아야 하는지 헷갈린다. 대신 지도 칸만
+              키우고 나머지 정보는 아래로 밀어 스크롤로 볼 수 있게 한다. */}
+          <div
+            className={cn(
+              'relative w-full overflow-hidden rounded-xl border border-border bg-muted transition-[height] duration-300 ease-out',
+              mapExpanded ? 'h-[58dvh]' : 'h-45'
+            )}
+          >
             <div ref={mapRef} className="h-full w-full" />
+
+            {mapState === 'ready' && (
+              <button
+                type="button"
+                onClick={() => setMapExpanded((on) => !on)}
+                aria-label={mapExpanded ? '지도 작게 보기' : '지도 크게 보기'}
+                className="absolute top-2 right-2 z-1 flex size-8 items-center justify-center rounded-lg border border-border bg-card/95 text-foreground shadow-sm"
+              >
+                {mapExpanded ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
+              </button>
+            )}
             {/* 걸어가는 길이 아니라 차로 가는 길임을 분명히 적어둔다. */}
             {mapState === 'ready' && showRoute && route && (
               <span className="absolute bottom-2 left-1/2 z-1 flex max-w-[92%] -translate-x-1/2 items-center gap-1.5 rounded-full bg-black/70 px-2.5 py-1 text-[11px] font-semibold text-white">
