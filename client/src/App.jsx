@@ -165,7 +165,7 @@ export default function App() {
         onStatusTabChange={setStatusTab}
       />
 
-      <main className="flex-1 px-5 pb-5">
+      <main className="flex-1 px-5 pt-3 pb-5">
         {loading && <p className="py-10 text-center text-muted-foreground">불러오는 중…</p>}
         {!loading && error && <p className="py-10 text-center text-destructive">{error}</p>}
         {!loading && !error && (

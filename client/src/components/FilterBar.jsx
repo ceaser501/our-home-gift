@@ -4,8 +4,10 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 
 export default function FilterBar({ search, onSearchChange, category, onCategoryChange, statusTab, onStatusTabChange }) {
+  // 목록과 맞닿는 경계에 가는 선을 둔다. 선이 없으면 필터와 첫 카드가 한 덩어리처럼 붙어 보이고,
+  // 화면을 올릴 때 카드가 필터 밑으로 지나가는 것도 눈에 잘 안 띈다.
   return (
-    <div className="sticky top-0 z-10 flex flex-col gap-2.5 bg-background px-5 pt-2 pb-3">
+    <div className="sticky top-0 z-10 flex flex-col gap-2.5 border-b border-border bg-background px-5 pt-2 pb-3">
       <div className="relative">
         <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input

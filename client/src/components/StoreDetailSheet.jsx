@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Car, Clock, ExternalLink, MapPin, Navigation, Phone } from 'lucide-react';
+import { Car, Clock, ExternalLink, Info, MapPin, Navigation, Phone } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { fetchDrivingRoute } from '../api';
@@ -231,29 +231,37 @@ export default function StoreDetailSheet({ store, origin, onClose }) {
               </a>
             )}
             {/* 영업시간은 카카오가 API로 주지 않아서 앱 안에서는 보여줄 수 없다. 어디서 볼 수 있는지만 안내한다. */}
-            <p className="m-0 flex items-center gap-2.5 px-3.5 py-2.5 text-sm">
+            <p className="m-0 flex items-center gap-2.5 border-b border-border px-3.5 py-2.5 text-sm">
               <Clock className="size-4 shrink-0 text-muted-foreground" />
               <span className="text-muted-foreground">영업시간·리뷰는 카카오맵에서 볼 수 있어요</span>
             </p>
+            {/* 같은 브랜드라도 가맹점마다 받는 기프티콘이 다르다. 헛걸음하지 않도록 미리 알려준다. */}
+            <p className="m-0 flex items-center gap-2.5 px-3.5 py-2.5 text-sm">
+              <Info className="size-4 shrink-0 text-muted-foreground" />
+              <span className="break-keep text-muted-foreground">기프티콘을 쓸 수 있는지는 매장에 전화로 확인해주세요</span>
+            </p>
           </div>
 
+          {/* 여기서 사람이 가장 먼저 해야 하는 일은 "이 기프티콘 되나요?" 확인이라, 전화를 대표로 둔다.
+              카카오맵은 영업시간·리뷰를 보러 가는 보조 통로라 가장 조용하게 남긴다.
+              전화번호가 없는 매장이면 길찾기가 대표가 된다. */}
           <div className="flex gap-2">
             {phoneHref && (
-              <Button asChild variant="outline" className="flex-1 rounded-xl">
+              <Button asChild className="flex-1 rounded-xl">
                 <a href={phoneHref}>
                   <Phone className="size-4" /> 전화
                 </a>
               </Button>
             )}
             {routeUrl && (
-              <Button asChild variant="outline" className="flex-1 rounded-xl">
+              <Button asChild variant={phoneHref ? 'outline' : 'default'} className="flex-1 rounded-xl">
                 <a href={routeUrl} target="_blank" rel="noopener noreferrer">
                   <Navigation className="size-4" /> 길찾기
                 </a>
               </Button>
             )}
             {store.placeUrl && (
-              <Button asChild className="flex-1 rounded-xl">
+              <Button asChild variant="ghost" className="flex-1 rounded-xl text-muted-foreground">
                 <a href={store.placeUrl} target="_blank" rel="noopener noreferrer">
                   <ExternalLink className="size-4" /> 카카오맵
                 </a>
