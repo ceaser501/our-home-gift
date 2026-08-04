@@ -1,4 +1,4 @@
-import { Ticket } from 'lucide-react';
+import { MapPin, Ticket } from 'lucide-react';
 import { CATEGORIES } from '../constants';
 import { formatDday, formatDate, ddayUrgency } from '../utils/date';
 import { tagColorClass } from '../utils/tagColor';
@@ -17,7 +17,7 @@ const DDAY_CLASS = {
   expired: 'bg-muted text-muted-foreground',
 };
 
-export default function GifticonCard({ gifticon, onViewCode, onViewImage, onToggleUsed, onEdit, onDelete }) {
+export default function GifticonCard({ gifticon, onViewCode, onViewImage, onToggleUsed, onEdit, onDelete, onFindStores }) {
   const { members } = useFamily();
   const isUsed = gifticon.status === 'used';
   const urgency = isUsed ? 'none' : ddayUrgency(gifticon.expires_at);
@@ -108,6 +108,18 @@ export default function GifticonCard({ gifticon, onViewCode, onViewImage, onTogg
           <Button size="sm" variant="outline" className="flex-1 px-1" onClick={() => onToggleUsed(gifticon)}>
             {isUsed ? '사용취소' : '사용완료'}
           </Button>
+          {/* 어디서 쓸 수 있는지(주변 매장). 이미 썼거나 기한이 지난 건 갈 일이 없으니 뺀다. */}
+          {!codeLocked && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="w-9 shrink-0 px-0"
+              aria-label="주변 매장 찾기"
+              onClick={() => onFindStores(gifticon)}
+            >
+              <MapPin className="size-4 text-primary" />
+            </Button>
+          )}
         </div>
       </div>
     </li>

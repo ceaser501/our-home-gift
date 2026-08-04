@@ -6,6 +6,7 @@ import GifticonList from './components/GifticonList';
 import UploadSheet from './components/UploadSheet';
 import BarcodeModal from './components/BarcodeModal';
 import ImageViewerModal from './components/ImageViewerModal';
+import NearbyStoresSheet from './components/NearbyStoresSheet';
 import InstallPrompt from './components/InstallPrompt';
 import AlertDialog from './components/AlertDialog';
 import PullToRefresh from './components/PullToRefresh';
@@ -50,6 +51,7 @@ export default function App() {
   const [sheetState, setSheetState] = useState(null); // { mode, initial }
   const [codeTarget, setCodeTarget] = useState(null);
   const [imageTarget, setImageTarget] = useState(null);
+  const [storesTarget, setStoresTarget] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [notice, setNotice] = useState(null);
 
@@ -174,6 +176,7 @@ export default function App() {
             onToggleUsed={handleToggleUsed}
             onEdit={(g) => setSheetState({ mode: 'edit', initial: g })}
             onDelete={setDeleteTarget}
+            onFindStores={setStoresTarget}
           />
         )}
       </main>
@@ -199,6 +202,7 @@ export default function App() {
 
       {codeTarget && <BarcodeModal gifticon={codeTarget} onClose={() => setCodeTarget(null)} />}
       {imageTarget && <ImageViewerModal gifticon={imageTarget} onClose={() => setImageTarget(null)} />}
+      {storesTarget && <NearbyStoresSheet gifticon={storesTarget} onClose={() => setStoresTarget(null)} />}
 
       {deleteTarget && (
         <AlertDialog

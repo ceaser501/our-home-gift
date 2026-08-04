@@ -207,6 +207,19 @@ export async function searchPrice({ brand, name }) {
   return data;
 }
 
+// 현재 위치 주변에서 이 브랜드의 매장을 가까운 순으로 찾아온다.
+// (카카오 API 키가 브라우저에 노출되면 안 되므로 Edge Function을 거친다.)
+export async function searchNearbyStores({ query, lat, lng }) {
+  const { data, error } = await supabase.functions.invoke('search-places', {
+    body: { query, lat, lng },
+  });
+  if (error) {
+    const detail = await error.context?.json?.().catch(() => null);
+    throw new Error(detail?.error || error.message || '주변 매장을 찾지 못했어요.');
+  }
+  return data.stores || [];
+}
+
 export async function deleteGifticon(id) {
   const { data: existing } = await supabase
     .from(GIFTICON_TABLE)
