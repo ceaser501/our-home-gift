@@ -10,7 +10,7 @@ import InstallPrompt from './components/InstallPrompt';
 import AlertDialog from './components/AlertDialog';
 import PullToRefresh from './components/PullToRefresh';
 import { listGifticons, updateGifticon, deleteGifticon } from './api';
-import { subscribeToGifticons } from './realtime';
+import { subscribeToGifticons, subscribeToFamily } from './realtime';
 import { daysUntil, todayStr } from './utils/date';
 import { useFamily } from './FamilyContext';
 
@@ -37,7 +37,7 @@ function sortGifticons(items) {
 }
 
 export default function App() {
-  const { family, members, user, dataVersion } = useFamily();
+  const { family, members, user, dataVersion, refreshFamily } = useFamily();
   const myName = members.find((m) => m.user_id === user.id)?.display_name || null;
   const [gifticons, setGifticons] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -80,8 +80,8 @@ export default function App() {
 
   // 검색어를 한 글자 칠 때마다 fetchList가 새로 만들어지는데, 그때마다 구독을 끊었다 다시
   // 맺으면 낭비라서 최신 함수만 여기에 담아두고 구독은 가족이 바뀔 때만 다시 맺는다.
-  const fetchListRef = useRef(fetchList);
-  fetchListRef.current = fetchList;
+  const refreshRef = useRef(null);
+  refreshRef.current = () => Promise.all([fetchList({ silent: true }), refreshFamily()]);
 
   // 가족이 기프티콘을 올리거나 고치면 새로고침 없이 바로 목록에 나타나게 한다.
   useEffect(() => {
@@ -90,12 +90,14 @@ export default function App() {
     // 한 번만 다시 불러온다.
     function reload() {
       clearTimeout(timer);
-      timer = setTimeout(() => fetchListRef.current({ silent: true }), 300);
+      timer = setTimeout(() => refreshRef.current(), 300);
     }
-    const unsubscribe = subscribeToGifticons(family.id, reload);
+    const unsubscribeGifticons = subscribeToGifticons(family.id, reload);
+    const unsubscribeFamily = subscribeToFamily(family.id, reload);
     return () => {
       clearTimeout(timer);
-      unsubscribe();
+      unsubscribeGifticons();
+      unsubscribeFamily();
     };
   }, [family.id]);
 
@@ -103,7 +105,7 @@ export default function App() {
   // 앱이 다시 화면에 나오면 한 번 맞춰본다.
   useEffect(() => {
     function onVisible() {
-      if (!document.hidden) fetchListRef.current({ silent: true });
+      if (!document.hidden) refreshRef.current();
     }
     document.addEventListener('visibilitychange', onVisible);
     return () => document.removeEventListener('visibilitychange', onVisible);
@@ -145,7 +147,8 @@ export default function App() {
 
   return (
     <div className="relative mx-auto flex min-h-dvh w-full max-w-[480px] flex-col overflow-x-hidden bg-background pb-22">
-      <PullToRefresh onRefresh={() => fetchList({ silent: true })} />
+      {/* 당겨서 새로고침은 기프티콘뿐 아니라 가족 구성원까지 같이 다시 읽어온다. */}
+      <PullToRefresh onRefresh={() => refreshRef.current()} />
 
       <Header />
 

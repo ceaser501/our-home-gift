@@ -23,3 +23,23 @@ export function subscribeToGifticons(familyId, onChange) {
     supabase.removeChannel(channel);
   };
 }
+
+// 가족이 새로 들어오거나 나가거나 이름을 바꾸면, 헤더의 "가족 N명"과 구성원 목록도 같이 맞춘다.
+// 예전에는 가족 정보를 로그인 직후 한 번만 읽어서, 새 구성원이 들어와도 화면에는
+// 영영 나타나지 않았다(목록 새로고침은 기프티콘만 다시 불러온다).
+export function subscribeToFamily(familyId, onChange) {
+  const members = { schema: 'public', table: 'family_members', filter: `family_id=eq.${familyId}` };
+
+  const channel = supabase
+    .channel(`family-${familyId}`)
+    .on('postgres_changes', { event: 'INSERT', ...members }, onChange)
+    .on('postgres_changes', { event: 'UPDATE', ...members }, onChange)
+    // 나간 사람은 기프티콘 삭제와 마찬가지로 어느 가족이었는지 알려주지 못해 거르지 못한다.
+    .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'family_members' }, onChange)
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'families', filter: `id=eq.${familyId}` }, onChange)
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}
