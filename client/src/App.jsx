@@ -8,6 +8,7 @@ import BarcodeModal from './components/BarcodeModal';
 import ImageViewerModal from './components/ImageViewerModal';
 import InstallPrompt from './components/InstallPrompt';
 import AlertDialog from './components/AlertDialog';
+import PullToRefresh from './components/PullToRefresh';
 import { listGifticons, updateGifticon, deleteGifticon } from './api';
 import { daysUntil, todayStr } from './utils/date';
 import { useFamily } from './FamilyContext';
@@ -51,8 +52,10 @@ export default function App() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [notice, setNotice] = useState(null);
 
-  const fetchList = useCallback(async () => {
-    setLoading(true);
+  // silent: 당겨서 새로고침처럼 이미 다른 표시가 돌고 있을 때는 목록을 "불러오는 중…"으로
+  // 갈아끼우지 않는다. 화면이 통째로 사라졌다 나타나면 오히려 새로고침이 아니라 오류처럼 보인다.
+  const fetchList = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true);
     setError('');
     try {
       const params = { search, category };
@@ -70,7 +73,7 @@ export default function App() {
   }, [search, category, statusTab, dataVersion]);
 
   useEffect(() => {
-    const timer = setTimeout(fetchList, search ? 300 : 0);
+    const timer = setTimeout(() => fetchList(), search ? 300 : 0);
     return () => clearTimeout(timer);
   }, [fetchList, search]);
 
@@ -110,6 +113,8 @@ export default function App() {
 
   return (
     <div className="relative mx-auto flex min-h-dvh w-full max-w-[480px] flex-col overflow-x-hidden bg-background pb-22">
+      <PullToRefresh onRefresh={() => fetchList({ silent: true })} />
+
       <Header />
 
       <InstallPrompt />
