@@ -159,6 +159,7 @@ export default function FamilySwitcherSheet({ onClose }) {
                   placeholder="6자리 코드"
                   className="tracking-[0.2em] uppercase"
                   maxLength={6}
+                  autoComplete="off"
                   autoFocus
                   required
                 />
