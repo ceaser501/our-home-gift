@@ -37,6 +37,8 @@ export function subscribeToFamily(familyId, onChange) {
     // 나간 사람은 기프티콘 삭제와 마찬가지로 어느 가족이었는지 알려주지 못해 거르지 못한다.
     .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'family_members' }, onChange)
     .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'families', filter: `id=eq.${familyId}` }, onChange)
+    // 참여 신청이 들어오거나 처리되면 헤더의 알림 점과 구성원 목록이 바로 따라가야 한다.
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'family_join_requests', filter: `family_id=eq.${familyId}` }, onChange)
     .subscribe();
 
   return () => {

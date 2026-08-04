@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getSession, onAuthStateChange, signOut } from '../auth';
-import { getFamilyMembers, getMyFamilies } from '../family';
+import { getFamilyMembers, getMyFamilies, listPendingJoinRequests } from '../family';
 import { FamilyContext } from '../FamilyContext';
 import LoginScreen from './LoginScreen';
 import FamilyOnboarding from './FamilyOnboarding';
@@ -59,6 +59,7 @@ function familySignature(state) {
     state.family.name,
     ...state.families.map((f) => `${f.id}:${f.name}`),
     ...state.members.map((m) => `${m.user_id}:${m.display_name}`),
+    ...state.joinRequests.map((r) => r.id),
   ].join('|');
 }
 
@@ -105,7 +106,11 @@ export default function AuthGate({ children }) {
       const family = families.find((f) => f.id === wanted) ?? families[0];
       rememberFamilyId(family.id);
 
-      return { families, family, members: await getFamilyMembers(family.id) };
+      const [members, joinRequests] = await Promise.all([
+        getFamilyMembers(family.id),
+        listPendingJoinRequests(family.id).catch(() => []),
+      ]);
+      return { families, family, members, joinRequests };
     },
     [userId]
   );
@@ -174,6 +179,7 @@ export default function AuthGate({ children }) {
         family: familyState.family,
         families: familyState.families,
         members: familyState.members,
+        joinRequests: familyState.joinRequests,
         dataVersion,
         switchFamily,
         refetchFamily,

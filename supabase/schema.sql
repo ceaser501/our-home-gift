@@ -442,6 +442,150 @@ create trigger trg_reset_expiry_notified
   before update on public.gifticons
   for each row execute function public.reset_expiry_notified();
 
+-- ===================== 가족 참여 신청 =====================
+
+-- 초대 코드만 알면 바로 들어올 수 있으면, 코드를 마구 넣어보다 우연히 맞힌 사람도 그 가족의
+-- 기프티콘(=돈)을 전부 보게 된다. 코드를 길게 만드는 건 맞히는 데 드는 시간을 늘릴 뿐이라,
+-- 아예 기존 구성원이 승인해야 들어오도록 한다. 코드는 그대로 짧게 두어도 된다.
+create table if not exists public.family_join_requests (
+  id uuid primary key default gen_random_uuid(),
+  family_id uuid not null references public.families(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  display_name text not null,
+  status text not null default 'pending', -- pending | approved | rejected
+  created_at timestamptz not null default now(),
+  decided_at timestamptz,
+  decided_by uuid references auth.users(id),
+  unique (family_id, user_id)
+);
+
+alter table public.family_join_requests enable row level security;
+
+-- 신청한 본인과 그 가족 구성원만 본다. 넣고 고치는 일은 아래 함수로만 한다.
+drop policy if exists "join_requests select" on public.family_join_requests;
+create policy "join_requests select" on public.family_join_requests
+  for select to authenticated
+  using (user_id = auth.uid() or public.is_family_member(family_id));
+
+-- 초대 코드로 참여 신청. 코드가 맞아도 바로 들어가지지 않고 대기 상태가 된다.
+create or replace function public.request_join_family(code text, member_name text)
+returns json
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  found_family public.families;
+  clean_name text := btrim(member_name);
+  member_count int;
+begin
+  if auth.uid() is null then
+    raise exception '로그인이 필요해요.';
+  end if;
+  if clean_name = '' then
+    raise exception '이름을 입력해주세요.';
+  end if;
+  if char_length(clean_name) > 20 then
+    raise exception '이름은 20자까지 쓸 수 있어요.';
+  end if;
+
+  select * into found_family from public.families where invite_code = upper(btrim(code));
+  if not found then
+    raise exception '초대 코드를 찾을 수 없어요.';
+  end if;
+
+  -- 이미 그 가족이면 이름만 갱신하고 끝낸다.
+  if exists (select 1 from public.family_members where family_id = found_family.id and user_id = auth.uid()) then
+    update public.family_members set display_name = clean_name
+    where family_id = found_family.id and user_id = auth.uid();
+    return json_build_object('status', 'joined', 'family_id', found_family.id, 'family_name', found_family.name);
+  end if;
+
+  select count(*) into member_count from public.family_members where family_id = found_family.id;
+
+  -- 아무도 남지 않은 가족은 승인해줄 사람이 없어서 그대로 들어간다(영영 못 들어가지 않도록).
+  if member_count = 0 then
+    insert into public.family_members (family_id, user_id, display_name, tag_color)
+    values (found_family.id, auth.uid(), clean_name, public.next_tag_color(found_family.id));
+    return json_build_object('status', 'joined', 'family_id', found_family.id, 'family_name', found_family.name);
+  end if;
+
+  insert into public.family_join_requests (family_id, user_id, display_name)
+  values (found_family.id, auth.uid(), clean_name)
+  on conflict (family_id, user_id) do update
+    set display_name = excluded.display_name,
+        status = 'pending',
+        created_at = now(),
+        decided_at = null,
+        decided_by = null;
+
+  return json_build_object('status', 'pending', 'family_id', found_family.id, 'family_name', found_family.name);
+end;
+$$;
+
+-- 승인은 그 가족 구성원이면 누구나 할 수 있다. 만든 사람만 할 수 있게 하면 그 사람이
+-- 폰을 안 보거나 가족을 나갔을 때 아무도 못 들어온다. 이미 들어와 있는 사람들은 서로
+-- 기프티콘을 다 보는 사이라, 승인 권한을 나눠도 실질적으로 잃는 것이 없다.
+create or replace function public.approve_join_request(request_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  req public.family_join_requests;
+begin
+  select * into req from public.family_join_requests where id = request_id;
+  if not found then
+    raise exception '신청을 찾을 수 없어요.';
+  end if;
+  if not public.is_family_member(req.family_id) then
+    raise exception '이 가족의 구성원만 승인할 수 있어요.';
+  end if;
+  if req.status <> 'pending' then
+    return;
+  end if;
+
+  insert into public.family_members (family_id, user_id, display_name, tag_color)
+  values (req.family_id, req.user_id, req.display_name, public.next_tag_color(req.family_id))
+  on conflict (family_id, user_id) do update set display_name = excluded.display_name;
+
+  update public.family_join_requests
+  set status = 'approved', decided_at = now(), decided_by = auth.uid()
+  where id = request_id;
+end;
+$$;
+
+create or replace function public.reject_join_request(request_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  req public.family_join_requests;
+begin
+  select * into req from public.family_join_requests where id = request_id;
+  if not found then
+    raise exception '신청을 찾을 수 없어요.';
+  end if;
+  if not public.is_family_member(req.family_id) then
+    raise exception '이 가족의 구성원만 거절할 수 있어요.';
+  end if;
+
+  update public.family_join_requests
+  set status = 'rejected', decided_at = now(), decided_by = auth.uid()
+  where id = request_id and status = 'pending';
+end;
+$$;
+
+grant execute on function public.request_join_family(text, text) to authenticated;
+grant execute on function public.approve_join_request(uuid) to authenticated;
+grant execute on function public.reject_join_request(uuid) to authenticated;
+
+-- 예전 함수는 승인 없이 바로 들어가게 해줘서 승인 절차를 우회할 수 있다. 없앤다.
+drop function if exists public.join_family(text, text);
+
 -- ===================== 실시간 반영 =====================
 
 -- 가족 중 누가 기프티콘을 올리거나 가족이 새로 들어오면, 다른 사람 화면에도 새로고침 없이
@@ -456,7 +600,7 @@ begin
     return;
   end if;
 
-  foreach target in array array['gifticons', 'family_members', 'families'] loop
+  foreach target in array array['gifticons', 'family_members', 'families', 'family_join_requests'] loop
     if not exists (
       select 1 from pg_publication_tables
       where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = target

@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Users } from 'lucide-react';
-import { createFamily, joinFamily } from '../family';
+import { Clock, Users } from 'lucide-react';
+import { createFamily, requestJoinFamily } from '../family';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,6 +15,7 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [created, setCreated] = useState(null);
+  const [pendingFor, setPendingFor] = useState(null);
 
   async function handleCreate(e) {
     e.preventDefault();
@@ -37,13 +38,38 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
     setSubmitting(true);
     setError('');
     try {
-      await joinFamily(code.trim(), memberName.trim());
-      onDone();
+      // 코드가 맞아도 바로 들어가지지 않는다. 기존 구성원이 승인해야 한다.
+      const result = await requestJoinFamily(code.trim(), memberName.trim());
+      if (result.status === 'joined') {
+        onDone();
+        return;
+      }
+      setPendingFor(result.family_name);
     } catch (err) {
-      setError(err.message || '초대 코드로 참여하지 못했어요.');
+      setError(err.message || '참여 신청을 하지 못했어요.');
     } finally {
       setSubmitting(false);
     }
+  }
+
+  if (pendingFor) {
+    return (
+      <div className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col items-center justify-center gap-5 bg-background px-6">
+        <Clock className="size-10 text-primary" />
+        <h1 className="m-0 text-lg font-bold text-foreground">승인을 기다리는 중이에요</h1>
+        <p className="m-0 text-center text-sm break-keep text-muted-foreground">
+          '{pendingFor}'에 참여를 신청했어요. 그 가족의 구성원이 승인하면 바로 함께 볼 수 있어요.
+          <br />
+          초대 코드를 알려준 분에게 확인해달라고 말씀해주세요.
+        </p>
+        <Button size="lg" className="w-full rounded-xl" onClick={onDone}>
+          확인했어요
+        </Button>
+        <button type="button" onClick={() => setPendingFor(null)} className="text-center text-xs text-muted-foreground underline">
+          다른 코드로 다시 신청하기
+        </button>
+      </div>
+    );
   }
 
   if (created) {

@@ -55,8 +55,32 @@ export async function renameFamily(familyId, newName) {
   if (error) throw new Error(error.message || '가족 이름을 바꾸지 못했어요.');
 }
 
-export async function joinFamily(code, memberName) {
-  const { data, error } = await supabase.rpc('join_family', { code, member_name: memberName });
-  if (error) throw new Error(error.message || '초대 코드로 참여하지 못했어요.');
+// 초대 코드로 참여 신청. 코드가 맞아도 바로 들어가지지 않고, 기존 구성원이 승인해야 한다.
+// { status: 'pending' | 'joined', family_id, family_name }을 돌려준다.
+export async function requestJoinFamily(code, memberName) {
+  const { data, error } = await supabase.rpc('request_join_family', { code, member_name: memberName });
+  if (error) throw new Error(error.message || '참여 신청을 하지 못했어요.');
   return data;
+}
+
+// 이 가족에 들어오려고 기다리는 사람들.
+export async function listPendingJoinRequests(familyId) {
+  const { data, error } = await supabase
+    .from('family_join_requests')
+    .select('id, user_id, display_name, created_at')
+    .eq('family_id', familyId)
+    .eq('status', 'pending')
+    .order('created_at');
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+export async function approveJoinRequest(requestId) {
+  const { error } = await supabase.rpc('approve_join_request', { request_id: requestId });
+  if (error) throw new Error(error.message || '승인하지 못했어요.');
+}
+
+export async function rejectJoinRequest(requestId) {
+  const { error } = await supabase.rpc('reject_join_request', { request_id: requestId });
+  if (error) throw new Error(error.message || '거절하지 못했어요.');
 }

@@ -8,7 +8,7 @@ import { useFamily } from '../FamilyContext';
 import { OWNER_TAG_PALETTE, memberTagColorClass } from '../utils/tagColor';
 
 export default function Header() {
-  const { family, members, user } = useFamily();
+  const { family, members, user, joinRequests } = useFamily();
   const me = members.find((m) => m.user_id === user.id);
   const myName = me?.display_name || '나';
 
@@ -36,9 +36,13 @@ export default function Header() {
           type="button"
           onClick={() => setMembersOpen(true)}
           aria-label="가족 구성원 보기"
-          className="mr-auto flex size-7 shrink-0 items-center justify-center rounded-full text-muted-foreground"
+          className="relative mr-auto flex size-7 shrink-0 items-center justify-center rounded-full text-muted-foreground"
         >
           <Users className="size-4.5" />
+          {/* 참여를 기다리는 사람이 있으면 여기서만 알 수 있으니 점으로 표시한다. */}
+          {joinRequests.length > 0 && (
+            <span className="absolute top-0.5 right-0.5 size-2 rounded-full bg-destructive ring-2 ring-background" />
+          )}
         </button>
 
         {/* 내 이름 버튼: 설정·가족 나가기·로그아웃이 여기 모여 있다. */}

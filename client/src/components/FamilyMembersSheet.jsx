@@ -1,15 +1,31 @@
 import { useState } from 'react';
-import { Pencil } from 'lucide-react';
+import { Pencil, UserPlus } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Button } from '@/components/ui/button';
 import RenameSheet from './RenameSheet';
 import { useFamily } from '../FamilyContext';
-import { renameFamily } from '../family';
+import { approveJoinRequest, rejectJoinRequest, renameFamily } from '../family';
 import { OWNER_TAG_PALETTE, memberTagColorClass } from '../utils/tagColor';
 import { formatDate } from '../utils/date';
 
 export default function FamilyMembersSheet({ onClose }) {
-  const { family, members, user, refreshFamily } = useFamily();
+  const { family, members, user, joinRequests, refreshFamily } = useFamily();
   const [renameOpen, setRenameOpen] = useState(false);
+  const [deciding, setDeciding] = useState(null);
+  const [error, setError] = useState('');
+
+  async function decide(request, approve) {
+    setDeciding(request.id);
+    setError('');
+    try {
+      await (approve ? approveJoinRequest(request.id) : rejectJoinRequest(request.id));
+      await refreshFamily();
+    } catch (err) {
+      setError(err.message || '처리하지 못했어요.');
+    } finally {
+      setDeciding(null);
+    }
+  }
 
   return (
     <Sheet open onOpenChange={(open) => !open && onClose()}>
@@ -35,6 +51,34 @@ export default function FamilyMembersSheet({ onClose }) {
           </p>
         </div>
 
+        {/* 초대 코드는 짧아서 우연히 맞힐 수도 있다. 그래서 코드가 맞아도 여기서 승인해야 들어온다. */}
+        {joinRequests.length > 0 && (
+          <div className="mx-5 mt-2 flex flex-col gap-2 rounded-xl border border-primary/30 bg-primary/5 p-3">
+            <p className="m-0 flex items-center gap-1.5 text-xs font-semibold text-primary">
+              <UserPlus className="size-4" />
+              참여를 기다리는 사람이 {joinRequests.length}명 있어요
+            </p>
+            {joinRequests.map((request) => (
+              <div key={request.id} className="flex items-center gap-2">
+                <span className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground">{request.display_name}</span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 rounded-lg px-3"
+                  disabled={deciding === request.id}
+                  onClick={() => decide(request, false)}
+                >
+                  거절
+                </Button>
+                <Button size="sm" className="h-8 rounded-lg px-3" disabled={deciding === request.id} onClick={() => decide(request, true)}>
+                  승인
+                </Button>
+              </div>
+            ))}
+            {error && <p className="m-0 text-xs text-destructive">{error}</p>}
+          </div>
+        )}
+
         <ul className="m-0 flex list-none flex-col gap-1 px-5 pt-2">
           {members.map((member) => (
             <li key={member.user_id} className="flex items-center gap-3 rounded-xl px-1 py-2.5">
@@ -49,6 +93,12 @@ export default function FamilyMembersSheet({ onClose }) {
                 <span className="truncate text-sm font-semibold text-foreground">
                   {member.display_name}
                   {member.user_id === user.id && <span className="ml-1.5 text-xs font-normal text-primary">나</span>}
+                  {/* 가족을 처음 만든 사람. 권한이 더 있는 건 아니고 누가 만들었는지만 알려준다. */}
+                  {member.user_id === family.created_by && (
+                    <span className="ml-1.5 rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-bold text-accent-foreground">
+                      대표
+                    </span>
+                  )}
                 </span>
                 <span className="text-xs text-muted-foreground">{formatDate(member.created_at)}부터 함께</span>
               </span>

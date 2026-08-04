@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { Check, KeyRound, Plus, Users } from 'lucide-react';
+import { Check, Clock, KeyRound, Plus, Users } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useFamily } from '../FamilyContext';
-import { createFamily, joinFamily } from '../family';
+import { createFamily, requestJoinFamily } from '../family';
 import { cn } from '@/lib/utils';
 
 // 보는 가족을 바꾸는 창. 한 사람이 여러 가족에 속할 수 있어서(연인끼리 하나, 부모님과 하나)
@@ -23,6 +23,7 @@ export default function FamilySwitcherSheet({ onClose }) {
   const [code, setCode] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [pendingFor, setPendingFor] = useState(null);
 
   async function pick(id) {
     if (id === family.id) {
@@ -39,19 +40,29 @@ export default function FamilySwitcherSheet({ onClose }) {
     setSubmitting(true);
     setError('');
     try {
-      const created =
-        mode === 'create'
-          ? await createFamily(familyName.trim(), memberName.trim())
-          : await joinFamily(code.trim(), memberName.trim());
-      await switchFamily(created.id);
-      onClose();
+      if (mode === 'create') {
+        const created = await createFamily(familyName.trim(), memberName.trim());
+        await switchFamily(created.id);
+        onClose();
+        return;
+      }
+
+      // 초대 코드가 맞아도 바로 들어가지지 않는다. 기존 구성원이 승인해야 한다.
+      const result = await requestJoinFamily(code.trim(), memberName.trim());
+      if (result.status === 'joined') {
+        await switchFamily(result.family_id);
+        onClose();
+        return;
+      }
+      setPendingFor(result.family_name);
+      setSubmitting(false);
     } catch (err) {
       setError(err.message || (mode === 'create' ? '가족을 만들지 못했어요.' : '초대 코드로 참여하지 못했어요.'));
       setSubmitting(false);
     }
   }
 
-  const title = mode === 'create' ? '새 가족 만들기' : mode === 'join' ? '초대 코드로 참여' : '가족 바꾸기';
+  const title = pendingFor ? '승인을 기다리는 중' : mode === 'create' ? '새 가족 만들기' : mode === 'join' ? '초대 코드로 참여' : '가족 바꾸기';
 
   return (
     <Sheet open onOpenChange={(open) => !open && onClose()}>
@@ -60,7 +71,18 @@ export default function FamilySwitcherSheet({ onClose }) {
           <SheetTitle>{title}</SheetTitle>
         </SheetHeader>
 
-        {mode === 'list' ? (
+        {pendingFor ? (
+          <div className="flex flex-col items-center gap-3 px-8 py-8 text-center">
+            <Clock className="size-7 text-primary" />
+            <p className="m-0 text-sm font-semibold text-foreground">'{pendingFor}'에 참여를 신청했어요</p>
+            <p className="m-0 text-xs leading-relaxed break-keep text-muted-foreground">
+              그 가족의 구성원이 승인하면 목록에 나타나요. 초대 코드를 알려준 분에게 확인해달라고 말씀해주세요.
+            </p>
+            <Button className="mt-1 w-full rounded-xl" onClick={onClose}>
+              알겠어요
+            </Button>
+          </div>
+        ) : mode === 'list' ? (
           <>
             <p className="m-0 px-5 pb-2 text-xs text-muted-foreground">
               기프티콘은 가족마다 따로 모여요. 보고 싶은 가족을 고르세요.
