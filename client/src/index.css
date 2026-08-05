@@ -156,7 +156,7 @@
   scrollbar-width: none;
 }
 
-/* 진입 화면(스플래시)에서 로고가 살짝 떠오르며 나타나는 효과 */
+/* 알림창이 살짝 떠오르며 나타나는 효과 */
 @keyframes splash-in {
   from {
     opacity: 0;
@@ -185,8 +185,4 @@
 
 .animate-progress-indeterminate {
   animation: progress-indeterminate 1.1s ease-in-out infinite;
-}
-
-.animate-splash-in-delayed {
-  animation: splash-in 0.45s ease-out 0.12s both;
 }

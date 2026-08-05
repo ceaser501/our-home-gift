@@ -80,7 +80,9 @@ export default function GifticonCard({
             보여주는 건 올린 사진 전체가 아니라 상품 사진만 잘라낸 것(thumb_image_url)이다.
             대개 선물함 화면을 통째로 찍은 캡처라, 68px로 줄이면 글자와 버튼까지 뭉개져 들어가
             무슨 상품인지 알아볼 수 없다. 못 잘라낸 것은 예전처럼 첫 사진을 그대로 쓴다. */}
-        <span className="pointer-events-none relative flex size-17 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-accent">
+        {/* 흰 배경 상품 사진은 카드와 경계가 없어 허공에 떠 보인다. 아주 연한 선으로
+            "여기까지가 사진"이라고만 알려준다. 진하면 사진보다 테두리가 먼저 보인다. */}
+        <span className="pointer-events-none relative flex size-17 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border bg-accent">
           {thumbUrl ? (
             <img src={thumbUrl} alt={gifticon.name} className="h-full w-full object-cover" />
           ) : (

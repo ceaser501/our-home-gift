@@ -6,34 +6,13 @@ import { FamilyContext } from '../FamilyContext';
 import LoginScreen from './LoginScreen';
 import FamilyOnboarding from './FamilyOnboarding';
 import ConsentScreen from './ConsentScreen';
-import SplashScreen from './SplashScreen';
 import LoadingScreen from './LoadingScreen';
 
-// 스플래시가 깜빡이고 사라지면 오히려 산만해서, 한 번 뜨면 최소 이 시간만큼은 보여준다.
-const MIN_SPLASH_MS = 1800;
-
-// 인트로 스플래시는 "앱을 켰을 때 한 번"만 보여준다.
-// 구글/네이버 로그인은 외부 페이지로 나갔다 돌아오는 리다이렉트 방식이라 앱이 통째로 새로
-// 로드되는데, 그때마다 인트로가 다시 뜨면 성가시다. sessionStorage는 같은 탭(설치형 PWA라면
-// 같은 앱 실행) 안에서는 리다이렉트를 건너뛰어도 유지되므로, 이걸로 "이미 봤음"을 기억한다.
-const SPLASH_SHOWN_KEY = 'moacon:splash-shown';
-
-function readSplashShown() {
-  try {
-    return sessionStorage.getItem(SPLASH_SHOWN_KEY) === '1';
-  } catch {
-    // 사파리 프라이빗 모드 등에서 접근이 막히면 그냥 매번 보여준다.
-    return false;
-  }
-}
-
-function markSplashShown() {
-  try {
-    sessionStorage.setItem(SPLASH_SHOWN_KEY, '1');
-  } catch {
-    // 저장 못 해도 동작에는 지장 없다.
-  }
-}
+// 예전에는 여기서 로고와 한 줄 소개를 보여주는 인트로 화면을 최소 1.8초 띄웠다.
+// 그런데 설치형 PWA는 앱을 켤 때 브라우저가 먼저 제 스플래시(아이콘 + 앱 이름)를
+// 띄우기 때문에, 우리 인트로가 그 뒤에 또 나와 같은 인사를 두 번 하는 꼴이었다.
+// 브라우저 것은 우리가 끌 수 없으므로 우리 것을 뺐다. 준비되는 동안에는 조용한
+// 로딩 화면만 쓴다.
 
 // 여러 가족에 속해 있을 수 있어서, 마지막으로 보던 가족을 기억해뒀다가 다음에도 그대로 연다.
 const LAST_FAMILY_KEY = 'moacon:family-id';
@@ -74,19 +53,6 @@ export default function AuthGate({ children }) {
   // 다시 읽어온 가족 정보와 견주어 볼 "지금 값". 비교만 하는 용도라 화면을 다시 그리지 않는다.
   const familyRef = useRef(familyState);
   familyRef.current = familyState;
-  // 이번 화면 로드 이전에 이미 인트로를 봤는지(= 로그인 리다이렉트 등으로 돌아온 상황인지).
-  const [introShownBefore] = useState(readSplashShown);
-  const [splashDone, setSplashDone] = useState(introShownBefore);
-
-  useEffect(() => {
-    if (splashDone) return;
-    markSplashShown();
-    const timer = setTimeout(() => setSplashDone(true), MIN_SPLASH_MS);
-    return () => clearTimeout(timer);
-    // 최초 마운트에서만 판단하면 되는 값이라 의존성은 비워둔다.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   useEffect(() => {
     getSession().then(setSession);
     return onAuthStateChange(setSession);
@@ -184,11 +150,8 @@ export default function AuthGate({ children }) {
     if (next) setFamilyState(next);
   }
 
-  // 앱을 처음 켠 순간에는 준비가 끝날 때까지 인트로를 계속 보여주고(화면이 갈아끼워지지 않게),
-  // 그 뒤의 대기 상황에서는 조용한 로딩 화면만 쓴다.
-  const waitingScreen = introShownBefore ? <LoadingScreen /> : <SplashScreen />;
+  const waitingScreen = <LoadingScreen />;
 
-  if (!splashDone) return <SplashScreen />;
   if (session === undefined) return waitingScreen;
   if (!session) return <LoginScreen />;
   if (agreed === undefined) return waitingScreen;
