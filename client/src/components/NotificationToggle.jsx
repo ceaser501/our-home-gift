@@ -48,9 +48,14 @@ export default function NotificationToggle({ asRow = false }) {
           className="flex w-full items-center gap-3 px-1 py-3 text-left text-sm disabled:opacity-50"
         >
           {enabled ? <Bell className="size-4.5 text-muted-foreground" /> : <BellOff className="size-4.5 text-muted-foreground" />}
-          {/* 이 스위치 하나로 이 앱의 알림을 모두 끄고 켠다(유효기한 임박, 가족 참여 신청). */}
-          <span className="flex-1 text-foreground">알림 받기</span>
-          <span className={enabled ? 'text-xs font-semibold text-primary' : 'text-xs text-muted-foreground'}>
+          <span className="flex min-w-0 flex-1 flex-col">
+            <span className="text-foreground">폰으로 알림 받기</span>
+            {/* 무엇이 폰을 울리는지 적어둔다. 이걸 안 적으면 가족이 기프티콘을 쓸 때마다
+                알림이 오는 줄 알고 꺼버린다. 정작 만료 알림까지 같이 꺼지는 셈이다.
+                (사용·사용취소·등록은 폰을 울리지 않고 헤더의 종에만 쌓인다.) */}
+            <span className="text-xs break-keep text-muted-foreground">유효기한 임박, 가족 참여 신청</span>
+          </span>
+          <span className={enabled ? 'shrink-0 text-xs font-semibold text-primary' : 'shrink-0 text-xs text-muted-foreground'}>
             {enabled ? '켜짐' : '꺼짐'}
           </span>
         </button>

@@ -24,6 +24,24 @@ export function subscribeToGifticons(familyId, onChange) {
   };
 }
 
+// 가족이 기프티콘을 쓰거나 올리면 헤더의 종에 숫자가 바로 붙게 한다. 기록은 데이터베이스
+// 트리거가 남기므로, 누가 어느 화면에서 처리했든 이 신호는 똑같이 온다.
+// 지우는 일은 60일 지난 것을 정리할 때뿐이라 받지 않는다(안 읽은 개수와 상관없다).
+export function subscribeToActivities(familyId, onChange) {
+  const channel = supabase
+    .channel(`activities-${familyId}`)
+    .on(
+      'postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'activities', filter: `family_id=eq.${familyId}` },
+      onChange
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}
+
 // 가족이 새로 들어오거나 나가거나 이름을 바꾸면, 헤더의 "가족 N명"과 구성원 목록도 같이 맞춘다.
 // 예전에는 가족 정보를 로그인 직후 한 번만 읽어서, 새 구성원이 들어와도 화면에는
 // 영영 나타나지 않았다(목록 새로고침은 기프티콘만 다시 불러온다).

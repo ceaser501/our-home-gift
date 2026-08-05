@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ChevronDown, Users } from 'lucide-react';
 import Logo from './Logo';
 import FamilyMembersSheet from './FamilyMembersSheet';
+import NotificationBell from './NotificationBell';
 import FamilySwitcherSheet from './FamilySwitcherSheet';
 import ProfileMenu from './ProfileMenu';
 import { useFamily } from '../FamilyContext';
@@ -44,6 +45,10 @@ export default function Header() {
             <span className="absolute top-0.5 right-0.5 size-2 rounded-full bg-destructive ring-2 ring-background" />
           )}
         </button>
+
+        {/* 가족이 무엇을 했는지(올림·사용·사용취소) 모아 보는 자리. 구성원 아이콘과
+            내 이름 사이에 둔다 — 둘 다 "가족" 쪽 이야기라 한 덩어리로 읽힌다. */}
+        <NotificationBell />
 
         {/* 내 이름 버튼: 설정·가족 나가기·로그아웃이 여기 모여 있다. */}
         <button

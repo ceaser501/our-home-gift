@@ -55,6 +55,15 @@ Deno.serve(async (req) => {
   webpush.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey);
 
   const admin = createClient(supabaseUrl, serviceRoleKey);
+
+  // 앱 안 알림(activities)에서 60일 지난 것을 지운다. 알림 발송과는 상관없는 일이지만,
+  // 하루 두 번 꼬박꼬박 도는 일정이 이것뿐이라 여기에 얹는다. 이걸 위해 크론을 하나 더
+  // 만들면 나중에 배포할 때 챙길 것만 늘어난다.
+  //
+  // 아래 발송 로직보다 먼저 부른다. 뒤에 두면 "알릴 기프티콘이 없어요"로 일찍 끝나는 날에는
+  // 정리가 통째로 건너뛰어진다. 실패해도 발송은 그대로 진행한다.
+  await admin.rpc('purge_old_activities');
+
   const today = todayDateStr();
   const windowEnd = addDays(today, EXPIRY_WINDOW_DAYS);
 

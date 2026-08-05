@@ -328,6 +328,39 @@ export async function listNotices() {
   return data || [];
 }
 
+// 가족이 기프티콘을 쓰거나 올린 기록. 폰을 울릴 일은 아니라 푸시로는 보내지 않고
+// 앱 안에서만 쌓아뒀다가, 헤더의 종을 누르면 보여준다.
+export async function listActivities(familyId) {
+  const { data, error } = await supabase
+    .from('activities')
+    .select('*')
+    .eq('family_id', familyId)
+    .order('created_at', { ascending: false })
+    .limit(50);
+  // 활동 기록을 못 읽는 것과 기프티콘을 못 보는 것은 다르다. 없어도 앱은 돌아가야 한다
+  // (테이블을 아직 안 만든 경우도 여기로 온다).
+  if (error) return [];
+  return data || [];
+}
+
+// 내가 이 가족의 알림을 어디까지 봤는지. 아직 한 번도 안 열었으면 null이 온다.
+export async function getActivityLastRead(familyId) {
+  const { data, error } = await supabase
+    .from('activity_reads')
+    .select('last_read_at')
+    .eq('family_id', familyId)
+    .maybeSingle();
+  if (error) return null;
+  return data?.last_read_at || null;
+}
+
+export async function markActivitiesRead(familyId, userId) {
+  const { error } = await supabase
+    .from('activity_reads')
+    .upsert({ user_id: userId, family_id: familyId, last_read_at: new Date().toISOString() }, { onConflict: 'user_id,family_id' });
+  if (error) throw new Error(error.message);
+}
+
 export async function savePushSubscription({ userId, familyId, subscription }) {
   const json = subscription.toJSON();
   const { error } = await supabase.from('push_subscriptions').upsert(
