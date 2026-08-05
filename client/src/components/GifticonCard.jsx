@@ -24,9 +24,9 @@ const DDAY_CLASS = {
 const BAR_BUTTON = 'flex flex-1 items-center justify-center gap-1.5 py-2.5 text-xs font-semibold';
 
 // 사진 위에 얹히는 바코드 띠. 실제로 읽히는 바코드가 아니라 "여기 바코드가 들었다"는
-// 표시라서, 진짜처럼 잘게 쪼개지 않는다. 68px짜리 썸네일에서 1px 막대를 촘촘히 세우면
-// 바코드가 아니라 잔털처럼 보인다. 굵게 몇 개만 세워야 멀리서도 바코드로 읽힌다.
-const BAR_WIDTHS = [2, 1, 3, 1, 2, 1, 3, 2];
+// 표시라서, 진짜처럼 잘게 쪼개지 않는다. 68px짜리 썸네일에서 1px 막대는 바코드가 아니라
+// 잔털로 보이므로 2~3px만 쓰고, 짧고 굵게 세워야 멀리서도 바코드로 읽힌다.
+const BAR_WIDTHS = [3, 2, 3, 2, 2, 3, 2, 3];
 
 function BarcodeStrip() {
   return (
@@ -35,7 +35,7 @@ function BarcodeStrip() {
       aria-hidden="true"
     >
       {BAR_WIDTHS.map((width, i) => (
-        <i key={i} className="block h-2.5 bg-barcode-foreground" style={{ width: `${width}px` }} />
+        <i key={i} className="block h-2 bg-barcode-foreground" style={{ width: `${width}px` }} />
       ))}
     </span>
   );

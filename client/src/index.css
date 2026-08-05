@@ -27,10 +27,11 @@
   --success-foreground: #ffffff;
   --warning: #e69008;
   --warning-foreground: #1c1e27;
-  /* 썸네일 아래 바코드 띠. 카드 배경과 가장 먼 색이라야 "붙어 있는 것"으로 읽힌다.
-     밝은 화면에서는 검은 띠에 흰 줄, 어두운 화면에서는 뒤집어 흰 띠에 검은 줄을 쓴다. */
-  --barcode: #1c1e27;
-  --barcode-foreground: #ffffff;
+  /* 썸네일 아래 바코드 띠. 실제 기프티콘의 바코드가 늘 흰 바탕에 검은 줄이라,
+     띠도 같은 차림으로 두어야 설명 없이 바코드로 읽힌다. 검은 띠는 사진 위에서
+     너무 튀어서 사진보다 띠가 먼저 보였다. */
+  --barcode: #f1f1f4;
+  --barcode-foreground: #17171c;
   --border: #e7e7ec;
   --input: #e7e7ec;
   --ring: #5b4fe8;
@@ -92,7 +93,8 @@
   --success-foreground: #0c1f14;
   --warning: #e69008;
   --warning-foreground: #1c1e27;
-  --barcode: #f2f2f5;
+  /* 어두운 화면에서 순백에 가까운 띠는 사진 위에서 혼자 빛나 보인다. 한 톤 낮춘다. */
+  --barcode: #dcdce1;
   --barcode-foreground: #16161b;
   --border: #2a2a31;
   --input: #2a2a31;
@@ -157,10 +159,16 @@
 }
 
 /* 사진 아래를 잘라내지 않고 그 위에 얹은 느낌으로 두는 바코드 띠.
-   경계를 딱 자르면 사진이 잘린 것처럼 보이고, 반대로 전체를 흐리게 풀면 막대가 번져
-   수염처럼 지저분해진다. 그래서 막대가 놓이는 아래쪽은 꽉 채우고 위쪽 끝만 짧게 푼다. */
+   경계를 딱 자르면 사진이 잘린 것처럼 보이고, 반대로 전체를 흐리게 풀면 막대까지 번져
+   수염처럼 지저분해진다. 그래서 막대가 놓이는 아래쪽은 같은 농도로 채우고 위쪽 끝만
+   짧게 푼다. 띠 자체도 살짝 비쳐서 아래 사진 색이 배어 나오게 둔다. */
 .barcode-band {
-  background-image: linear-gradient(to top, var(--barcode) 0%, var(--barcode) 66%, transparent 100%);
+  background-image: linear-gradient(
+    to top,
+    color-mix(in srgb, var(--barcode) 88%, transparent) 0%,
+    color-mix(in srgb, var(--barcode) 88%, transparent) 68%,
+    transparent 100%
+  );
 }
 
 .no-scrollbar::-webkit-scrollbar {
