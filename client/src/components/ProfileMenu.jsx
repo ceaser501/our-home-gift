@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BellRing, ChevronRight, DoorOpen, FileText, LogOut, Receipt, ShieldCheck, UserRound, UserRoundX } from 'lucide-react';
+import { BellRing, ChevronRight, DoorOpen, FileText, LogOut, Receipt, Scale, ShieldCheck, UserRound, UserRoundX } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import ThemeToggle from './ThemeToggle';
 import NotificationToggle from './NotificationToggle';
@@ -172,6 +172,22 @@ export default function ProfileMenu({ onClose }) {
             <span className="flex-1">이용약관</span>
             <ChevronRight className="size-4 text-muted-foreground" />
           </a>
+          <a
+            href={`${import.meta.env.BASE_URL}licenses.html`}
+            target="_blank"
+            rel="noreferrer"
+            className="flex w-full items-center gap-3 px-1 py-3 text-left text-sm text-foreground no-underline"
+          >
+            <Scale className="size-4.5 text-muted-foreground" />
+            <span className="flex-1">오픈소스 및 기술 정보</span>
+            <ChevronRight className="size-4 text-muted-foreground" />
+          </a>
+
+          {/* 문의를 받았을 때 "어떤 코드를 쓰고 계신가"를 물어볼 수 있어야 한다.
+              누를 것이 없는 줄이라 아이콘 없이 옅게 적어둔다. */}
+          <p className="m-0 px-1 py-3 text-xs text-muted-foreground">
+            버전 {__APP_VERSION__} ({__BUILD_DATE__})
+          </p>
 
           {/* 자주 쓰는 것(로그아웃)을 위에 두고, 되돌리기 어려운 것 둘은 아래로 내려
               구분선으로 떼어놓는다. 손가락이 미끄러져도 위험한 쪽에 먼저 닿지 않도록. */}
