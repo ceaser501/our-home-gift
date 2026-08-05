@@ -674,6 +674,46 @@ where family_id is not null
 delete from public.families f
 where not exists (select 1 from public.family_members fm where fm.family_id = f.id);
 
+-- ===================== 약관 동의 =====================
+
+-- 문서를 만들어 두는 것과 이용자가 동의한 것은 다르다. 동의를 받은 기록이 없으면 약관은
+-- 효력을 주장하기 어렵고, 스토어 심사에서도 가입 절차에 동의가 있는지를 본다.
+--
+-- 만 14세 확인을 함께 받는 이유: 개인정보보호법상 만 14세 미만은 법정대리인 동의가 있어야
+-- 개인정보를 수집할 수 있다. 이 앱은 그 절차를 감당할 수 없으므로 만 14세 이상만 받는다.
+--
+-- 버전을 적어두면 약관을 고쳤을 때 누가 어느 판에 동의했는지 알 수 있고, 다시 받아야 할
+-- 사람을 가려낼 수 있다.
+create table if not exists public.user_consents (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  terms_version text not null,
+  privacy_version text not null,
+  is_over_14 boolean not null,
+  agreed_at timestamptz not null default now()
+);
+
+alter table public.user_consents enable row level security;
+
+-- 자기 동의 기록만 보고 남길 수 있다. 고치거나 지우는 정책은 두지 않는다.
+-- 동의 기록은 "그때 이렇게 동의했다"는 사실이라 나중에 손대면 기록으로서 의미가 없다.
+drop policy if exists "user_consents select own" on public.user_consents;
+create policy "user_consents select own" on public.user_consents
+  for select to authenticated
+  using (user_id = auth.uid());
+
+drop policy if exists "user_consents insert own" on public.user_consents;
+create policy "user_consents insert own" on public.user_consents
+  for insert to authenticated
+  with check (user_id = auth.uid() and is_over_14);
+
+-- 약관을 고쳐 다시 동의를 받아야 할 때는 화면 쪽 버전 값을 올린다. 그러면 예전 판에
+-- 동의한 사람에게 동의 화면이 다시 나타나므로, 여기서 기록을 지울 필요가 없다.
+drop policy if exists "user_consents update own" on public.user_consents;
+create policy "user_consents update own" on public.user_consents
+  for update to authenticated
+  using (user_id = auth.uid())
+  with check (user_id = auth.uid() and is_over_14);
+
 -- ===================== 외부 API 사용량 =====================
 
 -- 돈이 나가는 기능(AI 분석, 가격 검색, 주변 매장)을 한 사람이 하루에 몇 번 썼는지 센다.

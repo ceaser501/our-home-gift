@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getSession, onAuthStateChange, signOut } from '../auth';
 import { getFamilyMembers, getMyFamilies, listPendingJoinRequests } from '../family';
+import { hasAgreedToCurrent } from '../consent';
 import { FamilyContext } from '../FamilyContext';
 import LoginScreen from './LoginScreen';
 import FamilyOnboarding from './FamilyOnboarding';
+import ConsentScreen from './ConsentScreen';
 import SplashScreen from './SplashScreen';
 import LoadingScreen from './LoadingScreen';
 
@@ -65,6 +67,8 @@ function familySignature(state) {
 
 export default function AuthGate({ children }) {
   const [session, setSession] = useState(undefined);
+  // undefined = 아직 확인 중, true/false = 지금 판 약관에 동의했는지
+  const [agreed, setAgreed] = useState(undefined);
   const [familyState, setFamilyState] = useState(undefined);
   const [dataVersion, setDataVersion] = useState(0);
   // 다시 읽어온 가족 정보와 견주어 볼 "지금 값". 비교만 하는 용도라 화면을 다시 그리지 않는다.
@@ -114,6 +118,24 @@ export default function AuthGate({ children }) {
     },
     [userId]
   );
+
+  // 약관 동의는 가족을 만들기 전에 받는다. 가족을 만드는 것도 개인정보를 남기는 일이라
+  // 그 전에 물어야 순서가 맞다.
+  useEffect(() => {
+    if (userId === undefined) return;
+    if (userId === null) {
+      setAgreed(undefined);
+      return;
+    }
+    let cancelled = false;
+    setAgreed(undefined);
+    hasAgreedToCurrent(userId)
+      .then((ok) => !cancelled && setAgreed(ok))
+      .catch(() => !cancelled && setAgreed(true));
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
 
   useEffect(() => {
     if (userId === undefined) return;
@@ -169,6 +191,8 @@ export default function AuthGate({ children }) {
   if (!splashDone) return <SplashScreen />;
   if (session === undefined) return waitingScreen;
   if (!session) return <LoginScreen />;
+  if (agreed === undefined) return waitingScreen;
+  if (!agreed) return <ConsentScreen userId={session.user.id} onDone={() => setAgreed(true)} />;
   if (familyState === undefined) return waitingScreen;
   if (!familyState) return <FamilyOnboarding userEmail={session.user.email} onDone={refetchFamily} />;
 
