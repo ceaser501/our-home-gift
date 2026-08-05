@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="mbg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#8A5CFF"/><stop offset="1" stop-color="#E8579B"/>
+    </linearGradient>
+    <radialGradient id="mgl" cx="18%" cy="12%" r="78%">
+      <stop offset="0" stop-color="#C79BFF" stop-opacity=".95"/>
+      <stop offset="1" stop-color="#C79BFF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="mwl" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#FFF0F8"/>
+    </linearGradient>
+    <linearGradient id="mwb" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFE7F3"/><stop offset="1" stop-color="#FFC9E2"/>
+    </linearGradient>
+    <mask id="mm">
+      <rect width="512" height="512" fill="#fff"/>
+      <rect x="248" y="256" width="16" height="150" fill="#000"/>
+    </mask>
+    <filter id="mg" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.870" numOctaves="4" stitchTiles="stitch"/>
+      <feColorMatrix type="saturate" values="0"/>
+    </filter>
+  </defs>
+  <rect width="512" height="512" fill="url(#mbg)"/>
+  <rect width="512" height="512" fill="url(#mgl)"/>
+
+    <path d="M146 262H366V380A20 20 0 0 1 346 400H166A20 20 0 0 1 146 380Z" fill="url(#mwb)" mask="url(#mm)"/>
+    <rect x="118" y="196" width="276" height="66" rx="18" fill="url(#mwl)"/>
+    <path d="M256 206C256 206 198 172 198 142C198 124 212 114 226 114C238 114 249 121 256 130C263 121 274 114 286 114C300 114 314 124 314 142C314 172 256 206 256 206Z" fill="#fff"/>
+
+</svg>
