@@ -41,6 +41,27 @@ jobs:
           VITE_RESET_TOKEN: ${{ secrets.VITE_RESET_TOKEN }}
         run: npm run build
 
+      # 관리자 대시보드(admin/)는 앱과 무관한 정적 파일 하나라 vite 빌드를 거치지 않는다.
+      # 빌드 결과 옆에 그대로 얹어 /admin/ 주소로 열리게 한다.
+      # 시안(mockups/)은 고르기 위한 미리보기라 배포하지 않는다.
+      #
+      # 로그인에 쓸 접속 정보는 앱과 같은 값을 넣어준다. 둘 다 브라우저에 공개되는 값이라
+      # (앱 번들에도 그대로 들어 있다) 비밀이 아니지만, 저장소에 적어두지는 않는다.
+      # 파일에 그대로 쓰면 값에 들어 있는 /와 &를 sed가 잘못 읽으므로 환경변수로 넘긴다.
+      - name: Copy admin dashboard
+        env:
+          SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+        run: |
+          mkdir -p client/dist/admin
+          python3 - <<'PY'
+          import os, pathlib
+          html = pathlib.Path('admin/index.html').read_text(encoding='utf-8')
+          html = html.replace('__SUPABASE_URL__', os.environ['SUPABASE_URL'].rstrip('/'))
+          html = html.replace('__SUPABASE_ANON_KEY__', os.environ['SUPABASE_ANON_KEY'])
+          pathlib.Path('client/dist/admin/index.html').write_text(html, encoding='utf-8')
+          PY
+
       - uses: actions/configure-pages@v5
 
       - uses: actions/upload-pages-artifact@v3

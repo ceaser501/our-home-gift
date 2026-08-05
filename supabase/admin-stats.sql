@@ -2,9 +2,48 @@
 -- 여러 번 실행해도 안전합니다(idempotent). schema.sql과는 별개 파일인데, 앱이 돌아가는 데
 -- 필요한 것과 관리자가 들여다보는 것을 섞지 않기 위해서다.
 --
--- 여기 만드는 것들은 전부 서비스 롤(서버)만 쓸 수 있다. 대시보드는 로그인 화면이 없는
--- 정적 HTML이라, 브라우저가 직접 데이터베이스를 읽게 하면 통계 전체가 공개되는 셈이다.
--- 그래서 브라우저 → admin-stats Edge Function(관리자 토큰 확인) → 이 함수 순서로만 흐른다.
+-- 여기 만드는 것들은 전부 서비스 롤(서버)만 쓸 수 있다. 대시보드는 주소만 알면 누구나
+-- 열리는 정적 HTML이라, 브라우저가 직접 데이터베이스를 읽게 하면 통계 전체가 공개되는
+-- 셈이다. 그래서 브라우저 → admin-stats Edge Function(로그인 + 관리자 명단 확인)
+-- → 이 함수 순서로만 흐른다.
+
+-- ===================== 관리자 명단 =====================
+
+-- 관리자 대시보드에 들어올 수 있는 사람. 앱과 같은 계정으로 로그인하되, 여기 이름이
+-- 올라 있는 사람만 통계를 본다.
+--
+-- 계정에 'is_admin' 같은 칸을 두지 않고 별도 표로 두는 이유: 관리자는 앱의 개념이 아니라
+-- 운영의 개념이다. 앱 어디에서도 "내가 관리자인가"를 묻지 않으므로 앱 데이터에 섞을 이유가
+-- 없고, 표를 따로 두면 이 파일 하나만 봐도 누가 들어올 수 있는지 한눈에 보인다.
+--
+-- 빼는 것도 한 줄이면 된다(delete). 예전 방식(공유 비밀 토큰)은 한 사람을 빼려면 토큰을
+-- 바꾸고 함수를 다시 배포해야 했는데, 그러면 나머지 관리자도 전부 다시 설정해야 했다.
+create table if not exists public.admin_users (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  -- 화면에 누구인지 보여주고, 나중에 명단을 볼 때 uuid만 늘어놓지 않으려고 함께 적어둔다.
+  email text,
+  memo text,
+  created_at timestamptz not null default now()
+);
+
+-- 사용자가 직접 볼 일도 고칠 일도 없다. 정책을 하나도 만들지 않아서
+-- (RLS는 켜져 있고 정책이 없으면 아무것도 통과하지 못한다) 서버만 다룬다.
+-- 특히 "내가 관리자인지" 조차 앱에서 물어볼 수 없어야 한다. 명단이 읽히면 누구를 노려야
+-- 하는지 알려주는 셈이기 때문이다.
+alter table public.admin_users enable row level security;
+
+-- ⚠️ 첫 관리자는 여기서 직접 넣어야 한다. 아래 이메일을 본인 것으로 바꿔 한 번 실행하세요.
+--    (앱에 한 번이라도 로그인한 계정이어야 auth.users에 있어서 등록됩니다.)
+--
+--    insert into public.admin_users (user_id, email, memo)
+--    select id, email, '최초 관리자' from auth.users where email = '여기에@본인이메일.com'
+--    on conflict (user_id) do nothing;
+--
+-- 나중에 관리자를 빼려면:
+--    delete from public.admin_users where email = '뺄사람@이메일.com';
+--
+-- 지금 명단을 보려면:
+--    select email, memo, created_at from public.admin_users order by created_at;
 
 -- ===================== AI 호출 기록 =====================
 

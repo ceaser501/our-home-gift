@@ -3,6 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- 자물쇠는 로그인과 관리자 명단이지만, 검색에 걸려 굳이 사람들이 찾아오게 만들
+     이유는 없으니 색인은 막는다(접근 통제가 아니라 노출 줄이기). -->
+<meta name="robots" content="noindex, nofollow">
 <title>모아콘 관리자</title>
 <!--
   모아콘 관리자 대시보드 (실동작 버전).
@@ -10,11 +13,12 @@
   앱과 연결 통로가 없는, 관리자 혼자 보는 화면이다. 빌드 없이 파일 하나로 끝나도록
   전부 이 파일 안에 있다. 브라우저에서 그냥 열거나(file://), 아무 정적 호스팅에 올려도 된다.
 
-  데이터 흐름: 이 페이지 → admin-stats Edge Function(x-admin-token 확인)
+  데이터 흐름: 이 페이지 → admin-stats Edge Function(로그인 + 관리자 명단 확인)
              → admin_dashboard_stats() (supabase/admin-stats.sql)
 
-  처음 열면 설정 화면이 나온다. Functions URL과 관리자 토큰을 넣으면 브라우저에 저장된다.
-  자세한 배포 순서는 admin/README.md 참고.
+  들어올 수 있는 사람: 앱과 같은 계정으로 로그인하고, admin_users 명단에 있는 사람.
+  판단은 서버(admin-stats)가 한다. 이 파일은 로그인 화면과 통계 그리기만 맡는다.
+  자세한 배포·관리자 등록 순서는 admin/README.md 참고.
 
   디자인은 시안 1(클린 라이트)에 사이드바를 더한 것이다. 사이드바는 앞으로 공지사항
   입력 같은 관리 화면이 붙을 자리라 미리 틀을 잡아뒀고, 아직 대시보드만 동작한다.
@@ -85,6 +89,7 @@ h2{font-size:13.5px;font-weight:650;color:var(--ink)}
 .setup .go{background:var(--accent);color:var(--accent-ink);border:0;border-radius:10px;padding:10px;font:inherit;font-weight:650;cursor:pointer}
 .setup .hint{font-size:11.5px;color:var(--muted);line-height:1.6}
 .setup .err{font-size:12px;color:var(--bad);background:color-mix(in srgb,var(--bad) 8%,transparent);border-radius:8px;padding:8px 10px;display:none}
+.setup .ok{font-size:12px;color:var(--good);background:color-mix(in srgb,var(--good) 8%,transparent);border-radius:8px;padding:8px 10px;display:none;line-height:1.6}
 .loading{text-align:center;color:var(--muted);padding:120px 0;font-size:13px}
 
 /* ----- 디자인 토큰: 시안 1 클린 라이트 ----- */
@@ -122,26 +127,55 @@ h2{font-size:13.5px;font-weight:650;color:var(--ink)}
 </head>
 <body>
 
-<div id="view-setup" style="display:none">
+<!-- 로그인 화면. 앱과 같은 계정으로 들어온다. -->
+<div id="view-login" style="display:none">
   <div class="setup">
     <h1><span class="logo-mark">모</span>모아콘 관리자</h1>
     <div class="hint">
-      통계를 가져올 곳을 알려주세요. 한 번 넣으면 이 브라우저에 저장돼요.<br>
-      · Functions URL: Supabase 프로젝트의 <b>https://&lt;프로젝트&gt;.supabase.co/functions/v1</b><br>
-      · 관리자 토큰: <b>supabase secrets set ADMIN_STATS_TOKEN=...</b> 에 넣은 값
+      앱에서 쓰는 이메일로 로그인해주세요. 로그인 링크를 보내드려요.<br>
+      관리자로 등록된 계정만 통계를 볼 수 있어요.
     </div>
-    <label>Functions URL
-      <input id="in-url" placeholder="https://xxxx.supabase.co/functions/v1" autocomplete="off">
+    <label>이메일
+      <input id="in-email" type="email" placeholder="you@example.com" autocomplete="email">
     </label>
-    <label>관리자 토큰
-      <input id="in-token" type="password" placeholder="ADMIN_STATS_TOKEN 값" autocomplete="off">
-    </label>
-    <div class="err" id="setup-err"></div>
-    <button class="go" id="btn-connect">불러오기</button>
+    <div class="err" id="login-err"></div>
+    <div class="ok" id="login-ok"></div>
+    <button class="go" id="btn-login">로그인 링크 받기</button>
   </div>
 </div>
 
-<div id="view-loading" class="loading" style="display:none">통계를 불러오는 중…</div>
+<!-- 로그인은 했지만 관리자 명단에 없는 경우. -->
+<div id="view-denied" style="display:none">
+  <div class="setup">
+    <h1><span class="logo-mark">모</span>모아콘 관리자</h1>
+    <div class="hint">
+      <b id="denied-email"></b> 계정은 관리자가 아니에요.<br>
+      다른 계정으로 들어오려면 로그아웃 후 다시 로그인해주세요.
+    </div>
+    <button class="go" id="btn-logout-denied">로그아웃</button>
+  </div>
+</div>
+
+<!-- Supabase 접속 정보가 없을 때(로컬 파일로 열었을 때)만 나온다. -->
+<div id="view-config" style="display:none">
+  <div class="setup">
+    <h1><span class="logo-mark">모</span>모아콘 관리자</h1>
+    <div class="hint">
+      배포된 주소로 열면 이 화면은 나오지 않아요. 로컬 파일로 열었을 때만
+      접속 정보를 한 번 넣어주세요(둘 다 앱이 쓰는 공개 값이라 비밀이 아니에요).
+    </div>
+    <label>Supabase URL
+      <input id="in-url" placeholder="https://xxxx.supabase.co" autocomplete="off">
+    </label>
+    <label>anon key
+      <input id="in-anon" placeholder="eyJhbGciOi..." autocomplete="off">
+    </label>
+    <div class="err" id="config-err"></div>
+    <button class="go" id="btn-save-config">저장</button>
+  </div>
+</div>
+
+<div id="view-loading" class="loading" style="display:none">불러오는 중…</div>
 
 <div id="view-dash" class="shell" style="display:none">
   <aside class="side">
@@ -152,7 +186,7 @@ h2{font-size:13.5px;font-weight:650;color:var(--ink)}
       <a class="soon">기프티콘<span class="soon-badge">준비 중</span></a>
       <a class="soon">가족<span class="soon-badge">준비 중</span></a>
     </nav>
-    <div class="side-foot">관리 화면이 늘어나면<br>여기에 메뉴가 붙는다</div>
+    <div class="side-foot"><span id="side-email"></span><br>관리 화면이 늘어나면 여기에 메뉴가 붙는다</div>
   </aside>
   <div class="main">
   <header class="top">
@@ -164,7 +198,7 @@ h2{font-size:13.5px;font-weight:650;color:var(--ink)}
         <button data-mode="year">연도별</button>
       </div>
       <button class="icon-btn" id="btn-refresh">새로고침</button>
-      <button class="icon-btn" id="btn-config">설정</button>
+      <button class="icon-btn" id="btn-logout">로그아웃</button>
       <span class="updated" id="updated"></span>
     </div>
   </header>
@@ -242,8 +276,7 @@ h2{font-size:13.5px;font-weight:650;color:var(--ink)}
   </div>
 </div>
 
-<script>
-'use strict';
+<script type="module">
 // ===================== 포맷/집계 유틸 =====================
 const nf = new Intl.NumberFormat('ko-KR');
 const won = v=>'₩'+nf.format(Math.round(v));
@@ -438,26 +471,46 @@ function hBarChart(host, items, opts={}){
   host.appendChild(wrap);
 }
 
-// ===================== 설정 저장 =====================
+// ===================== 접속 정보 =====================
+// 배포할 때 워크플로가 아래 자리를 앱과 같은 값으로 바꿔 넣는다(.github/workflows/deploy-pages.yml).
+// 둘 다 브라우저에 공개되는 값이라 비밀이 아니다 — anon key만으로는 아무 데이터도 못 읽는다.
+// 로컬 파일로 열어 자리가 그대로면 설정 화면에서 한 번 받아 저장한다.
+const INJECTED={ url:'__SUPABASE_URL__', anonKey:'__SUPABASE_ANON_KEY__' };
 const CONFIG_KEY='moacon-admin-config';
+
 function loadConfig(){
+  if(!INJECTED.url.startsWith('__')) return INJECTED;
   try{ return JSON.parse(localStorage.getItem(CONFIG_KEY)) || null; }catch{ return null; }
 }
 function saveConfig(cfg){ localStorage.setItem(CONFIG_KEY, JSON.stringify(cfg)); }
 
+const VIEWS=['view-login','view-denied','view-config','view-loading','view-dash'];
 function show(view){
-  for(const id of ['view-setup','view-loading','view-dash'])
+  for(const id of VIEWS)
     document.getElementById(id).style.display = id===view? (id==='view-dash'?'grid':'block') : 'none';
 }
+function showErr(id,message){
+  const box=document.getElementById(id);
+  box.textContent=message; box.style.display='block';
+}
+function hideErr(id){ document.getElementById(id).style.display='none'; }
 
 // ===================== 데이터 불러오기/가공 =====================
 let STATS=null, MODE='day';
 
-async function fetchStats(cfg){
-  const base=cfg.url.replace(/\/+$/,'');
-  const res=await fetch(base+'/admin-stats',{headers:{'x-admin-token':cfg.token}});
+// 통계는 로그인한 사람의 토큰으로 받아온다. 관리자인지는 서버(admin-stats)가 판단한다.
+async function fetchStats(){
+  const { data: { session } } = await sb.auth.getSession();
+  if(!session) { const e=new Error('로그인이 필요해요.'); e.reason='unauthenticated'; throw e; }
+  const res=await fetch(CONFIG.url.replace(/\/+$/,'')+'/functions/v1/admin-stats',{
+    headers:{ Authorization:'Bearer '+session.access_token },
+  });
   const body=await res.json().catch(()=>({}));
-  if(!res.ok) throw new Error(body.error || ('HTTP '+res.status));
+  if(!res.ok){
+    const err=new Error(body.error || ('HTTP '+res.status));
+    err.reason=body.reason;
+    throw err;
+  }
   return body;
 }
 
@@ -603,56 +656,109 @@ function fillKpis(){
     t.toLocaleString('ko-KR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})+' 갱신';
 }
 
+// ===================== 로그인 =====================
+let CONFIG=null, sb=null;
+
+// supabase-js는 CDN에서 가져온다. 이 페이지는 빌드를 거치지 않는 파일 하나라서 번들러가
+// 없고, 직접 auth REST를 부르는 대신 라이브러리를 쓰는 이유는 세션 저장 방식이 앱과
+// 같아야 하기 때문이다. 같은 도메인·같은 저장 형식이라, 이 브라우저에서 앱에 로그인해
+// 뒀다면 여기서도 그대로 로그인된 상태가 된다.
+async function initSupabase(){
+  const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');
+  return createClient(CONFIG.url, CONFIG.anonKey);
+}
+
+async function sendMagicLink(email){
+  // 로그인 링크는 이 페이지로 되돌아온다. Supabase 대시보드의 Redirect URLs에
+  // 이 주소가 등록돼 있어야 한다(admin/README.md 참고).
+  const redirectTo=window.location.origin+window.location.pathname;
+  const { error } = await sb.auth.signInWithOtp({ email, options:{ emailRedirectTo: redirectTo } });
+  if(error) throw new Error(error.message || '로그인 링크 전송에 실패했어요.');
+}
+
+async function logout(){
+  await sb.auth.signOut();
+  location.reload();
+}
+
 // ===================== 흐름 =====================
-async function connect(cfg,{fromSetup=false}={}){
+async function connect(){
   show('view-loading');
   try{
-    STATS=await fetchStats(cfg);
-    saveConfig(cfg);
+    STATS=await fetchStats();
     show('view-dash');
+    document.getElementById('side-email').textContent=STATS.viewer?.email||'';
     fillKpis();
     renderAll();
   }catch(err){
-    show('view-setup');
-    const box=document.getElementById('setup-err');
-    box.textContent='불러오지 못했어요: '+err.message;
-    box.style.display='block';
-    if(!fromSetup){
-      document.getElementById('in-url').value=cfg.url||'';
-      document.getElementById('in-token').value=cfg.token||'';
+    if(err.reason==='not_admin'){
+      const { data:{ user } } = await sb.auth.getUser();
+      document.getElementById('denied-email').textContent=user?.email||'이';
+      show('view-denied');
+    }else if(err.reason==='unauthenticated'){
+      show('view-login');
+    }else{
+      show('view-login');
+      showErr('login-err','불러오지 못했어요: '+err.message);
     }
   }
 }
 
-window.addEventListener('DOMContentLoaded',()=>{
+async function start(){
   document.querySelectorAll('[data-mode]').forEach(b=>b.addEventListener('click',()=>{
     MODE=b.dataset.mode;
     document.querySelectorAll('[data-mode]').forEach(x=>x.classList.toggle('active',x===b));
     renderAll();
   }));
-  document.getElementById('btn-connect').addEventListener('click',()=>{
-    const cfg={url:document.getElementById('in-url').value.trim(),token:document.getElementById('in-token').value.trim()};
-    if(!cfg.url||!cfg.token){
-      const box=document.getElementById('setup-err');
-      box.textContent='URL과 토큰을 모두 입력해주세요.';
-      box.style.display='block';
-      return;
-    }
-    connect(cfg,{fromSetup:true});
+  document.getElementById('btn-refresh').addEventListener('click',connect);
+  document.getElementById('btn-logout').addEventListener('click',logout);
+  document.getElementById('btn-logout-denied').addEventListener('click',logout);
+  document.getElementById('btn-save-config').addEventListener('click',()=>{
+    const cfg={url:document.getElementById('in-url').value.trim(),anonKey:document.getElementById('in-anon').value.trim()};
+    if(!cfg.url||!cfg.anonKey){ showErr('config-err','두 값을 모두 입력해주세요.'); return; }
+    saveConfig(cfg); location.reload();
   });
-  document.getElementById('btn-refresh').addEventListener('click',()=>{const c=loadConfig();if(c)connect(c);});
-  document.getElementById('btn-config').addEventListener('click',()=>{
-    const c=loadConfig()||{};
-    document.getElementById('in-url').value=c.url||'';
-    document.getElementById('in-token').value=c.token||'';
-    show('view-setup');
+  document.getElementById('btn-login').addEventListener('click',async()=>{
+    const email=document.getElementById('in-email').value.trim();
+    hideErr('login-err');
+    if(!email){ showErr('login-err','이메일을 입력해주세요.'); return; }
+    const btn=document.getElementById('btn-login');
+    btn.disabled=true; btn.textContent='보내는 중…';
+    try{
+      await sendMagicLink(email);
+      const ok=document.getElementById('login-ok');
+      ok.innerHTML='<b>'+email+'</b> 으로 로그인 링크를 보냈어요.<br>메일함에서 링크를 누르면 이 화면으로 돌아옵니다.';
+      ok.style.display='block';
+    }catch(err){
+      showErr('login-err',err.message);
+    }finally{
+      btn.disabled=false; btn.textContent='로그인 링크 받기';
+    }
   });
 
-  const cfg=loadConfig();
-  if(cfg&&cfg.url&&cfg.token) connect(cfg);
-  else show('view-setup');
-});
+  CONFIG=loadConfig();
+  if(!CONFIG||!CONFIG.url||!CONFIG.anonKey){ show('view-config'); return; }
+
+  try{
+    sb=await initSupabase();
+  }catch{
+    show('view-login');
+    showErr('login-err','로그인 모듈을 불러오지 못했어요. 네트워크 연결을 확인해주세요.');
+    return;
+  }
+
+  // 로그인 링크로 돌아온 경우 supabase-js가 주소의 토큰을 읽어 세션을 만든다. 그 뒤에는
+  // 주소에 토큰이 남아 있을 이유가 없다(새로고침·공유 시 그대로 새어나간다).
+  const { data:{ session } } = await sb.auth.getSession();
+  if(window.location.hash.includes('access_token')){
+    history.replaceState(null,'',window.location.pathname+window.location.search);
+  }
+  if(!session){ show('view-login'); return; }
+  connect();
+}
+
 let rsz; window.addEventListener('resize',()=>{clearTimeout(rsz);rsz=setTimeout(renderAll,150);});
+start();
 </script>
 </body>
 </html>

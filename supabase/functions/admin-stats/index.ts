@@ -1,34 +1,26 @@
 // 관리자 대시보드(admin/index.html)가 부르는 통계 함수.
 //
-// 앱과는 연결 통로가 없다. 관리자 혼자 보는 화면이라 로그인 체계를 붙이지 않고,
-// 비밀 토큰 하나로 지킨다:
-//   supabase secrets set ADMIN_STATS_TOKEN=$(openssl rand -hex 32)
-// 대시보드 설정 화면에 같은 값을 넣으면 요청마다 x-admin-token 헤더로 실려 온다.
+// 대시보드 주소는 앱과 같은 곳에 있어서 누구나 열 수 있다. 자물쇠는 여기에 있다.
+//   1) 앱과 같은 로그인인지 — 토큰으로 auth 서버에 물어본다(anon key로는 통과 못 한다).
+//   2) 그 사람이 관리자 명단(admin_users)에 있는지 — 앱 사용자 아무나는 통과하지 못한다.
 //
-// 숫자를 실제로 세는 일은 데이터베이스의 admin_dashboard_stats()가 한다
-// (supabase/admin-stats.sql — 이 함수를 배포하기 전에 먼저 실행해야 한다).
-// 여기서는 토큰을 확인하고, 비용 계산에 쓸 단가를 함께 실어 보낸다.
+// 예전에는 공유 비밀 토큰 하나(ADMIN_STATS_TOKEN)로 막았는데, 붙여넣기가 번거롭고 한 번
+// 새면 값을 바꿔 재배포하기 전까지 계속 유효했다. 로그인은 사람마다 다르고, 명단에서
+// 지우는 즉시 그 사람만 막힌다.
+//
+// 관리자 등록은 supabase/admin-stats.sql 위쪽 주석 참고.
+//
+// 숫자를 실제로 세는 일은 데이터베이스의 admin_dashboard_stats()가 한다.
 
 import { adminClient } from '../_shared/guard.ts';
 
-// 대시보드는 정적 HTML이라 어디서 열릴지(로컬 파일, 아무 정적 호스팅) 정해져 있지 않다.
-// 인증이 Origin이 아니라 토큰이므로 CORS는 전부 열어도 지켜진다.
+// 대시보드가 어디서 열릴지(Pages 주소, 로컬 파일) 정해져 있지 않다. 인증이 Origin이 아니라
+// 로그인 토큰이므로 CORS는 열어도 지켜진다.
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'content-type, x-admin-token',
+  'Access-Control-Allow-Headers': 'authorization, content-type',
 };
 const jsonHeaders = { ...corsHeaders, 'Content-Type': 'application/json' };
-
-// 문자열을 앞에서부터 비교하다 다른 글자에서 멈추면, 걸린 시간으로 몇 글자까지 맞았는지
-// 새어 나간다. 해시로 바꿔 길이를 같게 만든 뒤 끝까지 비교한다.
-async function tokenMatches(given: string, expected: string) {
-  const digest = async (value: string) =>
-    new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value)));
-  const [a, b] = await Promise.all([digest(given), digest(expected)]);
-  let diff = 0;
-  for (let i = 0; i < a.length; i++) diff |= a[i] ^ b[i];
-  return diff === 0;
-}
 
 function priceFromEnv(name: string, fallback: number) {
   const raw = Number(Deno.env.get(name));
@@ -40,26 +32,48 @@ Deno.serve(async (req) => {
     return new Response('ok', { headers: corsHeaders });
   }
 
-  const expected = Deno.env.get('ADMIN_STATS_TOKEN');
-  if (!expected) {
-    return new Response(JSON.stringify({ error: 'ADMIN_STATS_TOKEN이 설정되지 않았어요.' }), {
+  const admin = adminClient();
+  if (!admin) {
+    return new Response(JSON.stringify({ error: '서버 설정이 완료되지 않았어요.' }), {
       status: 500,
       headers: jsonHeaders,
     });
   }
 
-  const given = (req.headers.get('x-admin-token') || '').trim();
-  if (!given || !(await tokenMatches(given, expected))) {
-    return new Response(JSON.stringify({ error: '관리자 토큰이 올바르지 않아요.' }), {
+  // 1) 로그인 확인. anon key도 형식은 JWT라 여기까지는 오지만, 그 토큰에는 사용자가 없다.
+  const token = (req.headers.get('Authorization') || '').replace('Bearer ', '').trim();
+  if (!token) {
+    return new Response(JSON.stringify({ error: '로그인이 필요해요.', reason: 'unauthenticated' }), {
       status: 401,
       headers: jsonHeaders,
     });
   }
 
-  const admin = adminClient();
-  if (!admin) {
-    return new Response(JSON.stringify({ error: '서버 설정이 완료되지 않았어요.' }), {
-      status: 500,
+  const { data: auth, error: authError } = await admin.auth.getUser(token);
+  if (authError || !auth?.user) {
+    return new Response(JSON.stringify({ error: '로그인이 만료됐어요. 다시 로그인해주세요.', reason: 'unauthenticated' }), {
+      status: 401,
+      headers: jsonHeaders,
+    });
+  }
+
+  // 2) 관리자 명단 확인. 로그인만으로는 부족하다 — 앱 사용자는 누구나 로그인할 수 있다.
+  const { data: row, error: adminError } = await admin
+    .from('admin_users')
+    .select('user_id')
+    .eq('user_id', auth.user.id)
+    .maybeSingle();
+
+  if (adminError) {
+    return new Response(
+      JSON.stringify({ error: `관리자 확인에 실패했어요: ${adminError.message} (supabase/admin-stats.sql을 실행했는지 확인해주세요)` }),
+      { status: 500, headers: jsonHeaders },
+    );
+  }
+  if (!row) {
+    // 명단에 없는 사람에게는 "명단에 없다"까지만 알린다. 누가 관리자인지는 알려주지 않는다.
+    return new Response(JSON.stringify({ error: '이 계정은 관리자가 아니에요.', reason: 'not_admin' }), {
+      status: 403,
       headers: jsonHeaders,
     });
   }
@@ -96,5 +110,7 @@ Deno.serve(async (req) => {
     },
   };
 
-  return new Response(JSON.stringify({ ...data, pricing }), { headers: jsonHeaders });
+  return new Response(JSON.stringify({ ...data, pricing, viewer: { email: auth.user.email } }), {
+    headers: jsonHeaders,
+  });
 });
