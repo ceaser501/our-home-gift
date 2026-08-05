@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { BellRing, ChevronRight, DoorOpen, FileText, LogOut, Receipt, Scale, ShieldCheck, UserRound, UserRoundX } from 'lucide-react';
+import { BellRing, ChevronRight, DoorOpen, FileText, LogOut, Megaphone, Receipt, Scale, ShieldCheck, UserRound, UserRoundX } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import ThemeToggle from './ThemeToggle';
 import NotificationToggle from './NotificationToggle';
 import UsageReportSheet from './UsageReportSheet';
+import NoticesSheet from './NoticesSheet';
 import AlertDialog from './AlertDialog';
 import RenameSheet from './RenameSheet';
 import { sendTestNotification } from '../api';
@@ -20,6 +21,7 @@ export default function ProfileMenu({ onClose }) {
 
   const [renameOpen, setRenameOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
+  const [noticesOpen, setNoticesOpen] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const [leaveAsking, setLeaveAsking] = useState(false);
   const [testing, setTesting] = useState(false);
@@ -138,6 +140,19 @@ export default function ProfileMenu({ onClose }) {
             <span className="text-xs text-muted-foreground">{testing ? '보내는 중…' : '5초 뒤 도착'}</span>
           </button>
 
+          {/* 배너를 닫아도 여기서는 늘 다시 볼 수 있어야 한다. 배너에만 있으면
+              한 번 닫는 순간 그 공지를 다시 찾을 데가 없어진다. */}
+          <p className="m-0 pt-3 pb-1 text-xs font-semibold text-muted-foreground">소식</p>
+          <button
+            type="button"
+            onClick={() => setNoticesOpen(true)}
+            className="flex w-full items-center gap-3 px-1 py-3 text-left text-sm"
+          >
+            <Megaphone className="size-4.5 text-muted-foreground" />
+            <span className="flex-1 text-foreground">공지사항</span>
+            <ChevronRight className="size-4 text-muted-foreground" />
+          </button>
+
           <p className="m-0 pt-3 pb-1 text-xs font-semibold text-muted-foreground">기록</p>
           <button
             type="button"
@@ -243,6 +258,8 @@ export default function ProfileMenu({ onClose }) {
         )}
 
         {reportOpen && <UsageReportSheet onClose={() => setReportOpen(false)} />}
+
+        {noticesOpen && <NoticesSheet onClose={() => setNoticesOpen(false)} />}
 
         {leaveAsking && (
           <AlertDialog
