@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
 import JsBarcode from 'jsbarcode';
-import { StickyNote } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Image as ImageIcon, ScanLine, StickyNote } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import CopyButton from './CopyButton';
+import { cn } from '@/lib/utils';
 import { useFamily } from '../FamilyContext';
 
 const ZXING_TO_JSBARCODE = {
@@ -21,6 +22,9 @@ export default function BarcodeModal({ gifticon, onClose }) {
   const { members } = useFamily();
   const [canvas, setCanvas] = useState(null);
   const [renderError, setRenderError] = useState(false);
+  // 'code' | 'photo' — 이 창이 지금 무엇을 보여주고 있는지
+  const [view, setView] = useState('code');
+  const [photoIndex, setPhotoIndex] = useState(0);
 
   // 메모를 남긴 사람. 등록자를 모르는 예전 기프티콘은 받은 사람으로 대신 표시한다.
   const memoWriter =
@@ -71,13 +75,36 @@ export default function BarcodeModal({ gifticon, onClose }) {
 
   if (!gifticon) return null;
 
+  // 원본 사진은 이 창 안에서 갈아끼운다. 창을 하나 더 띄우면 목록 → 바코드 → 사진으로
+  // 세 겹이 쌓여서, 닫기를 몇 번 눌러야 하는지 헷갈린다.
+  // 바코드가 주인공이고 사진은 곁가지라, 처음에는 늘 바코드로 열린다.
+  const photos = (gifticon.image_urls || []).filter(Boolean);
+
   return (
     <Sheet open onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="max-h-[92dvh] gap-0 overflow-y-auto pb-[max(24px,env(safe-area-inset-bottom))]">
         <SheetHeader className="pr-14 pb-2">
-          <SheetTitle>{gifticon.brand || gifticon.name}</SheetTitle>
+          <SheetTitle className="flex items-center gap-1.5">
+            {view === 'photo' && (
+              <button
+                type="button"
+                onClick={() => setView('code')}
+                aria-label="바코드로 돌아가기"
+                className="-ml-1.5 shrink-0 rounded-full p-1.5 text-muted-foreground"
+              >
+                <ChevronLeft className="size-4.5" />
+              </button>
+            )}
+            <span className="min-w-0 truncate">{view === 'photo' ? '원본 사진' : gifticon.brand || gifticon.name}</span>
+            {view === 'photo' && photos.length > 1 && (
+              <span className="ml-auto shrink-0 text-xs font-normal text-muted-foreground">
+                {photoIndex + 1} / {photos.length}
+              </span>
+            )}
+          </SheetTitle>
         </SheetHeader>
 
+        {view === 'code' && (
         <div className="flex flex-col items-center gap-2.5 px-5 pt-2">
           <dl className="flex w-full flex-col gap-1.5">
             <div className="flex gap-2.5 text-sm">
@@ -136,7 +163,75 @@ export default function BarcodeModal({ gifticon, onClose }) {
           ) : (
             <p className="text-xs text-muted-foreground">등록된 바코드/QR 정보가 없어요. 수정에서 직접 입력할 수 있어요.</p>
           )}
+
+          {photos.length > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                setPhotoIndex(0);
+                setView('photo');
+              }}
+              className="mt-1 flex w-full items-center justify-center gap-1.5 border-t border-border pt-3 text-sm font-semibold text-foreground"
+            >
+              <ImageIcon className="size-4 text-muted-foreground" />
+              원본 사진 보기
+              {photos.length > 1 && <span className="text-xs font-normal text-muted-foreground">{photos.length}장</span>}
+            </button>
+          )}
         </div>
+        )}
+
+        {view === 'photo' && (
+          <div className="flex flex-col items-center gap-3 px-5 pt-2">
+            <img
+              src={photos[photoIndex]}
+              alt={`${gifticon.name} 사진 ${photoIndex + 1}`}
+              className="max-h-[58dvh] w-full rounded-xl bg-secondary object-contain"
+            />
+
+            {/* 넘길 것이 없는데 점이나 화살표가 있으면 더 있는 줄 알고 밀어보게 된다.
+                한 장뿐이면 아무것도 보여주지 않는다. */}
+            {photos.length > 1 && (
+              <div className="flex w-full items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => setPhotoIndex((i) => Math.max(0, i - 1))}
+                  disabled={photoIndex === 0}
+                  aria-label="이전 사진"
+                  className="rounded-full p-2 text-muted-foreground disabled:opacity-30"
+                >
+                  <ChevronLeft className="size-5" />
+                </button>
+                <div className="flex gap-1.5">
+                  {photos.map((url, i) => (
+                    <i
+                      key={url}
+                      className={cn('size-1.5 rounded-full', i === photoIndex ? 'bg-primary' : 'bg-border')}
+                    />
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setPhotoIndex((i) => Math.min(photos.length - 1, i + 1))}
+                  disabled={photoIndex === photos.length - 1}
+                  aria-label="다음 사진"
+                  className="rounded-full p-2 text-muted-foreground disabled:opacity-30"
+                >
+                  <ChevronRight className="size-5" />
+                </button>
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setView('code')}
+              className="flex w-full items-center justify-center gap-1.5 border-t border-border pt-3 text-sm font-semibold text-foreground"
+            >
+              <ScanLine className="size-4 text-muted-foreground" />
+              바코드로 돌아가기
+            </button>
+          </div>
+        )}
       </SheetContent>
     </Sheet>
   );

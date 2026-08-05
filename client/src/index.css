@@ -27,6 +27,10 @@
   --success-foreground: #ffffff;
   --warning: #e69008;
   --warning-foreground: #1c1e27;
+  /* 썸네일 아래 바코드 띠. 카드 배경과 가장 먼 색이라야 "붙어 있는 것"으로 읽힌다.
+     밝은 화면에서는 검은 띠에 흰 줄, 어두운 화면에서는 뒤집어 흰 띠에 검은 줄을 쓴다. */
+  --barcode: #1c1e27;
+  --barcode-foreground: #ffffff;
   --border: #e7e7ec;
   --input: #e7e7ec;
   --ring: #5b4fe8;
@@ -88,6 +92,8 @@
   --success-foreground: #0c1f14;
   --warning: #e69008;
   --warning-foreground: #1c1e27;
+  --barcode: #f2f2f5;
+  --barcode-foreground: #16161b;
   --border: #2a2a31;
   --input: #2a2a31;
   --ring: #8478f5;
@@ -112,6 +118,8 @@
   --color-destructive-foreground: var(--destructive-foreground);
   --color-success: var(--success);
   --color-success-foreground: var(--success-foreground);
+  --color-barcode: var(--barcode);
+  --color-barcode-foreground: var(--barcode-foreground);
   --color-warning: var(--warning);
   --color-warning-foreground: var(--warning-foreground);
   --color-border: var(--border);
@@ -146,6 +154,18 @@
     font-family: -apple-system, BlinkMacSystemFont, 'Pretendard', 'Apple SD Gothic Neo', 'Segoe UI', Roboto, sans-serif;
     -webkit-tap-highlight-color: transparent;
   }
+}
+
+/* 사진 아래를 잘라내지 않고 그 위에 얹은 느낌으로 두는 바코드 띠.
+   경계를 딱 자르면 사진이 잘린 것처럼 보여서, 위쪽은 투명하게 두고 아래로 갈수록 짙어지게 한다. */
+.barcode-band {
+  background-image: linear-gradient(
+    to top,
+    color-mix(in srgb, var(--barcode) 92%, transparent) 0%,
+    color-mix(in srgb, var(--barcode) 82%, transparent) 45%,
+    color-mix(in srgb, var(--barcode) 40%, transparent) 75%,
+    transparent 100%
+  );
 }
 
 .no-scrollbar::-webkit-scrollbar {

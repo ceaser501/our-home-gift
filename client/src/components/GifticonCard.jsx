@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Barcode, CheckCircle2, Hand, MapPin, MoreVertical, Pencil, RotateCcw, Ticket, Trash2 } from 'lucide-react';
+import { CheckCircle2, Hand, MapPin, MoreVertical, Pencil, RotateCcw, Ticket, Trash2 } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { CATEGORIES } from '../constants';
 import { formatDday, formatDate, ddayUrgency } from '../utils/date';
@@ -23,7 +23,34 @@ const DDAY_CLASS = {
 // 카드 아래 한 줄로 붙는 버튼들. 폭을 똑같이 나눠 가져서 누르기 쉽다.
 const BAR_BUTTON = 'flex flex-1 items-center justify-center gap-1.5 py-2.5 text-xs font-semibold';
 
-export default function GifticonCard({ gifticon, onViewCode, onViewImage, onToggleUsed, onEdit, onDelete, onFindStores, onToggleClaim }) {
+// 사진 아래에 얹히는 바코드 띠. 굵기가 들쭉날쭉해야 무늬가 아니라 바코드로 읽힌다.
+const BAR_WIDTHS = [1, 2, 1, 3, 1, 1, 2, 1, 1, 3, 2, 1, 1, 2];
+
+// 사진을 잘라내고 띠를 덧대면 사진 아래쪽이 잘려 보인다. 대신 사진 위에 겹쳐 얹고
+// 위쪽 경계를 흐리게 풀어서, 바코드가 사진에 묻어난 것처럼 보이게 한다.
+function BarcodeStrip() {
+  return (
+    <span
+      className="barcode-band pointer-events-none absolute inset-x-0 bottom-0 flex h-6 items-end justify-center gap-px px-1 pb-1"
+      aria-hidden="true"
+    >
+      {BAR_WIDTHS.map((width, i) => (
+        <i key={i} className="block h-2 bg-barcode-foreground/90" style={{ width: `${width}px` }} />
+      ))}
+    </span>
+  );
+}
+
+export default function GifticonCard({
+  gifticon,
+  onViewCode,
+  onViewImage,
+  onToggleUsed,
+  onEdit,
+  onDelete,
+  onFindStores,
+  onToggleClaim,
+}) {
   const { members, user } = useFamily();
   const [menuOpen, setMenuOpen] = useState(false);
   const isUsed = gifticon.status === 'used';
@@ -37,6 +64,9 @@ export default function GifticonCard({ gifticon, onViewCode, onViewImage, onTogg
   // 이미 쓴 것과 기한이 지난 것은 매장에서 쓸 수 없으니 바코드를 열지 않는다.
   const isExpired = urgency === 'expired';
   const codeLocked = isUsed || isExpired;
+  // 열 바코드가 실제로 있는지. 없는데 띠를 붙이면 눌러보고 나서야 없는 걸 알게 된다.
+  const canOpenCode = !codeLocked && Boolean(gifticon.code || gifticon.barcode_image_url);
+  const photoCount = gifticon.image_urls?.filter(Boolean).length ?? 0;
 
   // "이건 내가 쓸게" 표시. 잠금이 아니라 표시라, 남이 찜해뒀어도 바코드는 그대로 열린다.
   const claimed = Boolean(gifticon.claimed_by);
@@ -45,33 +75,38 @@ export default function GifticonCard({ gifticon, onViewCode, onViewImage, onTogg
   return (
     <li className={cn('relative overflow-hidden rounded-2xl border border-border bg-card shadow-xs', isUsed && 'opacity-60')}>
       <div className="flex gap-3 p-3">
+        {/* 계산대 앞에서 제일 급한 동작이 바코드 열기라, 카드에서 가장 큰 과녁을 준다.
+            사진을 분류 아이콘으로 바꾸지 않는 이유: 사람은 기프티콘을 "스타벅스 초록색 그거"로
+            기억한다. 브랜드 색은 글자보다 빨리 읽히고, 내가 올린 사진이라야 내 지갑처럼 느껴진다.
+            대신 사진만 있으면 눌러도 되는 줄 모르므로 아래에 바코드 띠를 얹어 알린다. */}
         <button
           type="button"
-          className="relative size-17 shrink-0 overflow-hidden rounded-xl bg-accent"
-          onClick={() => onViewImage(gifticon)}
-          aria-label="업로드한 이미지 보기"
+          className="relative flex size-17 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-accent"
+          onClick={() => (canOpenCode ? onViewCode(gifticon) : onViewImage(gifticon))}
+          aria-label={canOpenCode ? '바코드 보기' : '업로드한 이미지 보기'}
         >
           {gifticon.image_url ? (
             <img src={gifticon.image_url} alt={gifticon.name} className="h-full w-full object-cover" />
           ) : (
-            <span className="flex h-full w-full items-center justify-center">
-              <Ticket className="size-6 text-primary/60" />
-            </span>
+            <Ticket className="size-6 text-primary/60" />
           )}
           {isUsed && (
             <span className="absolute inset-0 flex items-center justify-center bg-black/55 text-[11px] font-bold text-white">
               사용완료
             </span>
           )}
-          {gifticon.image_urls?.length > 1 && (
-            <span className="absolute right-1 bottom-1 rounded-full bg-black/60 px-1.5 py-px text-[10px] font-bold text-white">
-              {gifticon.image_urls.length}
+          {photoCount > 1 && (
+            <span className="absolute top-1 right-1 rounded-full bg-black/60 px-1.5 py-px text-[10px] font-bold text-white">
+              {photoCount}
             </span>
           )}
+          {/* 열 바코드가 있을 때만 얹는다. 없는데 붙어 있으면 카드가 거짓말을 하는 셈이다. */}
+          {canOpenCode && <BarcodeStrip />}
         </button>
 
         <div className="flex min-w-0 flex-1 flex-col">
-          {/* 받은 사람은 진한 이름표 대신 이름 앞 작은 점으로. 색은 그대로라 누구 건지는 그대로 구분된다. */}
+          {/* 받은 사람은 진한 이름표 대신 이름 앞 작은 점으로. 색은 그대로라 누구 건지는 그대로 구분된다.
+              분류는 썸네일에서 빼기로 했으므로 이 줄이 유일한 분류 표시다. */}
           <span className="flex items-center gap-1.5 pr-7 text-[11px] text-muted-foreground">
             {gifticon.owner && <i className={cn('size-1.5 shrink-0 rounded-full', ownerDotClass)} />}
             <span className="truncate">
@@ -87,11 +122,13 @@ export default function GifticonCard({ gifticon, onViewCode, onViewImage, onTogg
               {formatDday(gifticon.expires_at)} · {formatDate(gifticon.expires_at)}까지
             </p>
           )}
-          {/* 찜은 다른 사람 보라고 하는 표시다. 카드에서 안 보이면 아무 소용이 없다. */}
+
+          {/* 유효기한 바로 밑. "언제까지 / 누가 쓸 것인가"가 이어서 읽힌다.
+              찜하지 않은 카드에는 이 줄이 아예 없어서 높이가 늘지 않는다. */}
           {!isUsed && claimed && (
-            <p className="mt-1 inline-flex items-center gap-1 self-start rounded-full bg-primary/12 px-2 py-0.5 text-xs font-bold text-primary">
-              <Hand className="size-3" />
-              {claimedByMe ? '내가 쓸 예정' : `${gifticon.claimed_by_name}님이 쓸 예정`}
+            <p className="mt-1 flex items-center gap-1 text-xs font-bold text-primary">
+              <Hand className="size-3 shrink-0" />
+              {claimedByMe ? '내가 찜했어요' : `${gifticon.claimed_by_name}님이 찜했어요`}
             </p>
           )}
 
@@ -116,39 +153,47 @@ export default function GifticonCard({ gifticon, onViewCode, onViewImage, onTogg
         </button>
       </div>
 
+      {/* 왼쪽부터 알아보는 것 → 가볍게 정하는 것 → 되돌리기 번거로운 것.
+          "어디서 쓰지 → 내가 쓸게 → 다 썼다"라는 실제 순서와 같고,
+          제일 무거운 동작이 끝에 있어 잘못 누를 일이 줄어든다. */}
       <div className="flex border-t border-border">
         {codeLocked ? (
-          <span className={cn(BAR_BUTTON, 'text-muted-foreground')}>{isUsed ? '사용완료' : '기한 만료'}</span>
+          <>
+            <span className={cn(BAR_BUTTON, 'text-muted-foreground')}>{isUsed ? '사용완료' : '기한 만료'}</span>
+            <button
+              type="button"
+              onClick={() => onToggleUsed(gifticon)}
+              className={cn(BAR_BUTTON, 'border-l border-border text-foreground')}
+            >
+              <RotateCcw className="size-4 text-muted-foreground" />
+              사용취소
+            </button>
+          </>
         ) : (
-          // 유효기한 칩이 회색이 되면서, 이제 카드에서 색을 가진 곳은 이 버튼 하나다.
-          <button type="button" onClick={() => onViewCode(gifticon)} className={cn(BAR_BUTTON, 'bg-accent text-accent-foreground')}>
-            <Barcode className="size-4" />
-            바코드
-          </button>
-        )}
+          <>
+            <button type="button" onClick={() => onFindStores(gifticon)} className={cn(BAR_BUTTON, 'text-foreground')}>
+              <MapPin className="size-4 text-muted-foreground" />
+              매장
+            </button>
 
-        <button type="button" onClick={() => onToggleUsed(gifticon)} className={cn(BAR_BUTTON, 'border-l border-border text-foreground')}>
-          {isUsed ? <RotateCcw className="size-4 text-muted-foreground" /> : <CheckCircle2 className="size-4 text-muted-foreground" />}
-          {isUsed ? '사용취소' : '사용완료'}
-        </button>
+            <button
+              type="button"
+              onClick={() => onToggleClaim(gifticon)}
+              className={cn(BAR_BUTTON, 'border-l border-border', claimedByMe ? 'text-primary' : 'text-foreground')}
+            >
+              <Hand className={cn('size-4', claimedByMe ? 'text-primary' : 'text-muted-foreground')} />
+              {claimedByMe ? '찜 해제' : '찜하기'}
+            </button>
 
-        {!codeLocked && (
-          <button
-            type="button"
-            onClick={() => onToggleClaim(gifticon)}
-            className={cn(BAR_BUTTON, 'border-l border-border', claimedByMe ? 'text-primary' : 'text-foreground')}
-          >
-            <Hand className={cn('size-4', claimedByMe ? 'text-primary' : 'text-muted-foreground')} />
-            {claimedByMe ? '찜 해제' : '찜하기'}
-          </button>
-        )}
-
-        {/* 이미 썼거나 기한이 지난 건 매장에 갈 일이 없으니 뺀다. */}
-        {!codeLocked && (
-          <button type="button" onClick={() => onFindStores(gifticon)} className={cn(BAR_BUTTON, 'border-l border-border text-foreground')}>
-            <MapPin className="size-4 text-muted-foreground" />
-            매장
-          </button>
+            <button
+              type="button"
+              onClick={() => onToggleUsed(gifticon)}
+              className={cn(BAR_BUTTON, 'border-l border-border text-foreground')}
+            >
+              <CheckCircle2 className="size-4 text-muted-foreground" />
+              사용완료
+            </button>
+          </>
         )}
       </div>
 

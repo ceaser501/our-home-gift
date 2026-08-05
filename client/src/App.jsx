@@ -170,10 +170,11 @@ export default function App() {
       } else {
         const result = await claimGifticon(gifticon.id);
         if (!result?.ok) {
+          // 찜은 잠금이 아니라 표시다. "못 쓴다"가 아니라 "겹칠 수 있다"로 읽히게 적는다.
           setNotice({
             tone: 'info',
-            title: '이미 찜한 사람이 있어요',
-            description: `${result?.claimed_by_name || '다른 구성원'}님이 먼저 찜했어요.\n그래도 쓰실 수 있지만, 겹치지 않게 한 번 확인해보세요.`,
+            title: `${result?.claimed_by_name || '다른 구성원'}님이 찜했어요`,
+            description: '겹치지 않게 한 번 물어보시는 게 좋아요.\n그래도 쓰실 수 있어요.',
           });
         }
       }
