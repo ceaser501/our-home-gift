@@ -8,14 +8,9 @@
 // API 키는 브라우저에 노출되면 안 되므로 서버 비밀값으로만 보관한다:
 //   supabase secrets set KAKAO_REST_API_KEY=...
 
-import { limitFromEnv, requireUser, tooManyMessage, withinDailyLimit } from '../_shared/guard.ts';
+import { corsFor, limitFromEnv, requireUser, tooManyMessage, withinDailyLimit } from '../_shared/guard.ts';
 
 const MAX_RESULTS = 15;
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
 
 // 카카오가 돌려준 오류를 사람이 읽을 한국어로 바꾼다. 원문(JSON)을 그대로 내보내면
 // 화면에 영어 에러가 떠서 무슨 말인지 알 수 없다. 설정 문제(관리자가 고쳐야 하는 것)와
@@ -175,6 +170,7 @@ async function handleWalkRoute(
 }
 
 Deno.serve(async (req) => {
+  const corsHeaders = corsFor(req);
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
   const jsonHeaders = { ...corsHeaders, 'Content-Type': 'application/json' };

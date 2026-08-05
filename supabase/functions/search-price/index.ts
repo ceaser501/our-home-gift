@@ -9,18 +9,13 @@
 // 필요한 비밀값: supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
 
 import Anthropic from 'npm:@anthropic-ai/sdk@0.115.0';
-import { limitFromEnv, requireUser, tooManyMessage, withinDailyLimit } from '../_shared/guard.ts';
+import { corsFor, limitFromEnv, requireUser, tooManyMessage, withinDailyLimit } from '../_shared/guard.ts';
 
 const MODEL = 'claude-haiku-4-5';
 // 웹 검색 도구는 모델 세대에 따라 쓸 수 있는 버전이 다르다. haiku-4-5는 기본형을 쓴다.
 const WEB_SEARCH_TOOL = { type: 'web_search_20250305', name: 'web_search', max_uses: 4 };
 // 서버 쪽 도구 사용이 한 번에 안 끝나면 pause_turn으로 잠시 멈춘다. 그때 이어서 요청한다.
 const MAX_CONTINUATIONS = 3;
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
 
 const SYSTEM_PROMPT = `너는 한국에서 파는 상품의 현재 판매가를 찾아주는 도구다.
 
@@ -42,6 +37,7 @@ function extractJson(text) {
 }
 
 Deno.serve(async (req) => {
+  const corsHeaders = corsFor(req);
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }

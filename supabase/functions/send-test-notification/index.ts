@@ -12,13 +12,9 @@
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import webpush from 'npm:web-push@3';
+import { corsFor } from '../_shared/guard.ts';
 
 const SEND_DELAY_MS = 5000;
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
 
 function todayDateStr() {
   return new Date().toISOString().slice(0, 10);
@@ -30,6 +26,7 @@ function daysUntil(expiresAt, today) {
 }
 
 Deno.serve(async (req) => {
+  const corsHeaders = corsFor(req);
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
   const jsonHeaders = { ...corsHeaders, 'Content-Type': 'application/json' };

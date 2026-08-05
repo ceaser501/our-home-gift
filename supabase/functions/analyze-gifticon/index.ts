@@ -12,15 +12,10 @@
 //   supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
 
 import Anthropic from 'npm:@anthropic-ai/sdk@0.115.0';
-import { limitFromEnv, requireUser, tooManyMessage, withinDailyLimit } from '../_shared/guard.ts';
+import { corsFor, limitFromEnv, requireUser, tooManyMessage, withinDailyLimit } from '../_shared/guard.ts';
 
 const MODEL = 'claude-haiku-4-5';
 const MAX_IMAGES = 5;
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
 
 const SYSTEM_PROMPT = `너는 한국 모바일 기프티콘 이미지를 읽어 필요한 정보만 뽑아내는 도구다.
 
@@ -53,6 +48,7 @@ function buildSchema(categories: string[]) {
 }
 
 Deno.serve(async (req) => {
+  const corsHeaders = corsFor(req);
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }

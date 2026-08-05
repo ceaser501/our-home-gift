@@ -10,16 +10,13 @@
 // 사용자 토큰이 죽어서 1)을 부를 수 없다.
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { corsFor } from '../_shared/guard.ts';
 
 // 스토리지 삭제는 한 번에 너무 많이 보내면 거절당해서 나눠 보낸다.
 const REMOVE_CHUNK = 100;
 
 Deno.serve(async (req) => {
+  const corsHeaders = corsFor(req);
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
   const jsonHeaders = { ...corsHeaders, 'Content-Type': 'application/json' };

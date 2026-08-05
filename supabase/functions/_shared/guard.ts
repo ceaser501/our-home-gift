@@ -10,6 +10,34 @@
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
+// 어느 사이트에서 부를 수 있게 할지. 예전에는 전부 '*'였다. 인증이 붙은 지금은 남의 사이트가
+// 불러도 로그인 토큰이 없어 통과하지 못하지만, 굳이 열어둘 이유도 없다.
+//
+// 브라우저가 보낸 Origin이 목록에 있으면 그 값을 그대로 돌려준다. '*'를 쓰지 않는 이유는,
+// 나중에 쿠키나 인증 정보를 함께 보내야 할 때 '*'로는 안 되기 때문이다.
+// (ALLOWED_ORIGINS에 쉼표로 나눠 적는다. 설정이 없으면 예전처럼 전부 허용한다 — 이건
+//  막는 장치가 아니라 정리하는 장치라, 설정 누락으로 앱이 통째로 멈추는 편이 더 나쁘다.)
+function allowedOrigins(): string[] {
+  return (Deno.env.get('ALLOWED_ORIGINS') || '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+export function corsFor(req: Request) {
+  const allowed = allowedOrigins();
+  const origin = req.headers.get('Origin') || '';
+  const value = allowed.length === 0 ? '*' : allowed.includes(origin) ? origin : allowed[0];
+
+  return {
+    'Access-Control-Allow-Origin': value,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    // 허용 주소가 여럿이면 응답이 Origin에 따라 달라진다. 이걸 알려주지 않으면
+    // 중간 캐시가 한 사람 응답을 다른 사람에게 그대로 돌려줄 수 있다.
+    Vary: 'Origin',
+  };
+}
+
 export function adminClient() {
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
