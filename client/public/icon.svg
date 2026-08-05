@@ -22,8 +22,11 @@
       <feColorMatrix type="saturate" values="0"/>
     </filter>
   </defs>
-  <rect width="512" height="512" fill="url(#mbg)"/>
-  <rect width="512" height="512" fill="url(#mgl)"/>
+  <!-- 브라우저 스플래시와 파비콘은 이 아이콘을 마스크 없이 그대로 얹는다.
+       모서리를 비워두면 정사각형으로 나오므로 여기서 굴린다(iOS 스퀘어클과 같은 22.27%).
+       마스커블(icon-maskable-512.png)과 apple-touch-icon은 플랫폼이 직접 깎으니 그대로 둔다. -->
+  <rect width="512" height="512" rx="114" fill="url(#mbg)"/>
+  <rect width="512" height="512" rx="114" fill="url(#mgl)"/>
 
     <path d="M146 262H366V380A20 20 0 0 1 346 400H166A20 20 0 0 1 146 380Z" fill="url(#mwb)" mask="url(#mm)"/>
     <rect x="118" y="196" width="276" height="66" rx="18" fill="url(#mwl)"/>
