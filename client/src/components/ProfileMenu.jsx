@@ -16,6 +16,7 @@ export default function ProfileMenu({ onClose }) {
   const { family, members, user, refetchFamily, refreshFamily, signOut } = useFamily();
   const me = members.find((m) => m.user_id === user.id);
   const myName = me?.display_name || '나';
+  const isLastMember = members.length === 1;
 
   const [renameOpen, setRenameOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
@@ -148,17 +149,9 @@ export default function ProfileMenu({ onClose }) {
             <ChevronRight className="size-4 text-muted-foreground" />
           </button>
 
+          {/* 자주 쓰는 것(로그아웃)을 위에 두고, 되돌리기 어려운 것 둘은 아래로 내려
+              구분선으로 떼어놓는다. 손가락이 미끄러져도 위험한 쪽에 먼저 닿지 않도록. */}
           <div className="my-2 h-px bg-border" />
-
-          <button
-            type="button"
-            onClick={() => setLeaveAsking(true)}
-            disabled={leaving}
-            className="flex w-full items-center gap-3 px-1 py-3 text-left text-sm text-destructive disabled:opacity-50"
-          >
-            <DoorOpen className="size-4.5" />
-            <span className="flex-1">{leaving ? '나가는 중…' : '가족 나가기'}</span>
-          </button>
 
           <button
             type="button"
@@ -169,8 +162,18 @@ export default function ProfileMenu({ onClose }) {
             <span className="flex-1">로그아웃</span>
           </button>
 
-          {/* 가족 나가기와 헷갈리기 쉬워서 따로 떼어놓고, 무엇이 다른지 오른쪽에 적어둔다. */}
           <div className="my-2 h-px bg-border" />
+
+          <button
+            type="button"
+            onClick={() => setLeaveAsking(true)}
+            disabled={leaving}
+            className="flex w-full items-center gap-3 px-1 py-3 text-left text-sm text-destructive disabled:opacity-50"
+          >
+            <DoorOpen className="size-4.5" />
+            <span className="flex-1">{leaving ? '나가는 중…' : '가족 나가기'}</span>
+            <span className="text-xs text-muted-foreground">이 가족만</span>
+          </button>
 
           <button
             type="button"
@@ -179,8 +182,8 @@ export default function ProfileMenu({ onClose }) {
             className="flex w-full items-center gap-3 px-1 py-3 text-left text-sm text-destructive disabled:opacity-50"
           >
             <UserRoundX className="size-4.5" />
-            <span className="flex-1">{deleting ? '지우는 중…' : '계정 삭제(탈퇴)'}</span>
-            <span className="text-xs text-muted-foreground">계정이 없어져요</span>
+            <span className="flex-1">{deleting ? '지우는 중…' : '계정 삭제'}</span>
+            <span className="text-xs text-muted-foreground">계정까지</span>
           </button>
         </div>
 
@@ -205,9 +208,13 @@ export default function ProfileMenu({ onClose }) {
           <AlertDialog
             tone="danger"
             title={`'${family.name}'에서 나갈까요?`}
-            description={
-              '내가 등록했거나 내 앞으로 되어 있는 기프티콘은 남은 가족에게 보이지 않게 돼요.\n' +
-              '(지워지는 건 아니라서, 다시 참여하면 되살릴 수 있어요.)'
+            // 마지막 한 사람이 나가면 그 가족은 통째로 사라진다. 결과가 아예 다르므로
+            // 같은 문구를 쓰면 안 된다("다시 참여하면 되살아난다"가 거짓말이 된다).
+            description={isLastMember ? '나 말고 아무도 없어서, 나가면 이 가족이 없어져요.' : undefined}
+            details={
+              isLastMember
+                ? ['이 가족의 기프티콘이 사진까지 지워져요', '되돌릴 수 없어요']
+                : ['내 기프티콘은 남은 가족에게 안 보여요', '지워지진 않아서, 다시 참여하면 되살아나요']
             }
             confirmLabel="나가기"
             onConfirm={handleLeave}
@@ -219,13 +226,12 @@ export default function ProfileMenu({ onClose }) {
           <AlertDialog
             tone="danger"
             title="계정을 삭제할까요?"
-            description={
-              "'가족 나가기'와는 달라요. 가족 나가기는 그 가족에서만 빠지고 계정은 그대로지만,\n" +
-              '계정 삭제는 이 계정 자체가 없어져서 같은 이메일로 다시 로그인할 수 없어요.\n\n' +
-              '· 속한 가족에서 모두 빠져요. 나 혼자였던 가족은 없어져요.\n' +
-              '· 내가 올렸거나 내 앞으로 된 기프티콘은 사진까지 지워져요(되살릴 수 없어요).\n' +
-              '· 가족의 사용 내역에 내 이름 대신 \'탈퇴한 구성원\'으로 남아요.'
-            }
+            description={"'가족 나가기'와 달라요.\n계정이 없어져서 다시 로그인할 수 없어요."}
+            details={[
+              '속한 가족에서 모두 빠져요',
+              '내가 올린 기프티콘은 사진까지 지워져요',
+              '나 혼자였던 가족은 없어져요',
+            ]}
             confirmLabel="계속"
             onConfirm={() => setDeleteStep('sure')}
             onClose={() => setDeleteStep(null)}
@@ -236,7 +242,7 @@ export default function ProfileMenu({ onClose }) {
           <AlertDialog
             tone="danger"
             title="정말 탈퇴할까요?"
-            description={'한 번 지우면 되돌릴 수 없어요.\n정말 계정을 지우시겠어요?'}
+            description="한 번 지우면 되돌릴 수 없어요."
             confirmLabel="탈퇴하기"
             onConfirm={handleDeleteAccount}
             onClose={() => setDeleteStep(null)}

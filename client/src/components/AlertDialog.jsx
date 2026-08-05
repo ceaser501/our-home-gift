@@ -15,6 +15,7 @@ const TONE = {
 export default function AlertDialog({
   title,
   description,
+  details,
   tone = 'info',
   confirmLabel = '확인',
   cancelLabel = '취소',
@@ -43,6 +44,19 @@ export default function AlertDialog({
             </p>
           )}
         </div>
+
+        {/* 여러 항목을 알려줘야 할 때. 가운데 정렬 안에 목록을 넣으면 줄마다 시작점이 달라져
+            읽기 어려워서, 목록만 왼쪽으로 맞추고 상자로 묶어 본문과 구분한다. */}
+        {details?.length > 0 && (
+          <ul className="m-0 mt-3 flex list-none flex-col gap-1.5 rounded-xl bg-secondary p-3 text-left">
+            {details.map((item) => (
+              <li key={item} className="flex gap-1.5 text-xs leading-relaxed break-keep text-muted-foreground">
+                <span aria-hidden="true">·</span>
+                <span className="flex-1">{item}</span>
+              </li>
+            ))}
+          </ul>
+        )}
 
         <div className="mt-4 flex gap-2">
           {asking && (
