@@ -94,11 +94,13 @@ export default function LoginScreen() {
       <div className="flex flex-col items-center gap-3">
         <Logo className="size-12" />
         <h1 className="m-0 text-xl font-bold text-foreground">모아콘</h1>
-        {/* 혼자 쓰려는 사람이 여기서 "내 앱이 아니네" 하고 나가지 않도록, 함께 보는 것은
-            할 수 있는 일로만 적는다. 이 앱의 강점은 여전히 함께 보는 것이지만, 그게 조건처럼
-            읽히면 문턱이 된다. */}
+        {/* 이 앱의 중심은 가족과 함께 보는 것이다. 개인용으로 방향을 틀면 카카오톡 선물함과
+            겨루는 싸움이 되고, 유일한 차별점을 잃는다. 그래서 문구에서 가족을 빼지 않는다.
+            다만 그것이 "가족이 있어야 쓸 수 있다"는 조건처럼 읽히면 혼자 쓰려던 사람이
+            첫 화면에서 나가버리므로, 조건이 아니라 할 수 있는 일로 적는다.
+            ("볼 수도 있어요"처럼 흐리지 않는다. 곁다리로 들려서 오히려 중심이 약해진다.) */}
         <p className="m-0 text-center text-sm break-keep text-muted-foreground">
-          기프티콘을 모아두고, 가족과 함께 볼 수도 있어요.
+          기프티콘을 모아두고, 가족과 함께 볼 수 있어요.
         </p>
       </div>
 

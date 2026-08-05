@@ -103,7 +103,7 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
         <Users className="size-9 text-primary" />
         <h1 className="m-0 text-lg font-bold text-foreground">기프티콘을 모아둘 곳을 만들어요</h1>
         <p className="m-0 text-center text-sm break-keep text-muted-foreground">
-          혼자 써도 좋아요. 나중에 가족을 초대할 수도 있어요.
+          혼자 써도 좋아요. 나중에 가족을 초대할 수 있어요.
         </p>
         <p className="m-0 text-center text-xs text-muted-foreground">{userEmail}로 로그인했어요.</p>
       </div>
