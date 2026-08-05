@@ -24,15 +24,13 @@ const DDAY_CLASS = {
 const BAR_BUTTON = 'flex flex-1 items-center justify-center gap-1.5 py-2.5 text-xs font-semibold';
 
 // 실제로 읽히는 바코드가 아니라 "여기 바코드가 들었다"는 표시라서, 진짜처럼 잘게 쪼개지
-// 않는다. 68px짜리 썸네일에서 1px 막대는 바코드가 아니라 잔털로 보이므로 2~3px만 쓴다.
-// 대신 줄 수는 넉넉히 둔다. 막대가 몇 개뿐이면 폭이 좁아 바코드가 아니라 무늬로 보인다.
-const BAR_WIDTHS = [2, 3, 2, 2, 3, 2, 3, 2, 2, 3, 2, 3, 2, 2];
+// 않는다. 68px짜리 썸네일에서 가는 막대를 촘촘히 늘어놓으면 바코드가 아니라 잔털로 보인다.
+// 굵은 막대 몇 개로 짧게 끊는 편이 이 크기에서는 오히려 바코드로 읽힌다.
+const BAR_WIDTHS = [4, 2, 3, 4, 2, 4, 3, 2, 4];
 
 function BarcodeStrip() {
-  // justify-between으로 사진 폭을 꽉 채운다. 가운데 모아두면 양옆이 남아서
-  // 실물 기프티콘의 바코드처럼 "한쪽 끝에서 반대쪽 끝까지"로 읽히지 않는다.
   return (
-    <span className="flex h-2.5 w-full shrink-0 items-center justify-between" aria-hidden="true">
+    <span className="flex h-2.5 w-full shrink-0 items-center justify-center gap-[2px]" aria-hidden="true">
       {BAR_WIDTHS.map((width, i) => (
         <i key={i} className="block h-full rounded-[1px] bg-barcode-line" style={{ width: `${width}px` }} />
       ))}
