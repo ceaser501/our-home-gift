@@ -85,15 +85,19 @@ export default function GifticonCard({
             무슨 상품인지 알아볼 수 없다. 못 잘라낸 것은 예전처럼 첫 사진을 그대로 쓴다.
 
             바코드는 사진 위에 겹치지 않고 아래에 따로 앉는다. 겹치면 사진을 가리거나
-            사진이 잘려 보이는데, 실물 기프티콘도 사진과 바코드가 한 장에 위아래로 나뉘어 있다. */}
+            사진이 잘려 보이는데, 실물 기프티콘도 사진과 바코드가 한 장에 위아래로 나뉘어 있다.
+
+            그래서 타일은 정사각형이 아니라 세로로 조금 긴 직사각형이다. 잘라낸 상품 사진은
+            대개 정사각형에 가까운데, 정사각형 타일 안에 바코드까지 넣으면 사진이 위아래로
+            눌려 납작해진다. 바코드가 차지할 만큼 키를 늘려 사진 자리를 정사각형으로 남긴다. */}
         <button
           type="button"
           className={cn(
-            'relative flex size-17 shrink-0 overflow-hidden rounded-xl bg-accent',
+            'relative flex h-21 w-17 shrink-0 overflow-hidden rounded-xl bg-accent',
             // 사진과 바코드 사이를 넉넉히 띄운다. 바짝 붙으면 바코드가 사진에 딸린 무늬처럼
             // 보이고, 떨어져 있어야 "사진 아래 바코드"라는 두 덩어리로 읽힌다.
-            // 그만큼 사진이 작아지지만, 어차피 무슨 상품인지만 알아보면 되는 크기다.
-            canOpenCode ? 'flex-col gap-[5px] p-[3px]' : 'items-center justify-center'
+            // 아래 여백은 위보다 조금 넓다. 같게 두면 바코드가 바닥에 붙은 것처럼 보인다.
+            canOpenCode ? 'flex-col gap-[5px] px-[3px] pt-[3px] pb-[5px]' : 'items-center justify-center'
           )}
           onClick={() => (canOpenCode ? onViewCode(gifticon) : onViewImage(gifticon))}
           aria-label={canOpenCode ? '바코드 보기' : '업로드한 이미지 보기'}
