@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BellRing, ChevronRight, DoorOpen, LogOut, Receipt, UserRound, UserRoundX } from 'lucide-react';
+import { BellRing, ChevronRight, DoorOpen, FileText, LogOut, Receipt, ShieldCheck, UserRound, UserRoundX } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import ThemeToggle from './ThemeToggle';
 import NotificationToggle from './NotificationToggle';
@@ -148,6 +148,30 @@ export default function ProfileMenu({ onClose }) {
             <span className="flex-1 text-foreground">가족 사용 내역</span>
             <ChevronRight className="size-4 text-muted-foreground" />
           </button>
+
+          {/* 스토어 심사에서 앱 안에 방침 링크가 있는지를 본다. 그것과 별개로, 사진이 AI에
+              전송된다는 사실을 알고 싶은 사람이 찾아볼 자리는 있어야 한다. */}
+          <p className="m-0 pt-3 pb-1 text-xs font-semibold text-muted-foreground">약관</p>
+          <a
+            href={`${import.meta.env.BASE_URL}privacy.html`}
+            target="_blank"
+            rel="noreferrer"
+            className="flex w-full items-center gap-3 px-1 py-3 text-left text-sm text-foreground no-underline"
+          >
+            <ShieldCheck className="size-4.5 text-muted-foreground" />
+            <span className="flex-1">개인정보처리방침</span>
+            <ChevronRight className="size-4 text-muted-foreground" />
+          </a>
+          <a
+            href={`${import.meta.env.BASE_URL}terms.html`}
+            target="_blank"
+            rel="noreferrer"
+            className="flex w-full items-center gap-3 px-1 py-3 text-left text-sm text-foreground no-underline"
+          >
+            <FileText className="size-4.5 text-muted-foreground" />
+            <span className="flex-1">이용약관</span>
+            <ChevronRight className="size-4 text-muted-foreground" />
+          </a>
 
           {/* 자주 쓰는 것(로그아웃)을 위에 두고, 되돌리기 어려운 것 둘은 아래로 내려
               구분선으로 떼어놓는다. 손가락이 미끄러져도 위험한 쪽에 먼저 닿지 않도록. */}
