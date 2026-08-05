@@ -8,6 +8,8 @@
 // API 키는 브라우저에 노출되면 안 되므로 서버 비밀값으로만 보관한다:
 //   supabase secrets set KAKAO_REST_API_KEY=...
 
+import { limitFromEnv, requireUser, tooManyMessage, withinDailyLimit } from '../_shared/guard.ts';
+
 const MAX_RESULTS = 15;
 
 const corsHeaders = {
@@ -180,6 +182,14 @@ Deno.serve(async (req) => {
     new Response(JSON.stringify(body), { status, headers: jsonHeaders });
 
   try {
+    // 카카오는 무료 쿼터가 있고 TMAP 보행경로는 하루 1,000건을 넘으면 건당 요금이다.
+    // 아무나 부를 수 있으면 하룻밤 사이에 쿼터가 비고 요금이 붙는다.
+    const guard = await requireUser(req);
+    if (guard.error) return reply({ error: guard.error }, guard.status);
+
+    const usage = await withinDailyLimit(guard.admin, guard.user.id, 'places', limitFromEnv('PLACES_DAILY_LIMIT', 200));
+    if (!usage.allowed) return reply({ error: tooManyMessage(usage.used, usage.limit) }, 429);
+
     const apiKey = Deno.env.get('KAKAO_REST_API_KEY');
     if (!apiKey) {
       return reply({ error: '주변 매장 검색 서버 설정이 아직 완료되지 않았어요.' }, 500);

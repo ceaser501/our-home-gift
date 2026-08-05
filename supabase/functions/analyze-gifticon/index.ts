@@ -12,6 +12,7 @@
 //   supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
 
 import Anthropic from 'npm:@anthropic-ai/sdk@0.115.0';
+import { limitFromEnv, requireUser, tooManyMessage, withinDailyLimit } from '../_shared/guard.ts';
 
 const MODEL = 'claude-haiku-4-5';
 const MAX_IMAGES = 5;
@@ -59,6 +60,19 @@ Deno.serve(async (req) => {
   const jsonHeaders = { ...corsHeaders, 'Content-Type': 'application/json' };
 
   try {
+    // 이미지 한 장을 볼 때마다 AI 요금이 나간다. 아무나 부를 수 있으면 그대로 요금이 된다.
+    const guard = await requireUser(req);
+    if (guard.error) {
+      return new Response(JSON.stringify({ error: guard.error }), { status: guard.status, headers: jsonHeaders });
+    }
+    const usage = await withinDailyLimit(guard.admin, guard.user.id, 'analyze', limitFromEnv('ANALYZE_DAILY_LIMIT', 30));
+    if (!usage.allowed) {
+      return new Response(JSON.stringify({ error: tooManyMessage(usage.used, usage.limit) }), {
+        status: 429,
+        headers: jsonHeaders,
+      });
+    }
+
     const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
     if (!apiKey) {
       return new Response(JSON.stringify({ error: '이미지 인식 서버 설정이 아직 완료되지 않았어요.' }), {

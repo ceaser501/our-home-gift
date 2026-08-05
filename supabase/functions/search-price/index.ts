@@ -9,6 +9,7 @@
 // 필요한 비밀값: supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
 
 import Anthropic from 'npm:@anthropic-ai/sdk@0.115.0';
+import { limitFromEnv, requireUser, tooManyMessage, withinDailyLimit } from '../_shared/guard.ts';
 
 const MODEL = 'claude-haiku-4-5';
 // 웹 검색 도구는 모델 세대에 따라 쓸 수 있는 버전이 다르다. haiku-4-5는 기본형을 쓴다.
@@ -48,6 +49,19 @@ Deno.serve(async (req) => {
   const jsonHeaders = { ...corsHeaders, 'Content-Type': 'application/json' };
 
   try {
+    // 웹 검색까지 도는 호출이라 한 번이 꽤 비싸다. 로그인한 사람만, 그것도 하루 몇 번까지만.
+    const guard = await requireUser(req);
+    if (guard.error) {
+      return new Response(JSON.stringify({ error: guard.error }), { status: guard.status, headers: jsonHeaders });
+    }
+    const usage = await withinDailyLimit(guard.admin, guard.user.id, 'price', limitFromEnv('PRICE_DAILY_LIMIT', 50));
+    if (!usage.allowed) {
+      return new Response(JSON.stringify({ error: tooManyMessage(usage.used, usage.limit) }), {
+        status: 429,
+        headers: jsonHeaders,
+      });
+    }
+
     const { brand, name } = await req.json();
     if (!name || !String(name).trim()) {
       return new Response(JSON.stringify({ error: '상품명이 필요해요.' }), { status: 400, headers: jsonHeaders });

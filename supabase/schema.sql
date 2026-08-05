@@ -641,6 +641,54 @@ where family_id is not null
 delete from public.families f
 where not exists (select 1 from public.family_members fm where fm.family_id = f.id);
 
+-- ===================== 외부 API 사용량 =====================
+
+-- 돈이 나가는 기능(AI 분석, 가격 검색, 주변 매장)을 한 사람이 하루에 몇 번 썼는지 센다.
+-- 로그인 확인만으로는 부족하다. 계정은 얼마든지 새로 만들 수 있어서, 사람 수가 아니라
+-- 계정 수만큼 요금이 나갈 수 있기 때문이다. 여기서 사람당 상한을 둔다.
+create table if not exists public.api_usage (
+  user_id uuid not null references auth.users(id) on delete cascade,
+  action text not null,
+  day date not null,
+  count int not null default 0,
+  primary key (user_id, action, day)
+);
+
+-- 사용자가 직접 들여다보거나 고칠 일이 없다. 정책을 하나도 만들지 않아서
+-- (RLS는 켜져 있고 정책이 없으면 아무것도 통과하지 못한다) 서버만 다룬다.
+alter table public.api_usage enable row level security;
+
+-- 세는 일과 판단을 한 문장에서 한다. 나눠서 하면 동시에 여러 번 부를 때 둘 다
+-- "아직 여유 있음"으로 읽고 지나가버린다.
+create or replace function public.bump_api_usage(uid uuid, act text, max_per_day int)
+returns json
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  today date := (now() at time zone 'utc')::date;
+  used int;
+begin
+  insert into public.api_usage (user_id, action, day, count)
+  values (uid, act, today, 1)
+  on conflict (user_id, action, day) do update set count = public.api_usage.count + 1
+  returning count into used;
+
+  return json_build_object('allowed', used <= max_per_day, 'used', used, 'limit', max_per_day);
+end;
+$$;
+
+-- 이 함수를 사용자가 부를 수 있으면 남의 사용량을 마음대로 올려 못 쓰게 만들 수 있다.
+-- 서버(Edge Function)만 부른다.
+revoke all on function public.bump_api_usage(uuid, text, int) from public;
+revoke all on function public.bump_api_usage(uuid, text, int) from anon;
+revoke all on function public.bump_api_usage(uuid, text, int) from authenticated;
+grant execute on function public.bump_api_usage(uuid, text, int) to service_role;
+
+-- 오래된 기록은 쌓아둘 이유가 없다. 부를 때마다 한 달 지난 것을 조금씩 치운다.
+delete from public.api_usage where day < (now() at time zone 'utc')::date - 30;
+
 -- ===================== 계정 탈퇴 =====================
 
 -- '가족 나가기'와 다르다. 가족 나가기는 그 가족에서만 빠지고 계정과 다른 가족은 그대로지만,
