@@ -156,7 +156,7 @@
   scrollbar-width: none;
 }
 
-/* 알림창이 살짝 떠오르며 나타나는 효과 */
+/* 알림창과 인트로 화면(SplashScreen)이 살짝 떠오르며 나타나는 효과 */
 @keyframes splash-in {
   from {
     opacity: 0;
@@ -170,6 +170,12 @@
 
 .animate-splash-in {
   animation: splash-in 0.45s ease-out both;
+}
+
+/* 인트로에서 로고가 먼저 뜨고 글자가 뒤따라 오게 한다. 지금은 인트로를 쓰지 않지만,
+   Capacitor 전환 때 되살릴 화면이라 같이 남겨둔다(SplashScreen.jsx 참고). */
+.animate-splash-in-delayed {
+  animation: splash-in 0.45s ease-out 0.12s both;
 }
 
 /* 얼마나 걸릴지 알 수 없는 작업(이미지 분석)의 진행 표시. 막대가 좌우로 오가며
