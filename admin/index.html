@@ -86,6 +86,20 @@ h2{font-size:13.5px;font-weight:650;color:var(--ink)}
 .watch li:last-child{border-bottom:0}
 .watch b{font-size:14px;color:var(--ink);font-variant-numeric:tabular-nums}
 .foot{text-align:center;font-size:11px;color:var(--muted);padding-top:6px}
+.sample-note{background:color-mix(in srgb,#e69008 10%,transparent);border:1px solid color-mix(in srgb,#e69008 30%,transparent);border-radius:var(--radius);padding:10px 14px;font-size:12.5px;color:var(--ink2)}
+
+/* ----- 공지사항 폼 ----- */
+.notice-form{display:flex;flex-direction:column;gap:12px}
+.field{display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--muted);flex:1}
+.field .search{min-width:0;width:100%}
+.field textarea{resize:vertical;font-family:inherit}
+.field-row{display:flex;gap:12px}
+.muted-inline{color:var(--muted);font-weight:400}
+.form-actions{display:flex;align-items:center;gap:10px;justify-content:flex-end}
+.form-err{font-size:12px;color:var(--bad);margin-right:auto}
+.save-btn{background:var(--accent);color:var(--accent-ink);border:0;border-radius:10px;padding:8px 22px;font:inherit;font-size:13px;font-weight:650;cursor:pointer}
+.save-btn:disabled{opacity:.5}
+@media (max-width:700px){.field-row{flex-direction:column}}
 
 /* ----- 목록 화면 ----- */
 .list-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:0 0 12px}
@@ -249,11 +263,12 @@ td.strong{font-weight:650}
   <aside class="side">
     <div class="side-logo"><span class="logo-mark">모</span><span>모아콘 관리자</span></div>
     <nav>
+      <a data-page="notices">공지사항</a>
       <a data-page="dash" class="on">대시보드</a>
+      <a data-page="sample">대시보드 샘플</a>
       <a data-page="users">회원 관리</a>
       <a data-page="gifticons">기프티콘 관리</a>
       <a data-page="families">가족 관리</a>
-      <a class="soon">공지사항<span class="soon-badge">준비 중</span></a>
     </nav>
     <div class="side-foot"><span id="side-email"></span></div>
   </aside>
@@ -296,8 +311,46 @@ td.strong{font-weight:650}
     </div>
   </div>
 
+  <!-- ===== 공지사항 화면 ===== -->
+  <div id="page-notices" style="display:none">
+    <div class="card notice-form">
+      <div class="card-head"><h2 id="notice-form-title">새 공지 쓰기</h2>
+        <span class="card-note">여기 등록한 공지는 모아콘 앱의 배너와 공지사항 화면에 그대로 나갑니다</span></div>
+      <label class="field">제목
+        <input id="n-title" class="search" maxlength="200" placeholder="예: 8월 15일 새벽 점검 안내">
+      </label>
+      <label class="field">내용
+        <textarea id="n-body" class="search" rows="4" placeholder="자세한 내용 (비워도 됩니다)"></textarea>
+      </label>
+      <div class="field-row">
+        <label class="field">게시 시작 <span class="muted-inline">(비우면 지금 바로)</span>
+          <input id="n-starts" class="search" type="datetime-local">
+        </label>
+        <label class="field">게시 종료 <span class="muted-inline">(비우면 계속 게시)</span>
+          <input id="n-ends" class="search" type="datetime-local">
+        </label>
+      </div>
+      <div class="form-actions">
+        <span class="form-err" id="n-err" style="display:none"></span>
+        <button class="icon-btn" id="n-cancel" style="display:none">취소</button>
+        <button class="save-btn" id="n-save">등록</button>
+      </div>
+    </div>
+    <div class="card table-card" style="margin-top:16px">
+      <div class="table-wrap">
+        <table id="notices-table">
+          <thead><tr><th>상태</th><th>제목</th><th>내용</th><th>게시 시작</th><th>게시 종료</th><th>등록일</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
   <!-- ===== 대시보드 화면 ===== -->
   <div id="page-dash">
+  <div class="sample-note" id="sample-note" style="display:none">
+    지금 보는 숫자는 <b>샘플(목데이터)</b>이에요. 실제 데이터가 쌓이면 대시보드가 이런 모습이 됩니다.
+  </div>
   <section class="kpis kpis-4">
     <div class="kpi"><span class="kpi-label">가족 수</span><span class="kpi-value" id="k-families"></span><span class="kpi-sub">구성원 <b id="k-members"></b>명 · 평균 <b id="k-avg-members"></b>명</span></div>
     <div class="kpi"><span class="kpi-label">총 사용자</span><span class="kpi-value" id="k-users"></span><span class="kpi-sub">푸시 구독 <b id="k-push"></b>기기</span></div>
@@ -592,14 +645,20 @@ function showErr(id,message){
 function hideErr(id){ document.getElementById(id).style.display='none'; }
 
 // ===================== 데이터 불러오기/가공 =====================
-let STATS=null, MODE='day';
+let STATS=null, REAL_STATS=null, MODE='day';
 
-// 통계도 목록도 로그인한 사람의 토큰으로 받아온다. 관리자인지는 서버(admin-stats)가 판단한다.
-async function callApi(query=''){
+// 통계·목록·공지 쓰기 모두 로그인한 사람의 토큰으로 부른다. 관리자인지는 서버가 판단한다.
+// payload를 주면 POST(쓰기), 없으면 GET(읽기)이다.
+async function callApi(query='', payload=null){
   const { data: { session } } = await sb.auth.getSession();
   if(!session) { const e=new Error('로그인이 필요해요.'); e.reason='unauthenticated'; throw e; }
   const res=await fetch(CONFIG.url.replace(/\/+$/,'')+'/functions/v1/admin-stats'+query,{
-    headers:{ Authorization:'Bearer '+session.access_token },
+    method: payload?'POST':'GET',
+    headers:{
+      Authorization:'Bearer '+session.access_token,
+      ...(payload?{'Content-Type':'application/json'}:{}),
+    },
+    body: payload?JSON.stringify(payload):undefined,
   });
   const body=await res.json().catch(()=>({}));
   if(!res.ok){
@@ -767,19 +826,30 @@ const PAGES={
   users:{
     title:'회원 관리', search:'이메일로 검색', filter:false,
     // {n:1}인 칸은 숫자라 값·머리글을 오른쪽 정렬한다.
-    columns:['이메일','가입 방법','소속 가족',{l:'등록',n:1},{l:'사용',n:1},{l:'알림',n:1},'약관','최근 로그인','가입일'],
-    row:r=>`
+    columns:['이메일','가입 방법','소속 가족','가족에서 이름',{l:'등록',n:1},{l:'사용',n:1},{l:'알림',n:1},'약관','최근 로그인','가입일'],
+    row:r=>{
+      const fams=r.families||[];
+      // 이름이 같은 가족이 둘이면(예: 테스트로 만든 "우리집" 두 개) 같은 가족이 두 번
+      // 나온 것처럼 보인다. 겹치는 이름에만 초대 코드를 붙여 서로 다른 가족임을 보여준다.
+      const nameCount={};
+      fams.forEach(f=>{nameCount[f.family_name]=(nameCount[f.family_name]||0)+1;});
+      const famLabel=f=>esc(f.family_name)+(nameCount[f.family_name]>1&&f.invite_code?` <span class="muted">(${esc(f.invite_code)})</span>`:'');
+      return `
       <td class="strong">${dash(r.email)}${r.is_admin?' <span class="tag tag-admin">관리자</span>':''}</td>
       <td class="muted">${esc(r.provider)}</td>
-      <td>${(r.families||[]).length
-        ? '<span class="chips">'+r.families.map(f=>`<span class="tag">${esc(f.family_name)} · ${esc(f.display_name)}</span>`).join('')+'</span>'
+      <td>${fams.length
+        ? '<span class="chips">'+fams.map(f=>`<span class="tag">${famLabel(f)}</span>`).join('')+'</span>'
         : '<span class="muted">없음</span>'}</td>
+      <td>${fams.length
+        ? '<span class="chips">'+fams.map(f=>`<span class="tag">${esc(f.display_name)}</span>`).join('')+'</span>'
+        : '<span class="muted">—</span>'}</td>
       <td class="num">${nf.format(r.uploaded||0)}</td>
       <td class="num">${nf.format(r.used||0)}</td>
       <td class="num">${r.push_devices?nf.format(r.push_devices):'<span class="muted">—</span>'}</td>
       <td>${r.agreed?'<span class="tag tag-unused">동의</span>':'<span class="tag tag-hidden">미동의</span>'}</td>
       <td class="muted">${dt(r.last_sign_in_at)}</td>
-      <td class="muted">${dt(r.created_at)}</td>`,
+      <td class="muted">${dt(r.created_at)}</td>`;
+    },
   },
   gifticons:{
     title:'기프티콘 관리', search:'상품명·브랜드·받은 사람으로 검색', filter:true,
@@ -853,14 +923,185 @@ async function renderList(){
   document.getElementById('page-next').disabled=to>=LIST.total;
 }
 
+// ===================== 대시보드 샘플 (목데이터) =====================
+// 데이터가 아직 적을 때 "쌓이면 이런 모습이 된다"를 보여주는 화면. 서버는 부르지 않고
+// 여기서 만든 숫자를 실제 대시보드와 똑같은 코드로 그린다.
+function buildSampleStats(){
+  // 시드 고정 난수: 열 때마다 숫자가 널뛰면 샘플이라도 이상해 보인다.
+  let seed=20260805;
+  const rnd=()=>{seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};
+  const days=[];
+  for(let i=179;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);days.push(d.toISOString().slice(0,10));}
+  const months=[...new Set(days.map(d=>d.slice(0,7)))];
+
+  const api_usage_daily=[], ai_usage_daily=[];
+  days.forEach((day,i)=>{
+    const growth=1+i/180*1.6, wknd=[0,6].includes(new Date(day).getDay())?1.35:1;
+    const a=Math.round((4+rnd()*10)*growth*wknd), p=Math.round((1+rnd()*5)*growth);
+    api_usage_daily.push({action:'analyze',day,count:a},{action:'price',day,count:p},
+      {action:'places',day,count:Math.round((8+rnd()*22)*growth*wknd)});
+    if(rnd()<0.3) api_usage_daily.push({action:'join_attempt',day,count:Math.ceil(rnd()*3)});
+    ai_usage_daily.push(
+      {day,action:'analyze',model:'claude-haiku-4-5',calls:a,input_tokens:a*4200,output_tokens:a*350,web_search_requests:0},
+      {day,action:'price',model:'claude-haiku-4-5',calls:p,input_tokens:p*9000,output_tokens:p*700,web_search_requests:p*3});
+  });
+  const daily=f=>days.map((day,i)=>({day,...f(day,i)}));
+  const monthly=f=>months.map((month,i)=>({month,...f(month,i)}));
+  return {
+    generated_at:new Date().toISOString(),
+    users:{total:152,
+      by_day:daily((d,i)=>({count:rnd()<0.55?0:Math.round(1+rnd()*3)})),
+      by_month:monthly((m,i)=>({count:12+i*8}))},
+    families:{total:47,members:149,size_distribution:[],by_month:monthly((m,i)=>({count:4+i}))},
+    gifticons:{total:381,unused:189,used:169,expired:23,hidden:12,no_amount:57,
+      amount_total:8710000,amount_unused:4620000,amount_used:3480000,amount_expired:610000,
+      avg_days_to_use:11.4,
+      by_day:daily((d,i)=>{const c=Math.round((0.6+rnd()*3.4)*(1+i/180));return{count:c,amount:c*23000};}),
+      by_month:monthly((m,i)=>({count:40+i*10,amount:(40+i*10)*23000})),
+      used_by_day:daily((d,i)=>{const c=Math.round(rnd()*2.6);return{count:c,amount:c*21000};}),
+      used_by_month:monthly((m,i)=>({count:18+i*4,amount:(18+i*4)*21000})),
+      categories:[
+        {category:'카페·음료',count:126,amount:1830000},{category:'치킨·버거',count:84,amount:2110000},
+        {category:'편의점',count:67,amount:940000},{category:'베이커리',count:41,amount:620000},
+        {category:'상품권',count:28,amount:2800000},{category:'기타',count:35,amount:410000}],
+      brands:[
+        {brand:'스타벅스',count:58,amount:812000},{brand:'BBQ',count:34,amount:748000},
+        {brand:'GS25',count:31,amount:396000},{brand:'배스킨라빈스',count:24,amount:379000},
+        {brand:'파리바게뜨',count:19,amount:282000}]},
+    engagement:{push_subscriptions:96,pending_join_requests:2,expiring_7d:6,expiring_30d:21,active_by_day:[]},
+    api_usage_daily, ai_usage_daily,
+    pricing:{token_prices:{'claude-haiku-4-5':{input_usd_per_mtok:1,output_usd_per_mtok:5}},
+      web_search_usd_per_call:0.01,
+      estimate_usd_per_call:{analyze:0.008,price:0.05,places:0,join_attempt:0}},
+  };
+}
+
+// ===================== 공지사항 =====================
+// 여기서 등록한 공지는 앱의 notices 테이블에 들어가고, 모아콘 상단 배너와 공지사항
+// 화면에 그대로 나간다. 쓰기는 admin-stats 함수(서비스 롤)를 거친다 — notices에는
+// 브라우저용 쓰기 정책이 일부러 없다(schema.sql 참고).
+let NOTICES=[], editingNoticeId=null;
+
+function noticeState(n){
+  const now=new Date();
+  if(new Date(n.starts_at)>now) return ['예정','tag-used'];
+  if(n.ends_at&&new Date(n.ends_at)<now) return ['내려감','tag-hidden'];
+  return ['게시 중','tag-unused'];
+}
+const dtm=s=>s?new Date(s).toLocaleString('ko-KR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}):'—';
+// datetime-local 입력값(현지 시각)으로 서로 변환
+function toLocalInput(iso){
+  if(!iso) return '';
+  const d=new Date(iso), p=v=>String(v).padStart(2,'0');
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+async function loadNotices(){
+  const tbody=document.querySelector('#notices-table tbody');
+  tbody.innerHTML='<tr class="empty-row"><td colspan="7">불러오는 중…</td></tr>';
+  try{
+    const data=await callApi('?resource=notices');
+    NOTICES=data.rows||[];
+  }catch(err){
+    tbody.innerHTML=`<tr class="empty-row"><td colspan="7">불러오지 못했어요: ${esc(err.message)}</td></tr>`;
+    return;
+  }
+  renderNotices();
+}
+
+function renderNotices(){
+  const tbody=document.querySelector('#notices-table tbody');
+  tbody.innerHTML = NOTICES.length ? NOTICES.map(n=>{
+    const [label,cls]=noticeState(n);
+    return `<tr>
+      <td><span class="tag ${cls}">${label}</span></td>
+      <td class="strong">${esc(n.title)}</td>
+      <td class="muted notice-body-cell" title="${esc(n.body||'')}">${esc((n.body||'').slice(0,40))}${(n.body||'').length>40?'…':''}</td>
+      <td class="muted">${dtm(n.starts_at)}</td>
+      <td class="muted">${n.ends_at?dtm(n.ends_at):'계속'}</td>
+      <td class="muted">${dt(n.created_at)}</td>
+      <td><button class="icon-btn" data-edit="${n.id}">수정</button>
+          <button class="icon-btn" data-del="${n.id}">삭제</button></td>
+    </tr>`;
+  }).join('') : '<tr class="empty-row"><td colspan="7">아직 공지가 없어요</td></tr>';
+
+  tbody.querySelectorAll('[data-edit]').forEach(b=>b.addEventListener('click',()=>{
+    const n=NOTICES.find(x=>String(x.id)===b.dataset.edit);
+    editingNoticeId=n.id;
+    document.getElementById('notice-form-title').textContent='공지 수정';
+    document.getElementById('n-title').value=n.title||'';
+    document.getElementById('n-body').value=n.body||'';
+    document.getElementById('n-starts').value=toLocalInput(n.starts_at);
+    document.getElementById('n-ends').value=toLocalInput(n.ends_at);
+    document.getElementById('n-save').textContent='저장';
+    document.getElementById('n-cancel').style.display='';
+    window.scrollTo({top:0,behavior:'smooth'});
+  }));
+  tbody.querySelectorAll('[data-del]').forEach(b=>b.addEventListener('click',async()=>{
+    const n=NOTICES.find(x=>String(x.id)===b.dataset.del);
+    if(!confirm(`공지 "${n.title}"를 삭제할까요?\n앱에서도 바로 사라집니다.`)) return;
+    try{
+      await callApi('?resource=notices',{action:'delete',id:n.id});
+      loadNotices();
+    }catch(err){ alert('삭제하지 못했어요: '+err.message); }
+  }));
+}
+
+function resetNoticeForm(){
+  editingNoticeId=null;
+  document.getElementById('notice-form-title').textContent='새 공지 쓰기';
+  ['n-title','n-body','n-starts','n-ends'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('n-save').textContent='등록';
+  document.getElementById('n-cancel').style.display='none';
+  document.getElementById('n-err').style.display='none';
+}
+
+async function saveNotice(){
+  const title=document.getElementById('n-title').value.trim();
+  const body=document.getElementById('n-body').value.trim();
+  const startsRaw=document.getElementById('n-starts').value;
+  const endsRaw=document.getElementById('n-ends').value;
+  const errBox=document.getElementById('n-err');
+  errBox.style.display='none';
+  if(!title){ errBox.textContent='제목을 입력해주세요.'; errBox.style.display='block'; return; }
+  const starts_at=startsRaw?new Date(startsRaw).toISOString():new Date().toISOString();
+  const ends_at=endsRaw?new Date(endsRaw).toISOString():null;
+  if(ends_at&&ends_at<=starts_at){ errBox.textContent='종료가 시작보다 빨라요.'; errBox.style.display='block'; return; }
+  const btn=document.getElementById('n-save');
+  btn.disabled=true;
+  try{
+    await callApi('?resource=notices', editingNoticeId
+      ? {action:'update',id:editingNoticeId,notice:{title,body,starts_at,ends_at}}
+      : {action:'create',notice:{title,body,starts_at,ends_at}});
+    resetNoticeForm();
+    loadNotices();
+  }catch(err){
+    errBox.textContent='저장하지 못했어요: '+err.message; errBox.style.display='block';
+  }finally{ btn.disabled=false; }
+}
+
+// ===================== 화면 전환 =====================
+let CURRENT_PAGE='dash';
 function openPage(name){
+  CURRENT_PAGE=name;
   document.querySelectorAll('[data-page]').forEach(a=>a.classList.toggle('on',a.dataset.page===name));
-  const isDash=name==='dash';
-  document.getElementById('page-dash').style.display=isDash?'block':'none';
-  document.getElementById('page-list').style.display=isDash?'none':'block';
-  document.getElementById('mode-seg').style.display=isDash?'':'none';
-  document.getElementById('page-title').textContent=isDash?'대시보드':PAGES[name].title;
-  if(isDash){ LIST.page=null; return; }
+  const isDashLike=name==='dash'||name==='sample';
+  // ''로 두어 CSS의 display(flex 등)가 그대로 살게 한다. 'block'을 박으면 카드 간격(gap)이 죽는다.
+  document.getElementById('page-dash').style.display=isDashLike?'':'none';
+  document.getElementById('page-list').style.display=(isDashLike||name==='notices')?'none':'block';
+  document.getElementById('page-notices').style.display=name==='notices'?'':'none';
+  document.getElementById('mode-seg').style.display=isDashLike?'':'none';
+  document.getElementById('sample-note').style.display=name==='sample'?'':'none';
+  document.getElementById('page-title').textContent=
+    name==='dash'?'대시보드':name==='sample'?'대시보드 샘플':name==='notices'?'공지사항':PAGES[name].title;
+
+  if(isDashLike){
+    LIST.page=null;
+    STATS = name==='sample' ? buildSampleStats() : (REAL_STATS||STATS);
+    if(STATS){ fillKpis(); renderAll(); }
+    return;
+  }
+  if(name==='notices'){ LIST.page=null; resetNoticeForm(); loadNotices(); return; }
 
   const def=PAGES[name];
   // 다른 화면으로 옮기면 검색어·페이지는 처음부터 시작한다. 회원에서 걸어둔 검색어가
@@ -906,6 +1147,7 @@ async function connect(){
   show('view-loading');
   try{
     STATS=await fetchStats();
+    REAL_STATS=STATS;
     show('view-dash');
     document.getElementById('side-email').textContent=STATS.viewer?.email||'';
     fillKpis();
@@ -932,7 +1174,10 @@ async function start(){
   }));
   // 새로고침은 지금 보고 있는 화면만 다시 불러온다.
   document.getElementById('btn-refresh').addEventListener('click',()=>{
-    if(LIST.page) renderList(); else connect();
+    if(CURRENT_PAGE==='notices') loadNotices();
+    else if(CURRENT_PAGE==='sample') openPage('sample');
+    else if(LIST.page) renderList();
+    else connect();
   });
 
   document.querySelectorAll('[data-page]').forEach(a=>a.addEventListener('click',()=>openPage(a.dataset.page)));
@@ -957,6 +1202,8 @@ async function start(){
   });
   document.getElementById('btn-logout').addEventListener('click',logout);
   document.getElementById('btn-logout-denied').addEventListener('click',logout);
+  document.getElementById('n-save').addEventListener('click',saveNotice);
+  document.getElementById('n-cancel').addEventListener('click',resetNoticeForm);
 
   // ----- 설치 버튼 -----
   // 크롬·엣지·안드로이드는 설치할 수 있게 되면 beforeinstallprompt를 쏴준다. 그때만

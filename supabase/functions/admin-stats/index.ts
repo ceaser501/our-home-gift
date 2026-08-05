@@ -88,6 +88,58 @@ Deno.serve(async (req) => {
     return Number.isFinite(raw) && raw >= 0 ? Math.min(Math.floor(raw), max) : fallback;
   };
 
+  // 공지사항: 목록은 GET, 등록/수정/삭제는 POST. notices 테이블에는 브라우저용 쓰기 정책이
+  // 일부러 없어서(schema.sql), 쓰기는 반드시 여기(서비스 롤)를 거친다. 여기 들어간 공지가
+  // 앱의 배너와 공지사항 화면에 그대로 나간다.
+  if (resource === 'notices') {
+    if (req.method === 'POST') {
+      let payload: { action?: string; id?: number; notice?: Record<string, unknown> };
+      try {
+        payload = await req.json();
+      } catch {
+        return new Response(JSON.stringify({ error: '요청 형식이 올바르지 않아요.' }), { status: 400, headers: jsonHeaders });
+      }
+
+      // 화면이 보낸 값을 그대로 넣지 않고 쓸 수 있는 칸만 골라 담는다.
+      const pick = (n: Record<string, unknown> | undefined) => ({
+        title: String(n?.title ?? '').trim(),
+        body: String(n?.body ?? '').trim() || null,
+        starts_at: n?.starts_at ? String(n.starts_at) : new Date().toISOString(),
+        ends_at: n?.ends_at ? String(n.ends_at) : null,
+      });
+
+      if (payload.action === 'create') {
+        const notice = pick(payload.notice);
+        if (!notice.title) {
+          return new Response(JSON.stringify({ error: '제목을 입력해주세요.' }), { status: 400, headers: jsonHeaders });
+        }
+        const { error: e } = await admin.from('notices').insert(notice);
+        if (e) return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: jsonHeaders });
+      } else if (payload.action === 'update' && payload.id) {
+        const notice = pick(payload.notice);
+        if (!notice.title) {
+          return new Response(JSON.stringify({ error: '제목을 입력해주세요.' }), { status: 400, headers: jsonHeaders });
+        }
+        const { error: e } = await admin.from('notices').update(notice).eq('id', payload.id);
+        if (e) return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: jsonHeaders });
+      } else if (payload.action === 'delete' && payload.id) {
+        const { error: e } = await admin.from('notices').delete().eq('id', payload.id);
+        if (e) return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: jsonHeaders });
+      } else {
+        return new Response(JSON.stringify({ error: '알 수 없는 동작이에요.' }), { status: 400, headers: jsonHeaders });
+      }
+      return new Response(JSON.stringify({ ok: true }), { headers: jsonHeaders });
+    }
+
+    // 목록: 앱과 달리 예정/내려간 공지까지 전부 본다(관리 화면이니까).
+    const { data: rows, error: e } = await admin
+      .from('notices')
+      .select('id, title, body, starts_at, ends_at, created_at')
+      .order('starts_at', { ascending: false });
+    if (e) return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: jsonHeaders });
+    return new Response(JSON.stringify({ rows }), { headers: jsonHeaders });
+  }
+
   if (resource !== 'stats') {
     // 목록마다 인자가 달라서 이름을 맞춰 넘긴다. 화면이 보낸 값을 그대로 믿지 않고,
     // 한 번에 가져갈 수 있는 줄 수에 천장을 둔다(실수로 전부 끌어오는 것을 막는다).

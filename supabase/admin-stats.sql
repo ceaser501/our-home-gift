@@ -313,8 +313,11 @@ as $$
         select
           p.id, p.email, p.created_at, p.last_sign_in_at, p.provider,
           -- 속한 가족들(이름과 그 가족에서 쓰는 이름). 여러 가족일 수 있다.
+          -- 초대 코드도 실어 보낸다: 이름이 같은 가족이 둘이면(테스트로 "우리집"을 두 번
+          -- 만든 경우 등) 화면에서 이름만으로는 같은 가족이 두 번 나온 것처럼 보인다.
           coalesce((
-            select json_agg(json_build_object('family_id', f.id, 'family_name', f.name, 'display_name', fm.display_name)
+            select json_agg(json_build_object('family_id', f.id, 'family_name', f.name,
+                                              'display_name', fm.display_name, 'invite_code', f.invite_code)
                             order by fm.created_at)
             from public.family_members fm join public.families f on f.id = fm.family_id
             where fm.user_id = p.id
