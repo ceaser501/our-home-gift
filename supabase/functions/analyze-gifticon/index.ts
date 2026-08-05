@@ -12,7 +12,7 @@
 //   supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
 
 import Anthropic from 'npm:@anthropic-ai/sdk@0.115.0';
-import { corsFor, limitFromEnv, requireUser, tooManyMessage, withinDailyLimit } from '../_shared/guard.ts';
+import { corsFor, limitFromEnv, logAiUsage, requireUser, tooManyMessage, withinDailyLimit } from '../_shared/guard.ts';
 
 const MODEL = 'claude-haiku-4-5';
 const MAX_IMAGES = 5;
@@ -170,6 +170,9 @@ Deno.serve(async (req) => {
         },
       ],
     });
+
+    // 응답을 받았으면(성공이든 거절이든) 토큰 요금은 이미 나갔으니 여기서 적는다.
+    await logAiUsage(guard.admin, 'analyze', MODEL, response.usage);
 
     if (response.stop_reason === 'refusal') {
       return new Response(JSON.stringify({ error: '이 이미지는 인식할 수 없어요. 직접 입력해주세요.' }), {

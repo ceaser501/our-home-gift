@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>모아콘 관리자</title>
+<!--
+  모아콘 관리자 대시보드 (실동작 버전).
+
+  앱과 연결 통로가 없는, 관리자 혼자 보는 화면이다. 빌드 없이 파일 하나로 끝나도록
+  전부 이 파일 안에 있다. 브라우저에서 그냥 열거나(file://), 아무 정적 호스팅에 올려도 된다.
+
+  데이터 흐름: 이 페이지 → admin-stats Edge Function(x-admin-token 확인)
+             → admin_dashboard_stats() (supabase/admin-stats.sql)
+
+  처음 열면 설정 화면이 나온다. Functions URL과 관리자 토큰을 넣으면 브라우저에 저장된다.
+  자세한 배포 순서는 admin/README.md 참고.
+
+  디자인은 시안 3(모아콘 브랜드)을 기본으로 한다. 다른 시안으로 바꾸려면
+  admin/mockups/ 의 해당 파일 <style>을 이 파일 스타일과 교체하면 된다.
+-->
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:14px}
+body{min-height:100vh}
+h1{font-size:17px;font-weight:700}
+h2{font-size:13.5px;font-weight:650;color:var(--ink)}
+.main{max-width:1180px;margin:0 auto;padding:20px 24px 40px;display:flex;flex-direction:column;gap:14px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:4px 0 6px}
+.brand{display:flex;align-items:center;gap:10px}
+.logo-mark{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:9px;background:var(--accent);color:var(--accent-ink);font-weight:800;font-size:15px}
+.controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.updated{font-size:11.5px;color:var(--muted)}
+.seg{display:inline-flex;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--card)}
+.seg button{border:0;background:transparent;color:var(--ink2);padding:6px 14px;font:inherit;font-size:12.5px;cursor:pointer}
+.seg button.active{background:var(--accent);color:var(--accent-ink);font-weight:650}
+.icon-btn{border:1px solid var(--border);background:var(--card);color:var(--ink2);border-radius:10px;padding:6px 12px;font:inherit;font-size:12.5px;cursor:pointer}
+.kpis{display:grid;gap:10px}
+.kpis-4{grid-template-columns:repeat(4,1fr)}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;display:flex;flex-direction:column;gap:5px;box-shadow:var(--shadow)}
+.kpi-label{font-size:12px;color:var(--muted)}
+.kpi-value{font-size:24px;font-weight:750;letter-spacing:-0.02em}
+.kpi-sub{font-size:11.5px;color:var(--muted)}
+.kpi-sub b{color:var(--ink2);font-weight:650}
+.accent-good .kpi-value{color:var(--good)}
+.accent-bad .kpi-value{color:var(--bad)}
+.cards{display:grid;gap:12px}
+.cards-2{grid-template-columns:1fr 1fr}
+.cards-3{grid-template-columns:1fr 1fr 1fr}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px 10px;box-shadow:var(--shadow);min-width:0}
+.card-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+.card-note{font-size:11px;color:var(--muted)}
+.chart{position:relative;width:100%}
+.empty{color:var(--muted);font-size:12px;padding:30px 0;text-align:center}
+.axis-label{font-size:10px;fill:var(--muted);font-family:var(--font);font-variant-numeric:tabular-nums}
+.legend{display:flex;gap:10px;flex-wrap:wrap}
+.legend-item{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--ink2)}
+.dot{width:8px;height:8px;border-radius:99px;display:inline-block;flex:none}
+.tip{position:absolute;z-index:5;background:var(--tip-bg);color:var(--tip-ink);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:11.5px;pointer-events:none;box-shadow:0 4px 14px rgba(0,0,0,.18);min-width:130px}
+.tip-title{font-weight:700;margin-bottom:4px}
+.tip-row{display:flex;align-items:center;gap:6px;padding:1px 0;white-space:nowrap}
+.tip-row b{margin-left:auto;font-variant-numeric:tabular-nums}
+.tip-total{border-top:1px solid var(--border);margin-top:4px;padding-top:4px}
+.hbars{display:flex;flex-direction:column;gap:7px;padding:2px 0 6px}
+.hbar-row{display:grid;grid-template-columns:76px 1fr 34px 84px;align-items:center;gap:8px;font-size:12px}
+.hbar-name{color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hbar-track{background:var(--track);border-radius:99px;height:10px;overflow:hidden}
+.hbar-fill{display:block;height:100%;border-radius:99px}
+.hbar-val{text-align:right;font-variant-numeric:tabular-nums;color:var(--ink)}
+.hbar-amt{text-align:right;font-variant-numeric:tabular-nums;color:var(--muted);font-size:11px}
+.watch{list-style:none;display:flex;flex-direction:column}
+.watch li{display:flex;justify-content:space-between;align-items:center;padding:8px 2px;border-bottom:1px solid var(--grid);font-size:12.5px;color:var(--ink2)}
+.watch li:last-child{border-bottom:0}
+.watch b{font-size:14px;color:var(--ink);font-variant-numeric:tabular-nums}
+.foot{text-align:center;font-size:11px;color:var(--muted);padding-top:6px}
+@media (max-width:980px){.kpis-4{grid-template-columns:1fr 1fr}.cards-2,.cards-3{grid-template-columns:1fr}}
+
+/* ----- 설정/상태 화면 ----- */
+.setup{max-width:460px;margin:80px auto;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:26px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:14px}
+.setup h1{display:flex;align-items:center;gap:9px}
+.setup label{font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:6px}
+.setup input{font:inherit;padding:9px 11px;border:1px solid var(--border);border-radius:10px;background:var(--bg);color:var(--ink)}
+.setup input:focus{outline:2px solid var(--accent);outline-offset:0;border-color:transparent}
+.setup .go{background:var(--accent);color:var(--accent-ink);border:0;border-radius:10px;padding:10px;font:inherit;font-weight:650;cursor:pointer}
+.setup .hint{font-size:11.5px;color:var(--muted);line-height:1.6}
+.setup .err{font-size:12px;color:var(--bad);background:color-mix(in srgb,var(--bad) 8%,transparent);border-radius:8px;padding:8px 10px;display:none}
+.loading{text-align:center;color:var(--muted);padding:120px 0;font-size:13px}
+
+/* ----- 디자인 토큰: 시안 3 모아콘 브랜드 ----- */
+:root{
+  --font:system-ui,-apple-system,'Segoe UI','Apple SD Gothic Neo',sans-serif;
+  --bg:#f7f7f9; --surface:#ffffff; --card:#ffffff;
+  --ink:#1c1e27; --ink2:#4c4e5a; --muted:#71717f;
+  --border:#e7e7ec; --grid:#ededf1; --baseline:#d4d4dc; --track:#f0eff5;
+  --accent:#5b4fe8; --accent-ink:#ffffff; --accent-soft:#f0efff; --accent-chart:#5b4fe8;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100;
+  --good:#16a35a; --bad:#e0453f;
+  --radius:16px; --shadow:0 1px 3px rgba(28,30,39,.05);
+  --tip-bg:#ffffff; --tip-ink:#1c1e27;
+}
+.top{background:linear-gradient(135deg,#5b4fe8,#7a6ff0);margin:-20px -24px 4px;padding:18px 24px;border-radius:0 0 22px 22px}
+.top h1{color:#fff}
+.top .updated{color:rgba(255,255,255,.75)}
+.top .logo-mark{background:#fff;color:#5b4fe8}
+.top .seg{border-color:rgba(255,255,255,.4);background:rgba(255,255,255,.14)}
+.top .seg button{color:rgba(255,255,255,.85)}
+.top .seg button.active{background:#fff;color:#5b4fe8}
+.top .icon-btn{border-color:rgba(255,255,255,.4);background:rgba(255,255,255,.14);color:#fff}
+</style>
+</head>
+<body>
+
+<div id="view-setup" style="display:none">
+  <div class="setup">
+    <h1><span class="logo-mark">모</span>모아콘 관리자</h1>
+    <div class="hint">
+      통계를 가져올 곳을 알려주세요. 한 번 넣으면 이 브라우저에 저장돼요.<br>
+      · Functions URL: Supabase 프로젝트의 <b>https://&lt;프로젝트&gt;.supabase.co/functions/v1</b><br>
+      · 관리자 토큰: <b>supabase secrets set ADMIN_STATS_TOKEN=...</b> 에 넣은 값
+    </div>
+    <label>Functions URL
+      <input id="in-url" placeholder="https://xxxx.supabase.co/functions/v1" autocomplete="off">
+    </label>
+    <label>관리자 토큰
+      <input id="in-token" type="password" placeholder="ADMIN_STATS_TOKEN 값" autocomplete="off">
+    </label>
+    <div class="err" id="setup-err"></div>
+    <button class="go" id="btn-connect">불러오기</button>
+  </div>
+</div>
+
+<div id="view-loading" class="loading" style="display:none">통계를 불러오는 중…</div>
+
+<div id="view-dash" class="main" style="display:none">
+  <header class="top">
+    <div class="brand"><span class="logo-mark">모</span><h1>모아콘 관리자</h1></div>
+    <div class="controls">
+      <div class="seg">
+        <button data-mode="day" class="active">일별</button>
+        <button data-mode="month">월별</button>
+        <button data-mode="year">연도별</button>
+      </div>
+      <button class="icon-btn" id="btn-refresh">새로고침</button>
+      <button class="icon-btn" id="btn-config">설정</button>
+      <span class="updated" id="updated"></span>
+    </div>
+  </header>
+
+  <section class="kpis kpis-4">
+    <div class="kpi"><span class="kpi-label">가족 수</span><span class="kpi-value" id="k-families"></span><span class="kpi-sub">구성원 <b id="k-members"></b>명 · 평균 <b id="k-avg-members"></b>명</span></div>
+    <div class="kpi"><span class="kpi-label">총 사용자</span><span class="kpi-value" id="k-users"></span><span class="kpi-sub">푸시 구독 <b id="k-push"></b>기기</span></div>
+    <div class="kpi"><span class="kpi-label">업로드된 기프티콘</span><span class="kpi-value" id="k-g-total"></span><span class="kpi-sub">미사용 <b id="k-g-unused"></b> · 사용 <b id="k-g-used"></b> · 만료 <b id="k-g-expired"></b></span></div>
+    <div class="kpi"><span class="kpi-label">최근 30일 AI·API 비용</span><span class="kpi-value" id="k-cost30"></span><span class="kpi-sub">AI 호출 <b id="k-ai30"></b>건</span></div>
+  </section>
+
+  <section class="kpis kpis-4">
+    <div class="kpi"><span class="kpi-label">기프티콘 총액</span><span class="kpi-value" id="k-amt-total"></span><span class="kpi-sub">금액 미입력 <b id="k-no-amount"></b>건 제외</span></div>
+    <div class="kpi accent-good"><span class="kpi-label">미사용(사용 가능) 총액</span><span class="kpi-value" id="k-amt-unused"></span></div>
+    <div class="kpi"><span class="kpi-label">사용완료 총액</span><span class="kpi-value" id="k-amt-used"></span></div>
+    <div class="kpi accent-bad"><span class="kpi-label">기간만료 총액</span><span class="kpi-value" id="k-amt-expired"></span></div>
+  </section>
+
+  <section class="cards cards-2">
+    <div class="card">
+      <div class="card-head"><h2>API 종류별 호출 건수</h2>
+        <div class="legend">
+          <span class="legend-item"><span class="dot" style="background:var(--s1)"></span>AI 이미지 인식</span>
+          <span class="legend-item"><span class="dot" style="background:var(--s2)"></span>AI 가격 검색</span>
+          <span class="legend-item"><span class="dot" style="background:var(--s3)"></span>주변 매장(카카오)</span>
+          <span class="legend-item"><span class="dot" style="background:var(--s4)"></span>초대 코드 시도</span>
+        </div>
+      </div>
+      <div class="chart" id="chart-api"></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h2>AI·API 비용 (USD)</h2><span class="card-note" id="cost-note"></span></div>
+      <div class="chart" id="chart-cost"></div>
+    </div>
+  </section>
+
+  <section class="cards cards-2">
+    <div class="card">
+      <div class="card-head"><h2>기프티콘 등록·사용 추이</h2>
+        <div class="legend">
+          <span class="legend-item"><span class="dot" style="background:var(--s1)"></span>등록</span>
+          <span class="legend-item"><span class="dot" style="background:var(--s3)"></span>사용</span>
+        </div>
+      </div>
+      <div class="chart" id="chart-gifticon"></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h2>신규 가입 추이</h2></div>
+      <div class="chart" id="chart-signup"></div>
+    </div>
+  </section>
+
+  <section class="cards cards-3">
+    <div class="card">
+      <div class="card-head"><h2>카테고리별 분포</h2></div>
+      <div id="chart-categories"></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h2>브랜드 Top 10</h2></div>
+      <div id="chart-brands"></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h2>지금 봐야 할 것</h2></div>
+      <ul class="watch">
+        <li><span>7일 내 만료 예정</span><b id="k-expiring7"></b></li>
+        <li><span>30일 내 만료 예정</span><b id="k-expiring30"></b></li>
+        <li><span>대기 중인 가족 참여 신청</span><b id="k-pending"></b></li>
+        <li><span>등록→사용 평균 소요</span><b id="k-avguse"></b></li>
+        <li><span>누적 API 호출</span><b id="k-calls"></b></li>
+        <li><span>가족 나감으로 감춰진 기프티콘</span><b id="k-hidden"></b></li>
+      </ul>
+    </div>
+  </section>
+  <footer class="foot">모아콘 관리자 대시보드</footer>
+</div>
+
+<script>
+'use strict';
+// ===================== 포맷/집계 유틸 =====================
+const nf = new Intl.NumberFormat('ko-KR');
+const won = v=>'₩'+nf.format(Math.round(v));
+const usd = v=>'$'+Number(v).toFixed(v>=10?1:2);
+
+function bucketKey(day, mode){
+  if(mode==='day') return day;
+  if(mode==='month') return String(day).slice(0,7);
+  return String(day).slice(0,4);
+}
+// rows: [{day 또는 month, ...fields}] → mode 기준으로 묶어 합산
+function aggregate(rows, keyField, fields, mode, lastN){
+  const map = new Map();
+  rows.forEach(r=>{
+    const k = bucketKey(r[keyField], mode);
+    if(!map.has(k)){const o={key:k};fields.forEach(f=>o[f]=0);map.set(k,o);}
+    const o = map.get(k);
+    fields.forEach(f=>o[f]+=Number(r[f])||0);
+  });
+  let out = [...map.values()].sort((a,b)=>a.key<b.key?-1:1);
+  if(mode==='day'&&lastN) out = out.slice(-lastN);
+  return out;
+}
+function fmtKey(k, mode){
+  if(mode==='day') return k.slice(5).replace('-','/');
+  if(mode==='month') return k.slice(2).replace('-','/');
+  return k;
+}
+
+// ===================== 차트 (SVG 직접 렌더) =====================
+const NS='http://www.w3.org/2000/svg';
+function el(tag,attrs){const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);return e;}
+function css(name){return getComputedStyle(document.documentElement).getPropertyValue(name).trim();}
+function makeTooltip(host){
+  const tip=document.createElement('div');tip.className='tip';tip.style.display='none';
+  host.appendChild(tip);
+  return {
+    show(html,x,y){tip.innerHTML=html;tip.style.display='block';
+      const r=host.getBoundingClientRect();const tw=tip.offsetWidth;
+      let lx=x+12; if(lx+tw>r.width-8) lx=x-tw-12;
+      tip.style.left=lx+'px'; tip.style.top=Math.max(4,y-10)+'px';},
+    hide(){tip.style.display='none';}
+  };
+}
+// 축 눈금: 4칸 기준으로 1/2/2.5/5×10^n 단위의 깔끔한 간격을 고른다.
+function niceStep(x){
+  if(x<=0)return 1;
+  const p=Math.pow(10,Math.floor(Math.log10(x)));
+  for(const m of [1,2,2.5,5,10]){ if(m*p>=x) return m*p; }
+  return 10*p;
+}
+function axisOf(dataMax){
+  const step=niceStep(Math.max(dataMax,1e-9)/4);
+  return {max:step*4, step};
+}
+function fmtTick(v,money){
+  if(money) return money(v);
+  if(v>=1000) return (v/1000)+'k';
+  return v%1===0? String(v) : String(Math.round(v*10)/10);
+}
+function labelIdx(n,maxLabels){
+  const every=Math.max(1,Math.ceil(n/maxLabels));
+  const set=new Set();
+  for(let i=n-1;i>=0;i-=every) set.add(i);
+  return set;
+}
+function roundedTopRect(x,y,w,h,r){
+  r=Math.min(r,w/2,h);
+  if(h<=0.5||r<=0.5) return 'M'+x+' '+(y+h)+'V'+y+'H'+(x+w)+'V'+(y+h)+'Z';
+  return 'M'+x+' '+(y+h)+'V'+(y+r)+'Q'+x+' '+y+' '+(x+r)+' '+y+'H'+(x+w-r)+'Q'+(x+w)+' '+y+' '+(x+w)+' '+(y+r)+'V'+(y+h)+'Z';
+}
+function showEmpty(host,msg){host.innerHTML='<div class="empty">'+(msg||'아직 데이터가 없어요')+'</div>';}
+
+function barChart(host, rows, series, opts={}){
+  host.innerHTML='';
+  if(!rows.length){showEmpty(host);return;}
+  const W=host.clientWidth||640, H=opts.height||210, padL=44, padR=8, padT=10, padB=22;
+  const svg=el('svg',{width:'100%',height:H,viewBox:'0 0 '+W+' '+H});
+  host.appendChild(svg);
+  const tip=makeTooltip(host);
+  const iw=W-padL-padR, ih=H-padT-padB;
+  const totals=rows.map(r=>series.reduce((s,sr)=>s+(r[sr.key]||0),0));
+  const axis=axisOf(Math.max(1,...totals));
+  const max=axis.max;
+  for(let i=0;i<=4;i++){
+    const v=axis.step*i, y=padT+ih-ih*i/4;
+    svg.appendChild(el('line',{x1:padL,x2:W-padR,y1:y,y2:y,stroke:css('--grid'),'stroke-width':1}));
+    const t=el('text',{x:padL-6,y:y+4,'text-anchor':'end',class:'axis-label'});
+    t.textContent=fmtTick(v,opts.money); svg.appendChild(t);
+  }
+  const n=rows.length;
+  const step=iw/n, bw=Math.max(3,Math.min(opts.maxBar||26,step*0.66));
+  rows.forEach((r,i)=>{
+    const x=padL+step*i+(step-bw)/2;
+    let y=padT+ih;
+    const segs=series.map(sr=>({sr,v:r[sr.key]||0,h:ih*(r[sr.key]||0)/max})).filter(s=>s.v>0);
+    segs.forEach((s,si)=>{
+      const isTop=si===segs.length-1;
+      const gap=si>0?2:0;
+      const h=Math.max(0,s.h-gap);
+      y-=s.h;
+      const shape=isTop
+        ? el('path',{d:roundedTopRect(x,y,bw,h,3),fill:s.sr.color})
+        : el('rect',{x,y,width:bw,height:h,fill:s.sr.color});
+      svg.appendChild(shape);
+    });
+    const hit=el('rect',{x:padL+step*i,y:padT,width:step,height:ih,fill:'transparent'});
+    hit.addEventListener('mousemove',ev=>{
+      const rect=host.getBoundingClientRect();
+      const rowsHtml=series.filter(sr=>(r[sr.key]||0)>0||series.length===1).map(sr=>
+        '<div class="tip-row"><span class="dot" style="background:'+sr.color+'"></span>'+sr.label+' <b>'+(opts.money?opts.money(r[sr.key]||0):nf.format(r[sr.key]||0))+'</b></div>').join('');
+      tip.show('<div class="tip-title">'+r.label+'</div>'+rowsHtml+(series.length>1?'<div class="tip-row tip-total">합계 <b>'+(opts.money?opts.money(totals[i]):nf.format(totals[i]))+'</b></div>':''),
+        ev.clientX-rect.left, ev.clientY-rect.top);
+    });
+    hit.addEventListener('mouseleave',()=>tip.hide());
+    svg.appendChild(hit);
+  });
+  svg.appendChild(el('line',{x1:padL,x2:W-padR,y1:padT+ih,y2:padT+ih,stroke:css('--baseline'),'stroke-width':1}));
+  const lset=labelIdx(n,8);
+  rows.forEach((r,i)=>{
+    if(!lset.has(i))return;
+    const t=el('text',{x:padL+step*i+step/2,y:H-6,'text-anchor':'middle',class:'axis-label'});
+    t.textContent=r.label; svg.appendChild(t);
+  });
+}
+
+function lineChart(host, rows, opts={}){
+  host.innerHTML='';
+  if(!rows.length){showEmpty(host);return;}
+  const W=host.clientWidth||640, H=opts.height||210, padL=48, padR=22, padT=10, padB=22;
+  const svg=el('svg',{width:'100%',height:H,viewBox:'0 0 '+W+' '+H});
+  host.appendChild(svg);
+  const tip=makeTooltip(host);
+  const iw=W-padL-padR, ih=H-padT-padB;
+  const axis=axisOf(Math.max(1e-9,...rows.map(r=>r.value)));
+  const max=axis.max;
+  for(let i=0;i<=4;i++){
+    const v=axis.step*i,y=padT+ih-ih*i/4;
+    svg.appendChild(el('line',{x1:padL,x2:W-padR,y1:y,y2:y,stroke:css('--grid'),'stroke-width':1}));
+    const t=el('text',{x:padL-6,y:y+4,'text-anchor':'end',class:'axis-label'});
+    t.textContent=fmtTick(v,opts.money); svg.appendChild(t);
+  }
+  const n=rows.length;
+  const px=i=>padL+(n===1?iw/2:iw*i/(n-1));
+  const py=v=>padT+ih-ih*v/max;
+  const color=opts.color||css('--s1');
+  let dArea='M'+px(0)+' '+(padT+ih), dLine='';
+  rows.forEach((r,i)=>{const x=px(i),y=py(r.value);dLine+=(i?'L':'M')+x+' '+y;dArea+='L'+x+' '+y;});
+  dArea+='L'+px(n-1)+' '+(padT+ih)+'Z';
+  svg.appendChild(el('path',{d:dArea,fill:color,opacity:0.08}));
+  svg.appendChild(el('path',{d:dLine,fill:'none',stroke:color,'stroke-width':2,'stroke-linejoin':'round','stroke-linecap':'round'}));
+  // 점이 하나뿐이면 선이 안 그려지므로(연도별 첫 해 등) 점을 직접 찍는다.
+  if(n===1) svg.appendChild(el('circle',{cx:px(0),cy:py(rows[0].value),r:4,fill:color}));
+  svg.appendChild(el('line',{x1:padL,x2:W-padR,y1:padT+ih,y2:padT+ih,stroke:css('--baseline'),'stroke-width':1}));
+  const lset=labelIdx(n,8);
+  rows.forEach((r,i)=>{
+    if(!lset.has(i))return;
+    const t=el('text',{x:px(i),y:H-6,'text-anchor':'middle',class:'axis-label'});
+    t.textContent=r.label; svg.appendChild(t);
+  });
+  const cross=el('line',{y1:padT,y2:padT+ih,stroke:css('--muted'),'stroke-width':1,'stroke-dasharray':'3 3',visibility:'hidden'});
+  const dot=el('circle',{r:4,fill:color,stroke:css('--surface'),'stroke-width':2,visibility:'hidden'});
+  svg.appendChild(cross);svg.appendChild(dot);
+  const hit=el('rect',{x:padL,y:padT,width:iw,height:ih,fill:'transparent'});
+  hit.addEventListener('mousemove',ev=>{
+    const rect=host.getBoundingClientRect();
+    const mx=(ev.clientX-rect.left)*(W/rect.width);
+    const i=Math.max(0,Math.min(n-1,Math.round((mx-padL)/(iw/(n-1||1)))));
+    const x=px(i),y=py(rows[i].value);
+    cross.setAttribute('x1',x);cross.setAttribute('x2',x);cross.setAttribute('visibility','visible');
+    dot.setAttribute('cx',x);dot.setAttribute('cy',y);dot.setAttribute('visibility','visible');
+    tip.show('<div class="tip-title">'+rows[i].label+'</div><div class="tip-row"><span class="dot" style="background:'+color+'"></span>'+opts.label+' <b>'+(opts.money?opts.money(rows[i].value):nf.format(rows[i].value))+'</b></div>',
+      x*(rect.width/W), ev.clientY-rect.top);
+  });
+  hit.addEventListener('mouseleave',()=>{tip.hide();cross.setAttribute('visibility','hidden');dot.setAttribute('visibility','hidden');});
+  svg.appendChild(hit);
+}
+
+function hBarChart(host, items, opts={}){
+  host.innerHTML='';
+  if(!items.length){showEmpty(host);return;}
+  const max=Math.max(...items.map(i=>i.count));
+  const wrap=document.createElement('div');wrap.className='hbars';
+  items.forEach(it=>{
+    const row=document.createElement('div');row.className='hbar-row';
+    row.innerHTML='<span class="hbar-name" title="'+it.name+'">'+it.name+'</span>'
+      +'<span class="hbar-track"><span class="hbar-fill" style="width:'+(it.count/max*100)+'%;background:'+(opts.color||css('--s1'))+'"></span></span>'
+      +'<span class="hbar-val">'+nf.format(it.count)+'</span>'
+      +'<span class="hbar-amt">'+won(it.amount||0)+'</span>';
+    wrap.appendChild(row);
+  });
+  host.appendChild(wrap);
+}
+
+// ===================== 설정 저장 =====================
+const CONFIG_KEY='moacon-admin-config';
+function loadConfig(){
+  try{ return JSON.parse(localStorage.getItem(CONFIG_KEY)) || null; }catch{ return null; }
+}
+function saveConfig(cfg){ localStorage.setItem(CONFIG_KEY, JSON.stringify(cfg)); }
+
+function show(view){
+  for(const id of ['view-setup','view-loading','view-dash'])
+    document.getElementById(id).style.display = id===view? (id==='view-dash'?'flex':'block') : 'none';
+}
+
+// ===================== 데이터 불러오기/가공 =====================
+let STATS=null, MODE='day';
+
+async function fetchStats(cfg){
+  const base=cfg.url.replace(/\/+$/,'');
+  const res=await fetch(base+'/admin-stats',{headers:{'x-admin-token':cfg.token}});
+  const body=await res.json().catch(()=>({}));
+  if(!res.ok) throw new Error(body.error || ('HTTP '+res.status));
+  return body;
+}
+
+const ACTION_LABELS={analyze:'AI 이미지 인식',price:'AI 가격 검색',places:'주변 매장(카카오)',join_attempt:'초대 코드 시도'};
+const ACTION_ORDER=['analyze','price','places','join_attempt'];
+
+// api_usage_daily [{action,day,count}] → [{day, analyze, price, ...}]
+function pivotApiDaily(){
+  const map=new Map();
+  (STATS.api_usage_daily||[]).forEach(r=>{
+    if(!map.has(r.day)) map.set(r.day,{day:r.day,analyze:0,price:0,places:0,join_attempt:0,other:0});
+    const o=map.get(r.day);
+    if(o[r.action]!==undefined) o[r.action]+=Number(r.count)||0; else o.other+=Number(r.count)||0;
+  });
+  return [...map.values()].sort((a,b)=>a.day<b.day?-1:1);
+}
+
+// 하루치 비용: 토큰 기록(ai_usage_log)이 있으면 실제 토큰×단가, 없으면 호출수×어림 단가.
+function buildCostDaily(apiRows){
+  const p=STATS.pricing||{};
+  const tokenPrices=p.token_prices||{};
+  const defaultPrice=Object.values(tokenPrices)[0]||{input_usd_per_mtok:1,output_usd_per_mtok:5};
+  const est=p.estimate_usd_per_call||{};
+  const ws=p.web_search_usd_per_call||0.01;
+
+  const aiByDay=new Map(); // day -> action -> {in,out,web}
+  (STATS.ai_usage_daily||[]).forEach(r=>{
+    if(!aiByDay.has(r.day)) aiByDay.set(r.day,{});
+    const slot=aiByDay.get(r.day);
+    if(!slot[r.action]) slot[r.action]={in:0,out:0,web:0,model:r.model};
+    slot[r.action].in+=Number(r.input_tokens)||0;
+    slot[r.action].out+=Number(r.output_tokens)||0;
+    slot[r.action].web+=Number(r.web_search_requests)||0;
+  });
+
+  return apiRows.map(r=>{
+    let cost=0;
+    const ai=aiByDay.get(r.day)||{};
+    for(const action of ['analyze','price']){
+      if(ai[action]){
+        const tp=tokenPrices[ai[action].model]||defaultPrice;
+        cost+=ai[action].in/1e6*tp.input_usd_per_mtok
+            + ai[action].out/1e6*tp.output_usd_per_mtok
+            + ai[action].web*ws;
+      }else{
+        cost+=(r[action]||0)*(est[action]||0);
+      }
+    }
+    cost+=(r.places||0)*(est.places||0);
+    return {day:r.day, cost};
+  });
+}
+
+function renderAll(){
+  if(!STATS) return;
+  const lastN=MODE==='day'?30:undefined;
+  const colors=[css('--s1'),css('--s2'),css('--s3'),css('--s4')];
+
+  // API 호출
+  const apiRows=pivotApiDaily();
+  const api=aggregate(apiRows,'day',ACTION_ORDER,MODE,lastN).map(r=>({...r,label:fmtKey(r.key,MODE)}));
+  barChart(document.getElementById('chart-api'),api,
+    ACTION_ORDER.map((a,i)=>({key:a,label:ACTION_LABELS[a],color:colors[i]})));
+
+  // 비용
+  const costDaily=buildCostDaily(apiRows);
+  const cost=aggregate(costDaily,'day',['cost'],MODE,lastN).map(r=>({label:fmtKey(r.key,MODE),value:r.cost}));
+  lineChart(document.getElementById('chart-cost'),cost,{label:'비용',money:usd,color:css('--s2')});
+  const hasTokenLog=(STATS.ai_usage_daily||[]).length>0;
+  document.getElementById('cost-note').textContent=
+    hasTokenLog?'토큰 실사용 기준 · 웹 검색 포함':'토큰 기록이 쌓이기 전이라 호출수×어림 단가';
+
+  // 기프티콘 등록·사용
+  const g=STATS.gifticons||{};
+  let gRows;
+  if(MODE==='day'){
+    const created=new Map((g.by_day||[]).map(r=>[r.day,Number(r.count)||0]));
+    const used=new Map((g.used_by_day||[]).map(r=>[r.day,Number(r.count)||0]));
+    const keys=[...new Set([...created.keys(),...used.keys()])].sort();
+    gRows=keys.map(k=>({key:k,created:created.get(k)||0,used:used.get(k)||0})).slice(-30);
+  }else{
+    const map=new Map();
+    (g.by_month||[]).forEach(r=>{
+      const k=bucketKey(r.month,MODE);
+      if(!map.has(k)) map.set(k,{key:k,created:0,used:0});
+      map.get(k).created+=Number(r.count)||0;
+    });
+    (g.used_by_month||[]).forEach(r=>{
+      const k=bucketKey(r.month,MODE);
+      if(!map.has(k)) map.set(k,{key:k,created:0,used:0});
+      map.get(k).used+=Number(r.count)||0;
+    });
+    gRows=[...map.values()].sort((a,b)=>a.key<b.key?-1:1);
+  }
+  barChart(document.getElementById('chart-gifticon'),gRows.map(r=>({...r,label:fmtKey(r.key,MODE)})),
+    [{key:'created',label:'등록',color:css('--s1')},{key:'used',label:'사용',color:css('--s3')}]);
+
+  // 신규 가입
+  const u=STATS.users||{};
+  const suSrc=MODE==='day'?(u.by_day||[]):(u.by_month||[]);
+  const suKey=MODE==='day'?'day':'month';
+  const su=aggregate(suSrc,suKey,['count'],MODE,lastN).map(r=>({label:fmtKey(r.key,MODE),value:r.count}));
+  lineChart(document.getElementById('chart-signup'),su,{label:'신규 가입',color:css('--accent-chart')});
+
+  hBarChart(document.getElementById('chart-categories'),
+    (g.categories||[]).map(c=>({name:c.category,count:Number(c.count)||0,amount:Number(c.amount)||0})));
+  hBarChart(document.getElementById('chart-brands'),
+    (g.brands||[]).map(b=>({name:b.brand,count:Number(b.count)||0,amount:Number(b.amount)||0})),{color:css('--s3')});
+}
+
+function fillKpis(){
+  const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
+  const s=STATS, g=s.gifticons||{}, f=s.families||{}, u=s.users||{}, e=s.engagement||{};
+  set('k-families',nf.format(f.total||0));
+  set('k-members',nf.format(f.members||0));
+  set('k-avg-members',f.total?Math.round(f.members/f.total*10)/10:0);
+  set('k-users',nf.format(u.total||0));
+  set('k-push',nf.format(e.push_subscriptions||0));
+  set('k-g-total',nf.format(g.total||0));
+  set('k-g-unused',nf.format(g.unused||0));
+  set('k-g-used',nf.format(g.used||0));
+  set('k-g-expired',nf.format(g.expired||0));
+  set('k-amt-total',won(g.amount_total||0));
+  set('k-amt-unused',won(g.amount_unused||0));
+  set('k-amt-used',won(g.amount_used||0));
+  set('k-amt-expired',won(g.amount_expired||0));
+  set('k-no-amount',nf.format(g.no_amount||0));
+  set('k-expiring7',nf.format(e.expiring_7d||0));
+  set('k-expiring30',nf.format(e.expiring_30d||0));
+  set('k-pending',nf.format(e.pending_join_requests||0));
+  set('k-avguse',g.avg_days_to_use!=null?g.avg_days_to_use+'일':'—');
+  set('k-hidden',nf.format(g.hidden||0));
+
+  const apiRows=pivotApiDaily();
+  set('k-calls',nf.format(apiRows.reduce((t,r)=>t+r.analyze+r.price+r.places+r.join_attempt,0)));
+  const last30=apiRows.slice(-30);
+  set('k-ai30',nf.format(last30.reduce((t,r)=>t+r.analyze+r.price,0)));
+  const cost30=buildCostDaily(last30).reduce((t,r)=>t+r.cost,0);
+  set('k-cost30',usd(cost30));
+
+  const t=new Date(s.generated_at);
+  document.getElementById('updated').textContent=
+    t.toLocaleString('ko-KR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})+' 갱신';
+}
+
+// ===================== 흐름 =====================
+async function connect(cfg,{fromSetup=false}={}){
+  show('view-loading');
+  try{
+    STATS=await fetchStats(cfg);
+    saveConfig(cfg);
+    show('view-dash');
+    fillKpis();
+    renderAll();
+  }catch(err){
+    show('view-setup');
+    const box=document.getElementById('setup-err');
+    box.textContent='불러오지 못했어요: '+err.message;
+    box.style.display='block';
+    if(!fromSetup){
+      document.getElementById('in-url').value=cfg.url||'';
+      document.getElementById('in-token').value=cfg.token||'';
+    }
+  }
+}
+
+window.addEventListener('DOMContentLoaded',()=>{
+  document.querySelectorAll('[data-mode]').forEach(b=>b.addEventListener('click',()=>{
+    MODE=b.dataset.mode;
+    document.querySelectorAll('[data-mode]').forEach(x=>x.classList.toggle('active',x===b));
+    renderAll();
+  }));
+  document.getElementById('btn-connect').addEventListener('click',()=>{
+    const cfg={url:document.getElementById('in-url').value.trim(),token:document.getElementById('in-token').value.trim()};
+    if(!cfg.url||!cfg.token){
+      const box=document.getElementById('setup-err');
+      box.textContent='URL과 토큰을 모두 입력해주세요.';
+      box.style.display='block';
+      return;
+    }
+    connect(cfg,{fromSetup:true});
+  });
+  document.getElementById('btn-refresh').addEventListener('click',()=>{const c=loadConfig();if(c)connect(c);});
+  document.getElementById('btn-config').addEventListener('click',()=>{
+    const c=loadConfig()||{};
+    document.getElementById('in-url').value=c.url||'';
+    document.getElementById('in-token').value=c.token||'';
+    show('view-setup');
+  });
+
+  const cfg=loadConfig();
+  if(cfg&&cfg.url&&cfg.token) connect(cfg);
+  else show('view-setup');
+});
+let rsz; window.addEventListener('resize',()=>{clearTimeout(rsz);rsz=setTimeout(renderAll,150);});
+</script>
+</body>
+</html>

@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>모아콘 관리자 — 시안 4 데이터 고밀도</title>
+<!-- 표와 숫자 중심의 빽빽한 화면. 스크롤 없이 최대한 많은 지표를 한눈에 — 실무형 관리 화면. -->
+<style>
+
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:14px}
+body{min-height:100vh}
+h1{font-size:17px;font-weight:700}
+h2{font-size:13.5px;font-weight:650;color:var(--ink)}
+.main{max-width:1180px;margin:0 auto;padding:20px 24px 40px;display:flex;flex-direction:column;gap:14px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:4px 0 6px}
+.brand{display:flex;align-items:center;gap:10px}
+.logo-mark{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:9px;background:var(--accent);color:var(--accent-ink);font-weight:800;font-size:15px}
+.badge{font-size:11.5px;color:var(--muted);border:1px solid var(--border);border-radius:99px;padding:3px 9px}
+.controls{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.updated{font-size:11.5px;color:var(--muted)}
+.seg{display:inline-flex;border:1px solid var(--border);border-radius:calc(var(--radius) * .6);overflow:hidden;background:var(--card)}
+.seg button{border:0;background:transparent;color:var(--ink2);padding:6px 14px;font:inherit;font-size:12.5px;cursor:pointer}
+.seg button.active{background:var(--accent);color:var(--accent-ink);font-weight:650}
+.kpis{display:grid;gap:10px}
+.kpis-4{grid-template-columns:repeat(4,1fr)}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;display:flex;flex-direction:column;gap:5px;box-shadow:var(--shadow)}
+.kpi-label{font-size:12px;color:var(--muted)}
+.kpi-value{font-size:24px;font-weight:750;letter-spacing:-0.02em;font-family:var(--num-font,var(--font))}
+.kpi-sub{font-size:11.5px;color:var(--muted)}
+.kpi-sub b{color:var(--ink2);font-weight:650}
+.accent-good .kpi-value{color:var(--good)}
+.accent-bad .kpi-value{color:var(--bad)}
+.cards{display:grid;gap:12px}
+.cards-2{grid-template-columns:1fr 1fr}
+.cards-3{grid-template-columns:1fr 1fr 1fr}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px 10px;box-shadow:var(--shadow);min-width:0}
+.card-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+.card-note{font-size:11px;color:var(--muted)}
+.chart{position:relative;width:100%}
+.axis-label{font-size:10px;fill:var(--muted);font-family:var(--font);font-variant-numeric:tabular-nums}
+.legend{display:flex;gap:10px;flex-wrap:wrap}
+.legend-item{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--ink2)}
+.dot{width:8px;height:8px;border-radius:99px;display:inline-block;flex:none}
+.tip{position:absolute;z-index:5;background:var(--tip-bg);color:var(--tip-ink);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:11.5px;pointer-events:none;box-shadow:0 4px 14px rgba(0,0,0,.18);min-width:130px}
+.tip-title{font-weight:700;margin-bottom:4px}
+.tip-row{display:flex;align-items:center;gap:6px;padding:1px 0;white-space:nowrap}
+.tip-row b{margin-left:auto;font-variant-numeric:tabular-nums}
+.tip-total{border-top:1px solid var(--border);margin-top:4px;padding-top:4px}
+.hbars{display:flex;flex-direction:column;gap:7px;padding:2px 0 6px}
+.hbar-row{display:grid;grid-template-columns:76px 1fr 34px 84px;align-items:center;gap:8px;font-size:12px}
+.hbar-name{color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hbar-track{background:var(--track);border-radius:99px;height:10px;overflow:hidden}
+.hbar-fill{display:block;height:100%;border-radius:99px}
+.hbar-val{text-align:right;font-variant-numeric:tabular-nums;color:var(--ink)}
+.hbar-amt{text-align:right;font-variant-numeric:tabular-nums;color:var(--muted);font-size:11px}
+.watch{list-style:none;display:flex;flex-direction:column}
+.watch li{display:flex;justify-content:space-between;align-items:center;padding:8px 2px;border-bottom:1px solid var(--grid);font-size:12.5px;color:var(--ink2)}
+.watch li:last-child{border-bottom:0}
+.watch b{font-size:14px;color:var(--ink);font-variant-numeric:tabular-nums}
+.foot{text-align:center;font-size:11px;color:var(--muted);padding-top:6px}
+.side{display:none}
+@media (max-width:980px){.kpis-4{grid-template-columns:1fr 1fr}.cards-2,.cards-3{grid-template-columns:1fr}}
+
+
+
+:root{
+  --font:system-ui,-apple-system,'Segoe UI','Apple SD Gothic Neo',sans-serif;
+  --num-font:ui-monospace,'SF Mono',Consolas,monospace;
+  --bg:#ffffff; --surface:#ffffff; --card:#ffffff;
+  --ink:#111318; --ink2:#3f434d; --muted:#7d818c;
+  --border:#d9dbe1; --grid:#e8eaef; --baseline:#c6c9d2; --track:#eef0f4;
+  --accent:#111318; --accent-ink:#ffffff; --accent-chart:#2a78d6;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100;
+  --good:#006300; --bad:#d03b3b;
+  --radius:4px; --shadow:none;
+  --tip-bg:#111318; --tip-ink:#ffffff;
+  --chart-h:164;
+}
+html,body{font-size:13px}
+.main{max-width:1280px;gap:8px;padding:14px 18px 30px}
+.kpis{gap:6px}
+.cards{gap:6px}
+.kpi{padding:9px 12px;gap:2px;border-radius:4px}
+.kpi-value{font-size:19px}
+.card{padding:10px 12px 6px}
+h2{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink2)}
+.tip{box-shadow:none}
+.watch li{padding:5.5px 2px}
+</style>
+</head>
+<body>
+
+<div class="main">
+  <header class="top">
+    <div class="brand"><span class="logo-mark">모</span><h1>모아콘 관리자</h1><span class="badge">시안 4 · 데이터 고밀도</span></div>
+    <div class="controls">
+      <div class="seg">
+        <button data-mode="day" class="active">일별</button>
+        <button data-mode="month">월별</button>
+        <button data-mode="year">연도별</button>
+      </div>
+      <span class="updated">2026-08-05 09:12 갱신 · 모의 데이터</span>
+    </div>
+  </header>
+
+  <section class="kpis kpis-4">
+    <div class="kpi"><span class="kpi-label">가족 수</span><span class="kpi-value" id="k-families"></span><span class="kpi-sub">구성원 <b id="k-members"></b>명 · 평균 3.2명</span></div>
+    <div class="kpi"><span class="kpi-label">총 사용자</span><span class="kpi-value" id="k-users"></span><span class="kpi-sub">푸시 구독 <b id="k-push"></b>기기</span></div>
+    <div class="kpi"><span class="kpi-label">업로드된 기프티콘</span><span class="kpi-value" id="k-g-total"></span><span class="kpi-sub">미사용 <b id="k-g-unused"></b> · 사용 <b id="k-g-used"></b> · 만료 <b id="k-g-expired"></b></span></div>
+    <div class="kpi"><span class="kpi-label">최근 30일 AI 비용</span><span class="kpi-value" id="k-cost30"></span><span class="kpi-sub">AI 호출 <b id="k-ai30"></b>건</span></div>
+  </section>
+
+  <section class="kpis kpis-4 kpis-amount">
+    <div class="kpi"><span class="kpi-label">기프티콘 총액</span><span class="kpi-value" id="k-amt-total"></span></div>
+    <div class="kpi accent-good"><span class="kpi-label">미사용(사용 가능) 총액</span><span class="kpi-value" id="k-amt-unused"></span></div>
+    <div class="kpi"><span class="kpi-label">사용완료 총액</span><span class="kpi-value" id="k-amt-used"></span></div>
+    <div class="kpi accent-bad"><span class="kpi-label">기간만료 총액</span><span class="kpi-value" id="k-amt-expired"></span></div>
+  </section>
+
+  <section class="cards cards-2">
+    <div class="card">
+      <div class="card-head"><h2>API 종류별 호출 건수</h2><div class="legend"><span class="legend-item"><span class="dot" style="background:var(--s1)"></span>AI 이미지 인식</span><span class="legend-item"><span class="dot" style="background:var(--s2)"></span>AI 가격 검색</span><span class="legend-item"><span class="dot" style="background:var(--s3)"></span>주변 매장(카카오)</span><span class="legend-item"><span class="dot" style="background:var(--s4)"></span>초대 코드 시도</span></div></div>
+      <div class="chart" id="chart-api"></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h2>AI·API 비용 (USD)</h2><span class="card-note">토큰 실사용 기준 · 웹 검색 $10/1k회 포함</span></div>
+      <div class="chart" id="chart-cost"></div>
+    </div>
+  </section>
+
+  <section class="cards cards-2">
+    <div class="card">
+      <div class="card-head"><h2>기프티콘 등록·사용 추이</h2><div class="legend"><span class="legend-item"><span class="dot" style="background:var(--s1)"></span>등록</span><span class="legend-item"><span class="dot" style="background:var(--s3)"></span>사용</span></div></div>
+      <div class="chart" id="chart-gifticon"></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h2>신규 가입 추이</h2></div>
+      <div class="chart" id="chart-signup"></div>
+    </div>
+  </section>
+
+  <section class="cards cards-3">
+    <div class="card">
+      <div class="card-head"><h2>카테고리별 분포</h2></div>
+      <div id="chart-categories"></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h2>브랜드 Top 5</h2></div>
+      <div id="chart-brands"></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h2>지금 봐야 할 것</h2></div>
+      <ul class="watch">
+        <li><span>7일 내 만료 예정</span><b id="k-expiring7"></b></li>
+        <li><span>30일 내 만료 예정</span><b id="k-expiring30"></b></li>
+        <li><span>대기 중인 가족 참여 신청</span><b id="k-pending"></b></li>
+        <li><span>등록→사용 평균 소요</span><b id="k-avguse"></b></li>
+        <li><span>누적 API 호출</span><b id="k-calls"></b></li>
+      </ul>
+    </div>
+  </section>
+  <footer class="foot">모아콘 관리자 대시보드 · 디자인 시안 4 — 데이터 고밀도</footer>
+</div>
+<script>
+
+// ===== 모의 데이터 (시안 미리보기용 — 실제 대시보드는 admin-stats 함수에서 받아온다) =====
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const rnd = mulberry32(20260805);
+const DAYS = 180;
+const today = new Date('2026-08-05T00:00:00');
+function dstr(d){return d.toISOString().slice(0,10)}
+const days = [];
+for(let i=DAYS-1;i>=0;i--){const d=new Date(today);d.setDate(d.getDate()-i);days.push(dstr(d));}
+
+const ACTIONS = [
+  {key:'analyze', label:'AI 이미지 인식', ai:true},
+  {key:'price', label:'AI 가격 검색', ai:true},
+  {key:'places', label:'주변 매장(카카오)', ai:false},
+  {key:'join_attempt', label:'초대 코드 시도', ai:false},
+];
+
+// 일별 호출 건수: 완만히 성장 + 주말 파동
+const apiDaily = days.map((day,i)=>{
+  const growth = 1 + i/DAYS*1.6;
+  const wk = new Date(day).getDay();
+  const wknd = (wk===0||wk===6)?1.35:1;
+  return {
+    day,
+    analyze: Math.round((4+rnd()*10)*growth*wknd),
+    price: Math.round((1+rnd()*5)*growth),
+    places: Math.round((8+rnd()*22)*growth*wknd),
+    join_attempt: Math.round(rnd()*3),
+  };
+});
+
+// 일별 토큰 (비용 계산용): analyze 호출당 in≈4200/out≈350, price in≈9000/out≈700 + 검색 3회
+const PRICING = {in_mtok:1, out_mtok:5, web_search:0.01};
+function costOfDay(r){
+  const a = (r.analyze*4200/1e6)*PRICING.in_mtok + (r.analyze*350/1e6)*PRICING.out_mtok;
+  const p = (r.price*9000/1e6)*PRICING.in_mtok + (r.price*700/1e6)*PRICING.out_mtok + r.price*3*PRICING.web_search;
+  return {analyze:a, price:p, total:a+p};
+}
+
+// 일별 기프티콘 등록/사용, 신규 가입
+const gifticonDaily = days.map((day,i)=>{
+  const growth = 1 + i/DAYS*1.2;
+  return {day, created: Math.round((0.6+rnd()*3.4)*growth), amount: Math.round((rnd()*90+18))*1000, used: Math.round(rnd()*2.6*growth)};
+});
+const signupDaily = days.map((day,i)=>({day, count: rnd()<0.55?0:Math.round(1+rnd()*3)}));
+
+const CATEGORIES = [
+  {name:'카페·음료', count:126, amount: 1830000},
+  {name:'치킨·버거', count:84, amount: 2110000},
+  {name:'편의점', count:67, amount: 940000},
+  {name:'베이커리', count:41, amount: 620000},
+  {name:'상품권', count:28, amount: 2800000},
+  {name:'기타', count:35, amount: 410000},
+];
+const BRANDS = [
+  {name:'스타벅스', count:58, amount: 812000},
+  {name:'BBQ', count:34, amount: 748000},
+  {name:'GS25', count:31, amount: 396000},
+  {name:'배스킨라빈스', count:24, amount: 379000},
+  {name:'파리바게뜨', count:19, amount: 282000},
+];
+
+const KPI = (()=>{
+  const totalCalls = apiDaily.reduce((s,r)=>s+r.analyze+r.price+r.places+r.join_attempt,0);
+  const cost30 = apiDaily.slice(-30).reduce((s,r)=>s+costOfDay(r).total,0);
+  const created = 381, used=169, expired=23, unused=189;
+  return {
+    families: 47, users: 152, members: 149, push: 96,
+    gCreated: created, gUnused: unused, gUsed: used, gExpired: expired,
+    amtTotal: 8710000, amtUnused: 4620000, amtUsed: 3480000, amtExpired: 610000,
+    expiring7: 6, expiring30: 21, pendingJoin: 2, avgDaysToUse: 11.4,
+    totalCalls, cost30,
+    aiCalls30: apiDaily.slice(-30).reduce((s,r)=>s+r.analyze+r.price,0),
+  };
+})();
+
+// ===== 집계 (일별 / 월별 / 연도별) =====
+function bucketKey(day, mode){
+  if(mode==='day') return day;
+  if(mode==='month') return day.slice(0,7);
+  return day.slice(0,4);
+}
+function aggregate(rows, fields, mode, lastN){
+  const map = new Map();
+  rows.forEach(r=>{
+    const k = bucketKey(r.day, mode);
+    if(!map.has(k)){const o={key:k};fields.forEach(f=>o[f]=0);map.set(k,o);}
+    const o = map.get(k);
+    fields.forEach(f=>o[f]+=r[f]||0);
+  });
+  let out = [...map.values()].sort((a,b)=>a.key<b.key?-1:1);
+  if(mode==='day'&&lastN) out = out.slice(-lastN);
+  return out;
+}
+function fmtKey(k, mode){
+  if(mode==='day') return k.slice(5).replace('-','/');
+  if(mode==='month') return k.slice(2).replace('-','/');
+  return k;
+}
+
+// ===== 포맷 =====
+const nf = new Intl.NumberFormat('ko-KR');
+const won = v=>'₩'+nf.format(v);
+const usd = v=>'$'+v.toFixed(v>=10?1:2);
+
+// ===== 차트 (SVG 직접 렌더) =====
+const NS='http://www.w3.org/2000/svg';
+function el(tag,attrs){const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);return e;}
+function css(name){return getComputedStyle(document.documentElement).getPropertyValue(name).trim();}
+
+function makeTooltip(host){
+  const tip=document.createElement('div');tip.className='tip';tip.style.display='none';
+  host.appendChild(tip);
+  return {
+    show(html,x,y){tip.innerHTML=html;tip.style.display='block';
+      const r=host.getBoundingClientRect();const tw=tip.offsetWidth;
+      let lx=x+12; if(lx+tw>r.width-8) lx=x-tw-12;
+      tip.style.left=lx+'px'; tip.style.top=Math.max(4,y-10)+'px';},
+    hide(){tip.style.display='none';}
+  };
+}
+// 축 눈금: 4칸 기준으로 1/2/2.5/5×10^n 단위의 깔끔한 간격을 고른다(13.3 같은 눈금 방지).
+function niceStep(x){
+  if(x<=0)return 1;
+  const p=Math.pow(10,Math.floor(Math.log10(x)));
+  for(const m of [1,2,2.5,5,10]){ if(m*p>=x) return m*p; }
+  return 10*p;
+}
+function axisOf(dataMax){
+  const step=niceStep(Math.max(dataMax,1e-9)/4);
+  return {max:step*4, step};
+}
+function fmtTick(v,money){
+  if(money) return money(v);
+  if(v>=1000) return (v/1000)+'k';
+  return v%1===0? String(v) : String(Math.round(v*10)/10);
+}
+function chartH(fallback){const v=parseFloat(css('--chart-h'));return Number.isFinite(v)&&v>0?v:fallback;}
+// x축 라벨: 끝(오늘)에서부터 일정 간격으로 거꾸로 골라, 마지막 라벨이 겹치지 않게 한다.
+function labelIdx(n,maxLabels){
+  const every=Math.max(1,Math.ceil(n/maxLabels));
+  const set=new Set();
+  for(let i=n-1;i>=0;i-=every) set.add(i);
+  return set;
+}
+
+function roundedTopRect(x,y,w,h,r){
+  r=Math.min(r,w/2,h);
+  if(h<=0.5||r<=0.5) return 'M'+x+' '+(y+h)+'V'+y+'H'+(x+w)+'V'+(y+h)+'Z';
+  return 'M'+x+' '+(y+h)+'V'+(y+r)+'Q'+x+' '+y+' '+(x+r)+' '+y+'H'+(x+w-r)+'Q'+(x+w)+' '+y+' '+(x+w)+' '+(y+r)+'V'+(y+h)+'Z';
+}
+
+// 세로 막대(단일 또는 누적). series=[{key,label,color}]
+function barChart(host, rows, series, opts={}){
+  host.innerHTML='';
+  const W=host.clientWidth||640, H=opts.height||chartH(210), padL=44, padR=8, padT=10, padB=22;
+  const svg=el('svg',{width:'100%',height:H,viewBox:'0 0 '+W+' '+H});
+  host.appendChild(svg);
+  const tip=makeTooltip(host);
+  const iw=W-padL-padR, ih=H-padT-padB;
+  const totals=rows.map(r=>series.reduce((s,sr)=>s+(r[sr.key]||0),0));
+  const axis=axisOf(Math.max(1,...totals));
+  const max=axis.max;
+  // gridlines + y labels
+  for(let i=0;i<=4;i++){
+    const v=axis.step*i, y=padT+ih-ih*i/4;
+    svg.appendChild(el('line',{x1:padL,x2:W-padR,y1:y,y2:y,stroke:css('--grid'),'stroke-width':1}));
+    const t=el('text',{x:padL-6,y:y+4,'text-anchor':'end',class:'axis-label'});
+    t.textContent=fmtTick(v,opts.money);
+    svg.appendChild(t);
+  }
+  const n=rows.length;
+  const step=iw/n, bw=Math.max(3,Math.min(opts.maxBar||26,step*0.66));
+  rows.forEach((r,i)=>{
+    const x=padL+step*i+(step-bw)/2;
+    let y=padT+ih;
+    const segs=[];
+    series.forEach((sr,si)=>{
+      const v=r[sr.key]||0;
+      const h=ih*v/max;
+      segs.push({sr,v,h});
+    });
+    // 아래에서 위로 쌓고, 세그먼트 사이 2px 띄움
+    let drawn=0;
+    const visible=segs.filter(s=>s.v>0);
+    visible.forEach((s,si)=>{
+      const isTop=si===visible.length-1;
+      const gap=si>0?2:0;
+      const h=Math.max(0,s.h-gap);
+      y-=s.h;
+      const shape=isTop
+        ? el('path',{d:roundedTopRect(x,y,bw,h+ (isTop?0:0),3),fill:s.sr.color})
+        : el('rect',{x,y:y,width:bw,height:h,fill:s.sr.color});
+      shape.setAttribute('class','mark');
+      svg.appendChild(shape);
+      drawn++;
+    });
+    // hover 영역(막대보다 넓게)
+    const hit=el('rect',{x:padL+step*i,y:padT,width:step,height:ih,fill:'transparent'});
+    hit.addEventListener('mousemove',ev=>{
+      const rect=host.getBoundingClientRect();
+      const rowsHtml=series.filter(sr=>(r[sr.key]||0)>0||series.length===1).map(sr=>
+        '<div class="tip-row"><span class="dot" style="background:'+sr.color+'"></span>'+sr.label+' <b>'+(opts.money?opts.money(r[sr.key]||0):nf.format(r[sr.key]||0))+'</b></div>').join('');
+      tip.show('<div class="tip-title">'+r.label+'</div>'+rowsHtml+(series.length>1?'<div class="tip-row tip-total">합계 <b>'+(opts.money?opts.money(totals[i]):nf.format(totals[i]))+'</b></div>':''),
+        ev.clientX-rect.left, ev.clientY-rect.top);
+    });
+    hit.addEventListener('mouseleave',()=>tip.hide());
+    svg.appendChild(hit);
+  });
+  // baseline
+  svg.appendChild(el('line',{x1:padL,x2:W-padR,y1:padT+ih,y2:padT+ih,stroke:css('--baseline'),'stroke-width':1}));
+  // x labels
+  const lset=labelIdx(n,8);
+  rows.forEach((r,i)=>{
+    if(!lset.has(i))return;
+    const t=el('text',{x:padL+step*i+step/2,y:H-6,'text-anchor':'middle',class:'axis-label'});
+    t.textContent=r.label; svg.appendChild(t);
+  });
+}
+
+// 선 차트 (단일 계열, crosshair + tooltip)
+function lineChart(host, rows, opts={}){
+  host.innerHTML='';
+  const W=host.clientWidth||640, H=opts.height||chartH(210), padL=48, padR=22, padT=10, padB=22;
+  const svg=el('svg',{width:'100%',height:H,viewBox:'0 0 '+W+' '+H});
+  host.appendChild(svg);
+  const tip=makeTooltip(host);
+  const iw=W-padL-padR, ih=H-padT-padB;
+  const axis=axisOf(Math.max(1e-9,...rows.map(r=>r.value)));
+  const max=axis.max;
+  for(let i=0;i<=4;i++){
+    const v=axis.step*i,y=padT+ih-ih*i/4;
+    svg.appendChild(el('line',{x1:padL,x2:W-padR,y1:y,y2:y,stroke:css('--grid'),'stroke-width':1}));
+    const t=el('text',{x:padL-6,y:y+4,'text-anchor':'end',class:'axis-label'});
+    t.textContent=fmtTick(v,opts.money); svg.appendChild(t);
+  }
+  const n=rows.length;
+  const px=i=>padL+(n===1?iw/2:iw*i/(n-1));
+  const py=v=>padT+ih-ih*v/max;
+  const color=opts.color||css('--s1');
+  let dArea='M'+px(0)+' '+(padT+ih), dLine='';
+  rows.forEach((r,i)=>{
+    const x=px(i),y=py(r.value);
+    dLine+=(i?'L':'M')+x+' '+y;
+    dArea+='L'+x+' '+y;
+  });
+  dArea+='L'+px(n-1)+' '+(padT+ih)+'Z';
+  svg.appendChild(el('path',{d:dArea,fill:color,opacity:0.08}));
+  svg.appendChild(el('path',{d:dLine,fill:'none',stroke:color,'stroke-width':2,'stroke-linejoin':'round','stroke-linecap':'round'}));
+  // 점이 하나뿐이면 선이 안 그려지므로(연도별 첫 해 등) 점을 직접 찍는다.
+  if(n===1) svg.appendChild(el('circle',{cx:px(0),cy:py(rows[0].value),r:4,fill:color}));
+  svg.appendChild(el('line',{x1:padL,x2:W-padR,y1:padT+ih,y2:padT+ih,stroke:css('--baseline'),'stroke-width':1}));
+  const lset=labelIdx(n,8);
+  rows.forEach((r,i)=>{
+    if(!lset.has(i))return;
+    const t=el('text',{x:px(i),y:H-6,'text-anchor':'middle',class:'axis-label'});
+    t.textContent=r.label; svg.appendChild(t);
+  });
+  const cross=el('line',{y1:padT,y2:padT+ih,stroke:css('--muted'),'stroke-width':1,'stroke-dasharray':'3 3',visibility:'hidden'});
+  const dot=el('circle',{r:4,fill:color,stroke:css('--surface'),'stroke-width':2,visibility:'hidden'});
+  svg.appendChild(cross);svg.appendChild(dot);
+  const hit=el('rect',{x:padL,y:padT,width:iw,height:ih,fill:'transparent'});
+  hit.addEventListener('mousemove',ev=>{
+    const rect=host.getBoundingClientRect();
+    const mx=(ev.clientX-rect.left)*(W/rect.width);
+    const i=Math.max(0,Math.min(n-1,Math.round((mx-padL)/(iw/(n-1||1)))));
+    const x=px(i),y=py(rows[i].value);
+    cross.setAttribute('x1',x);cross.setAttribute('x2',x);cross.setAttribute('visibility','visible');
+    dot.setAttribute('cx',x);dot.setAttribute('cy',y);dot.setAttribute('visibility','visible');
+    tip.show('<div class="tip-title">'+rows[i].label+'</div><div class="tip-row"><span class="dot" style="background:'+color+'"></span>'+opts.label+' <b>'+(opts.money?opts.money(rows[i].value):nf.format(rows[i].value))+'</b></div>',
+      x*(rect.width/W), ev.clientY-rect.top);
+  });
+  hit.addEventListener('mouseleave',()=>{tip.hide();cross.setAttribute('visibility','hidden');dot.setAttribute('visibility','hidden');});
+  svg.appendChild(hit);
+}
+
+// 가로 막대 (분포/랭킹)
+function hBarChart(host, items, opts={}){
+  host.innerHTML='';
+  const max=Math.max(...items.map(i=>i.count));
+  const wrap=document.createElement('div');wrap.className='hbars';
+  items.forEach(it=>{
+    const row=document.createElement('div');row.className='hbar-row';
+    row.innerHTML='<span class="hbar-name">'+it.name+'</span>'
+      +'<span class="hbar-track"><span class="hbar-fill" style="width:'+(it.count/max*100)+'%;background:'+(opts.color||css('--s1'))+'"></span></span>'
+      +'<span class="hbar-val">'+nf.format(it.count)+'</span>'
+      +(opts.amount?'<span class="hbar-amt">'+won(it.amount)+'</span>':'');
+    wrap.appendChild(row);
+  });
+  host.appendChild(wrap);
+}
+
+// ===== 대시보드 조립 =====
+let MODE='day';
+function seriesColors(){return [css('--s1'),css('--s2'),css('--s3'),css('--s4')];}
+
+function renderAll(){
+  const colors=seriesColors();
+  const apiSeries=ACTIONS.map((a,i)=>({key:a.key,label:a.label,color:colors[i]}));
+  const lastN = MODE==='day'?30:undefined;
+
+  const api=aggregate(apiDaily,['analyze','price','places','join_attempt'],MODE,lastN)
+    .map(r=>({...r,label:fmtKey(r.key,MODE)}));
+  barChart(document.getElementById('chart-api'),api,apiSeries);
+
+  const costRows=aggregate(apiDaily.map(r=>({day:r.day,cost:costOfDay(r).total})),['cost'],MODE,lastN)
+    .map(r=>({label:fmtKey(r.key,MODE),value:r.cost}));
+  lineChart(document.getElementById('chart-cost'),costRows,{label:'비용',money:usd,color:css('--s2')});
+
+  const g=aggregate(gifticonDaily,['created','used'],MODE,lastN).map(r=>({...r,label:fmtKey(r.key,MODE)}));
+  barChart(document.getElementById('chart-gifticon'),g,
+    [{key:'created',label:'등록',color:css('--s1')},{key:'used',label:'사용',color:css('--s3')}]);
+
+  const su=aggregate(signupDaily,['count'],MODE,lastN).map(r=>({label:fmtKey(r.key,MODE),value:r.count}));
+  lineChart(document.getElementById('chart-signup'),su,{label:'신규 가입',color:css('--accent-chart')||css('--s1')});
+
+  hBarChart(document.getElementById('chart-categories'),CATEGORIES.map(c=>({name:c.name,count:c.count,amount:c.amount})),{amount:true});
+  hBarChart(document.getElementById('chart-brands'),BRANDS,{amount:true,color:css('--s3')});
+}
+
+function setMode(m){
+  MODE=m;
+  document.querySelectorAll('[data-mode]').forEach(b=>b.classList.toggle('active',b.dataset.mode===m));
+  renderAll();
+}
+
+function fillKpis(){
+  const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
+  set('k-families',nf.format(KPI.families));
+  set('k-users',nf.format(KPI.users));
+  set('k-members',nf.format(KPI.members));
+  set('k-push',nf.format(KPI.push));
+  set('k-g-total',nf.format(KPI.gCreated));
+  set('k-g-unused',nf.format(KPI.gUnused));
+  set('k-g-used',nf.format(KPI.gUsed));
+  set('k-g-expired',nf.format(KPI.gExpired));
+  set('k-amt-total',won(KPI.amtTotal));
+  set('k-amt-unused',won(KPI.amtUnused));
+  set('k-amt-used',won(KPI.amtUsed));
+  set('k-amt-expired',won(KPI.amtExpired));
+  set('k-cost30',usd(KPI.cost30));
+  set('k-ai30',nf.format(KPI.aiCalls30));
+  set('k-calls',nf.format(KPI.totalCalls));
+  set('k-expiring7',nf.format(KPI.expiring7));
+  set('k-expiring30',nf.format(KPI.expiring30));
+  set('k-pending',nf.format(KPI.pendingJoin));
+  set('k-avguse',KPI.avgDaysToUse+'일');
+}
+
+window.addEventListener('DOMContentLoaded',()=>{
+  document.querySelectorAll('[data-mode]').forEach(b=>b.addEventListener('click',()=>setMode(b.dataset.mode)));
+  fillKpis();
+  renderAll();
+});
+let rsz; window.addEventListener('resize',()=>{clearTimeout(rsz);rsz=setTimeout(renderAll,150);});
+
+</script>
+</body>
+</html>

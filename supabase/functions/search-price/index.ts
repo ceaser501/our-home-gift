@@ -9,7 +9,7 @@
 // 필요한 비밀값: supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
 
 import Anthropic from 'npm:@anthropic-ai/sdk@0.115.0';
-import { corsFor, limitFromEnv, requireUser, tooManyMessage, withinDailyLimit } from '../_shared/guard.ts';
+import { corsFor, limitFromEnv, logAiUsage, requireUser, tooManyMessage, withinDailyLimit } from '../_shared/guard.ts';
 
 const MODEL = 'claude-haiku-4-5';
 // 웹 검색 도구는 모델 세대에 따라 쓸 수 있는 버전이 다르다. haiku-4-5는 기본형을 쓴다.
@@ -86,15 +86,29 @@ Deno.serve(async (req) => {
       tools: [WEB_SEARCH_TOOL],
     };
 
+    // 한 번의 가격 검색이 pause_turn 때문에 여러 요청으로 나뉠 수 있어서, 토큰과 웹 검색
+    // 횟수를 응답마다 모아 두었다가 끝나고 한 줄로 적는다(관리자 대시보드의 비용 계산용).
+    const spent = { input_tokens: 0, output_tokens: 0 };
+    let webSearches = 0;
+    const tally = (res) => {
+      spent.input_tokens += res.usage?.input_tokens ?? 0;
+      spent.output_tokens += res.usage?.output_tokens ?? 0;
+      webSearches += res.usage?.server_tool_use?.web_search_requests ?? 0;
+    };
+
     const messages = [{ role: 'user', content: `"${query}"의 현재 판매가를 찾아줘.` }];
     let response = await client.messages.create({ ...request, messages });
+    tally(response);
 
     // 검색이 한 번에 안 끝나면 pause_turn으로 잠시 멈춘다. 지금까지의 답을 그대로 붙여
     // 다시 요청하면 서버가 이어서 진행한다("계속해줘" 같은 말을 덧붙이면 안 된다).
     for (let i = 0; i < MAX_CONTINUATIONS && response.stop_reason === 'pause_turn'; i++) {
       messages.push({ role: 'assistant', content: response.content });
       response = await client.messages.create({ ...request, messages });
+      tally(response);
     }
+
+    await logAiUsage(guard.admin, 'price', MODEL, spent, webSearches);
 
     const text = response.content
       .filter((block) => block.type === 'text')

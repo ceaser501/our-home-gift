@@ -930,8 +930,10 @@ revoke all on function public.bump_api_usage(uuid, text, int, int) from authenti
 grant execute on function public.bump_api_usage(uuid, text, int, int) to service_role;
 
 -- 오래된 기록은 쌓아둘 이유가 없다. 이 파일을 실행할 때마다 한 달 지난 것을 치운다.
+-- 단 api_usage_total은 치우지 않는다. 사람별 기록(api_usage)은 한도 검사용이라 한 달이면
+-- 충분하지만, 전체 기록은 관리자 대시보드(supabase/admin-stats.sql)가 일/월/연 호출 추이를
+-- 그리는 원본이다. 하루에 기능당 한 줄이라 몇 년을 쌓아도 부담이 없다.
 delete from public.api_usage where day < (now() at time zone 'utc')::date - 30;
-delete from public.api_usage_total where day < (now() at time zone 'utc')::date - 30;
 
 -- ===================== 계정 탈퇴 =====================
 

@@ -83,6 +83,31 @@ export async function withinDailyLimit(admin, userId: string, action: string, li
   return data as { allowed: boolean; reason: string | null; used: number; limit: number };
 }
 
+// AI 호출이 끝난 뒤 모델과 토큰 수를 적어둔다(supabase/admin-stats.sql의 ai_usage_log).
+// 호출 횟수(bump_api_usage)만으로는 요금을 어림잡을 수밖에 없는데, AI 요금은 토큰 수로
+// 매겨지므로 이 기록이 있어야 관리자 대시보드가 비용을 계산으로 보여줄 수 있다.
+// 기록에 실패해도 기능은 그대로 동작해야 하므로(통계는 부가 기능이다) 오류를 삼킨다.
+export async function logAiUsage(
+  admin,
+  action: string,
+  model: string,
+  usage: { input_tokens?: number; output_tokens?: number } | null | undefined,
+  webSearchRequests = 0,
+) {
+  if (!admin) return;
+  try {
+    await admin.from('ai_usage_log').insert({
+      action,
+      model,
+      input_tokens: usage?.input_tokens ?? 0,
+      output_tokens: usage?.output_tokens ?? 0,
+      web_search_requests: webSearchRequests,
+    });
+  } catch (_err) {
+    // 테이블이 아직 없거나(admin-stats.sql 미실행) 일시 오류여도 본 기능을 막지 않는다.
+  }
+}
+
 export function limitFromEnv(name: string, fallback: number) {
   const raw = Number(Deno.env.get(name));
   return Number.isFinite(raw) && raw > 0 ? raw : fallback;
