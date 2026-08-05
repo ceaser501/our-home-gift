@@ -281,6 +281,10 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
     }
   }
 
+  // 이미지에서 못 읽어 비어 있는 항목. 사용자가 칸에 직접 채우면 그 순간 사라진다.
+  const missingCode = !form.code.trim();
+  const missingExpiry = !form.expires_at;
+
   const thumbs = [
     ...existingImages.map((img) => ({ kind: 'existing', path: img.path, url: img.url })),
     ...newPreviews.map((url, i) => ({ kind: 'new', index: i, url })),
@@ -346,7 +350,30 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
 
           <input id="gifticon-image" ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleFileChange} hidden />
 
-          {autoFilled && <p className="text-xs text-success">자동으로 정보를 채웠어요. 확인 후 저장해주세요.</p>}
+          {/* 못 읽은 항목은 여기서 짚어준다. 목록에 나간 뒤에 알려주면 다시 찾아 들어와야
+              하지만, 지금은 사용자가 이 화면에서 입력 중이라 그 자리에서 채울 수 있다.
+              값을 채우면 그 줄만 사라지고, 둘 다 채워지면 평소의 "다 채웠어요"로 돌아간다. */}
+          {autoFilled && (missingCode || missingExpiry) ? (
+            <div className="flex flex-col gap-1.5 rounded-xl border border-warning/40 bg-warning/10 px-3.5 py-3">
+              <p className="m-0 text-xs font-semibold text-foreground">채웠지만, 못 읽은 게 있어요</p>
+              {/* 바코드를 먼저 적는다. 기한이 없으면 알림을 못 받을 뿐이지만, 바코드가
+                  없으면 계산대에서 이 기프티콘을 아예 쓸 수 없다. */}
+              {missingCode && (
+                <p className="m-0 text-xs leading-relaxed break-keep text-muted-foreground">
+                  <b className="font-semibold text-foreground">바코드/QR 값</b>을 못 읽었어요. 계산대에서 이 번호로 결제하니, 사진에
+                  인쇄된 번호를 직접 입력해주세요.
+                </p>
+              )}
+              {missingExpiry && (
+                <p className="m-0 text-xs leading-relaxed break-keep text-muted-foreground">
+                  <b className="font-semibold text-foreground">유효기한</b>을 못 읽었어요. 넣어두시면 만료 전에 알려드려요. (안 넣어도
+                  저장돼요)
+                </p>
+              )}
+            </div>
+          ) : (
+            autoFilled && <p className="text-xs text-success">자동으로 정보를 채웠어요. 확인 후 저장해주세요.</p>
+          )}
           {error && <p className="text-xs text-destructive">{error}</p>}
 
           <div className="grid grid-cols-2 gap-3">
