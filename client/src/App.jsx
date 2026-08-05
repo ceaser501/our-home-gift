@@ -14,6 +14,7 @@ import { listGifticons, updateGifticon, deleteGifticon, claimGifticon, releaseGi
 import { subscribeToGifticons, subscribeToFamily } from './realtime';
 import { ensureSampleGifticon } from './sampleData';
 import { daysUntil, todayStr } from './utils/date';
+import { hasNewVersion } from './utils/version';
 import { useFamily } from './FamilyContext';
 
 function sortGifticons(items) {
@@ -101,6 +102,21 @@ export default function App() {
   // 맺으면 낭비라서 최신 함수만 여기에 담아두고 구독은 가족이 바뀔 때만 다시 맺는다.
   const refreshRef = useRef(null);
   refreshRef.current = () => Promise.all([fetchList({ silent: true }), refreshFamily()]);
+
+  // 당겨서 새로고침은 사용자에게 "최신으로 맞춰줘"라는 뜻이다. 그런데 데이터만 다시 읽으면
+  // 그사이 배포된 새 화면은 옛것 그대로라, 당겼는데도 안 바뀌었다고 느끼게 된다.
+  // 설치해서 쓰면 주소창이 없어 페이지를 새로 열 방법도 마땅치 않다. 그래서 당길 때
+  // 새 버전이 올라와 있는지 함께 보고, 있으면 데이터 대신 페이지를 새로 연다.
+  //
+  // 이 확인은 당겼을 때만 한다. 실시간 반영이나 앱 복귀 때도 하면 기프티콘을 쓰는 도중에
+  // 화면이 통째로 다시 열릴 수 있는데, 당기는 건 사용자가 목록에서 직접 한 동작이라 안전하다.
+  async function handlePullRefresh() {
+    if (await hasNewVersion()) {
+      window.location.reload();
+      return;
+    }
+    await refreshRef.current();
+  }
 
   // 가족이 기프티콘을 올리거나 고치면 새로고침 없이 바로 목록에 나타나게 한다.
   useEffect(() => {
@@ -202,8 +218,9 @@ export default function App() {
 
   return (
     <div className="relative mx-auto flex min-h-dvh w-full max-w-[480px] flex-col overflow-x-hidden bg-background pb-22">
-      {/* 당겨서 새로고침은 기프티콘뿐 아니라 가족 구성원까지 같이 다시 읽어온다. */}
-      <PullToRefresh onRefresh={() => refreshRef.current()} />
+      {/* 당겨서 새로고침은 기프티콘뿐 아니라 가족 구성원까지 같이 다시 읽어오고,
+          새 버전이 배포됐으면 화면 자체를 새로 연다. */}
+      <PullToRefresh onRefresh={handlePullRefresh} />
 
       <Header />
 
