@@ -29,6 +29,11 @@ alter table public.gifticons add column if not exists image_paths text[] not nul
 -- 바코드 보기에서 원본 사진 대신 보여줄, 바코드/숫자 부분만 잘라낸 이미지
 alter table public.gifticons add column if not exists barcode_image_path text;
 
+-- 목록 썸네일로 쓸, 캡처에서 상품 사진 부분만 잘라낸 이미지.
+-- 올리는 사진은 대개 카톡 선물함 화면을 통째로 찍은 캡처라, 그대로 줄이면 글자와 버튼까지
+-- 뭉개져 들어가 무슨 상품인지 알아볼 수 없다. 상품 사진만 잘라 따로 둔다.
+alter table public.gifticons add column if not exists thumb_image_path text;
+
 -- 누가 등록했고 누가 썼는지. used_by_name은 사용한 사람의 이름을 그대로 적어두는 칸인데,
 -- 나중에 그 사람이 가족에서 나가도 사용 내역에 이름이 남아야 하기 때문에 따로 둔다.
 alter table public.gifticons add column if not exists created_by uuid references auth.users(id);
@@ -945,6 +950,8 @@ begin
     select unnest(image_paths) as p from public.gifticons where id = any(doomed)
     union all
     select barcode_image_path from public.gifticons where id = any(doomed) and barcode_image_path is not null
+    union all
+    select thumb_image_path from public.gifticons where id = any(doomed) and thumb_image_path is not null
   ) t;
 
   delete from public.gifticons where id = any(doomed);

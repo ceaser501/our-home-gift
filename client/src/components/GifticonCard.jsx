@@ -31,7 +31,7 @@ function BarcodeStrip() {
   return (
     <span className="flex h-2 shrink-0 items-center justify-center gap-[3px]" aria-hidden="true">
       {BAR_WIDTHS.map((width, i) => (
-        <i key={i} className="block h-full bg-barcode-foreground" style={{ width: `${width}px` }} />
+        <i key={i} className="block h-full rounded-[1px] bg-primary/55" style={{ width: `${width}px` }} />
       ))}
     </span>
   );
@@ -63,6 +63,9 @@ export default function GifticonCard({
   // 열 바코드가 실제로 있는지. 없는데 띠를 붙이면 눌러보고 나서야 없는 걸 알게 된다.
   const canOpenCode = !codeLocked && Boolean(gifticon.code || gifticon.barcode_image_url);
   const photoCount = gifticon.image_urls?.filter(Boolean).length ?? 0;
+  // 상품 사진만 잘라낸 그림이 있으면 그걸 쓴다. 이 기능이 생기기 전에 올렸거나 잘라낼
+  // 자리를 못 찾은 것은 예전처럼 첫 사진 그대로 보여준다.
+  const thumbUrl = gifticon.thumb_image_url || gifticon.image_url;
 
   // "이건 내가 쓸게" 표시. 잠금이 아니라 표시라, 남이 찜해뒀어도 바코드는 그대로 열린다.
   const claimed = Boolean(gifticon.claimed_by);
@@ -76,14 +79,17 @@ export default function GifticonCard({
             기억한다. 브랜드 색은 글자보다 빨리 읽히고, 내가 올린 사진이라야 내 지갑처럼 느껴진다.
             대신 사진만 있으면 눌러도 되는 줄 모르므로 아래에 바코드를 붙여 알린다.
 
-            바코드는 사진 위에 겹치지 않는다. 겹치면 사진을 가리거나 사진이 잘려 보이는데,
-            실물 기프티콘도 사진과 바코드가 한 장에 위아래로 나뉘어 있다. 그래서 썸네일 전체를
-            연한 종이처럼 두고 그 안에 사진과 바코드를 조금 띄워 앉힌다. */}
+            보여주는 건 올린 사진 전체가 아니라 상품 사진만 잘라낸 것(thumb_image_url)이다.
+            대개 선물함 화면을 통째로 찍은 캡처라, 68px로 줄이면 글자와 버튼까지 뭉개져 들어가
+            무슨 상품인지 알아볼 수 없다. 못 잘라낸 것은 예전처럼 첫 사진을 그대로 쓴다.
+
+            바코드는 사진 위에 겹치지 않고 아래에 따로 앉는다. 겹치면 사진을 가리거나
+            사진이 잘려 보이는데, 실물 기프티콘도 사진과 바코드가 한 장에 위아래로 나뉘어 있다. */}
         <button
           type="button"
           className={cn(
-            'relative flex size-17 shrink-0 overflow-hidden rounded-xl',
-            canOpenCode ? 'flex-col gap-[3px] bg-barcode p-[3px]' : 'items-center justify-center bg-accent'
+            'relative flex size-17 shrink-0 overflow-hidden rounded-xl bg-accent',
+            canOpenCode ? 'flex-col gap-[3px] p-[3px]' : 'items-center justify-center'
           )}
           onClick={() => (canOpenCode ? onViewCode(gifticon) : onViewImage(gifticon))}
           aria-label={canOpenCode ? '바코드 보기' : '업로드한 이미지 보기'}
@@ -91,11 +97,11 @@ export default function GifticonCard({
           <span
             className={cn(
               'relative flex items-center justify-center overflow-hidden',
-              canOpenCode ? 'min-h-0 flex-1 rounded-[9px] bg-accent' : 'size-full'
+              canOpenCode ? 'min-h-0 flex-1 rounded-[9px]' : 'size-full'
             )}
           >
-            {gifticon.image_url ? (
-              <img src={gifticon.image_url} alt={gifticon.name} className="h-full w-full object-cover" />
+            {thumbUrl ? (
+              <img src={thumbUrl} alt={gifticon.name} className="h-full w-full object-cover" />
             ) : (
               <Ticket className="size-6 text-primary/60" />
             )}

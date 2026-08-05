@@ -27,10 +27,6 @@
   --success-foreground: #ffffff;
   --warning: #e69008;
   --warning-foreground: #1c1e27;
-  /* 썸네일을 감싸는 종이 바탕과 그 아래 바코드 줄. 실제 기프티콘이 늘 흰 바탕에
-     검은 줄이라, 같은 차림으로 두어야 설명 없이 바코드로 읽힌다. */
-  --barcode: #f1f1f4;
-  --barcode-foreground: #17171c;
   --border: #e7e7ec;
   --input: #e7e7ec;
   --ring: #5b4fe8;
@@ -92,9 +88,6 @@
   --success-foreground: #0c1f14;
   --warning: #e69008;
   --warning-foreground: #1c1e27;
-  /* 어두운 화면에서 순백에 가까운 바탕은 혼자 빛나 보인다. 한 톤 낮춘다. */
-  --barcode: #dcdce1;
-  --barcode-foreground: #16161b;
   --border: #2a2a31;
   --input: #2a2a31;
   --ring: #8478f5;
@@ -119,8 +112,6 @@
   --color-destructive-foreground: var(--destructive-foreground);
   --color-success: var(--success);
   --color-success-foreground: var(--success-foreground);
-  --color-barcode: var(--barcode);
-  --color-barcode-foreground: var(--barcode-foreground);
   --color-warning: var(--warning);
   --color-warning-foreground: var(--warning-foreground);
   --color-border: var(--border);

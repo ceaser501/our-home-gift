@@ -16,6 +16,9 @@ const MAX_ANALYZE_EDGE = 2000;
 const MIN_ANALYZE_EDGE = 1600;
 // 서버로 보낼 이미지 크기. 글자를 읽기에 충분하면서 전송량과 비용이 과하지 않은 선.
 const UPLOAD_EDGE = 1400;
+// 목록 썸네일은 화면에서 68px로 보인다. 고해상도 화면과 나중에 크게 쓸 여지를 감안해도
+// 이 정도면 넉넉하고, 원본을 그대로 두는 것보다 훨씬 가볍게 받는다.
+const THUMB_EDGE = 480;
 
 function analyzeScale(longEdge) {
   if (longEdge > MAX_ANALYZE_EDGE) return MAX_ANALYZE_EDGE / longEdge;
@@ -161,6 +164,38 @@ async function cropBarcodeRegion(source, points, codeType) {
   return new Promise((resolve) => canvas.toBlob((blob) => resolve(blob), 'image/png'));
 }
 
+// 목록에 보여줄 상품 사진만 잘라낸다. 올라오는 사진은 대개 선물함 화면을 통째로 찍은
+// 캡처라, 68px로 줄이면 상품 사진·상품명·버튼이 한꺼번에 뭉개져서 뭐가 뭔지 알 수 없다.
+// 서버가 짚어준 영역(백분율)을 원본 좌표로 되돌려 그 부분만 잘라 쓴다.
+// 백분율로 주고받는 이유: 모델이 본 이미지는 줄여서 보낸 것이라 픽셀 좌표가 원본과 다르다.
+async function cropThumbnail(file, box) {
+  const canvas = await toAnalyzeCanvas(file);
+  try {
+    const x = Math.max(0, (box.x / 100) * canvas.width);
+    const y = Math.max(0, (box.y / 100) * canvas.height);
+    const width = Math.min(canvas.width - x, (box.width / 100) * canvas.width);
+    const height = Math.min(canvas.height - y, (box.height / 100) * canvas.height);
+    if (width < 16 || height < 16) return null;
+
+    const scale = Math.min(1, THUMB_EDGE / Math.max(width, height));
+    const out = document.createElement('canvas');
+    out.width = Math.round(width * scale);
+    out.height = Math.round(height * scale);
+    const ctx = out.getContext('2d');
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(canvas, x, y, width, height, 0, 0, out.width, out.height);
+
+    return await new Promise((resolve) => out.toBlob(resolve, 'image/jpeg', 0.85));
+  } catch {
+    // 썸네일은 없어도 원본 사진으로 대신할 수 있다. 여기서 막히면 등록 자체가 막힌다.
+    return null;
+  } finally {
+    canvas.width = 0;
+    canvas.height = 0;
+  }
+}
+
 // 기프티콘 한 건을 여러 장으로 나눠 올릴 수 있다(예: 상품명 화면 + 유효기간 화면).
 // 바코드는 장마다 따로 읽고, 글자 정보는 여러 장을 한 번에 서버로 보내 합쳐서 받는다.
 // onProgress로 지금 어느 단계인지 알려준다. 분석이 몇 초 걸리는데 화면에 아무 변화가
@@ -188,6 +223,12 @@ export async function analyzeImages(files, { onProgress } = {}) {
 
   report('reading');
   const info = await analyzeGifticonImages(uploads, CATEGORY_KEYS);
+
+  // 서버가 상품 사진 위치를 못 짚었으면 잘라내지 않는다. 이 경우 목록은 예전처럼
+  // 첫 사진을 그대로 보여준다(잘못 자른 그림보다는 캡처 전체가 낫다).
+  report('thumbnail');
+  const thumbBox = info.thumbnail;
+  const thumbCropBlob = thumbBox ? await cropThumbnail(files[thumbBox.image - 1], thumbBox) : null;
   report('done');
 
   // 바코드 막대를 못 읽었을 때는 이미지에 인쇄된 번호를 대신 쓴다.
@@ -199,6 +240,7 @@ export async function analyzeImages(files, { onProgress } = {}) {
     code,
     codeType,
     barcodeCropBlob: barcode.cropBlob,
+    thumbCropBlob,
     category: info.category || '기타',
     brand: info.brand || null,
     amount: info.amount ?? null,

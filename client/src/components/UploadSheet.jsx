@@ -75,6 +75,7 @@ function progressLabel(progress) {
     return `바코드를 읽고 있어요${count}`;
   }
   if (progress.step === 'reading') return '상품명·금액·유효기한을 읽고 있어요';
+  if (progress.step === 'thumbnail') return '상품 사진을 잘라내고 있어요';
   return '거의 다 됐어요';
 }
 
@@ -91,6 +92,7 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
   const [newFiles, setNewFiles] = useState([]);
   const [newPreviews, setNewPreviews] = useState([]);
   const [barcodeCropFile, setBarcodeCropFile] = useState(null);
+  const [thumbCropFile, setThumbCropFile] = useState(null);
 
   const [analyzing, setAnalyzing] = useState(false);
   const [autoFilled, setAutoFilled] = useState(false);
@@ -162,6 +164,11 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
           ? new File([result.barcodeCropBlob], 'barcode.png', { type: 'image/png' })
           : null
       );
+      // 목록 썸네일로 쓸, 상품 사진만 잘라낸 그림. 못 잘랐으면 null로 두어 예전처럼
+      // 올린 사진 그대로를 쓴다.
+      setThumbCropFile(
+        result.thumbCropBlob ? new File([result.thumbCropBlob], 'thumb.jpg', { type: 'image/jpeg' }) : null
+      );
       setAutoFilled(true);
     } catch {
       setError('이미지 자동 인식에 실패했어요. 직접 입력해주세요.');
@@ -208,6 +215,7 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
     setNewFiles([]);
     setNewPreviews([]);
     setBarcodeCropFile(null);
+    setThumbCropFile(null);
     setError('');
     setAutoFilled(false);
     setPriceSearchNote('');
@@ -252,13 +260,17 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
 
       if (mode === 'create') {
         // 등록한 사람은 새로 만들 때만 적는다(남의 기프티콘을 수정해도 등록자가 안 바뀌게).
-        const created = await createGifticon(family.id, { ...fields, created_by: user.id }, newFiles, barcodeCropFile);
+        const created = await createGifticon(family.id, { ...fields, created_by: user.id }, newFiles, {
+          barcodeCropFile,
+          thumbCropFile,
+        });
         onSaved(created);
       } else {
         const updated = await updateGifticon(family.id, initial.id, fields, {
           addFiles: newFiles,
           removePaths: removedPaths,
           barcodeCropFile,
+          thumbCropFile,
         });
         onSaved(updated);
       }

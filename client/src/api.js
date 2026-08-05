@@ -9,7 +9,7 @@ import { LEGACY_CATEGORIES, normalizeCategory } from './constants';
 const SIGNED_URL_TTL_SECONDS = 60 * 60;
 
 function imagePathsOf(row) {
-  return [...(row?.image_paths || []), row?.barcode_image_path].filter(Boolean);
+  return [...(row?.image_paths || []), row?.barcode_image_path, row?.thumb_image_path].filter(Boolean);
 }
 
 // 여러 장을 한 번에 서명받는다. 한 장씩 부르면 목록 한 번 여는 데 수십 번을 왕복한다.
@@ -35,6 +35,9 @@ function attachImageUrls(row, urls) {
     image_urls,
     image_url: image_urls.find(Boolean) || null,
     barcode_image_url: row.barcode_image_path ? (urls.get(row.barcode_image_path) ?? null) : null,
+    // 목록 썸네일. 상품 사진을 못 잘라낸 것(그리고 이 기능이 생기기 전에 올린 것)은
+    // 값이 없으니, 쓰는 쪽에서 image_url로 대신한다.
+    thumb_image_url: row.thumb_image_path ? (urls.get(row.thumb_image_path) ?? null) : null,
   };
 }
 
@@ -134,16 +137,25 @@ export async function findGifticonByCode(familyId, code, excludeId) {
   return data?.[0] || null;
 }
 
-export async function createGifticon(familyId, fields, files = [], barcodeCropFile = null) {
+export async function createGifticon(familyId, fields, files = [], crops = {}) {
   const image_paths = files.length ? await uploadImages(familyId, files) : [];
 
+  // 올린 사진에서 잘라낸 것들(바코드·상품 사진)까지 모아둔다. 중간에 실패하면 여기 담긴
+  // 것만 지우면 되니, 저장에 실패했는데 파일만 남는 일이 없다.
+  const uploaded = [...image_paths];
   let barcode_image_path = null;
+  let thumb_image_path = null;
   try {
-    if (barcodeCropFile) {
-      [barcode_image_path] = await uploadImages(familyId, [barcodeCropFile]);
+    if (crops.barcodeCropFile) {
+      [barcode_image_path] = await uploadImages(familyId, [crops.barcodeCropFile]);
+      uploaded.push(barcode_image_path);
+    }
+    if (crops.thumbCropFile) {
+      [thumb_image_path] = await uploadImages(familyId, [crops.thumbCropFile]);
+      uploaded.push(thumb_image_path);
     }
   } catch (err) {
-    if (image_paths.length) await removeImages(image_paths);
+    if (uploaded.length) await removeImages(uploaded);
     throw err;
   }
 
@@ -164,59 +176,69 @@ export async function createGifticon(familyId, fields, files = [], barcodeCropFi
       created_by: fields.created_by || null,
       image_paths,
       barcode_image_path,
+      thumb_image_path,
       status: 'unused',
     })
     .select()
     .single();
 
   if (error) {
-    const cleanup = barcode_image_path ? [...image_paths, barcode_image_path] : image_paths;
-    if (cleanup.length) await removeImages(cleanup);
+    if (uploaded.length) await removeImages(uploaded);
     throw new Error(error.message);
   }
   return withImageUrls(data);
 }
 
 export async function updateGifticon(familyId, id, fields, imageChanges = {}) {
-  const { addFiles = [], removePaths = [], barcodeCropFile = null } = imageChanges;
+  const { addFiles = [], removePaths = [], barcodeCropFile = null, thumbCropFile = null } = imageChanges;
   const updates = { ...fields, updated_at: new Date().toISOString() };
 
   if ('amount' in updates) {
     updates.amount = updates.amount === '' || updates.amount === undefined || updates.amount === null ? null : Number(updates.amount);
   }
 
-  let newPaths = [];
-  let oldBarcodeImagePath = null;
+  // uploaded: 이번에 새로 올린 것(저장이 실패하면 지운다)
+  // replaced: 새것으로 갈아치워 쓸모없어진 예전 것(저장이 성공해야 지운다)
+  const uploaded = [];
+  const replaced = [...removePaths];
 
-  if (addFiles.length || removePaths.length || barcodeCropFile) {
+  if (addFiles.length || removePaths.length || barcodeCropFile || thumbCropFile) {
     const { data: existing } = await supabase
       .from(GIFTICON_TABLE)
-      .select('image_paths, barcode_image_path')
+      .select('image_paths, barcode_image_path, thumb_image_path')
       .eq('id', id)
       .single();
 
     if (addFiles.length || removePaths.length) {
       const currentPaths = existing?.image_paths || [];
-      newPaths = addFiles.length ? await uploadImages(familyId, addFiles) : [];
+      const newPaths = addFiles.length ? await uploadImages(familyId, addFiles) : [];
+      uploaded.push(...newPaths);
       updates.image_paths = currentPaths.filter((p) => !removePaths.includes(p)).concat(newPaths);
     }
 
+    // 잘라낸 것들은 새로 만들어졌을 때만 갈아끼운다. 사진을 한 장 더 붙였는데 거기서
+    // 바코드나 상품 사진을 못 찾았다고 멀쩡한 예전 것을 지우면, 있던 게 사라진다.
     if (barcodeCropFile) {
-      oldBarcodeImagePath = existing?.barcode_image_path || null;
+      if (existing?.barcode_image_path) replaced.push(existing.barcode_image_path);
       [updates.barcode_image_path] = await uploadImages(familyId, [barcodeCropFile]);
+      uploaded.push(updates.barcode_image_path);
+    }
+
+    if (thumbCropFile) {
+      if (existing?.thumb_image_path) replaced.push(existing.thumb_image_path);
+      [updates.thumb_image_path] = await uploadImages(familyId, [thumbCropFile]);
+      uploaded.push(updates.thumb_image_path);
     }
   }
 
   const { data, error } = await supabase.from(GIFTICON_TABLE).update(updates).eq('id', id).select().single();
 
   if (error) {
-    const cleanup = updates.barcode_image_path ? [...newPaths, updates.barcode_image_path] : newPaths;
-    if (cleanup.length) await removeImages(cleanup);
+    if (uploaded.length) await removeImages(uploaded);
     throw new Error(error.message);
   }
 
-  const cleanupOld = oldBarcodeImagePath ? [...removePaths, oldBarcodeImagePath] : removePaths;
-  if (cleanupOld.length) await removeImages(cleanupOld);
+  if (replaced.length) await removeImages(replaced);
   return withImageUrls(data);
 }
 
@@ -281,15 +303,14 @@ export async function fetchRoute({ mode, origin, destination }) {
 export async function deleteGifticon(id) {
   const { data: existing } = await supabase
     .from(GIFTICON_TABLE)
-    .select('image_paths, barcode_image_path')
+    .select('image_paths, barcode_image_path, thumb_image_path')
     .eq('id', id)
     .single();
 
   const { error } = await supabase.from(GIFTICON_TABLE).delete().eq('id', id);
   if (error) throw new Error(error.message);
 
-  const paths = [...(existing?.image_paths || [])];
-  if (existing?.barcode_image_path) paths.push(existing.barcode_image_path);
+  const paths = imagePathsOf(existing);
   if (paths.length) await removeImages(paths);
 }
 
