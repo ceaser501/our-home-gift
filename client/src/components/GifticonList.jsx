@@ -1,7 +1,16 @@
+import { useState } from 'react';
 import { CalendarOff } from 'lucide-react';
 import GifticonCard from './GifticonCard';
 
+// 기한을 일부러 안 적고 쓰는 사람도 있다. 그 사람에게는 이 안내가 잔소리라서,
+// 한 번 끄면 다시 띄우지 않는다(개수가 늘어도 마찬가지다 — 늘 때마다 다시 나오면
+// 끈 의미가 없다). 끈 뒤에도 카드마다 붙는 "유효기한 미입력" 칩은 그대로 남아서,
+// 나중에 마음이 바뀌어도 어느 것이 비었는지는 목록에서 알 수 있다.
+const NOTICE_DISMISS_KEY = 'expiry-notice-dismissed';
+
 export default function GifticonList({ gifticons, onViewCode, onViewImage, onToggleUsed, onEdit, onDelete, onFindStores, onToggleClaim }) {
+  const [noticeDismissed, setNoticeDismissed] = useState(() => localStorage.getItem(NOTICE_DISMISS_KEY) === '1');
+
   if (gifticons.length === 0) {
     return (
       <div className="px-5 py-15 text-center text-muted-foreground">
@@ -17,16 +26,32 @@ export default function GifticonList({ gifticons, onViewCode, onViewImage, onTog
   // 이미 쓴 것은 세지 않는다. 기한이 지나든 말든 상관없는 것들이라 채우라고 할 이유가 없다.
   const missingExpiry = gifticons.filter((g) => g.status !== 'used' && !g.expires_at).length;
 
+  function dismissNotice() {
+    localStorage.setItem(NOTICE_DISMISS_KEY, '1');
+    setNoticeDismissed(true);
+  }
+
   return (
     <>
-      {missingExpiry > 0 && (
-        <p className="m-0 mb-3 flex items-start gap-1.5 rounded-xl bg-secondary px-3 py-2.5 text-xs leading-relaxed break-keep text-muted-foreground">
-          <CalendarOff className="mt-0.5 size-3.5 shrink-0" />
-          <span>
-            유효기한을 안 적은 기프티콘이 <b className="font-semibold text-foreground">{missingExpiry}개</b> 있어요. 기한을 채워야 만료
-            전에 알려드릴 수 있어요.
-          </span>
-        </p>
+      {missingExpiry > 0 && !noticeDismissed && (
+        <div className="mb-3 rounded-xl bg-secondary px-3 py-2.5">
+          <p className="m-0 flex items-start gap-1.5 text-xs leading-relaxed break-keep text-muted-foreground">
+            <CalendarOff className="mt-0.5 size-3.5 shrink-0" />
+            <span>
+              유효기한을 안 적은 기프티콘이 <b className="font-semibold text-foreground">{missingExpiry}개</b> 있어요. 기한을 채워야
+              만료 전에 알려드릴 수 있어요.
+            </span>
+          </p>
+          {/* "닫기"(X)가 아니라 "다시 안 보기"로 적는다. X는 이번만 접는 것처럼 읽히는데
+              실제로는 다시 띄우지 않으므로, 하는 일을 그대로 말해주는 편이 낫다. */}
+          <button
+            type="button"
+            onClick={dismissNotice}
+            className="mt-1.5 ml-auto block text-[11px] font-semibold text-muted-foreground underline underline-offset-2"
+          >
+            다시 안 보기
+          </button>
+        </div>
       )}
 
       <ul className="m-0 flex list-none flex-col gap-3 p-0">
