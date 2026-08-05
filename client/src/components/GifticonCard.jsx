@@ -118,11 +118,19 @@ export default function GifticonCard({
             <p className="mb-1 text-[13px] text-muted-foreground">{Number(gifticon.amount).toLocaleString()}원</p>
           ) : null}
 
-          {!isUsed && gifticon.expires_at && (
-            <p className={cn('mt-0.5 inline-block self-start rounded-full px-2 py-0.5 text-xs font-bold', DDAY_CLASS[urgency])}>
-              {formatDday(gifticon.expires_at)} · {formatDate(gifticon.expires_at)}까지
-            </p>
-          )}
+          {!isUsed &&
+            (gifticon.expires_at ? (
+              <p className={cn('mt-0.5 inline-block self-start rounded-full px-2 py-0.5 text-xs font-bold', DDAY_CLASS[urgency])}>
+                {formatDday(gifticon.expires_at)} · {formatDate(gifticon.expires_at)}까지
+              </p>
+            ) : (
+              // 기한을 안 적으면 이 자리가 통째로 비어서, 기한이 넉넉한 것과 구분이 안 됐다.
+              // 빈칸 대신 "안 적혔다"고 말해준다. 급한 일은 아니므로 붉은색은 쓰지 않는다
+              // (목록에서 붉은색은 기한이 임박한 것 하나만 가져야 눈에 들어온다).
+              <p className="mt-0.5 inline-block self-start rounded-full border border-dashed border-border px-2 py-0.5 text-xs font-bold text-muted-foreground">
+                유효기한 미입력
+              </p>
+            ))}
 
           {/* 누가 썼는지 목록에서 바로 보이게 한다("이거 누가 썼어?"를 굳이 안 물어보게). */}
           {isUsed && (gifticon.used_at || gifticon.used_by_name) && (
