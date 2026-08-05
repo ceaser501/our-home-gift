@@ -32,7 +32,7 @@ h1{font-size:17px;font-weight:700}
 h2{font-size:13.5px;font-weight:650;color:var(--ink)}
 /* 폭을 제한하지 않는다. 관리 화면은 큰 모니터에 띄워두고 보는 것이라, 가운데만 쓰고
    양옆을 비워두면 정작 봐야 할 차트가 좁아진다. */
-.main{padding:20px 28px 40px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.main{padding:24px 32px 48px;display:flex;flex-direction:column;gap:24px;min-width:0}
 .top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:4px 0 6px}
 .brand{display:flex;align-items:center;gap:10px}
 .logo-mark{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:9px;background:var(--accent);color:var(--accent-ink);font-weight:800;font-size:15px}
@@ -42,20 +42,22 @@ h2{font-size:13.5px;font-weight:650;color:var(--ink)}
 .seg button{border:0;background:transparent;color:var(--ink2);padding:6px 14px;font:inherit;font-size:12.5px;cursor:pointer}
 .seg button.active{background:var(--accent);color:var(--accent-ink);font-weight:650}
 .icon-btn{border:1px solid var(--border);background:var(--card);color:var(--ink2);border-radius:10px;padding:6px 12px;font:inherit;font-size:12.5px;cursor:pointer}
-.kpis{display:grid;gap:10px}
+.kpis{display:grid;gap:16px}
 .kpis-4{grid-template-columns:repeat(4,1fr)}
-.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;display:flex;flex-direction:column;gap:5px;box-shadow:var(--shadow)}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;display:flex;flex-direction:column;gap:6px;box-shadow:var(--shadow)}
 .kpi-label{font-size:12px;color:var(--muted)}
 .kpi-value{font-size:24px;font-weight:750;letter-spacing:-0.02em}
 .kpi-sub{font-size:11.5px;color:var(--muted)}
 .kpi-sub b{color:var(--ink2);font-weight:650}
 .accent-good .kpi-value{color:var(--good)}
 .accent-bad .kpi-value{color:var(--bad)}
-.cards{display:grid;gap:12px}
+/* 대시보드 섹션들은 이 상자 안에 있어서(.main의 gap이 닿지 않는다) 여기서 간격을 준다. */
+#page-dash{display:flex;flex-direction:column;gap:24px}
+.cards{display:grid;gap:16px}
 .cards-2{grid-template-columns:1fr 1fr}
 .cards-3{grid-template-columns:1fr 1fr 1fr}
-.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px 10px;box-shadow:var(--shadow);min-width:0}
-.card-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px 12px;box-shadow:var(--shadow);min-width:0}
+.card-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:10px;flex-wrap:wrap}
 .card-note{font-size:11px;color:var(--muted)}
 .chart{position:relative;width:100%}
 .empty{color:var(--muted);font-size:12px;padding:30px 0;text-align:center}
@@ -95,6 +97,9 @@ h2{font-size:13.5px;font-weight:650;color:var(--ink)}
 table{border-collapse:separate;border-spacing:0;width:100%;font-size:12.5px}
 th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--grid);white-space:nowrap}
 th{font-size:11.5px;font-weight:650;color:var(--muted);background:var(--bg);position:sticky;top:0;z-index:1;border-bottom-color:var(--border)}
+/* 숫자 칸은 값이 오른쪽 정렬이라 머리글도 오른쪽에 있어야 한다. 머리글만 왼쪽에 두면
+   값이 옆 칸 밑에 있는 것처럼 보인다(정렬이 밀린 듯한 착시의 원인). */
+th.num{text-align:right}
 tbody tr:last-child td{border-bottom:0}
 tbody tr:hover{background:var(--accent-soft)}
 td.num{text-align:right;font-variant-numeric:tabular-nums}
@@ -730,7 +735,8 @@ const dash=v=>v===null||v===undefined||v===''?'<span class="muted">—</span>':e
 const PAGES={
   users:{
     title:'회원 관리', search:'이메일로 검색', filter:false,
-    columns:['이메일','가입 방법','소속 가족','등록','사용','알림','약관','최근 로그인','가입일'],
+    // {n:1}인 칸은 숫자라 값·머리글을 오른쪽 정렬한다.
+    columns:['이메일','가입 방법','소속 가족',{l:'등록',n:1},{l:'사용',n:1},{l:'알림',n:1},'약관','최근 로그인','가입일'],
     row:r=>`
       <td class="strong">${dash(r.email)}${r.is_admin?' <span class="tag tag-admin">관리자</span>':''}</td>
       <td class="muted">${esc(r.provider)}</td>
@@ -746,7 +752,7 @@ const PAGES={
   },
   gifticons:{
     title:'기프티콘 관리', search:'상품명·브랜드·받은 사람으로 검색', filter:true,
-    columns:['상품명','브랜드','분류','금액','받은 사람','가족','상태','유효기한','사용일','등록일'],
+    columns:['상품명','브랜드','분류',{l:'금액',n:1},'받은 사람','가족','상태','유효기한','사용일','등록일'],
     row:r=>{
       const label={unused:'미사용',used:'사용완료',expired:'기간만료'}[r.state]||r.state;
       const tag=r.hidden_at
@@ -767,7 +773,7 @@ const PAGES={
   },
   families:{
     title:'가족 관리', search:'가족 이름·초대 코드로 검색', filter:false,
-    columns:['가족 이름','초대 코드','구성원','기프티콘','미사용','보유 금액','대기 신청','만든 날'],
+    columns:['가족 이름','초대 코드','구성원',{l:'기프티콘',n:1},{l:'미사용',n:1},{l:'보유 금액',n:1},{l:'대기 신청',n:1},'만든 날'],
     row:r=>`
       <td class="strong">${dash(r.name)}</td>
       <td class="muted">${dash(r.invite_code)}</td>
@@ -834,7 +840,8 @@ function openPage(name){
   const filter=document.getElementById('list-filter');
   filter.style.display=def.filter?'':'none';
   filter.querySelectorAll('[data-status]').forEach(b=>b.classList.toggle('active',b.dataset.status===''));
-  document.querySelector('#list-table thead').innerHTML='<tr>'+def.columns.map(c=>`<th>${c}</th>`).join('')+'</tr>';
+  document.querySelector('#list-table thead').innerHTML=
+    '<tr>'+def.columns.map(c=>typeof c==='string'?`<th>${c}</th>`:`<th class="num">${c.l}</th>`).join('')+'</tr>';
   renderList();
 }
 
