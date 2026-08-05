@@ -369,21 +369,28 @@ create policy "gifticons delete family" on public.gifticons
 
 -- ===================== 이미지 스토리지 =====================
 
--- 이미지 저장용 public 버킷 생성 (이미지 자체는 지금처럼 URL을 아는 사람이면 볼 수 있는 공개 버킷으로 유지.
--- 업로드/수정/삭제만 그 가족 폴더(family_id/파일명)에 속한 로그인 사용자로 제한한다.)
+-- 기프티콘 이미지 저장소.
+--
+-- 예전에는 공개 버킷이었다. 주소만 알면 로그인 없이 누구나 볼 수 있었다는 뜻인데,
+-- 기프티콘 사진에는 바코드가 찍혀 있다. 바코드는 그 자체가 돈이라, 주소 하나가 새면
+-- 그 기프티콘은 남이 쓸 수 있다. 주소가 길고 어렵게 생긴 것은 방어가 아니다. 한 번
+-- 새어 나간 주소는 영원히 유효했고, 가족에서 나간 사람이 예전에 본 주소를 계속 쓸 수도
+-- 있었다.
+--
+-- 이제 비공개로 두고, 볼 자격이 있는 사람에게만 시간 제한이 붙은 주소를 발급해준다.
 insert into storage.buckets (id, name, public)
-values ('gifticon-images', 'gifticon-images', true)
+values ('gifticon-images', 'gifticon-images', false)
 on conflict (id) do nothing;
 
--- 올릴 수 있는 파일의 크기와 형식을 서버에서 제한한다.
--- 화면에도 같은 검사가 있지만 그건 편의를 위한 것이지 방어가 아니다. 브라우저를 거치지
--- 않고 스토리지 API를 직접 부르면 그 검사는 없는 것과 같아서, 로그인만 하면 자기 가족
--- 폴더에 아무 크기의 아무 파일이나 올릴 수 있었다(요금이 나가고, 파일 저장소로 악용된다).
+-- 이미 만들어져 있던 버킷도 비공개로 돌린다.
 --
--- 아이폰이 원본 그대로 올리는 경우가 있어 heic/heif도 받는다.
--- 크기 10MB는 휴대폰 사진 한 장으로는 넉넉하고, 큰 파일을 쌓아두기엔 좁은 선이다.
+-- 크기·형식 제한도 함께 건다. 화면에도 같은 검사가 있지만 그건 편의를 위한 것이지 방어가
+-- 아니다. 브라우저를 거치지 않고 스토리지 API를 직접 부르면 그 검사는 없는 것과 같아서,
+-- 로그인만 하면 자기 가족 폴더에 아무 크기의 아무 파일이나 올릴 수 있었다.
+-- (아이폰이 원본 그대로 올리는 경우가 있어 heic/heif도 받는다.)
 update storage.buckets
-set file_size_limit = 10485760,
+set public = false,
+    file_size_limit = 10485760,
     allowed_mime_types = array['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif']
 where id = 'gifticon-images';
 
@@ -401,11 +408,18 @@ exception when others then
 end;
 $$;
 
+-- 볼 수 있는 사람 = 그 사진이 들어 있는 폴더(=family_id)의 구성원.
+-- 이 정책이 "시간 제한 주소를 발급받을 자격"까지 정한다. 서명은 스토리지에 한 번 물어보고
+-- 나오는 것이라, 여기서 막히면 주소 자체를 받을 수 없다.
+-- 예전에는 to public이라 로그인조차 필요 없었다.
 drop policy if exists "gifticon-images read" on storage.objects;
 create policy "gifticon-images read"
   on storage.objects for select
-  to public
-  using (bucket_id = 'gifticon-images');
+  to authenticated
+  using (
+    bucket_id = 'gifticon-images'
+    and public.is_family_member(public.storage_folder_family_id(name))
+  );
 
 drop policy if exists "gifticon-images insert" on storage.objects;
 create policy "gifticon-images insert"

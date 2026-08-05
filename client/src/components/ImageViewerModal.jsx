@@ -8,7 +8,10 @@ export default function ImageViewerModal({ gifticon, onClose }) {
 
   if (!gifticon) return null;
 
-  const images = gifticon.image_urls?.length ? gifticon.image_urls : gifticon.image_url ? [gifticon.image_url] : [];
+  // image_urls는 image_paths와 자리를 맞추느라 못 받은 자리가 null로 남아 있다.
+  // 넘겨보는 화면에서는 빈 자리를 한 장으로 세면 안 되니 걸러낸다.
+  const loaded = (gifticon.image_urls || []).filter(Boolean);
+  const images = loaded.length ? loaded : gifticon.image_url ? [gifticon.image_url] : [];
   const current = Math.min(index, images.length - 1);
 
   return (

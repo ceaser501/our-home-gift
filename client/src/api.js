@@ -1,14 +1,51 @@
 import { supabase, GIFTICON_TABLE, IMAGE_BUCKET } from './supabaseClient';
 import { LEGACY_CATEGORIES, normalizeCategory } from './constants';
 
-function withImageUrls(row) {
+// 이미지 저장소가 비공개라, 사진을 보려면 그때그때 시간 제한이 붙은 주소를 발급받아야 한다.
+// 예전에는 주소가 고정이라 한 번 새면 영원히 열려 있었다(바코드가 찍힌 사진이라 곧 돈이다).
+//
+// 한 시간이면 앱을 열어 쓰는 동안은 넉넉하다. 그보다 오래 열어둬서 주소가 만료돼도,
+// 앱이 다시 화면에 나올 때 목록을 새로 읽으므로(App.jsx의 visibilitychange) 저절로 낫는다.
+const SIGNED_URL_TTL_SECONDS = 60 * 60;
+
+function imagePathsOf(row) {
+  return [...(row?.image_paths || []), row?.barcode_image_path].filter(Boolean);
+}
+
+// 여러 장을 한 번에 서명받는다. 한 장씩 부르면 목록 한 번 여는 데 수십 번을 왕복한다.
+async function signImagePaths(paths) {
+  const unique = [...new Set(paths)];
+  if (unique.length === 0) return new Map();
+
+  const { data, error } = await supabase.storage.from(IMAGE_BUCKET).createSignedUrls(unique, SIGNED_URL_TTL_SECONDS);
+  // 사진을 못 불러오는 것과 기프티콘을 못 보는 것은 다르다. 여기서 던지면 사진 하나 때문에
+  // 목록 전체가 안 뜬다. 주소 없이 돌려주면 사진 자리만 비고 나머지는 그대로 보인다.
+  if (error) return new Map();
+
+  return new Map((data || []).filter((item) => item?.signedUrl).map((item) => [item.path, item.signedUrl]));
+}
+
+// image_urls는 image_paths와 자리를 맞춰 둔다(못 받은 자리는 null). 수정 화면이 두 배열을
+// 같은 번호로 짝지어 쓰기 때문에, 실패한 것을 빼서 줄이면 엉뚱한 사진이 지워진다.
+function attachImageUrls(row, urls) {
+  const image_urls = (row.image_paths || []).map((path) => urls.get(path) ?? null);
+  return {
+    ...row,
+    category: normalizeCategory(row.category),
+    image_urls,
+    image_url: image_urls.find(Boolean) || null,
+    barcode_image_url: row.barcode_image_path ? (urls.get(row.barcode_image_path) ?? null) : null,
+  };
+}
+
+async function withImageUrls(row) {
   if (!row) return row;
-  const paths = row.image_paths || [];
-  const image_urls = paths.map((path) => supabase.storage.from(IMAGE_BUCKET).getPublicUrl(path).data.publicUrl);
-  const barcode_image_url = row.barcode_image_path
-    ? supabase.storage.from(IMAGE_BUCKET).getPublicUrl(row.barcode_image_path).data.publicUrl
-    : null;
-  return { ...row, category: normalizeCategory(row.category), image_urls, image_url: image_urls[0] || null, barcode_image_url };
+  return attachImageUrls(row, await signImagePaths(imagePathsOf(row)));
+}
+
+async function withImageUrlsMany(rows) {
+  const urls = await signImagePaths(rows.flatMap(imagePathsOf));
+  return rows.map((row) => attachImageUrls(row, urls));
 }
 
 async function uploadImages(familyId, files) {
@@ -70,7 +107,7 @@ export async function listGifticons(params = {}) {
 
   const { data, error } = await query;
   if (error) throw new Error(error.message);
-  return data.map(withImageUrls);
+  return withImageUrlsMany(data);
 }
 
 // 사용 내역(누가 어떤 기프티콘을 언제 썼는지). 가족에서 나간 사람이 쓴 것도 남는다.
