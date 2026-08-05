@@ -27,6 +27,9 @@
   --success-foreground: #ffffff;
   --warning: #e69008;
   --warning-foreground: #1c1e27;
+  /* 썸네일 아래 바코드 줄. 실물 바코드처럼 검은 쪽이되, 사진보다 먼저 눈에 띄면
+     안 되므로 순검정에서 한 단계 물러난 진한 회색을 쓴다. */
+  --barcode-line: #4b4b57;
   --border: #e7e7ec;
   --input: #e7e7ec;
   --ring: #5b4fe8;
@@ -88,6 +91,9 @@
   --success-foreground: #0c1f14;
   --warning: #e69008;
   --warning-foreground: #1c1e27;
+  /* 어두운 타일 위에서는 검은 줄이 보이지 않는다. 밝기를 뒤집되, 흰색까지 올리면
+     혼자 빛나므로 라이트와 같은 정도로만 도드라지게 둔다. */
+  --barcode-line: #9d9bb0;
   --border: #2a2a31;
   --input: #2a2a31;
   --ring: #8478f5;
@@ -112,6 +118,7 @@
   --color-destructive-foreground: var(--destructive-foreground);
   --color-success: var(--success);
   --color-success-foreground: var(--success-foreground);
+  --color-barcode-line: var(--barcode-line);
   --color-warning: var(--warning);
   --color-warning-foreground: var(--warning-foreground);
   --color-border: var(--border);

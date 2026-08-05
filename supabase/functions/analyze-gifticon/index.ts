@@ -27,10 +27,13 @@ const SYSTEM_PROMPT = `너는 한국 모바일 기프티콘 이미지를 읽어 
 - 금액은 "금액권/권종"처럼 상품 자체의 가격이 인쇄돼 있을 때만 숫자로 적는다.
   결제 금액, 할인 금액, 배송비는 금액이 아니다.
 - 여러 장이 들어오면 같은 기프티콘을 여러 각도에서 찍은 것으로 보고 하나로 합쳐서 답한다.
-- thumbnail은 목록에 작게 보여줄 "상품 사진"의 위치다. 기프티콘 화면에서 상품을 찍은 사진
-  (또는 브랜드 대표 이미지)만 감싸는 네모를 고른다. 상품명·유효기간 같은 글자, 버튼,
-  바코드, 폰 상태표시줄은 넣지 않는다. 사진 테두리에 딱 맞춰 자르고, 사진이 없거나
-  어디인지 확실하지 않으면 image를 0으로 둔다(대충 찍는 것보다 비우는 게 낫다).`;
+- thumbnail은 목록에 작게 보여줄 "상품 사진"의 위치다. 화면 한 귀퉁이에 68px로 작게
+  들어가므로, 상품이 그 안을 꽉 채워야 무슨 상품인지 알아볼 수 있다.
+  - 상품(음료잔, 치킨, 케이크, 상품권 카드 등) 자체에 딱 붙는 네모를 고른다. 상품을 둘러싼
+    빈 배경, 사진 판 여백, 카드 테두리는 넣지 않는다. 사진 판 전체가 아니라 상품이다.
+  - 상품명·브랜드·유효기간 같은 글자, 버튼, 바코드, 폰 상태표시줄, 앱 상단 막대는 넣지 않는다.
+  - 화면 전체나 그에 가까운 넓은 영역을 고르지 않는다. 그럴 바에는 비운다.
+  - 상품 사진이 없거나 어디인지 확실하지 않으면 image를 0으로 둔다(대충 찍는 것보다 낫다).`;
 
 function buildSchema(categories: string[]) {
   return {
@@ -68,7 +71,10 @@ function buildSchema(categories: string[]) {
 // 엉뚱한 데를 잘라 놓으면 "왜 이 그림이지?" 싶은 썸네일이 남고 되돌릴 방법도 없다.
 // 화면의 한 귀퉁이만 집었거나 길쭉한 띠를 집은 것은 상품 사진이 아니라고 보고 버린다.
 // 버리면 예전처럼 캡처 전체가 썸네일이 되므로, 애매할 때는 버리는 쪽이 안전하다.
+// 화면을 통째로 짚은 것도 버린다. 그건 자르지 않은 것과 같은데, 잘라낸 그림으로 저장되면
+// 나중에 "왜 안 잘렸지" 하고 원인을 찾을 자리가 하나 늘어난다.
 const MIN_THUMB_PERCENT = 15;
+const MAX_THUMB_PERCENT = 90;
 const MAX_THUMB_RATIO = 2.5;
 
 function parseThumbnail(raw: Record<string, unknown> | null, imageCount: number) {
@@ -81,6 +87,7 @@ function parseThumbnail(raw: Record<string, unknown> | null, imageCount: number)
   const [x, y, width, height] = [box.x, box.y, box.width, box.height].map(Number);
   if (![x, y, width, height].every(Number.isFinite)) return null;
   if (width < MIN_THUMB_PERCENT || height < MIN_THUMB_PERCENT) return null;
+  if (width > MAX_THUMB_PERCENT && height > MAX_THUMB_PERCENT) return null;
   if (x < 0 || y < 0 || x + width > 101 || y + height > 101) return null;
 
   // 백분율은 가로세로 기준이 달라서 비율을 바로 비교할 수 없지만, 기프티콘 상품 사진은
