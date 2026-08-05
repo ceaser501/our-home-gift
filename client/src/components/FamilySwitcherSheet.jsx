@@ -18,7 +18,7 @@ export default function FamilySwitcherSheet({ onClose }) {
   const myName = members.find((m) => m.user_id === user.id)?.display_name || '';
 
   const [mode, setMode] = useState('list'); // list | create | join
-  const [familyName, setFamilyName] = useState('우리 가족');
+  const [familyName, setFamilyName] = useState('우리집');
   const [memberName, setMemberName] = useState(myName);
   const [code, setCode] = useState('');
   const [submitting, setSubmitting] = useState(false);

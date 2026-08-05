@@ -10,7 +10,7 @@ import { signOut } from '../auth';
 
 export default function FamilyOnboarding({ userEmail, onDone }) {
   const [mode, setMode] = useState('create');
-  const [familyName, setFamilyName] = useState('우리 가족');
+  const [familyName, setFamilyName] = useState('우리집');
   const [memberName, setMemberName] = useState('');
   const [code, setCode] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -27,7 +27,7 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
       const family = await createFamily(familyName.trim(), memberName.trim());
       setCreated(family);
     } catch (err) {
-      setError(err.message || '가족 그룹 생성에 실패했어요.');
+      setError(err.message || '만들지 못했어요.');
     } finally {
       setSubmitting(false);
     }
@@ -77,9 +77,10 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
     return (
       <div className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col items-center justify-center gap-5 bg-background px-6">
         <Users className="size-10 text-primary" />
-        <h1 className="m-0 text-lg font-bold text-foreground">가족 그룹을 만들었어요</h1>
+        <h1 className="m-0 text-lg font-bold text-foreground">만들었어요</h1>
         <p className="m-0 text-center text-sm text-muted-foreground">
-          아래 초대 코드를 가족에게 알려주면, 같은 코드로 참여해서 기프티콘을 함께 볼 수 있어요.
+          가족과 함께 보고 싶으면 이 코드를 알려주세요.
+          혼자 쓰실 거면 그냥 시작하셔도 돼요.
         </p>
         {/* 가족을 막 만든 이 순간이 코드를 실제로 보내는 순간이다. 여기서 복사가 안 되면
             사람은 여섯 자를 눈으로 외워 옮겨 적는다. */}
@@ -96,10 +97,15 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col justify-center gap-5 bg-background px-6">
+      {/* 이 화면이 "이 앱이 내 앱인가"를 정한다. 예전 문구("가족 그룹이 필요해요")는 혼자
+          쓰려는 사람에게 자격 조건처럼 읽혔다. 혼자도 괜찮다는 것을 먼저 말해준다. */}
       <div className="flex flex-col items-center gap-1.5">
         <Users className="size-9 text-primary" />
-        <h1 className="m-0 text-lg font-bold text-foreground">가족 그룹이 필요해요</h1>
-        <p className="m-0 text-center text-sm text-muted-foreground">{userEmail}로 로그인했어요.</p>
+        <h1 className="m-0 text-lg font-bold text-foreground">기프티콘을 모아둘 곳을 만들어요</h1>
+        <p className="m-0 text-center text-sm break-keep text-muted-foreground">
+          혼자 써도 좋아요. 나중에 가족을 초대할 수도 있어요.
+        </p>
+        <p className="m-0 text-center text-xs text-muted-foreground">{userEmail}로 로그인했어요.</p>
       </div>
 
       <div className="flex gap-1.5">
@@ -111,7 +117,7 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
             mode === 'create' ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card text-muted-foreground'
           )}
         >
-          가족 만들기
+          새로 만들기
         </button>
         <button
           type="button"
@@ -128,13 +134,13 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
       {mode === 'create' ? (
         <form onSubmit={handleCreate} className="flex flex-col gap-3">
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="fam-name">가족 이름</Label>
+            <Label htmlFor="fam-name">이름</Label>
             {/* autoComplete="off": 예전에 적었던 값이 아래로 뜨지 않게 한다. */}
             <Input
               id="fam-name"
               value={familyName}
               onChange={(e) => setFamilyName(e.target.value)}
-              placeholder="예: 우리 가족"
+              placeholder="예: 우리집"
               autoComplete="off"
               required
             />
@@ -152,7 +158,7 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
           <Button type="submit" size="lg" className="w-full rounded-xl" disabled={submitting}>
-            {submitting ? '만드는 중…' : '가족 만들기'}
+            {submitting ? '만드는 중…' : '만들기'}
           </Button>
         </form>
       ) : (

@@ -3,6 +3,7 @@ import QRCode from 'qrcode';
 import JsBarcode from 'jsbarcode';
 import { StickyNote } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import CopyButton from './CopyButton';
 import { useFamily } from '../FamilyContext';
 
 const ZXING_TO_JSBARCODE = {
@@ -117,12 +118,21 @@ export default function BarcodeModal({ gifticon, onClose }) {
           )}
 
           {gifticon.code ? (
-            <p className="text-center font-mono text-sm tracking-wide break-all text-muted-foreground">
-              바코드정보: {gifticon.code}
-              {renderError &&
-                !gifticon.barcode_image_url &&
-                ' (이미지로 표시할 수 없어 매장에서 이 번호를 직접 입력해주세요)'}
-            </p>
+            // 리더기가 못 읽거나 온라인에서 쓸 때는 번호를 직접 넣어야 한다. 열세 자리를
+            // 눈으로 옮겨 적는 건 계산대 앞에서 하기에 성가신 일이라 복사로 끝낼 수 있게 한다.
+            <div className="flex flex-col items-center gap-1">
+              <div className="flex items-center gap-1">
+                <p className="m-0 text-center font-mono text-sm tracking-wide break-all text-muted-foreground">
+                  바코드정보: {gifticon.code}
+                </p>
+                <CopyButton value={gifticon.code} label="복사" />
+              </div>
+              {renderError && !gifticon.barcode_image_url && (
+                <p className="m-0 text-center text-xs break-keep text-muted-foreground">
+                  이미지로 표시할 수 없어요. 매장에서 이 번호를 직접 입력해주세요.
+                </p>
+              )}
+            </div>
           ) : (
             <p className="text-xs text-muted-foreground">등록된 바코드/QR 정보가 없어요. 수정에서 직접 입력할 수 있어요.</p>
           )}

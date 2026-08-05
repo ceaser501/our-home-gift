@@ -58,8 +58,10 @@ export default function Header() {
         </button>
       </div>
 
+      {/* 혼자 쓰는 사람에게 "가족 1명"은 빈자리를 세는 말처럼 읽힌다. 혼자일 때는 그렇게
+          말하지 않는다. 초대 코드는 그대로 둔다 — 초대는 여전히 여기서 시작한다. */}
       <p className="m-0 pl-9.5 text-xs text-muted-foreground">
-        가족 {members.length}명 · 초대코드 {family.invite_code}
+        {members.length > 1 ? `가족 ${members.length}명` : '혼자 쓰는 중'} · 초대코드 {family.invite_code}
       </p>
 
       {switcherOpen && <FamilySwitcherSheet onClose={() => setSwitcherOpen(false)} />}

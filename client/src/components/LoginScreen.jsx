@@ -94,7 +94,12 @@ export default function LoginScreen() {
       <div className="flex flex-col items-center gap-3">
         <Logo className="size-12" />
         <h1 className="m-0 text-xl font-bold text-foreground">모아콘</h1>
-        <p className="m-0 text-center text-sm text-muted-foreground">가족과 기프티콘을 함께 관리해보세요.</p>
+        {/* 혼자 쓰려는 사람이 여기서 "내 앱이 아니네" 하고 나가지 않도록, 함께 보는 것은
+            할 수 있는 일로만 적는다. 이 앱의 강점은 여전히 함께 보는 것이지만, 그게 조건처럼
+            읽히면 문턱이 된다. */}
+        <p className="m-0 text-center text-sm break-keep text-muted-foreground">
+          기프티콘을 모아두고, 가족과 함께 볼 수도 있어요.
+        </p>
       </div>
 
       {sent ? (

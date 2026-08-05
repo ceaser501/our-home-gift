@@ -145,7 +145,7 @@ export default function ProfileMenu({ onClose }) {
             className="flex w-full items-center gap-3 px-1 py-3 text-left text-sm"
           >
             <Receipt className="size-4.5 text-muted-foreground" />
-            <span className="flex-1 text-foreground">가족 사용 내역</span>
+            <span className="flex-1 text-foreground">사용 내역</span>
             <ChevronRight className="size-4 text-muted-foreground" />
           </button>
 

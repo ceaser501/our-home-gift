@@ -102,8 +102,9 @@ export default function FamilyMembersSheet({ onClose }) {
                 <span className="truncate text-sm font-semibold text-foreground">
                   {member.display_name}
                   {member.user_id === user.id && <span className="ml-1.5 text-xs font-normal text-primary">나</span>}
-                  {/* 권한이 더 있는 건 아니고, 누구에게 물어보면 되는지 알려주는 표시다. */}
-                  {index === 0 && (
+                  {/* 권한이 더 있는 건 아니고, 누구에게 물어보면 되는지 알려주는 표시다.
+                      혼자면 물어볼 사람도 나뿐이라 붙일 이유가 없다. */}
+                  {index === 0 && members.length > 1 && (
                     <span className="ml-1.5 rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-bold text-accent-foreground">
                       대표
                     </span>
