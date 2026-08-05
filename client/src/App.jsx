@@ -278,7 +278,18 @@ export default function App() {
         />
       )}
 
-      {codeTarget && <BarcodeModal gifticon={codeTarget} onClose={() => setCodeTarget(null)} />}
+      {codeTarget && (
+        <BarcodeModal
+          gifticon={codeTarget}
+          onClose={() => setCodeTarget(null)}
+          // 사용완료를 누르면 창을 닫는다. 다 쓴 바코드를 계속 띄워둘 이유가 없고,
+          // 닫히는 것 자체가 "처리됐다"는 신호가 된다.
+          onUsed={() => {
+            handleToggleUsed(codeTarget);
+            setCodeTarget(null);
+          }}
+        />
+      )}
       {imageTarget && <ImageViewerModal gifticon={imageTarget} onClose={() => setImageTarget(null)} />}
       {storesTarget && <NearbyStoresSheet gifticon={storesTarget} onClose={() => setStoresTarget(null)} />}
 

@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
 import JsBarcode from 'jsbarcode';
-import { ChevronLeft, ChevronRight, Image as ImageIcon, ScanLine, StickyNote } from 'lucide-react';
+import { CheckCircle2, ChevronLeft, ChevronRight, Image as ImageIcon, ScanLine, StickyNote } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Button } from '@/components/ui/button';
 import CopyButton from './CopyButton';
 import { cn } from '@/lib/utils';
 import { useFamily } from '../FamilyContext';
@@ -18,7 +19,7 @@ const ZXING_TO_JSBARCODE = {
   CODABAR: 'codabar',
 };
 
-export default function BarcodeModal({ gifticon, onClose }) {
+export default function BarcodeModal({ gifticon, onClose, onUsed }) {
   const { members } = useFamily();
   const [canvas, setCanvas] = useState(null);
   const [renderError, setRenderError] = useState(false);
@@ -162,6 +163,16 @@ export default function BarcodeModal({ gifticon, onClose }) {
             </div>
           ) : (
             <p className="text-xs text-muted-foreground">등록된 바코드/QR 정보가 없어요. 수정에서 직접 입력할 수 있어요.</p>
+          )}
+
+          {/* 계산이 끝난 그 자리에서 바로 눌러 끝낼 수 있게 한다. 창을 닫고 목록에서 다시
+              카드를 찾아 누르게 하면, 그 한 걸음 때문에 표시를 미루다 잊는다.
+              눌러도 되돌릴 수 있다(카드에서 "사용취소"). 그래서 다시 묻지 않고 바로 처리한다. */}
+          {onUsed && (
+            <Button type="button" size="lg" onClick={onUsed} className="mt-1 w-full rounded-xl">
+              <CheckCircle2 className="size-4.5" />
+              사용완료
+            </Button>
           )}
 
           {photos.length > 0 && (

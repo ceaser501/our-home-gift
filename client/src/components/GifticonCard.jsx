@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CheckCircle2, Hand, MapPin, MoreVertical, Pencil, RotateCcw, Ticket, Trash2 } from 'lucide-react';
+import { CheckCircle2, Heart, MapPin, MoreVertical, Pencil, RotateCcw, Ticket, Trash2 } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { CATEGORIES } from '../constants';
 import { formatDday, formatDate, ddayUrgency } from '../utils/date';
@@ -184,7 +184,8 @@ export default function GifticonCard({
               onClick={() => onToggleClaim(gifticon)}
               className={cn(BAR_BUTTON, 'min-w-0 border-l border-border', claimed ? 'text-primary' : 'text-foreground')}
             >
-              <Hand className={cn('size-4 shrink-0', claimed ? 'text-primary' : 'text-muted-foreground')} />
+              {/* 찜한 것은 하트를 채운다. 색만 바꾸면 작은 아이콘에서 구분이 잘 안 된다. */}
+              <Heart className={cn('size-4 shrink-0', claimed ? 'fill-primary text-primary' : 'text-muted-foreground')} />
               <span className="truncate">
                 {claimedByMe ? '찜해제' : claimed ? `${gifticon.claimed_by_name} 찜` : '찜하기'}
               </span>
