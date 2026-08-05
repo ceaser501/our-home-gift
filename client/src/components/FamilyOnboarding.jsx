@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
+import CopyButton from './CopyButton';
 import { signOut } from '../auth';
 
 export default function FamilyOnboarding({ userEmail, onDone }) {
@@ -80,8 +81,11 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
         <p className="m-0 text-center text-sm text-muted-foreground">
           아래 초대 코드를 가족에게 알려주면, 같은 코드로 참여해서 기프티콘을 함께 볼 수 있어요.
         </p>
-        <div className="rounded-2xl border border-border bg-card px-8 py-4 text-center">
+        {/* 가족을 막 만든 이 순간이 코드를 실제로 보내는 순간이다. 여기서 복사가 안 되면
+            사람은 여섯 자를 눈으로 외워 옮겨 적는다. */}
+        <div className="flex flex-col items-center gap-1 rounded-2xl border border-border bg-card px-8 py-4">
           <p className="m-0 text-3xl font-bold tracking-[0.2em] text-primary">{created.invite_code}</p>
+          <CopyButton value={created.invite_code} label="코드 복사" />
         </div>
         <Button size="lg" className="w-full rounded-xl" onClick={onDone}>
           시작하기

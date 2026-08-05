@@ -3,6 +3,7 @@ import { Pencil, UserPlus } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import RenameSheet from './RenameSheet';
+import CopyButton from './CopyButton';
 import { useFamily } from '../FamilyContext';
 import { approveJoinRequest, rejectJoinRequest, renameFamily } from '../family';
 import { OWNER_TAG_PALETTE, memberTagColorClass } from '../utils/tagColor';
@@ -44,11 +45,16 @@ export default function FamilyMembersSheet({ onClose }) {
           </SheetTitle>
         </SheetHeader>
 
+        {/* 이 창을 여는 이유의 절반은 "누구 초대하려고"다. 그래서 코드를 읽어서 옮겨 적지
+            않아도 되게 복사 버튼을 코드 바로 옆에 둔다. */}
         <div className="px-5 pb-2">
-          <p className="m-0 text-xs text-muted-foreground">
-            초대코드 <span className="font-mono font-semibold tracking-wider text-foreground">{family.invite_code}</span> 를
-            알려주면 가족이 참여할 수 있어요.
-          </p>
+          <div className="flex items-center gap-1">
+            <p className="m-0 text-xs text-muted-foreground">
+              초대코드 <span className="font-mono font-semibold tracking-wider text-foreground">{family.invite_code}</span>
+            </p>
+            <CopyButton value={family.invite_code} label="복사" />
+          </div>
+          <p className="m-0 text-xs text-muted-foreground">알려주면 가족이 참여를 신청할 수 있어요.</p>
         </div>
 
         {/* 초대 코드는 짧아서 우연히 맞힐 수도 있다. 그래서 코드가 맞아도 여기서 승인해야 들어온다. */}
