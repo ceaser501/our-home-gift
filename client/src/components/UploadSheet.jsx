@@ -13,6 +13,11 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { cn } from '@/lib/utils';
 import AlertDialog from './AlertDialog';
 
+// 스토리지 버킷에 걸어둔 제한과 같은 값이어야 한다(supabase/schema.sql).
+// 달라지면 화면에서는 통과했는데 올릴 때 실패하는, 이유를 알 수 없는 오류가 난다.
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+
 function buildEmptyForm(defaultOwner) {
   return {
     name: '',
@@ -113,9 +118,17 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
     if (picked.length === 0) return;
 
     // "파일"로 고르면 이미지가 아닌 것도 집을 수 있어서 여기서 걸러낸다.
-    const selected = picked.filter((f) => f.type.startsWith('image/'));
+    // 서버(스토리지 버킷)에도 같은 제한이 걸려 있다. 여기 검사는 방어가 아니라,
+    // 올리고 나서 알 수 없는 오류를 보는 대신 고르는 순간 알려주기 위한 것이다.
+    const selected = picked.filter((f) => ALLOWED_IMAGE_TYPES.includes(f.type));
     if (selected.length === 0) {
-      setError('이미지 파일만 올릴 수 있어요.');
+      setError('사진 파일(JPG, PNG, WEBP, HEIC)만 올릴 수 있어요.');
+      return;
+    }
+
+    const tooBig = selected.find((f) => f.size > MAX_IMAGE_BYTES);
+    if (tooBig) {
+      setError(`사진 한 장은 ${Math.floor(MAX_IMAGE_BYTES / 1024 / 1024)}MB까지 올릴 수 있어요.`);
       return;
     }
 

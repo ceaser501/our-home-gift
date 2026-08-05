@@ -375,6 +375,18 @@ insert into storage.buckets (id, name, public)
 values ('gifticon-images', 'gifticon-images', true)
 on conflict (id) do nothing;
 
+-- 올릴 수 있는 파일의 크기와 형식을 서버에서 제한한다.
+-- 화면에도 같은 검사가 있지만 그건 편의를 위한 것이지 방어가 아니다. 브라우저를 거치지
+-- 않고 스토리지 API를 직접 부르면 그 검사는 없는 것과 같아서, 로그인만 하면 자기 가족
+-- 폴더에 아무 크기의 아무 파일이나 올릴 수 있었다(요금이 나가고, 파일 저장소로 악용된다).
+--
+-- 아이폰이 원본 그대로 올리는 경우가 있어 heic/heif도 받는다.
+-- 크기 10MB는 휴대폰 사진 한 장으로는 넉넉하고, 큰 파일을 쌓아두기엔 좁은 선이다.
+update storage.buckets
+set file_size_limit = 10485760,
+    allowed_mime_types = array['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif']
+where id = 'gifticon-images';
+
 -- 파일 경로의 첫 폴더(=family_id)를 안전하게 uuid로 파싱. 예전 방식(가족 폴더 없이 올라간 파일)이거나
 -- 형식이 안 맞으면 null을 돌려줘서 정책 평가 중 에러 없이 그냥 "권한 없음"으로 처리되게 한다.
 create or replace function public.storage_folder_family_id(object_name text)
