@@ -25,17 +25,20 @@ function daysUntil(expiresAt, today) {
 }
 
 Deno.serve(async (req) => {
-  const url = new URL(req.url);
-
   // 이 함수는 pg_cron이 부르는 것이라 로그인 토큰이 없다. 그래서 CRON_SECRET으로만 지킨다.
-  // 예전에는 `if (cronSecret && ...)`라서, 시크릿을 설정하지 않으면 조건 자체가 거짓이 되어
-  // 검사를 통째로 건너뛰었다. 이름을 잘못 적거나 실수로 지우면 문이 활짝 열리는 셈이다.
-  // 보안 검사는 설정이 빠졌을 때 열리는 쪽이 아니라 막히는 쪽으로 넘어져야 한다.
+  //
+  // 두 가지를 고쳤다.
+  // 1) 예전에는 `if (cronSecret && ...)`라서, 시크릿을 설정하지 않으면 조건 자체가 거짓이
+  //    되어 검사를 통째로 건너뛰었다. 보안 검사는 설정이 빠졌을 때 열리는 쪽이 아니라
+  //    막히는 쪽으로 넘어져야 한다.
+  // 2) 예전에는 토큰을 주소 뒤(?token=...)에 붙여 보냈다. 주소는 함수 호출 기록과
+  //    cron.job 테이블에 그대로 남아서, 비밀값을 여기저기 흘리고 다니는 셈이었다.
+  //    헤더로 옮긴다.
   const cronSecret = Deno.env.get('CRON_SECRET');
   if (!cronSecret) {
     return new Response('CRON_SECRET이 설정되지 않아 발송을 중단했어요.', { status: 500 });
   }
-  if (url.searchParams.get('token') !== cronSecret) {
+  if (req.headers.get('x-cron-secret') !== cronSecret) {
     return new Response('unauthorized', { status: 401 });
   }
 
