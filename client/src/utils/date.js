@@ -33,6 +33,16 @@ export function formatDate(dateStr) {
   return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
 }
 
+// 목록 카드는 폭이 좁아서 올해 날짜는 연도를 뺀다. 해가 넘어가는 기한은 헷갈리면
+// 안 되니 그때만 연도를 남긴다.
+export function formatShortDate(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(String(dateStr).includes('T') ? dateStr : `${dateStr}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return dateStr;
+  const monthDay = `${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
+  return d.getFullYear() === new Date().getFullYear() ? monthDay : `${d.getFullYear()}.${monthDay}`;
+}
+
 export function todayStr() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;

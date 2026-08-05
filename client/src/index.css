@@ -157,15 +157,10 @@
 }
 
 /* 사진 아래를 잘라내지 않고 그 위에 얹은 느낌으로 두는 바코드 띠.
-   경계를 딱 자르면 사진이 잘린 것처럼 보여서, 위쪽은 투명하게 두고 아래로 갈수록 짙어지게 한다. */
+   경계를 딱 자르면 사진이 잘린 것처럼 보이고, 반대로 전체를 흐리게 풀면 막대가 번져
+   수염처럼 지저분해진다. 그래서 막대가 놓이는 아래쪽은 꽉 채우고 위쪽 끝만 짧게 푼다. */
 .barcode-band {
-  background-image: linear-gradient(
-    to top,
-    color-mix(in srgb, var(--barcode) 92%, transparent) 0%,
-    color-mix(in srgb, var(--barcode) 82%, transparent) 45%,
-    color-mix(in srgb, var(--barcode) 40%, transparent) 75%,
-    transparent 100%
-  );
+  background-image: linear-gradient(to top, var(--barcode) 0%, var(--barcode) 66%, transparent 100%);
 }
 
 .no-scrollbar::-webkit-scrollbar {

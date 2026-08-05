@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { CheckCircle2, Hand, MapPin, MoreVertical, Pencil, RotateCcw, Ticket, Trash2 } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { CATEGORIES } from '../constants';
-import { formatDday, formatDate, ddayUrgency } from '../utils/date';
+import { formatDday, formatShortDate, ddayUrgency } from '../utils/date';
 import { tagColorClass } from '../utils/tagColor';
 import { cn } from '@/lib/utils';
 import { useFamily } from '../FamilyContext';
@@ -23,19 +23,19 @@ const DDAY_CLASS = {
 // 카드 아래 한 줄로 붙는 버튼들. 폭을 똑같이 나눠 가져서 누르기 쉽다.
 const BAR_BUTTON = 'flex flex-1 items-center justify-center gap-1.5 py-2.5 text-xs font-semibold';
 
-// 사진 아래에 얹히는 바코드 띠. 굵기가 들쭉날쭉해야 무늬가 아니라 바코드로 읽힌다.
-const BAR_WIDTHS = [1, 2, 1, 3, 1, 1, 2, 1, 1, 3, 2, 1, 1, 2];
+// 사진 위에 얹히는 바코드 띠. 실제로 읽히는 바코드가 아니라 "여기 바코드가 들었다"는
+// 표시라서, 진짜처럼 잘게 쪼개지 않는다. 68px짜리 썸네일에서 1px 막대를 촘촘히 세우면
+// 바코드가 아니라 잔털처럼 보인다. 굵게 몇 개만 세워야 멀리서도 바코드로 읽힌다.
+const BAR_WIDTHS = [2, 1, 3, 1, 2, 1, 3, 2];
 
-// 사진을 잘라내고 띠를 덧대면 사진 아래쪽이 잘려 보인다. 대신 사진 위에 겹쳐 얹고
-// 위쪽 경계를 흐리게 풀어서, 바코드가 사진에 묻어난 것처럼 보이게 한다.
 function BarcodeStrip() {
   return (
     <span
-      className="barcode-band pointer-events-none absolute inset-x-0 bottom-0 flex h-6 items-end justify-center gap-px px-1 pb-1"
+      className="barcode-band pointer-events-none absolute inset-x-0 bottom-0 flex h-6 items-end justify-center gap-[3px] pb-1.5"
       aria-hidden="true"
     >
       {BAR_WIDTHS.map((width, i) => (
-        <i key={i} className="block h-2 bg-barcode-foreground/90" style={{ width: `${width}px` }} />
+        <i key={i} className="block h-2.5 bg-barcode-foreground" style={{ width: `${width}px` }} />
       ))}
     </span>
   );
@@ -114,28 +114,32 @@ export default function GifticonCard({
             </span>
           </span>
 
-          <p className="mt-0.5 mb-0.5 truncate pr-7 text-[15px] font-bold text-foreground">{gifticon.name}</p>
-          {gifticon.amount ? <p className="mb-1 text-[13px] text-muted-foreground">{Number(gifticon.amount).toLocaleString()}원</p> : null}
+          <p className="mt-0.5 truncate pr-7 text-[15px] font-bold text-foreground">{gifticon.name}</p>
 
-          {!isUsed && gifticon.expires_at && (
-            <p className={cn('mt-0.5 inline-block self-start rounded-full px-2 py-0.5 text-xs font-bold', DDAY_CLASS[urgency])}>
-              {formatDday(gifticon.expires_at)} · {formatDate(gifticon.expires_at)}까지
-            </p>
-          )}
-
-          {/* 유효기한 바로 밑. "언제까지 / 누가 쓸 것인가"가 이어서 읽힌다.
-              찜하지 않은 카드에는 이 줄이 아예 없어서 높이가 늘지 않는다. */}
-          {!isUsed && claimed && (
-            <p className="mt-1 flex items-center gap-1 text-xs font-bold text-primary">
-              <Hand className="size-3 shrink-0" />
-              {claimedByMe ? '내가 찜했어요' : `${gifticon.claimed_by_name}님이 찜했어요`}
-            </p>
+          {/* 기한과 금액을 한 줄에 모은다. 카드에서 눈이 멈추는 줄이 적을수록 급한 게 먼저 보인다.
+              찜은 아래 버튼이 직접 "○○ 찜"으로 말해주므로 여기에 또 적지 않는다. */}
+          {!isUsed && (gifticon.expires_at || gifticon.amount) && (
+            <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+              {gifticon.expires_at && (
+                <span className={cn('rounded-full px-2 py-0.5 text-xs font-bold', DDAY_CLASS[urgency])}>
+                  {formatDday(gifticon.expires_at)}
+                  {/* 이미 지난 기한에 날짜까지 붙이면 같은 말을 두 번 하는 셈이다. */}
+                  {urgency !== 'expired' && ` · ${formatShortDate(gifticon.expires_at)}까지`}
+                </span>
+              )}
+              {gifticon.amount ? (
+                <span className="text-xs text-muted-foreground">{Number(gifticon.amount).toLocaleString()}원</span>
+              ) : null}
+            </div>
           )}
 
           {/* 누가 썼는지 목록에서 바로 보이게 한다("이거 누가 썼어?"를 굳이 안 물어보게). */}
           {isUsed && (gifticon.used_at || gifticon.used_by_name) && (
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              {[gifticon.used_at && `${formatDate(gifticon.used_at)} 사용`, gifticon.used_by_name && `${gifticon.used_by_name}님이 씀`]
+            <p className="mt-1 text-xs text-muted-foreground">
+              {[
+                gifticon.used_at && `${formatShortDate(gifticon.used_at)} 사용`,
+                gifticon.used_by_name && `${gifticon.used_by_name}님이 씀`,
+              ]
                 .filter(Boolean)
                 .join(' · ')}
             </p>
@@ -176,13 +180,18 @@ export default function GifticonCard({
               매장
             </button>
 
+            {/* 누가 찜했는지를 버튼 자리에서 바로 말한다. 카드 위쪽에 안내 줄을 따로 두면
+                한 가지 사실을 두 군데서 말하게 되고 카드만 길어진다. 남이 찜한 것을 눌러도
+                막지 않는다 — 눌러보면 "○○님이 찜했어요"만 알려주고 쓸지는 본인이 정한다. */}
             <button
               type="button"
               onClick={() => onToggleClaim(gifticon)}
-              className={cn(BAR_BUTTON, 'border-l border-border', claimedByMe ? 'text-primary' : 'text-foreground')}
+              className={cn(BAR_BUTTON, 'min-w-0 border-l border-border', claimed ? 'text-primary' : 'text-foreground')}
             >
-              <Hand className={cn('size-4', claimedByMe ? 'text-primary' : 'text-muted-foreground')} />
-              {claimedByMe ? '찜 해제' : '찜하기'}
+              <Hand className={cn('size-4 shrink-0', claimed ? 'text-primary' : 'text-muted-foreground')} />
+              <span className="truncate">
+                {claimedByMe ? '찜 해제' : claimed ? `${gifticon.claimed_by_name} 찜` : '찜하기'}
+              </span>
             </button>
 
             <button
