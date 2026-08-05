@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { CheckCircle2, Hand, MapPin, MoreVertical, Pencil, RotateCcw, Ticket, Trash2 } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { CATEGORIES } from '../constants';
-import { formatDday, formatShortDate, ddayUrgency } from '../utils/date';
+import { formatDday, formatDate, ddayUrgency } from '../utils/date';
 import { tagColorClass } from '../utils/tagColor';
 import { cn } from '@/lib/utils';
 import { useFamily } from '../FamilyContext';
@@ -23,19 +23,15 @@ const DDAY_CLASS = {
 // 카드 아래 한 줄로 붙는 버튼들. 폭을 똑같이 나눠 가져서 누르기 쉽다.
 const BAR_BUTTON = 'flex flex-1 items-center justify-center gap-1.5 py-2.5 text-xs font-semibold';
 
-// 사진 위에 얹히는 바코드 띠. 실제로 읽히는 바코드가 아니라 "여기 바코드가 들었다"는
-// 표시라서, 진짜처럼 잘게 쪼개지 않는다. 68px짜리 썸네일에서 1px 막대는 바코드가 아니라
-// 잔털로 보이므로 2~3px만 쓰고, 짧고 굵게 세워야 멀리서도 바코드로 읽힌다.
+// 실제로 읽히는 바코드가 아니라 "여기 바코드가 들었다"는 표시라서, 진짜처럼 잘게 쪼개지
+// 않는다. 68px짜리 썸네일에서 1px 막대는 바코드가 아니라 잔털로 보이므로 2~3px만 쓴다.
 const BAR_WIDTHS = [3, 2, 3, 2, 2, 3, 2, 3];
 
 function BarcodeStrip() {
   return (
-    <span
-      className="barcode-band pointer-events-none absolute inset-x-0 bottom-0 flex h-6 items-end justify-center gap-[3px] pb-1.5"
-      aria-hidden="true"
-    >
+    <span className="flex h-2 shrink-0 items-center justify-center gap-[3px]" aria-hidden="true">
       {BAR_WIDTHS.map((width, i) => (
-        <i key={i} className="block h-2 bg-barcode-foreground" style={{ width: `${width}px` }} />
+        <i key={i} className="block h-full bg-barcode-foreground" style={{ width: `${width}px` }} />
       ))}
     </span>
   );
@@ -78,29 +74,43 @@ export default function GifticonCard({
         {/* 계산대 앞에서 제일 급한 동작이 바코드 열기라, 카드에서 가장 큰 과녁을 준다.
             사진을 분류 아이콘으로 바꾸지 않는 이유: 사람은 기프티콘을 "스타벅스 초록색 그거"로
             기억한다. 브랜드 색은 글자보다 빨리 읽히고, 내가 올린 사진이라야 내 지갑처럼 느껴진다.
-            대신 사진만 있으면 눌러도 되는 줄 모르므로 아래에 바코드 띠를 얹어 알린다. */}
+            대신 사진만 있으면 눌러도 되는 줄 모르므로 아래에 바코드를 붙여 알린다.
+
+            바코드는 사진 위에 겹치지 않는다. 겹치면 사진을 가리거나 사진이 잘려 보이는데,
+            실물 기프티콘도 사진과 바코드가 한 장에 위아래로 나뉘어 있다. 그래서 썸네일 전체를
+            연한 종이처럼 두고 그 안에 사진과 바코드를 조금 띄워 앉힌다. */}
         <button
           type="button"
-          className="relative flex size-17 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-accent"
+          className={cn(
+            'relative flex size-17 shrink-0 overflow-hidden rounded-xl',
+            canOpenCode ? 'flex-col gap-[3px] bg-barcode p-[3px]' : 'items-center justify-center bg-accent'
+          )}
           onClick={() => (canOpenCode ? onViewCode(gifticon) : onViewImage(gifticon))}
           aria-label={canOpenCode ? '바코드 보기' : '업로드한 이미지 보기'}
         >
-          {gifticon.image_url ? (
-            <img src={gifticon.image_url} alt={gifticon.name} className="h-full w-full object-cover" />
-          ) : (
-            <Ticket className="size-6 text-primary/60" />
-          )}
-          {isUsed && (
-            <span className="absolute inset-0 flex items-center justify-center bg-black/55 text-[11px] font-bold text-white">
-              사용완료
-            </span>
-          )}
-          {photoCount > 1 && (
-            <span className="absolute top-1 right-1 rounded-full bg-black/60 px-1.5 py-px text-[10px] font-bold text-white">
-              {photoCount}
-            </span>
-          )}
-          {/* 열 바코드가 있을 때만 얹는다. 없는데 붙어 있으면 카드가 거짓말을 하는 셈이다. */}
+          <span
+            className={cn(
+              'relative flex items-center justify-center overflow-hidden',
+              canOpenCode ? 'min-h-0 flex-1 rounded-[9px] bg-accent' : 'size-full'
+            )}
+          >
+            {gifticon.image_url ? (
+              <img src={gifticon.image_url} alt={gifticon.name} className="h-full w-full object-cover" />
+            ) : (
+              <Ticket className="size-6 text-primary/60" />
+            )}
+            {isUsed && (
+              <span className="absolute inset-0 flex items-center justify-center bg-black/55 text-[11px] font-bold text-white">
+                사용완료
+              </span>
+            )}
+            {photoCount > 1 && (
+              <span className="absolute top-1 right-1 rounded-full bg-black/60 px-1.5 py-px text-[10px] font-bold text-white">
+                {photoCount}
+              </span>
+            )}
+          </span>
+          {/* 열 바코드가 있을 때만 붙인다. 없는데 붙어 있으면 카드가 거짓말을 하는 셈이다. */}
           {canOpenCode && <BarcodeStrip />}
         </button>
 
@@ -114,28 +124,24 @@ export default function GifticonCard({
             </span>
           </span>
 
-          <p className="mt-0.5 truncate pr-7 text-[15px] font-bold text-foreground">{gifticon.name}</p>
+          {/* 이름 → 금액 → 기한 순. 앞의 둘은 "이게 뭔지"를 말하는 상품 정보라 붙어 있고,
+              언제까지 써야 하는지는 성격이 달라서 맨 아래에 따로 앉힌다.
+              찜은 아래 버튼이 직접 "○○ 찜"으로 말해주므로 여기에 또 적지 않는다. */}
+          <p className="mt-0.5 mb-0.5 truncate pr-7 text-[15px] font-bold text-foreground">{gifticon.name}</p>
+          {gifticon.amount ? (
+            <p className="mb-1 text-[13px] text-muted-foreground">{Number(gifticon.amount).toLocaleString()}원</p>
+          ) : null}
 
-          {/* 찜은 아래 버튼이 직접 "○○ 찜"으로 말해주므로 여기에 또 적지 않는다. */}
           {!isUsed && gifticon.expires_at && (
-            <p className={cn('mt-1 inline-block self-start rounded-full px-2 py-0.5 text-xs font-bold', DDAY_CLASS[urgency])}>
-              {formatDday(gifticon.expires_at)}
-              {/* 이미 지난 기한에 날짜까지 붙이면 같은 말을 두 번 하는 셈이다. */}
-              {urgency !== 'expired' && ` · ${formatShortDate(gifticon.expires_at)}까지`}
+            <p className={cn('mt-0.5 inline-block self-start rounded-full px-2 py-0.5 text-xs font-bold', DDAY_CLASS[urgency])}>
+              {formatDday(gifticon.expires_at)} · {formatDate(gifticon.expires_at)}까지
             </p>
           )}
-
-          {!isUsed && gifticon.amount ? (
-            <p className="mt-1 text-xs text-muted-foreground">{Number(gifticon.amount).toLocaleString()}원</p>
-          ) : null}
 
           {/* 누가 썼는지 목록에서 바로 보이게 한다("이거 누가 썼어?"를 굳이 안 물어보게). */}
           {isUsed && (gifticon.used_at || gifticon.used_by_name) && (
             <p className="mt-1 text-xs text-muted-foreground">
-              {[
-                gifticon.used_at && `${formatShortDate(gifticon.used_at)} 사용`,
-                gifticon.used_by_name && `${gifticon.used_by_name}님이 씀`,
-              ]
+              {[gifticon.used_at && `${formatDate(gifticon.used_at)} 사용`, gifticon.used_by_name && `${gifticon.used_by_name}님이 씀`]
                 .filter(Boolean)
                 .join(' · ')}
             </p>
