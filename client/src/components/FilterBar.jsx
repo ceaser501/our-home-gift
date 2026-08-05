@@ -5,7 +5,35 @@ import { CATEGORIES, STATUS_TABS } from '../constants';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 
-export default function FilterBar({ search, onSearchChange, category, onCategoryChange, statusTab, onStatusTabChange }) {
+// 분류 칩에 붙는 개수. 고른 칩은 배경이 진해서 같은 회색 뱃지를 얹으면 묻히므로,
+// 그 위에서는 글자색을 따라가는 반투명 배경을 쓴다.
+function CountBadge({ count, selected }) {
+  // 0개인 분류에까지 '0'을 달면 눈에 걸리는 숫자만 늘어난다. 비어 있다는 건 칩을 눌러
+  // 빈 목록을 보면 알 수 있고, 대개는 누르지도 않는다.
+  if (!count) return null;
+
+  return (
+    <span
+      className={cn(
+        'ml-1 rounded-full px-1.5 text-[11px] font-semibold tabular-nums',
+        selected ? 'bg-primary-foreground/25 text-primary-foreground' : 'bg-secondary text-foreground/60'
+      )}
+    >
+      {count}
+    </span>
+  );
+}
+
+export default function FilterBar({
+  search,
+  onSearchChange,
+  category,
+  onCategoryChange,
+  categoryCounts = {},
+  totalCount = 0,
+  statusTab,
+  onStatusTabChange,
+}) {
   const [statusOpen, setStatusOpen] = useState(false);
   // 사용여부는 한 번 정해두면 잘 안 바꾸는 값이라 한 줄을 통째로 내주지 않고 접어둔다.
   // 대신 지금 무엇으로 보고 있는지가 버튼에 그대로 적혀 있어야, 걸어둔 걸 잊지 않는다.
@@ -57,11 +85,12 @@ export default function FilterBar({ search, onSearchChange, category, onCategory
           type="button"
           onClick={() => onCategoryChange('')}
           className={cn(
-            'shrink-0 rounded-full border px-3 py-1.5 text-[13px] whitespace-nowrap transition-colors',
+            'flex shrink-0 items-center rounded-full border px-3 py-1.5 text-[13px] whitespace-nowrap transition-colors',
             category === '' ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card text-muted-foreground'
           )}
         >
           전체
+          <CountBadge count={totalCount} selected={category === ''} />
         </button>
         {CATEGORIES.map((cat) => (
           <button
@@ -69,13 +98,14 @@ export default function FilterBar({ search, onSearchChange, category, onCategory
             type="button"
             onClick={() => onCategoryChange(cat.key)}
             className={cn(
-              'shrink-0 rounded-full border px-3 py-1.5 text-[13px] whitespace-nowrap transition-colors',
+              'flex shrink-0 items-center rounded-full border px-3 py-1.5 text-[13px] whitespace-nowrap transition-colors',
               category === cat.key
                 ? 'border-primary bg-primary text-primary-foreground'
                 : 'border-border bg-card text-muted-foreground'
             )}
           >
             {cat.label}
+            <CountBadge count={categoryCounts[cat.key]} selected={category === cat.key} />
           </button>
         ))}
       </div>

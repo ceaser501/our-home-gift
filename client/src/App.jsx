@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Plus } from 'lucide-react';
 import Header from './components/Header';
 import FilterBar from './components/FilterBar';
@@ -62,7 +62,10 @@ export default function App() {
     if (!silent) setLoading(true);
     setError('');
     try {
-      const params = { familyId: family.id, search, category };
+      // 분류는 서버에서 거르지 않고 다 받아온다. 분류별 개수를 뱃지로 보여주려면 어차피
+      // 전체가 필요하고, 받아둔 것을 화면에서 거르면 분류를 바꿀 때 서버에 다시 묻지 않아
+      // 즉시 바뀐다.
+      const params = { familyId: family.id, search };
       if (statusTab !== 'all') params.status = statusTab;
       const data = await listGifticons(params);
       setGifticons(sortGifticons(data));
@@ -74,7 +77,20 @@ export default function App() {
     // dataVersion은 이름 바꾸기처럼 목록에 적힌 이름까지 서버에서 바뀐 뒤 다시 읽어오게 하는 신호다.
     // 함수 안에서 쓰이지는 않지만, 값이 바뀌면 목록을 다시 불러와야 해서 의존성에 넣어둔다.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [family.id, search, category, statusTab, dataVersion]);
+  }, [family.id, search, statusTab, dataVersion]);
+
+  // 뱃지에 적을 숫자. "이걸 누르면 몇 개가 보이나"라서, 지금 걸어둔 사용여부·검색은
+  // 그대로 반영되고 분류만 빼고 센다.
+  const categoryCounts = useMemo(() => {
+    const counts = {};
+    for (const item of gifticons) counts[item.category] = (counts[item.category] ?? 0) + 1;
+    return counts;
+  }, [gifticons]);
+
+  const visibleGifticons = useMemo(
+    () => (category ? gifticons.filter((item) => item.category === category) : gifticons),
+    [gifticons, category]
+  );
 
   useEffect(() => {
     const timer = setTimeout(() => fetchList(), search ? 300 : 0);
@@ -175,6 +191,8 @@ export default function App() {
         onSearchChange={setSearch}
         category={category}
         onCategoryChange={setCategory}
+        categoryCounts={categoryCounts}
+        totalCount={gifticons.length}
         statusTab={statusTab}
         onStatusTabChange={setStatusTab}
       />
@@ -184,7 +202,7 @@ export default function App() {
         {!loading && error && <p className="py-10 text-center text-destructive">{error}</p>}
         {!loading && !error && (
           <GifticonList
-            gifticons={gifticons}
+            gifticons={visibleGifticons}
             onViewCode={setCodeTarget}
             onViewImage={setImageTarget}
             onToggleUsed={handleToggleUsed}
