@@ -28,6 +28,50 @@ function parseState(rawState) {
   return { redirectTo: rawState, browserClientId: null };
 }
 
+// state는 브라우저를 거쳐 오는 값이라 누구든 원하는 대로 채워 넣을 수 있다. 그런데 이 함수는
+// 마지막에 Supabase가 발급한 action_link로 리다이렉트하는데, 그 링크는 열기만 하면 세션이
+// 만들어지는 링크다. 돌아갈 주소를 검증하지 않으면 이런 일이 벌어진다:
+//
+//   1) 공격자가 r을 자기 사이트로 바꾼 네이버 로그인 URL을 피해자에게 보낸다
+//   2) 피해자가 자기 계정으로 네이버 로그인을 한다
+//   3) 이 함수가 피해자의 로그인 링크를 들고 공격자 사이트로 리다이렉트한다
+//   4) 공격자가 그 링크로 피해자 계정에 들어간다
+//
+// 그래서 우리가 아는 주소로만 돌려보낸다. 허용 목록에 없으면 로그인을 진행하지 않는다.
+// (NAVER_ALLOWED_REDIRECTS에 쉼표로 나눠 적는다. 예: https://ceaser501.github.io,http://localhost:5173)
+function allowedOrigins() {
+  // 예전부터 쓰던 기본 주소도 함께 허용 목록에 넣는다. 운영자가 직접 넣은 값이라 믿을 수 있고,
+  // NAVER_ALLOWED_REDIRECTS를 아직 안 넣었더라도 로그인이 통째로 막히지는 않게 된다.
+  const configured = [Deno.env.get('NAVER_ALLOWED_REDIRECTS'), Deno.env.get('NAVER_LOGIN_FALLBACK_REDIRECT')]
+    .filter(Boolean)
+    .join(',');
+
+  const origins = configured
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .map((item) => {
+      try {
+        return new URL(item).origin;
+      } catch {
+        return null;
+      }
+    })
+    .filter(Boolean);
+
+  return [...new Set(origins)];
+}
+
+function isAllowedRedirect(target, allowed) {
+  if (allowed.length === 0) return false;
+  try {
+    return allowed.includes(new URL(target).origin);
+  } catch {
+    // 주소 형식이 아니면(상대 경로, 조작된 값) 받아주지 않는다.
+    return false;
+  }
+}
+
 function redirectWithError(fallbackUrl, message) {
   const target = new URL(fallbackUrl);
   target.searchParams.set('login_error', message);
@@ -44,6 +88,20 @@ Deno.serve(async (req) => {
   const redirectTo = stateRedirect || Deno.env.get('NAVER_LOGIN_FALLBACK_REDIRECT');
   if (!redirectTo) {
     return new Response('로그인 후 돌아갈 주소(state)가 없어요.', { status: 400 });
+  }
+
+  // 검증은 redirectTo를 쓰기 전에 한다. 오류 안내조차 이 주소로 돌려보내기 때문에,
+  // 나중에 검사하면 오류 경로가 그대로 우회로가 된다.
+  const allowed = allowedOrigins();
+  if (allowed.length === 0) {
+    return new Response(
+      '네이버 로그인 설정이 끝나지 않았어요. NAVER_ALLOWED_REDIRECTS에 로그인 후 돌아갈 주소를 등록해주세요.',
+      { status: 500 },
+    );
+  }
+  if (!isAllowedRedirect(redirectTo, allowed)) {
+    // 여기로 온 요청은 우리 앱에서 시작한 로그인이 아니다. 아무 데도 보내지 않고 끝낸다.
+    return new Response('허용되지 않은 주소로 돌아가려고 해서 로그인을 중단했어요.', { status: 400 });
   }
 
   if (naverError) {

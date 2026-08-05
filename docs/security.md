@@ -10,7 +10,7 @@
 
 | # | 항목 | 위험 | 상태 |
 |---|---|---|---|
-| 1 | 네이버 로그인 오픈 리다이렉트 | 높음 (계정 탈취) | 대기 |
+| 1 | 네이버 로그인 오픈 리다이렉트 | 높음 (계정 탈취) | ✅ 완료 |
 | 2 | AI·외부 API 함수 인증 없음 | 높음 (비용) | 대기 |
 | 3 | 이미지 버킷 공개 | 높음 (바코드 노출) | 대기 |
 | 4 | 업로드 크기·형식 제한 없음 | 중간 (요금·악용) | 대기 |
@@ -31,7 +31,36 @@
 
 **위험.** 이 함수는 마지막에 Supabase가 발급한 `action_link`로 리다이렉트하는데, 그 링크는 **열기만 하면 세션이 만들어지는 링크**다. 공격자가 `state`를 조작한 네이버 로그인 URL을 피해자에게 보내면, 피해자가 로그인한 뒤 그 링크가 공격자 사이트로 넘어간다. 계정 탈취가 가능하다.
 
-**조치.** (대기)
+**조치 (완료).** 허용 origin 목록을 만들고, 목록에 없는 주소면 로그인을 중단한다.
+
+- 허용 목록은 `NAVER_ALLOWED_REDIRECTS`(쉼표로 구분)와 기존 `NAVER_LOGIN_FALLBACK_REDIRECT`를 합쳐서 만든다. 둘 다 운영자만 설정할 수 있는 값이다.
+- **검증을 `redirectTo`를 쓰기 전에 한다.** 오류 안내조차 그 주소로 돌려보내는 구조라, 검사를 뒤에 두면 오류 경로가 그대로 우회로가 된다.
+- 허용 목록이 비어 있으면 로그인을 진행하지 않는다(fail-closed). 설정이 빠졌을 때 열리는 쪽으로 넘어지지 않게 했다.
+- 비교는 문자열 앞부분 대조가 아니라 `new URL(...).origin`으로 한다. 주소 형식이 아니면 거부한다.
+
+**검증.** 배포될 파일에서 함수 본문을 그대로 떼어와 돌렸다(사본이 아니라 실제 코드).
+
+| 입력 | 결과 |
+|---|---|
+| `https://ceaser501.github.io/our-home-gift/?x=1` | 허용 |
+| `http://localhost:5173/` | 허용 |
+| `https://evil.com/steal` | 거부 |
+| `https://ceaser501.github.io.evil.com/` | 거부 |
+| `https://evil.ceaser501.github.io/` | 거부 |
+| `https://ceaser501.github.io@evil.com/` | 거부 |
+| `http://ceaser501.github.io/` (스킴 다운그레이드) | 거부 |
+| `//evil.com` (상대 경로) | 거부 |
+| `javascript:alert(1)` | 거부 |
+| 설정이 하나도 없을 때 — 우리 주소마저 | 거부 (fail-closed) |
+
+**운영자가 해야 할 것.**
+
+```
+supabase secrets set NAVER_ALLOWED_REDIRECTS="https://ceaser501.github.io,http://localhost:5173"
+supabase functions deploy naver-auth
+```
+
+`NAVER_LOGIN_FALLBACK_REDIRECT`를 이미 넣어뒀다면 그 주소는 자동으로 허용되므로, 로컬 개발 주소만 추가하면 된다.
 
 ---
 
