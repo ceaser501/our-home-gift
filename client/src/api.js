@@ -349,3 +349,19 @@ export async function resetAllData() {
   }
   return data;
 }
+
+// "이건 내가 쓸게" 표시. 한 사람만 찜할 수 있어서, 이미 다른 사람이 찜해뒀으면
+// { ok: false, claimed_by_name } 이 돌아온다.
+//
+// 찜은 잠금이 아니라 표시다. 찜해둔 것도 다른 사람이 바코드를 열고 쓸 수 있다.
+// 잠그면 찜해둔 사람이 잊었을 때 아무도 못 쓰게 되는데, 그게 막으려던 것보다 나쁘다.
+export async function claimGifticon(id) {
+  const { data, error } = await supabase.rpc('claim_gifticon', { gid: id });
+  if (error) throw new Error(error.message || '찜하지 못했어요.');
+  return data;
+}
+
+export async function releaseGifticon(id) {
+  const { error } = await supabase.rpc('release_gifticon', { gid: id });
+  if (error) throw new Error(error.message || '찜을 풀지 못했어요.');
+}

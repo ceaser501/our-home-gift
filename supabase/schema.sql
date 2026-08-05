@@ -224,6 +224,12 @@ begin
     where family_id = fid
       and hidden_at is null
       and (created_by = auth.uid() or owner = my_name);
+
+    -- 내가 찜해둔 것은 풀어준다. 나간 사람이 쓰러 갈 리 없는데 표시만 남아 있으면
+    -- 남은 가족이 "저건 누가 쓰기로 했나 보다" 하고 계속 비켜 간다.
+    update public.gifticons
+    set claimed_by = null, claimed_by_name = null, claimed_at = null
+    where family_id = fid and claimed_by = auth.uid();
   else
     select coalesce(array_agg(p), '{}') into orphan_paths
     from (
@@ -674,6 +680,99 @@ where family_id is not null
 delete from public.families f
 where not exists (select 1 from public.family_members fm where fm.family_id = f.id);
 
+-- ===================== 찜하기 =====================
+
+-- "이건 내가 쓸게"를 가족에게 알려두는 표시. 같은 기프티콘을 두 사람이 쓰러 가는 일을
+-- 막는 것이 목적이다.
+--
+-- 잠금이 아니라 표시다. 찜해둬도 다른 사람이 바코드를 열고 쓸 수 있다. 잠그면 찜해둔
+-- 사람이 잊었을 때 아무도 못 쓰게 되는데, 그건 막으려던 것보다 나쁘다.
+-- 그래서 찜을 푸는 것은 본인만 할 수 있어도 문제가 되지 않는다.
+alter table public.gifticons add column if not exists claimed_by uuid references auth.users(id);
+alter table public.gifticons add column if not exists claimed_at timestamptz;
+-- 이름을 따로 적어두는 이유는 used_by_name과 같다. 그 사람이 가족에서 나가도 카드에
+-- "누가 쓰기로 했는지"는 남아 있어야 한다.
+alter table public.gifticons add column if not exists claimed_by_name text;
+
+-- 한 사람만 찜할 수 있다. 둘이 찜하면 애초에 막으려던 중복이 그대로 생긴다.
+--
+-- 확인하고 나서 쓰는 두 단계로 나누면, 두 사람이 동시에 눌렀을 때 둘 다 "비어 있다"를
+-- 읽고 지나간다. 조건을 update의 where에 넣어 한 문장으로 처리한다.
+create or replace function public.claim_gifticon(gid bigint)
+returns json
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  uid uuid := auth.uid();
+  my_name text;
+  fid uuid;
+  taken_by text;
+  claimed int;
+begin
+  select family_id into fid from public.gifticons where id = gid;
+  if fid is null then
+    raise exception '기프티콘을 찾을 수 없어요.';
+  end if;
+
+  select display_name into my_name
+  from public.family_members where family_id = fid and user_id = uid;
+  if my_name is null then
+    raise exception '이 가족의 구성원이 아니에요.';
+  end if;
+
+  update public.gifticons
+  set claimed_by = uid, claimed_by_name = my_name, claimed_at = now()
+  where id = gid and (claimed_by is null or claimed_by = uid);
+  get diagnostics claimed = row_count;
+
+  if claimed = 0 then
+    select claimed_by_name into taken_by from public.gifticons where id = gid;
+    return json_build_object('ok', false, 'claimed_by_name', taken_by);
+  end if;
+
+  return json_build_object('ok', true, 'claimed_by_name', my_name);
+end;
+$$;
+
+-- 찜을 푸는 것은 본인만. 찜은 잠금이 아니라서, 남이 못 풀어도 쓰는 데 지장이 없다.
+create or replace function public.release_gifticon(gid bigint)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  update public.gifticons
+  set claimed_by = null, claimed_by_name = null, claimed_at = null
+  where id = gid and claimed_by = auth.uid();
+end;
+$$;
+
+grant execute on function public.claim_gifticon(bigint) to authenticated;
+grant execute on function public.release_gifticon(bigint) to authenticated;
+
+-- 다 쓴 기프티콘에 "내가 쓸게"가 남아 있으면 헷갈린다. 사용 완료로 바뀌면 찜을 지운다.
+create or replace function public.clear_claim_when_used()
+returns trigger
+language plpgsql
+as $$
+begin
+  if new.status = 'used' and old.status is distinct from 'used' then
+    new.claimed_by := null;
+    new.claimed_by_name := null;
+    new.claimed_at := null;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_clear_claim_when_used on public.gifticons;
+create trigger trg_clear_claim_when_used
+  before update on public.gifticons
+  for each row execute function public.clear_claim_when_used();
+
 -- ===================== 약관 동의 =====================
 
 -- 문서를 만들어 두는 것과 이용자가 동의한 것은 다르다. 동의를 받은 기록이 없으면 약관은
@@ -853,6 +952,9 @@ begin
   -- 남는 기프티콘에서 나를 가리키는 것들을 끊는다(계정이 지워지면 이 참조 때문에 막힌다).
   update public.gifticons set used_by = null, used_by_name = '탈퇴한 구성원' where used_by = uid;
   update public.gifticons set created_by = null where created_by = uid;
+  update public.gifticons
+  set claimed_by = null, claimed_by_name = null, claimed_at = null
+  where claimed_by = uid;
 
   delete from public.push_subscriptions where user_id = uid;
   delete from public.family_join_requests where user_id = uid;

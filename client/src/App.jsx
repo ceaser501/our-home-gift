@@ -10,7 +10,7 @@ import NearbyStoresSheet from './components/NearbyStoresSheet';
 import InstallPrompt from './components/InstallPrompt';
 import AlertDialog from './components/AlertDialog';
 import PullToRefresh from './components/PullToRefresh';
-import { listGifticons, updateGifticon, deleteGifticon } from './api';
+import { listGifticons, updateGifticon, deleteGifticon, claimGifticon, releaseGifticon } from './api';
 import { subscribeToGifticons, subscribeToFamily } from './realtime';
 import { ensureSampleGifticon } from './sampleData';
 import { daysUntil, todayStr } from './utils/date';
@@ -161,6 +161,28 @@ export default function App() {
     }
   }
 
+  // 찜은 "이건 내가 쓸게"를 가족에게 알려두는 표시다. 한 사람만 찜할 수 있어서, 그사이
+  // 다른 사람이 먼저 찜했으면 그 사실을 알려주고 목록을 새로 읽는다.
+  async function handleToggleClaim(gifticon) {
+    try {
+      if (gifticon.claimed_by === user.id) {
+        await releaseGifticon(gifticon.id);
+      } else {
+        const result = await claimGifticon(gifticon.id);
+        if (!result?.ok) {
+          setNotice({
+            tone: 'info',
+            title: '이미 찜한 사람이 있어요',
+            description: `${result?.claimed_by_name || '다른 구성원'}님이 먼저 찜했어요.\n그래도 쓰실 수 있지만, 겹치지 않게 한 번 확인해보세요.`,
+          });
+        }
+      }
+      fetchList({ silent: true });
+    } catch (err) {
+      setNotice({ tone: 'warning', title: '찜하지 못했어요', description: err.message });
+    }
+  }
+
   async function handleConfirmDelete() {
     const target = deleteTarget;
     setDeleteTarget(null);
@@ -209,6 +231,7 @@ export default function App() {
             onEdit={(g) => setSheetState({ mode: 'edit', initial: g })}
             onDelete={setDeleteTarget}
             onFindStores={setStoresTarget}
+            onToggleClaim={handleToggleClaim}
           />
         )}
       </main>

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Barcode, CheckCircle2, MapPin, MoreVertical, Pencil, RotateCcw, Ticket, Trash2 } from 'lucide-react';
+import { Barcode, CheckCircle2, Hand, MapPin, MoreVertical, Pencil, RotateCcw, Ticket, Trash2 } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { CATEGORIES } from '../constants';
 import { formatDday, formatDate, ddayUrgency } from '../utils/date';
@@ -23,8 +23,8 @@ const DDAY_CLASS = {
 // 카드 아래 한 줄로 붙는 버튼들. 폭을 똑같이 나눠 가져서 누르기 쉽다.
 const BAR_BUTTON = 'flex flex-1 items-center justify-center gap-1.5 py-2.5 text-xs font-semibold';
 
-export default function GifticonCard({ gifticon, onViewCode, onViewImage, onToggleUsed, onEdit, onDelete, onFindStores }) {
-  const { members } = useFamily();
+export default function GifticonCard({ gifticon, onViewCode, onViewImage, onToggleUsed, onEdit, onDelete, onFindStores, onToggleClaim }) {
+  const { members, user } = useFamily();
   const [menuOpen, setMenuOpen] = useState(false);
   const isUsed = gifticon.status === 'used';
   const urgency = isUsed ? 'none' : ddayUrgency(gifticon.expires_at);
@@ -37,6 +37,10 @@ export default function GifticonCard({ gifticon, onViewCode, onViewImage, onTogg
   // 이미 쓴 것과 기한이 지난 것은 매장에서 쓸 수 없으니 바코드를 열지 않는다.
   const isExpired = urgency === 'expired';
   const codeLocked = isUsed || isExpired;
+
+  // "이건 내가 쓸게" 표시. 잠금이 아니라 표시라, 남이 찜해뒀어도 바코드는 그대로 열린다.
+  const claimed = Boolean(gifticon.claimed_by);
+  const claimedByMe = gifticon.claimed_by === user.id;
 
   return (
     <li className={cn('relative overflow-hidden rounded-2xl border border-border bg-card shadow-xs', isUsed && 'opacity-60')}>
@@ -83,6 +87,14 @@ export default function GifticonCard({ gifticon, onViewCode, onViewImage, onTogg
               {formatDday(gifticon.expires_at)} · {formatDate(gifticon.expires_at)}까지
             </p>
           )}
+          {/* 찜은 다른 사람 보라고 하는 표시다. 카드에서 안 보이면 아무 소용이 없다. */}
+          {!isUsed && claimed && (
+            <p className="mt-1 inline-flex items-center gap-1 self-start rounded-full bg-primary/12 px-2 py-0.5 text-xs font-bold text-primary">
+              <Hand className="size-3" />
+              {claimedByMe ? '내가 쓸 예정' : `${gifticon.claimed_by_name}님이 쓸 예정`}
+            </p>
+          )}
+
           {/* 누가 썼는지 목록에서 바로 보이게 한다("이거 누가 썼어?"를 굳이 안 물어보게). */}
           {isUsed && (gifticon.used_at || gifticon.used_by_name) && (
             <p className="mt-0.5 text-xs text-muted-foreground">
@@ -119,6 +131,17 @@ export default function GifticonCard({ gifticon, onViewCode, onViewImage, onTogg
           {isUsed ? <RotateCcw className="size-4 text-muted-foreground" /> : <CheckCircle2 className="size-4 text-muted-foreground" />}
           {isUsed ? '사용취소' : '사용완료'}
         </button>
+
+        {!codeLocked && (
+          <button
+            type="button"
+            onClick={() => onToggleClaim(gifticon)}
+            className={cn(BAR_BUTTON, 'border-l border-border', claimedByMe ? 'text-primary' : 'text-foreground')}
+          >
+            <Hand className={cn('size-4', claimedByMe ? 'text-primary' : 'text-muted-foreground')} />
+            {claimedByMe ? '찜 해제' : '찜하기'}
+          </button>
+        )}
 
         {/* 이미 썼거나 기한이 지난 건 매장에 갈 일이 없으니 뺀다. */}
         {!codeLocked && (

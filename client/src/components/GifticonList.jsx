@@ -1,6 +1,6 @@
 import GifticonCard from './GifticonCard';
 
-export default function GifticonList({ gifticons, onViewCode, onViewImage, onToggleUsed, onEdit, onDelete, onFindStores }) {
+export default function GifticonList({ gifticons, onViewCode, onViewImage, onToggleUsed, onEdit, onDelete, onFindStores, onToggleClaim }) {
   if (gifticons.length === 0) {
     return (
       <div className="px-5 py-15 text-center text-muted-foreground">
@@ -22,6 +22,7 @@ export default function GifticonList({ gifticons, onViewCode, onViewImage, onTog
           onEdit={onEdit}
           onDelete={onDelete}
           onFindStores={onFindStores}
+          onToggleClaim={onToggleClaim}
         />
       ))}
     </ul>
