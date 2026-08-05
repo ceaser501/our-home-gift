@@ -61,6 +61,7 @@ jobs:
           html = html.replace('__SUPABASE_ANON_KEY__', os.environ['SUPABASE_ANON_KEY'])
           pathlib.Path('client/dist/admin/index.html').write_text(html, encoding='utf-8')
           PY
+          cp admin/manifest.json client/dist/admin/
 
       - uses: actions/configure-pages@v5
 

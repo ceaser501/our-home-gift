@@ -6,6 +6,10 @@
 <!-- 자물쇠는 로그인과 관리자 명단이지만, 검색에 걸려 굳이 사람들이 찾아오게 만들
      이유는 없으니 색인은 막는다(접근 통제가 아니라 노출 줄이기). -->
 <meta name="robots" content="noindex, nofollow">
+<!-- 홈 화면에 설치할 수 있게(PWA). 아이콘은 앱 것을 그대로 쓴다(한 사이트의 한 식구다). -->
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="../icon-192.png">
+<meta name="theme-color" content="#0b0b0b">
 <title>모아콘 관리자</title>
 <!--
   모아콘 관리자 대시보드 (실동작 버전).
@@ -263,6 +267,7 @@ td.strong{font-weight:650}
         <button data-mode="year">연도별</button>
       </div>
       <button class="icon-btn" id="btn-refresh">새로고침</button>
+      <button class="icon-btn" id="btn-install" style="display:none">설치</button>
       <button class="icon-btn" id="btn-logout">로그아웃</button>
       <span class="updated" id="updated"></span>
     </div>
@@ -952,6 +957,31 @@ async function start(){
   });
   document.getElementById('btn-logout').addEventListener('click',logout);
   document.getElementById('btn-logout-denied').addEventListener('click',logout);
+
+  // ----- 설치 버튼 -----
+  // 크롬·엣지·안드로이드는 설치할 수 있게 되면 beforeinstallprompt를 쏴준다. 그때만
+  // 버튼을 보인다(설치할 수 없는 환경에서 눌러도 아무 일도 없는 버튼을 두지 않는다).
+  // iOS 사파리는 그 이벤트가 없고 공유 메뉴로만 설치되므로, 버튼을 보여주되 방법을 알려준다.
+  let installEvent=null;
+  const installBtn=document.getElementById('btn-install');
+  window.addEventListener('beforeinstallprompt',e=>{
+    e.preventDefault();
+    installEvent=e;
+    installBtn.style.display='';
+  });
+  const isIos=/iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isStandalone=matchMedia('(display-mode: standalone)').matches||navigator.standalone;
+  if(isIos&&!isStandalone) installBtn.style.display='';
+  installBtn.addEventListener('click',async()=>{
+    if(installEvent){
+      installEvent.prompt();
+      await installEvent.userChoice;
+      installEvent=null;
+    }else{
+      alert('사파리에서는 공유 버튼(⬆︎) → "홈 화면에 추가"를 누르면 설치돼요.');
+    }
+  });
+  window.addEventListener('appinstalled',()=>{installBtn.style.display='none';});
   document.getElementById('btn-save-config').addEventListener('click',()=>{
     const cfg={url:document.getElementById('in-url').value.trim(),anonKey:document.getElementById('in-anon').value.trim()};
     if(!cfg.url||!cfg.anonKey){ showErr('config-err','두 값을 모두 입력해주세요.'); return; }
