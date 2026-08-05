@@ -314,6 +314,20 @@ export async function deleteGifticon(id) {
   if (paths.length) await removeImages(paths);
 }
 
+// 운영자 공지. 아직 시작 안 된 글은 RLS가 걸러주고, 여기서는 끝난 글만 더 걸러낸다.
+// 끝난 글까지 받아오는 이유: "지난 공지"로 모아 보여줘야 해서다. 화면에서 나눠 쓴다.
+export async function listNotices() {
+  const { data, error } = await supabase
+    .from('notices')
+    .select('*')
+    .order('starts_at', { ascending: false })
+    .limit(30);
+  // 공지를 못 불러오는 것과 기프티콘을 못 보는 것은 다르다. 공지는 없어도 앱이 돌아가야
+  // 하므로 던지지 않고 빈 목록으로 넘긴다(테이블을 아직 안 만든 경우도 여기로 온다).
+  if (error) return [];
+  return data || [];
+}
+
 export async function savePushSubscription({ userId, familyId, subscription }) {
   const json = subscription.toJSON();
   const { error } = await supabase.from('push_subscriptions').upsert(

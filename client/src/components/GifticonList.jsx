@@ -34,24 +34,24 @@ export default function GifticonList({ gifticons, onViewCode, onViewImage, onTog
   return (
     <>
       {missingExpiry > 0 && !noticeDismissed && (
-        <div className="mb-3 rounded-xl bg-secondary px-3 py-2.5">
-          <p className="m-0 flex items-start gap-1.5 text-xs leading-relaxed break-keep text-muted-foreground">
-            <CalendarOff className="mt-0.5 size-3.5 shrink-0" />
-            <span>
-              유효기한을 안 적은 기프티콘이 <b className="font-semibold text-foreground">{missingExpiry}개</b> 있어요. 기한을 채워야
-              만료 전에 알려드릴 수 있어요.
-            </span>
-          </p>
-          {/* "닫기"(X)가 아니라 "다시 안 보기"로 적는다. X는 이번만 접는 것처럼 읽히는데
-              실제로는 다시 띄우지 않으므로, 하는 일을 그대로 말해주는 편이 낫다. */}
-          <button
-            type="button"
-            onClick={dismissNotice}
-            className="mt-1.5 ml-auto block text-[11px] font-semibold text-muted-foreground underline underline-offset-2"
-          >
-            다시 안 보기
-          </button>
-        </div>
+        <p className="m-0 mb-3 flex items-start gap-1.5 rounded-xl bg-secondary px-3 py-2.5 text-xs leading-relaxed break-keep text-muted-foreground">
+          <CalendarOff className="mt-0.5 size-3.5 shrink-0" />
+          <span>
+            유효기간이 없는 기프티콘이 <b className="font-semibold text-foreground">{missingExpiry}개</b> 있어요. 기한을 입력해야
+            만료 전에 알려드릴 수 있어요.{' '}
+            {/* 끄기는 글 아래에 따로 줄을 잡지 않고 문장 끝에 이어 붙인다. 줄을 따로 두면
+                목록 위에 얹히는 안내가 세 줄이 되는데, 그 자리는 기프티콘이 써야 할 자리다.
+                "닫기"(X)가 아니라 "다시 안 보기"로 적는 이유: X는 이번만 접는 것처럼
+                읽히는데 실제로는 영영 안 띄우므로, 하는 일을 그대로 말하는 편이 낫다. */}
+            <button
+              type="button"
+              onClick={dismissNotice}
+              className="font-semibold whitespace-nowrap underline underline-offset-2"
+            >
+              다시 안 보기
+            </button>
+          </span>
+        </p>
       )}
 
       <ul className="m-0 flex list-none flex-col gap-3 p-0">
