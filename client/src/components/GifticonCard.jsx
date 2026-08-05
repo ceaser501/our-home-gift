@@ -135,7 +135,7 @@ export default function GifticonCard({
 
           {/* 이름 → 금액 → 기한 순. 앞의 둘은 "이게 뭔지"를 말하는 상품 정보라 붙어 있고,
               언제까지 써야 하는지는 성격이 달라서 맨 아래에 따로 앉힌다.
-              찜은 아래 버튼이 직접 "○○ 찜"으로 말해주므로 여기에 또 적지 않는다. */}
+              찜은 아래 버튼이 직접 "○○님 찜"으로 말해주므로 여기에 또 적지 않는다. */}
           <p className="mt-0.5 mb-0.5 truncate pr-7 text-[15px] font-bold text-foreground">{gifticon.name}</p>
           {gifticon.amount ? (
             <p className="mb-1 text-[13px] text-muted-foreground">{Number(gifticon.amount).toLocaleString()}원</p>
@@ -201,7 +201,7 @@ export default function GifticonCard({
             >
               <Hand className={cn('size-4 shrink-0', claimed ? 'text-primary' : 'text-muted-foreground')} />
               <span className="truncate">
-                {claimedByMe ? '찜 해제' : claimed ? `${gifticon.claimed_by_name} 찜` : '찜하기'}
+                {claimedByMe ? '찜해제' : claimed ? `${gifticon.claimed_by_name}님 찜` : '찜하기'}
               </span>
             </button>
 
