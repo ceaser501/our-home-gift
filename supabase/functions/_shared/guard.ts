@@ -64,14 +64,23 @@ export async function requireUser(req: Request) {
 // 오늘 이 사람이 이 기능을 몇 번 썼는지 세고, 한도를 넘으면 막는다.
 // 세는 일과 판단을 한 번의 쿼리로 하는 이유는, 나눠 하면 동시에 여러 번 부를 때
 // 둘 다 "아직 여유 있음"으로 읽고 지나가기 때문이다.
-export async function withinDailyLimit(admin, userId: string, action: string, limit: number) {
-  const { data, error } = await admin.rpc('bump_api_usage', { uid: userId, act: action, max_per_day: limit });
+//
+// 사람별 상한과 전체 상한을 함께 본다. 계정은 이메일만 있으면 새로 만들 수 있어서
+// 사람별 상한만으로는 계정을 갈아치우는 것을 막지 못한다. 하루에 나갈 수 있는 요금의
+// 천장을 정하는 건 전체 상한 쪽이다.
+export async function withinDailyLimit(admin, userId: string, action: string, limit: number, totalLimit: number) {
+  const { data, error } = await admin.rpc('bump_api_usage', {
+    uid: userId,
+    act: action,
+    max_per_day: limit,
+    max_total_per_day: totalLimit,
+  });
 
   // 세는 데 실패했다고 기능을 막지는 않는다. 한도는 요금 사고를 막으려는 장치이지
   // 기능의 일부가 아니라서, 여기서 막으면 장애가 곧 서비스 중단이 된다.
-  if (error) return { allowed: true, used: 0, limit };
+  if (error) return { allowed: true, reason: null, used: 0, limit };
 
-  return data as { allowed: boolean; used: number; limit: number };
+  return data as { allowed: boolean; reason: string | null; used: number; limit: number };
 }
 
 export function limitFromEnv(name: string, fallback: number) {
@@ -79,6 +88,11 @@ export function limitFromEnv(name: string, fallback: number) {
   return Number.isFinite(raw) && raw > 0 ? raw : fallback;
 }
 
-export function tooManyMessage(used: number, limit: number) {
-  return `오늘은 여기까지예요. 하루 ${limit}번까지 쓸 수 있어요(지금 ${used}번). 내일 다시 시도해주세요.`;
+// 내가 많이 쓴 것과, 전체가 많이 쓴 것은 사용자에게 할 말이 다르다.
+// 후자는 사용자 잘못이 아니라서 "네가 많이 썼다"고 하면 안 된다.
+export function tooManyMessage(usage: { reason: string | null; used: number; limit: number }) {
+  if (usage.reason === 'total') {
+    return '오늘은 이 기능을 쓰는 사람이 너무 많아 잠시 쉬어가요. 내일 다시 시도해주세요.';
+  }
+  return `오늘은 여기까지예요. 하루 ${usage.limit}번까지 쓸 수 있어요(지금 ${usage.used}번). 내일 다시 시도해주세요.`;
 }

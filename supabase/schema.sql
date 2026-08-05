@@ -547,6 +547,13 @@ begin
     raise exception '이름은 20자까지 쓸 수 있어요.';
   end if;
 
+  -- 초대 코드는 6자리라, 계속 넣어보면 언젠가는 맞는 코드를 찾을 수 있다. 맞혀도 승인이
+  -- 있어야 들어오지만, 남의 가족에 참여 신청을 마구 보내는 것만으로도 성가신 일이 된다.
+  -- 그래서 코드가 맞는지 확인하기 전에 시도 횟수부터 센다(틀린 시도도 세야 의미가 있다).
+  if not (public.bump_api_usage(auth.uid(), 'join_attempt', 20)->>'allowed')::boolean then
+    raise exception '초대 코드를 너무 여러 번 시도했어요. 내일 다시 시도해주세요.';
+  end if;
+
   select * into found_family from public.families where invite_code = upper(btrim(code));
   if not found then
     raise exception '초대 코드를 찾을 수 없어요.';
@@ -670,9 +677,24 @@ create table if not exists public.api_usage (
 -- (RLS는 켜져 있고 정책이 없으면 아무것도 통과하지 못한다) 서버만 다룬다.
 alter table public.api_usage enable row level security;
 
+-- 사람별 상한만으로는 부족하다. 계정은 이메일만 있으면 새로 만들 수 있어서, 계정을
+-- 갈아치우며 부르면 사람별 상한은 매번 0부터 다시 시작한다. 그래서 "오늘 이 기능이
+-- 전부 합쳐 몇 번 쓰였나"도 따로 세고, 거기에도 천장을 둔다. 요금이 얼마까지 나갈 수
+-- 있는지를 이 숫자가 정한다.
+create table if not exists public.api_usage_total (
+  action text not null,
+  day date not null,
+  count int not null default 0,
+  primary key (action, day)
+);
+
+alter table public.api_usage_total enable row level security;
+
 -- 세는 일과 판단을 한 문장에서 한다. 나눠서 하면 동시에 여러 번 부를 때 둘 다
 -- "아직 여유 있음"으로 읽고 지나가버린다.
-create or replace function public.bump_api_usage(uid uuid, act text, max_per_day int)
+-- (인자가 늘어서 예전 것을 지우고 다시 만든다)
+drop function if exists public.bump_api_usage(uuid, text, int);
+create or replace function public.bump_api_usage(uid uuid, act text, max_per_day int, max_total_per_day int default null)
 returns json
 language plpgsql
 security definer
@@ -681,25 +703,46 @@ as $$
 declare
   today date := (now() at time zone 'utc')::date;
   used int;
+  total_used int;
 begin
   insert into public.api_usage (user_id, action, day, count)
   values (uid, act, today, 1)
   on conflict (user_id, action, day) do update set count = public.api_usage.count + 1
   returning count into used;
 
-  return json_build_object('allowed', used <= max_per_day, 'used', used, 'limit', max_per_day);
+  -- 자기 몫을 넘긴 사람은 여기서 끝낸다. 전체 숫자는 올리지 않는다.
+  -- 올려버리면, 한 사람이 계속 두드리는 것만으로 그날 전체 몫이 바닥나서 아무도 못 쓰게
+  -- 된다. 막으려던 것(요금)을 막다가 다른 것(서비스 정지)을 내주는 셈이다.
+  if used > max_per_day then
+    return json_build_object('allowed', false, 'reason', 'user', 'used', used, 'limit', max_per_day);
+  end if;
+
+  if max_total_per_day is not null then
+    insert into public.api_usage_total (action, day, count)
+    values (act, today, 1)
+    on conflict (action, day) do update set count = public.api_usage_total.count + 1
+    returning count into total_used;
+
+    if total_used > max_total_per_day then
+      -- 사용자 잘못이 아니다. 화면에도 다르게 말해야 한다.
+      return json_build_object('allowed', false, 'reason', 'total', 'used', used, 'limit', max_per_day);
+    end if;
+  end if;
+
+  return json_build_object('allowed', true, 'reason', null, 'used', used, 'limit', max_per_day);
 end;
 $$;
 
 -- 이 함수를 사용자가 부를 수 있으면 남의 사용량을 마음대로 올려 못 쓰게 만들 수 있다.
--- 서버(Edge Function)만 부른다.
-revoke all on function public.bump_api_usage(uuid, text, int) from public;
-revoke all on function public.bump_api_usage(uuid, text, int) from anon;
-revoke all on function public.bump_api_usage(uuid, text, int) from authenticated;
-grant execute on function public.bump_api_usage(uuid, text, int) to service_role;
+-- 서버(Edge Function)와, 이 안에서 다시 부르는 security definer 함수만 부른다.
+revoke all on function public.bump_api_usage(uuid, text, int, int) from public;
+revoke all on function public.bump_api_usage(uuid, text, int, int) from anon;
+revoke all on function public.bump_api_usage(uuid, text, int, int) from authenticated;
+grant execute on function public.bump_api_usage(uuid, text, int, int) to service_role;
 
--- 오래된 기록은 쌓아둘 이유가 없다. 부를 때마다 한 달 지난 것을 조금씩 치운다.
+-- 오래된 기록은 쌓아둘 이유가 없다. 이 파일을 실행할 때마다 한 달 지난 것을 치운다.
 delete from public.api_usage where day < (now() at time zone 'utc')::date - 30;
+delete from public.api_usage_total where day < (now() at time zone 'utc')::date - 30;
 
 -- ===================== 계정 탈퇴 =====================
 

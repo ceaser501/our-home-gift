@@ -50,9 +50,15 @@ Deno.serve(async (req) => {
     if (guard.error) {
       return new Response(JSON.stringify({ error: guard.error }), { status: guard.status, headers: jsonHeaders });
     }
-    const usage = await withinDailyLimit(guard.admin, guard.user.id, 'price', limitFromEnv('PRICE_DAILY_LIMIT', 50));
+    const usage = await withinDailyLimit(
+      guard.admin,
+      guard.user.id,
+      'price',
+      limitFromEnv('PRICE_DAILY_LIMIT', 50),
+      limitFromEnv('PRICE_TOTAL_DAILY_LIMIT', 800),
+    );
     if (!usage.allowed) {
-      return new Response(JSON.stringify({ error: tooManyMessage(usage.used, usage.limit) }), {
+      return new Response(JSON.stringify({ error: tooManyMessage(usage) }), {
         status: 429,
         headers: jsonHeaders,
       });

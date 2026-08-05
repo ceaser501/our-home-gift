@@ -183,8 +183,14 @@ Deno.serve(async (req) => {
     const guard = await requireUser(req);
     if (guard.error) return reply({ error: guard.error }, guard.status);
 
-    const usage = await withinDailyLimit(guard.admin, guard.user.id, 'places', limitFromEnv('PLACES_DAILY_LIMIT', 200));
-    if (!usage.allowed) return reply({ error: tooManyMessage(usage.used, usage.limit) }, 429);
+    const usage = await withinDailyLimit(
+      guard.admin,
+      guard.user.id,
+      'places',
+      limitFromEnv('PLACES_DAILY_LIMIT', 200),
+      limitFromEnv('PLACES_TOTAL_DAILY_LIMIT', 3000),
+    );
+    if (!usage.allowed) return reply({ error: tooManyMessage(usage) }, 429);
 
     const apiKey = Deno.env.get('KAKAO_REST_API_KEY');
     if (!apiKey) {
