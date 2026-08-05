@@ -30,7 +30,9 @@ html,body{background:var(--bg);color:var(--ink);font-family:var(--font);font-siz
 body{min-height:100vh}
 h1{font-size:17px;font-weight:700}
 h2{font-size:13.5px;font-weight:650;color:var(--ink)}
-.main{max-width:1180px;margin:0 auto;padding:20px 24px 40px;display:flex;flex-direction:column;gap:14px}
+/* 폭을 제한하지 않는다. 관리 화면은 큰 모니터에 띄워두고 보는 것이라, 가운데만 쓰고
+   양옆을 비워두면 정작 봐야 할 차트가 좁아진다. */
+.main{padding:20px 28px 40px;display:flex;flex-direction:column;gap:14px;min-width:0}
 .top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:4px 0 6px}
 .brand{display:flex;align-items:center;gap:10px}
 .logo-mark{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:9px;background:var(--accent);color:var(--accent-ink);font-weight:800;font-size:15px}
@@ -78,6 +80,37 @@ h2{font-size:13.5px;font-weight:650;color:var(--ink)}
 .watch li:last-child{border-bottom:0}
 .watch b{font-size:14px;color:var(--ink);font-variant-numeric:tabular-nums}
 .foot{text-align:center;font-size:11px;color:var(--muted);padding-top:6px}
+
+/* ----- 목록 화면 ----- */
+.list-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:0 0 12px}
+.search{font:inherit;font-size:13px;padding:8px 12px;border:1px solid var(--border);border-radius:10px;background:var(--card);color:var(--ink);min-width:260px}
+.search:focus{outline:2px solid var(--accent);outline-offset:0;border-color:transparent}
+.list-count{font-size:12px;color:var(--muted);margin-left:auto}
+.table-card{padding:0;overflow:hidden}
+/* 표 안에서 스크롤한다. 페이지째 스크롤하면 머리글과 페이지 버튼이 화면 밖으로 나가서,
+   50줄을 훑는 동안 "이 칸이 무슨 칸이었지"를 확인하러 위로 되돌아가야 한다.
+   (가로 스크롤 컨테이너 안에서는 th의 sticky가 페이지 기준으로 동작하지 않는다.
+    세로도 이 안에서 스크롤되게 해야 머리글이 제자리에 붙는다.) */
+.table-wrap{overflow:auto;max-height:calc(100vh - 232px)}
+table{border-collapse:separate;border-spacing:0;width:100%;font-size:12.5px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--grid);white-space:nowrap}
+th{font-size:11.5px;font-weight:650;color:var(--muted);background:var(--bg);position:sticky;top:0;z-index:1;border-bottom-color:var(--border)}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover{background:var(--accent-soft)}
+td.num{text-align:right;font-variant-numeric:tabular-nums}
+td.muted{color:var(--muted)}
+td.strong{font-weight:650}
+.empty-row td{text-align:center;color:var(--muted);padding:36px 0}
+.tag{display:inline-block;font-size:11px;padding:2px 8px;border-radius:99px;border:1px solid var(--border);color:var(--ink2)}
+.tag-unused{background:color-mix(in srgb,var(--good) 12%,transparent);border-color:transparent;color:var(--good)}
+.tag-used{background:var(--track);border-color:transparent;color:var(--ink2)}
+.tag-expired{background:color-mix(in srgb,var(--bad) 12%,transparent);border-color:transparent;color:var(--bad)}
+.tag-hidden{background:transparent;color:var(--muted)}
+.tag-admin{background:var(--ink);border-color:transparent;color:var(--card)}
+.chips{display:flex;gap:4px;flex-wrap:wrap}
+.pager{display:flex;align-items:center;justify-content:center;gap:12px;padding:12px}
+.page-info{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.icon-btn:disabled{opacity:.4;cursor:default}
 @media (max-width:980px){.kpis-4{grid-template-columns:1fr 1fr}.cards-2,.cards-3{grid-template-columns:1fr}}
 
 /* ----- 설정/상태 화면 ----- */
@@ -181,18 +214,19 @@ h2{font-size:13.5px;font-weight:650;color:var(--ink)}
   <aside class="side">
     <div class="side-logo"><span class="logo-mark">모</span><span>모아콘 관리자</span></div>
     <nav>
-      <a class="on">대시보드</a>
+      <a data-page="dash" class="on">대시보드</a>
+      <a data-page="users">회원 관리</a>
+      <a data-page="gifticons">기프티콘 관리</a>
+      <a data-page="families">가족 관리</a>
       <a class="soon">공지사항<span class="soon-badge">준비 중</span></a>
-      <a class="soon">기프티콘<span class="soon-badge">준비 중</span></a>
-      <a class="soon">가족<span class="soon-badge">준비 중</span></a>
     </nav>
-    <div class="side-foot"><span id="side-email"></span><br>관리 화면이 늘어나면 여기에 메뉴가 붙는다</div>
+    <div class="side-foot"><span id="side-email"></span></div>
   </aside>
   <div class="main">
   <header class="top">
-    <h1>대시보드</h1>
+    <h1 id="page-title">대시보드</h1>
     <div class="controls">
-      <div class="seg">
+      <div class="seg" id="mode-seg">
         <button data-mode="day" class="active">일별</button>
         <button data-mode="month">월별</button>
         <button data-mode="year">연도별</button>
@@ -203,6 +237,31 @@ h2{font-size:13.5px;font-weight:650;color:var(--ink)}
     </div>
   </header>
 
+  <!-- ===== 목록 화면(회원/기프티콘/가족) ===== -->
+  <div id="page-list" style="display:none">
+    <div class="list-bar">
+      <input id="list-q" class="search" placeholder="검색" autocomplete="off">
+      <div class="seg" id="list-filter" style="display:none">
+        <button data-status="" class="active">전체</button>
+        <button data-status="unused">미사용</button>
+        <button data-status="used">사용완료</button>
+        <button data-status="expired">기간만료</button>
+        <button data-status="hidden">감춰짐</button>
+      </div>
+      <span class="list-count" id="list-count"></span>
+    </div>
+    <div class="card table-card">
+      <div class="table-wrap"><table id="list-table"><thead></thead><tbody></tbody></table></div>
+      <div class="pager">
+        <button class="icon-btn" id="page-prev">이전</button>
+        <span class="page-info" id="page-info"></span>
+        <button class="icon-btn" id="page-next">다음</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 대시보드 화면 ===== -->
+  <div id="page-dash">
   <section class="kpis kpis-4">
     <div class="kpi"><span class="kpi-label">가족 수</span><span class="kpi-value" id="k-families"></span><span class="kpi-sub">구성원 <b id="k-members"></b>명 · 평균 <b id="k-avg-members"></b>명</span></div>
     <div class="kpi"><span class="kpi-label">총 사용자</span><span class="kpi-value" id="k-users"></span><span class="kpi-sub">푸시 구독 <b id="k-push"></b>기기</span></div>
@@ -272,6 +331,7 @@ h2{font-size:13.5px;font-weight:650;color:var(--ink)}
       </ul>
     </div>
   </section>
+  </div>
   <footer class="foot">모아콘 관리자 대시보드</footer>
   </div>
 </div>
@@ -498,11 +558,11 @@ function hideErr(id){ document.getElementById(id).style.display='none'; }
 // ===================== 데이터 불러오기/가공 =====================
 let STATS=null, MODE='day';
 
-// 통계는 로그인한 사람의 토큰으로 받아온다. 관리자인지는 서버(admin-stats)가 판단한다.
-async function fetchStats(){
+// 통계도 목록도 로그인한 사람의 토큰으로 받아온다. 관리자인지는 서버(admin-stats)가 판단한다.
+async function callApi(query=''){
   const { data: { session } } = await sb.auth.getSession();
   if(!session) { const e=new Error('로그인이 필요해요.'); e.reason='unauthenticated'; throw e; }
-  const res=await fetch(CONFIG.url.replace(/\/+$/,'')+'/functions/v1/admin-stats',{
+  const res=await fetch(CONFIG.url.replace(/\/+$/,'')+'/functions/v1/admin-stats'+query,{
     headers:{ Authorization:'Bearer '+session.access_token },
   });
   const body=await res.json().catch(()=>({}));
@@ -513,6 +573,7 @@ async function fetchStats(){
   }
   return body;
 }
+const fetchStats=()=>callApi();
 
 const ACTION_LABELS={analyze:'AI 이미지 인식',price:'AI 가격 검색',places:'주변 매장(카카오)',join_attempt:'초대 코드 시도'};
 const ACTION_ORDER=['analyze','price','places','join_attempt'];
@@ -656,6 +717,127 @@ function fillKpis(){
     t.toLocaleString('ko-KR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})+' 갱신';
 }
 
+// ===================== 목록 화면 (회원 / 기프티콘 / 가족) =====================
+// 세 화면이 표 하나를 돌려 쓴다. 다른 것은 "무엇을 부르고 각 줄을 어떤 칸으로 그리는가"
+// 뿐이라, 그 둘만 아래 표에 적어두고 나머지 흐름(검색·페이지·빈 화면)은 공통으로 둔다.
+const PAGE_SIZE=50;
+const LIST={ page:null, q:'', status:'', offset:0, total:0, timer:null };
+
+const dt=s=>s?new Date(s).toLocaleDateString('ko-KR',{year:'2-digit',month:'2-digit',day:'2-digit'}):'—';
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const dash=v=>v===null||v===undefined||v===''?'<span class="muted">—</span>':esc(v);
+
+const PAGES={
+  users:{
+    title:'회원 관리', search:'이메일로 검색', filter:false,
+    columns:['이메일','가입 방법','소속 가족','등록','사용','알림','약관','최근 로그인','가입일'],
+    row:r=>`
+      <td class="strong">${dash(r.email)}${r.is_admin?' <span class="tag tag-admin">관리자</span>':''}</td>
+      <td class="muted">${esc(r.provider)}</td>
+      <td>${(r.families||[]).length
+        ? '<span class="chips">'+r.families.map(f=>`<span class="tag">${esc(f.family_name)} · ${esc(f.display_name)}</span>`).join('')+'</span>'
+        : '<span class="muted">없음</span>'}</td>
+      <td class="num">${nf.format(r.uploaded||0)}</td>
+      <td class="num">${nf.format(r.used||0)}</td>
+      <td class="num">${r.push_devices?nf.format(r.push_devices):'<span class="muted">—</span>'}</td>
+      <td>${r.agreed?'<span class="tag tag-unused">동의</span>':'<span class="tag tag-hidden">미동의</span>'}</td>
+      <td class="muted">${dt(r.last_sign_in_at)}</td>
+      <td class="muted">${dt(r.created_at)}</td>`,
+  },
+  gifticons:{
+    title:'기프티콘 관리', search:'상품명·브랜드·받은 사람으로 검색', filter:true,
+    columns:['상품명','브랜드','분류','금액','받은 사람','가족','상태','유효기한','사용일','등록일'],
+    row:r=>{
+      const label={unused:'미사용',used:'사용완료',expired:'기간만료'}[r.state]||r.state;
+      const tag=r.hidden_at
+        ? '<span class="tag tag-hidden">감춰짐</span>'
+        : `<span class="tag tag-${r.state}">${label}</span>`;
+      return `
+      <td class="strong">${dash(r.name)}</td>
+      <td>${dash(r.brand)}</td>
+      <td class="muted">${dash(r.category)}</td>
+      <td class="num">${r.amount?won(r.amount):'<span class="muted">—</span>'}</td>
+      <td>${dash(r.owner)}</td>
+      <td class="muted">${dash(r.family_name)}</td>
+      <td>${tag}</td>
+      <td class="muted">${dt(r.expires_at)}</td>
+      <td class="muted">${r.used_at?dt(r.used_at)+(r.used_by_name?` <span class="muted">(${esc(r.used_by_name)})</span>`:''):'<span class="muted">—</span>'}</td>
+      <td class="muted">${dt(r.created_at)}</td>`;
+    },
+  },
+  families:{
+    title:'가족 관리', search:'가족 이름·초대 코드로 검색', filter:false,
+    columns:['가족 이름','초대 코드','구성원','기프티콘','미사용','보유 금액','대기 신청','만든 날'],
+    row:r=>`
+      <td class="strong">${dash(r.name)}</td>
+      <td class="muted">${dash(r.invite_code)}</td>
+      <td>${(r.members||[]).length
+        ? '<span class="chips">'+r.members.map(m=>`<span class="tag">${esc(m)}</span>`).join('')+'</span>'
+        : '<span class="muted">없음</span>'}</td>
+      <td class="num">${nf.format(r.gifticons||0)}</td>
+      <td class="num">${nf.format(r.unused||0)}</td>
+      <td class="num">${won(r.amount_total||0)}</td>
+      <td class="num">${r.pending_requests?`<span class="tag tag-expired">${r.pending_requests}</span>`:'<span class="muted">—</span>'}</td>
+      <td class="muted">${dt(r.created_at)}</td>`,
+  },
+};
+
+async function fetchList(){
+  const p=new URLSearchParams({resource:LIST.page,q:LIST.q,page_size:PAGE_SIZE,page_offset:LIST.offset});
+  if(LIST.status) p.set('status',LIST.status);
+  return callApi('?'+p.toString());
+}
+
+async function renderList(){
+  const def=PAGES[LIST.page];
+  const tbody=document.querySelector('#list-table tbody');
+  tbody.innerHTML=`<tr class="empty-row"><td colspan="${def.columns.length}">불러오는 중…</td></tr>`;
+  let data;
+  try{
+    data=await fetchList();
+  }catch(err){
+    tbody.innerHTML=`<tr class="empty-row"><td colspan="${def.columns.length}">불러오지 못했어요: ${esc(err.message)}</td></tr>`;
+    return;
+  }
+  LIST.total=data.total||0;
+  const rows=data.rows||[];
+  tbody.innerHTML = rows.length
+    ? rows.map(r=>'<tr>'+def.row(r)+'</tr>').join('')
+    : `<tr class="empty-row"><td colspan="${def.columns.length}">${LIST.q?'검색 결과가 없어요':'아직 데이터가 없어요'}</td></tr>`;
+
+  const count=document.getElementById('list-count');
+  count.textContent = LIST.page==='gifticons' && data.amount_sum
+    ? `${nf.format(LIST.total)}건 · 합계 ${won(data.amount_sum)}`
+    : `${nf.format(LIST.total)}건`;
+
+  const from=LIST.total?LIST.offset+1:0, to=Math.min(LIST.offset+PAGE_SIZE,LIST.total);
+  document.getElementById('page-info').textContent=`${nf.format(from)}–${nf.format(to)} / ${nf.format(LIST.total)}`;
+  document.getElementById('page-prev').disabled=LIST.offset<=0;
+  document.getElementById('page-next').disabled=to>=LIST.total;
+}
+
+function openPage(name){
+  document.querySelectorAll('[data-page]').forEach(a=>a.classList.toggle('on',a.dataset.page===name));
+  const isDash=name==='dash';
+  document.getElementById('page-dash').style.display=isDash?'block':'none';
+  document.getElementById('page-list').style.display=isDash?'none':'block';
+  document.getElementById('mode-seg').style.display=isDash?'':'none';
+  document.getElementById('page-title').textContent=isDash?'대시보드':PAGES[name].title;
+  if(isDash){ LIST.page=null; return; }
+
+  const def=PAGES[name];
+  // 다른 화면으로 옮기면 검색어·페이지는 처음부터 시작한다. 회원에서 걸어둔 검색어가
+  // 기프티콘 목록에 그대로 남아 있으면 "왜 안 나오지"가 된다.
+  LIST.page=name; LIST.q=''; LIST.status=''; LIST.offset=0;
+  const input=document.getElementById('list-q');
+  input.value=''; input.placeholder=def.search;
+  const filter=document.getElementById('list-filter');
+  filter.style.display=def.filter?'':'none';
+  filter.querySelectorAll('[data-status]').forEach(b=>b.classList.toggle('active',b.dataset.status===''));
+  document.querySelector('#list-table thead').innerHTML='<tr>'+def.columns.map(c=>`<th>${c}</th>`).join('')+'</tr>';
+  renderList();
+}
+
 // ===================== 로그인 =====================
 let CONFIG=null, sb=null;
 
@@ -710,7 +892,31 @@ async function start(){
     document.querySelectorAll('[data-mode]').forEach(x=>x.classList.toggle('active',x===b));
     renderAll();
   }));
-  document.getElementById('btn-refresh').addEventListener('click',connect);
+  // 새로고침은 지금 보고 있는 화면만 다시 불러온다.
+  document.getElementById('btn-refresh').addEventListener('click',()=>{
+    if(LIST.page) renderList(); else connect();
+  });
+
+  document.querySelectorAll('[data-page]').forEach(a=>a.addEventListener('click',()=>openPage(a.dataset.page)));
+
+  // 글자를 칠 때마다 부르면 서버를 두드리는 횟수가 타자 수만큼 늘어난다. 잠시 멈추면 부른다.
+  document.getElementById('list-q').addEventListener('input',e=>{
+    clearTimeout(LIST.timer);
+    LIST.timer=setTimeout(()=>{ LIST.q=e.target.value.trim(); LIST.offset=0; renderList(); },300);
+  });
+  document.getElementById('list-filter').querySelectorAll('[data-status]').forEach(b=>{
+    b.addEventListener('click',()=>{
+      document.getElementById('list-filter').querySelectorAll('[data-status]')
+        .forEach(x=>x.classList.toggle('active',x===b));
+      LIST.status=b.dataset.status; LIST.offset=0; renderList();
+    });
+  });
+  document.getElementById('page-prev').addEventListener('click',()=>{
+    LIST.offset=Math.max(0,LIST.offset-PAGE_SIZE); renderList();
+  });
+  document.getElementById('page-next').addEventListener('click',()=>{
+    if(LIST.offset+PAGE_SIZE<LIST.total){ LIST.offset+=PAGE_SIZE; renderList(); }
+  });
   document.getElementById('btn-logout').addEventListener('click',logout);
   document.getElementById('btn-logout-denied').addEventListener('click',logout);
   document.getElementById('btn-save-config').addEventListener('click',()=>{

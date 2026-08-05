@@ -271,3 +271,175 @@ revoke all on function public.admin_dashboard_stats() from public;
 revoke all on function public.admin_dashboard_stats() from anon;
 revoke all on function public.admin_dashboard_stats() from authenticated;
 grant execute on function public.admin_dashboard_stats() to service_role;
+
+-- ===================== 관리 목록 (회원 / 기프티콘 / 가족) =====================
+--
+-- 대시보드 왼쪽 탭에서 쓰는 목록들. 통계와 달리 "한 줄 한 줄"을 보는 화면이라 검색과
+-- 페이지 나누기가 필요하다. 세 함수 모두 { total, rows } 형태로 돌려준다 —
+-- total이 있어야 화면에서 "몇 건 중 몇 번째"를 보여줄 수 있다.
+--
+-- ⚠️ 바코드 번호(gifticons.code)와 사진 경로는 어느 목록에도 넣지 않는다. 바코드는 그
+-- 자체가 돈이라, 운영하려고 만든 화면이 정작 가장 위험한 값을 한 화면에 펼쳐 보이면
+-- 안 된다. 관리에 필요한 것은 "무엇이 몇 장 있고 어떤 상태인가"지 번호가 아니다.
+
+-- 회원 목록. auth.users가 원본이고, 앱에서의 활동을 함께 붙여 보여준다.
+create or replace function public.admin_list_users(
+  q text default null,
+  page_size int default 50,
+  page_offset int default 0
+)
+returns json
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  with base as (
+    select u.id, u.email, u.created_at, u.last_sign_in_at,
+           -- 어느 방법으로 로그인했는지(email / kakao / google / naver).
+           coalesce(u.raw_app_meta_data->>'provider', 'email') as provider
+    from auth.users u
+    where q is null or q = '' or u.email ilike '%' || q || '%'
+  ),
+  counted as (select count(*) as total from base),
+  page as (
+    select * from base order by created_at desc limit page_size offset page_offset
+  )
+  select json_build_object(
+    'total', (select total from counted),
+    'rows', coalesce((
+      select json_agg(row)
+      from (
+        select
+          p.id, p.email, p.created_at, p.last_sign_in_at, p.provider,
+          -- 속한 가족들(이름과 그 가족에서 쓰는 이름). 여러 가족일 수 있다.
+          coalesce((
+            select json_agg(json_build_object('family_id', f.id, 'family_name', f.name, 'display_name', fm.display_name)
+                            order by fm.created_at)
+            from public.family_members fm join public.families f on f.id = fm.family_id
+            where fm.user_id = p.id
+          ), '[]'::json) as families,
+          (select count(*) from public.gifticons g where g.created_by = p.id) as uploaded,
+          (select count(*) from public.gifticons g where g.used_by = p.id) as used,
+          (select count(*) from public.push_subscriptions s where s.user_id = p.id) as push_devices,
+          exists (select 1 from public.user_consents c where c.user_id = p.id) as agreed,
+          exists (select 1 from public.admin_users a where a.user_id = p.id) as is_admin
+        from page p
+      ) row
+    ), '[]'::json)
+  );
+$$;
+
+-- 기프티콘 목록. status_filter는 unused | used | expired | hidden 중 하나(비우면 전부).
+-- 화면에서 보는 '만료'는 status 컬럼이 아니라 유효기한으로 정해지므로 여기서 함께 계산한다.
+create or replace function public.admin_list_gifticons(
+  q text default null,
+  status_filter text default null,
+  family_filter uuid default null,
+  page_size int default 50,
+  page_offset int default 0
+)
+returns json
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  with today as (select (now() at time zone 'Asia/Seoul')::date as d),
+  base as (
+    select g.id, g.name, g.brand, g.category, g.amount, g.owner,
+           g.expires_at, g.used_at, g.used_by_name, g.claimed_by_name,
+           g.created_at, g.hidden_at, g.family_id,
+           f.name as family_name,
+           case
+             when g.status = 'used' then 'used'
+             when g.expires_at is not null and g.expires_at < (select d from today) then 'expired'
+             else 'unused'
+           end as state
+    from public.gifticons g
+    left join public.families f on f.id = g.family_id
+    where (q is null or q = ''
+           or g.name ilike '%' || q || '%'
+           or g.brand ilike '%' || q || '%'
+           or g.owner ilike '%' || q || '%')
+      and (family_filter is null or g.family_id = family_filter)
+  ),
+  filtered as (
+    select * from base
+    where status_filter is null or status_filter = ''
+       or (status_filter = 'hidden' and hidden_at is not null)
+       or (status_filter <> 'hidden' and state = status_filter and hidden_at is null)
+  ),
+  counted as (select count(*) as total, coalesce(sum(amount), 0) as amount_sum from filtered)
+  select json_build_object(
+    'total', (select total from counted),
+    'amount_sum', (select amount_sum from counted),
+    'rows', coalesce((
+      select json_agg(row)
+      from (select * from filtered order by created_at desc limit page_size offset page_offset) row
+    ), '[]'::json)
+  );
+$$;
+
+-- 가족 목록. 구성원과 기프티콘 현황을 한 줄에 모아 본다.
+create or replace function public.admin_list_families(
+  q text default null,
+  page_size int default 50,
+  page_offset int default 0
+)
+returns json
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  with today as (select (now() at time zone 'Asia/Seoul')::date as d),
+  base as (
+    select f.id, f.name, f.invite_code, f.created_at
+    from public.families f
+    where q is null or q = '' or f.name ilike '%' || q || '%' or f.invite_code ilike '%' || q || '%'
+  ),
+  counted as (select count(*) as total from base),
+  page as (select * from base order by created_at desc limit page_size offset page_offset)
+  select json_build_object(
+    'total', (select total from counted),
+    'rows', coalesce((
+      select json_agg(row)
+      from (
+        select
+          p.id, p.name, p.invite_code, p.created_at,
+          coalesce((
+            select json_agg(fm.display_name order by fm.created_at)
+            from public.family_members fm where fm.family_id = p.id
+          ), '[]'::json) as members,
+          (select count(*) from public.family_members fm where fm.family_id = p.id) as member_count,
+          (select count(*) from public.gifticons g where g.family_id = p.id and g.hidden_at is null) as gifticons,
+          (select count(*) from public.gifticons g
+            where g.family_id = p.id and g.hidden_at is null and g.status <> 'used'
+              and (g.expires_at is null or g.expires_at >= (select d from today))) as unused,
+          (select coalesce(sum(g.amount), 0) from public.gifticons g
+            where g.family_id = p.id and g.hidden_at is null) as amount_total,
+          (select count(*) from public.family_join_requests r
+            where r.family_id = p.id and r.status = 'pending') as pending_requests
+        from page p
+      ) row
+    ), '[]'::json)
+  );
+$$;
+
+-- 목록도 통계와 같은 이유로 서버 전용이다.
+do $$
+declare
+  fn text;
+begin
+  foreach fn in array array[
+    'public.admin_list_users(text, int, int)',
+    'public.admin_list_gifticons(text, text, uuid, int, int)',
+    'public.admin_list_families(text, int, int)'
+  ] loop
+    execute format('revoke all on function %s from public', fn);
+    execute format('revoke all on function %s from anon', fn);
+    execute format('revoke all on function %s from authenticated', fn);
+    execute format('grant execute on function %s to service_role', fn);
+  end loop;
+end $$;

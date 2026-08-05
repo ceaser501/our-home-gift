@@ -78,6 +78,53 @@ Deno.serve(async (req) => {
     });
   }
 
+  // 여기서부터는 관리자만 온다. 무엇을 볼지는 resource로 정한다.
+  //   (없음) → 대시보드 통계
+  //   users / gifticons / families → 관리 화면의 목록
+  const url = new URL(req.url);
+  const resource = url.searchParams.get('resource') || 'stats';
+  const num = (name: string, fallback: number, max: number) => {
+    const raw = Number(url.searchParams.get(name));
+    return Number.isFinite(raw) && raw >= 0 ? Math.min(Math.floor(raw), max) : fallback;
+  };
+
+  if (resource !== 'stats') {
+    // 목록마다 인자가 달라서 이름을 맞춰 넘긴다. 화면이 보낸 값을 그대로 믿지 않고,
+    // 한 번에 가져갈 수 있는 줄 수에 천장을 둔다(실수로 전부 끌어오는 것을 막는다).
+    const q = (url.searchParams.get('q') || '').trim();
+    const page_size = num('page_size', 50, 200);
+    const page_offset = num('page_offset', 0, 1_000_000);
+
+    const calls: Record<string, { fn: string; args: Record<string, unknown> }> = {
+      users: { fn: 'admin_list_users', args: { q, page_size, page_offset } },
+      gifticons: {
+        fn: 'admin_list_gifticons',
+        args: {
+          q,
+          status_filter: url.searchParams.get('status') || null,
+          family_filter: url.searchParams.get('family_id') || null,
+          page_size,
+          page_offset,
+        },
+      },
+      families: { fn: 'admin_list_families', args: { q, page_size, page_offset } },
+    };
+
+    const call = calls[resource];
+    if (!call) {
+      return new Response(JSON.stringify({ error: '알 수 없는 목록이에요.' }), { status: 400, headers: jsonHeaders });
+    }
+
+    const { data: list, error: listError } = await admin.rpc(call.fn, call.args);
+    if (listError) {
+      return new Response(
+        JSON.stringify({ error: `목록을 가져오지 못했어요: ${listError.message} (supabase/admin-stats.sql을 다시 실행했는지 확인해주세요)` }),
+        { status: 500, headers: jsonHeaders },
+      );
+    }
+    return new Response(JSON.stringify(list), { headers: jsonHeaders });
+  }
+
   const { data, error } = await admin.rpc('admin_dashboard_stats');
   if (error) {
     return new Response(
