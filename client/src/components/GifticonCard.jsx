@@ -116,22 +116,18 @@ export default function GifticonCard({
 
           <p className="mt-0.5 truncate pr-7 text-[15px] font-bold text-foreground">{gifticon.name}</p>
 
-          {/* 기한과 금액을 한 줄에 모은다. 카드에서 눈이 멈추는 줄이 적을수록 급한 게 먼저 보인다.
-              찜은 아래 버튼이 직접 "○○ 찜"으로 말해주므로 여기에 또 적지 않는다. */}
-          {!isUsed && (gifticon.expires_at || gifticon.amount) && (
-            <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
-              {gifticon.expires_at && (
-                <span className={cn('rounded-full px-2 py-0.5 text-xs font-bold', DDAY_CLASS[urgency])}>
-                  {formatDday(gifticon.expires_at)}
-                  {/* 이미 지난 기한에 날짜까지 붙이면 같은 말을 두 번 하는 셈이다. */}
-                  {urgency !== 'expired' && ` · ${formatShortDate(gifticon.expires_at)}까지`}
-                </span>
-              )}
-              {gifticon.amount ? (
-                <span className="text-xs text-muted-foreground">{Number(gifticon.amount).toLocaleString()}원</span>
-              ) : null}
-            </div>
+          {/* 찜은 아래 버튼이 직접 "○○ 찜"으로 말해주므로 여기에 또 적지 않는다. */}
+          {!isUsed && gifticon.expires_at && (
+            <p className={cn('mt-1 inline-block self-start rounded-full px-2 py-0.5 text-xs font-bold', DDAY_CLASS[urgency])}>
+              {formatDday(gifticon.expires_at)}
+              {/* 이미 지난 기한에 날짜까지 붙이면 같은 말을 두 번 하는 셈이다. */}
+              {urgency !== 'expired' && ` · ${formatShortDate(gifticon.expires_at)}까지`}
+            </p>
           )}
+
+          {!isUsed && gifticon.amount ? (
+            <p className="mt-1 text-xs text-muted-foreground">{Number(gifticon.amount).toLocaleString()}원</p>
+          ) : null}
 
           {/* 누가 썼는지 목록에서 바로 보이게 한다("이거 누가 썼어?"를 굳이 안 물어보게). */}
           {isUsed && (gifticon.used_at || gifticon.used_by_name) && (
