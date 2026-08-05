@@ -23,21 +23,6 @@ const DDAY_CLASS = {
 // 카드 아래 한 줄로 붙는 버튼들. 폭을 똑같이 나눠 가져서 누르기 쉽다.
 const BAR_BUTTON = 'flex flex-1 items-center justify-center gap-1.5 py-2.5 text-xs font-semibold';
 
-// 실제로 읽히는 바코드가 아니라 "여기 바코드가 들었다"는 표시라서, 진짜처럼 잘게 쪼개지
-// 않는다. 68px짜리 썸네일에서 가는 막대를 촘촘히 늘어놓으면 바코드가 아니라 잔털로 보인다.
-// 굵은 막대 몇 개로 짧게 끊는 편이 이 크기에서는 오히려 바코드로 읽힌다.
-const BAR_WIDTHS = [4, 2, 3, 4, 2, 4, 3, 2, 4];
-
-function BarcodeStrip() {
-  return (
-    <span className="flex h-2.5 w-full shrink-0 items-center justify-center gap-[2px]" aria-hidden="true">
-      {BAR_WIDTHS.map((width, i) => (
-        <i key={i} className="block h-full rounded-[1px] bg-barcode-line" style={{ width: `${width}px` }} />
-      ))}
-    </span>
-  );
-}
-
 export default function GifticonCard({
   gifticon,
   onViewCode,
@@ -74,61 +59,46 @@ export default function GifticonCard({
 
   return (
     <li className={cn('relative overflow-hidden rounded-2xl border border-border bg-card shadow-xs', isUsed && 'opacity-60')}>
-      <div className="flex gap-3 p-3">
-        {/* 계산대 앞에서 제일 급한 동작이 바코드 열기라, 카드에서 가장 큰 과녁을 준다.
-            사진을 분류 아이콘으로 바꾸지 않는 이유: 사람은 기프티콘을 "스타벅스 초록색 그거"로
+      <div className="relative flex gap-3 p-3">
+        {/* 계산대 앞에서 제일 급한 동작이 바코드 열기라, 이 윗칸 전체를 그 버튼으로 쓴다.
+            사진만 눌리게 두면 68px짜리 과녁을 조준해야 하는데, 계산대 앞에서 그건 작다.
+            빈자리까지 포함해 어디를 눌러도 열리게 깔아둔 판이다.
+
+            글자 위에도 얹혀야 해서 내용 뒤가 아니라 앞에 깔고, 내용 쪽은 pointer-events를
+            꺼서 누름이 이 판으로 떨어지게 한다. 오른쪽 위 ⋮ 만 예외로 자기 클릭을 가져간다
+            (거긴 수정·삭제라, 바코드를 열려다 잘못 누르면 곤란하다). */}
+        <button
+          type="button"
+          className="absolute inset-0"
+          onClick={() => (canOpenCode ? onViewCode(gifticon) : onViewImage(gifticon))}
+          aria-label={canOpenCode ? '바코드 보기' : '업로드한 이미지 보기'}
+        />
+
+        {/* 사진을 분류 아이콘으로 바꾸지 않는 이유: 사람은 기프티콘을 "스타벅스 초록색 그거"로
             기억한다. 브랜드 색은 글자보다 빨리 읽히고, 내가 올린 사진이라야 내 지갑처럼 느껴진다.
-            대신 사진만 있으면 눌러도 되는 줄 모르므로 아래에 바코드를 붙여 알린다.
 
             보여주는 건 올린 사진 전체가 아니라 상품 사진만 잘라낸 것(thumb_image_url)이다.
             대개 선물함 화면을 통째로 찍은 캡처라, 68px로 줄이면 글자와 버튼까지 뭉개져 들어가
-            무슨 상품인지 알아볼 수 없다. 못 잘라낸 것은 예전처럼 첫 사진을 그대로 쓴다.
-
-            바코드는 사진 위에 겹치지 않고 아래에 따로 앉는다. 겹치면 사진을 가리거나
-            사진이 잘려 보이는데, 실물 기프티콘도 사진과 바코드가 한 장에 위아래로 나뉘어 있다.
-
-            그래서 타일은 정사각형이 아니라 세로로 조금 긴 직사각형이다. 잘라낸 상품 사진은
-            대개 정사각형에 가까운데, 정사각형 타일 안에 바코드까지 넣으면 사진이 위아래로
-            눌려 납작해진다. 바코드가 차지할 만큼 키를 늘려 사진 자리를 정사각형으로 남긴다. */}
-        <button
-          type="button"
-          className={cn(
-            'relative flex h-21 w-17 shrink-0 overflow-hidden rounded-xl bg-accent',
-            // 사진과 바코드 사이를 넉넉히 띄운다. 바짝 붙으면 바코드가 사진에 딸린 무늬처럼
-            // 보이고, 떨어져 있어야 "사진 아래 바코드"라는 두 덩어리로 읽힌다.
-            // 아래 여백은 위보다 조금 넓다. 같게 두면 바코드가 바닥에 붙은 것처럼 보인다.
-            canOpenCode ? 'flex-col gap-[5px] px-[3px] pt-[3px] pb-[5px]' : 'items-center justify-center'
+            무슨 상품인지 알아볼 수 없다. 못 잘라낸 것은 예전처럼 첫 사진을 그대로 쓴다. */}
+        <span className="pointer-events-none relative flex size-17 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-accent">
+          {thumbUrl ? (
+            <img src={thumbUrl} alt={gifticon.name} className="h-full w-full object-cover" />
+          ) : (
+            <Ticket className="size-6 text-primary/60" />
           )}
-          onClick={() => (canOpenCode ? onViewCode(gifticon) : onViewImage(gifticon))}
-          aria-label={canOpenCode ? '바코드 보기' : '업로드한 이미지 보기'}
-        >
-          <span
-            className={cn(
-              'relative flex items-center justify-center overflow-hidden',
-              canOpenCode ? 'min-h-0 flex-1 rounded-[9px]' : 'size-full'
-            )}
-          >
-            {thumbUrl ? (
-              <img src={thumbUrl} alt={gifticon.name} className="h-full w-full object-cover" />
-            ) : (
-              <Ticket className="size-6 text-primary/60" />
-            )}
-            {isUsed && (
-              <span className="absolute inset-0 flex items-center justify-center bg-black/55 text-[11px] font-bold text-white">
-                사용완료
-              </span>
-            )}
-            {photoCount > 1 && (
-              <span className="absolute top-1 right-1 rounded-full bg-black/60 px-1.5 py-px text-[10px] font-bold text-white">
-                {photoCount}
-              </span>
-            )}
-          </span>
-          {/* 열 바코드가 있을 때만 붙인다. 없는데 붙어 있으면 카드가 거짓말을 하는 셈이다. */}
-          {canOpenCode && <BarcodeStrip />}
-        </button>
+          {isUsed && (
+            <span className="absolute inset-0 flex items-center justify-center bg-black/55 text-[11px] font-bold text-white">
+              사용완료
+            </span>
+          )}
+          {photoCount > 1 && (
+            <span className="absolute top-1 right-1 rounded-full bg-black/60 px-1.5 py-px text-[10px] font-bold text-white">
+              {photoCount}
+            </span>
+          )}
+        </span>
 
-        <div className="flex min-w-0 flex-1 flex-col">
+        <div className="pointer-events-none relative flex min-w-0 flex-1 flex-col">
           {/* 받은 사람은 진한 이름표 대신 이름 앞 작은 점으로. 색은 그대로라 누구 건지는 그대로 구분된다.
               분류는 썸네일에서 빼기로 했으므로 이 줄이 유일한 분류 표시다. */}
           <span className="flex items-center gap-1.5 pr-7 text-[11px] text-muted-foreground">
