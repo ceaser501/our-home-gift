@@ -11,9 +11,17 @@ permissions:
   pages: write
   id-token: write
 
+# Pages 배포는 한 번에 하나만 돌 수 있어서 줄을 세운다.
+#
+# cancel-in-progress를 켜두면 앞선 배포가 도는 중에 새로 푸시했을 때 앞엣것을 죽인다.
+# 마지막 것만 올라가니 결과는 같아 보이지만, 실제로는 그렇지 않았다 — 커밋을 몇 분 간격으로
+# 연달아 밀면 중간 배포가 통째로 사라지고, 그 커밋의 변경은 다음 푸시가 있을 때까지 앱에
+# 반영되지 않는다. 고쳤는데 안 고쳐졌다고 한참을 헤맸다.
+#
+# 취소 대신 기다리게 둔다. 배포가 조금 밀릴 뿐 빠지는 커밋이 없다.
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:
