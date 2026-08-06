@@ -1,0 +1,39 @@
+# 멈춰 있는 Pages 배포 하나를 취소한다. 손으로 돌리는 도구다(자동으로 돌지 않는다).
+#
+# 왜 필요한가: Pages는 같은 사이트에 배포를 하나씩만 올린다. 그런데 GitHub 쪽 사정으로
+# 배포가 "진행 중"인 채로 굳어버리는 일이 있고, 그러면 그 뒤의 모든 배포가 이렇게 거절된다.
+#
+#   Deployment request failed for <새 SHA> due to in progress deployment.
+#   Please cancel <굳은 SHA> first or wait for it to complete.
+#
+# 굳은 것은 저절로 풀리지 않을 수 있고(몇 시간씩 남는 사례가 흔하다), 커밋을 새로 올려도
+# 소용없다 — 막고 있는 건 새 배포가 아니라 앞의 배포다. 취소는 REST API로만 되는데,
+# 웹 화면에는 그 버튼이 없다. 그래서 러너를 빌려 API를 부른다.
+#
+# 쓰는 법: Actions 탭 > 이 워크플로 > Run workflow > 거절 메시지에 적힌 SHA를 붙여넣기.
+name: Cancel stuck Pages deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      deployment_id:
+        description: '취소할 배포 ID (거절 메시지에 적힌 커밋 SHA 전체)'
+        required: true
+
+permissions:
+  pages: write
+
+jobs:
+  cancel:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Cancel deployment
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ID: ${{ inputs.deployment_id }}
+        run: |
+          echo "취소 대상: $ID"
+          gh api --method POST \
+            "/repos/${{ github.repository }}/pages/deployments/$ID/cancel"
+          echo "취소 요청을 보냈습니다. 이제 배포를 다시 돌리면 됩니다."
