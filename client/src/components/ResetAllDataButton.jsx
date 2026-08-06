@@ -5,12 +5,17 @@ import { deleteSampleGifticons, resetAllData } from '../api';
 import { SAMPLE_PREFIX, ensureSampleGifticon, setSampleOptOut } from '../sampleData';
 import AlertDialog from './AlertDialog';
 
-// ⚠️ 테스트 전용입니다. 실사용 배포 전에 이 파일을 지우고, Header와 LoginScreen에서
-// 로고를 감싼 곳도 풀어주세요. supabase/functions/reset-all-data도 같이 지웁니다.
+// ⚠️ 테스트 전용입니다. 실사용 배포 전에 이 파일을 지우고, Header에서 로고를 감싼 곳도
+// 풀어주세요. supabase/functions/reset-all-data도 같이 지웁니다.
 //
 // 눌러야 할 것이 화면에 보이지 않습니다. 첫 화면과 목록 화면을 스크린샷으로 찍어야 하는데
 // "전체 데이터 초기화 (테스트)" 같은 것이 붙어 있으면 그대로 사진에 남기 때문입니다.
-// 대신 가운데 모아콘 로고를 0.8초 길게 누르면 열립니다.
+// 대신 목록 화면 왼쪽 위 모아콘 로고를 0.8초 길게 누르면 열립니다.
+//
+// 여는 자리는 이 한 곳뿐입니다. 로그인 화면 로고에도 달아봤는데, 그 화면은 로그아웃
+// 상태에서만 보여서 목데이터를 넣을 가족이 없었습니다. 일괄삭제는 로그인한 채로 눌러도
+// 되고(누르면 계정이 지워지며 저절로 로그인 화면으로 나간다), 그러면 세 가지가 모두
+// 한자리에서 끝납니다.
 //
 // 여는 방법을 두 번 바꿨습니다. 세 번 두드리기 → 오른쪽 위 구석 길게 누르기 → 로고 길게
 // 누르기. 앞의 둘은 "화면의 어느 자리"를 좌표로 재서 판단했는데, 그 자리가 비어 있는지는
@@ -32,8 +37,6 @@ export default function TestDataMenu({ familyId, ownerName, userId, children }) 
   const startRef = useRef(null);
 
   const enabled = Boolean(import.meta.env.VITE_RESET_TOKEN);
-  // 목데이터는 가족 안에만 존재한다. 로그인 전 화면에서는 넣을 곳도 지울 곳도 없다.
-  const hasFamily = Boolean(familyId);
 
   function startHold(e) {
     if (!enabled) return;
@@ -161,12 +164,6 @@ export default function TestDataMenu({ familyId, ownerName, userId, children }) 
     },
   ];
 
-  // 목데이터는 가족 안에만 존재한다. 로그인 전에는 넣을 곳도 지울 곳도 없다.
-  //
-  // 예전에는 이 둘을 아예 감췄는데, 그러면 로그인 화면에서 열었을 때 "일괄삭제 하나만
-  // 있네, 안 만들어줬나?"로 읽힌다. 없는 이유와 어디로 가야 하는지를 대신 적어둔다.
-  const lockedReason = hasFamily ? null : '로그인한 뒤 목록 화면에서 왼쪽 위 로고를 길게 눌러주세요.';
-
   return (
     <>
       {/* 로고를 감싸는 자리. 길게 누르는 동안 브라우저가 끼어들지 않게 해둔다 —
@@ -199,34 +196,22 @@ export default function TestDataMenu({ familyId, ownerName, userId, children }) 
               <SheetTitle>테스트 도구</SheetTitle>
             </SheetHeader>
             <div className="flex flex-col px-5 pt-2">
-              {items.map((item) => {
-                // 일괄삭제는 가족이 없어도 된다(계정째 지우는 일이라). 나머지 둘만 잠긴다.
-                const locked = item.key !== 'reset' && Boolean(lockedReason);
-
-                return (
-                  <button
-                    key={item.key}
-                    type="button"
-                    disabled={locked}
-                    onClick={item.onClick}
-                    className="flex w-full items-start gap-3 border-b border-border px-1 py-3.5 text-left last:border-b-0 disabled:opacity-50"
-                  >
-                    <item.icon
-                      className={`mt-0.5 size-4.5 shrink-0 ${item.danger && !locked ? 'text-destructive' : 'text-muted-foreground'}`}
-                    />
-                    <span className="flex min-w-0 flex-col">
-                      <span
-                        className={`text-sm font-semibold ${item.danger && !locked ? 'text-destructive' : 'text-foreground'}`}
-                      >
-                        {item.label}
-                      </span>
-                      <span className="mt-0.5 text-xs break-keep text-muted-foreground">
-                        {locked ? lockedReason : item.hint}
-                      </span>
+              {items.map((item) => (
+                <button
+                  key={item.key}
+                  type="button"
+                  onClick={item.onClick}
+                  className="flex w-full items-start gap-3 border-b border-border px-1 py-3.5 text-left last:border-b-0"
+                >
+                  <item.icon className={`mt-0.5 size-4.5 shrink-0 ${item.danger ? 'text-destructive' : 'text-muted-foreground'}`} />
+                  <span className="flex min-w-0 flex-col">
+                    <span className={`text-sm font-semibold ${item.danger ? 'text-destructive' : 'text-foreground'}`}>
+                      {item.label}
                     </span>
-                  </button>
-                );
-              })}
+                    <span className="mt-0.5 text-xs break-keep text-muted-foreground">{item.hint}</span>
+                  </span>
+                </button>
+              ))}
               <p className="m-0 py-4 text-center text-[11px] break-keep text-muted-foreground">
                 테스트 중에만 있는 창이에요. 출시할 때 없어집니다.
               </p>
