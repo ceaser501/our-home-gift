@@ -25,10 +25,15 @@ function dateAfter(days) {
 
 // 화면에서 갈라지는 상태를 하나씩 맡는다. 하나만 넣어두면 "기한이 급한 카드"만 보여서,
 // 연장 안내·결산의 놓친 것·기한 미입력 같은 것이 실제로 어떻게 보이는지 확인할 수 없다.
+//
+// 받은 사람은 아빠·엄마·아들·딸 넷으로 흩어놓는다. 안내서에 넣을 화면을 찍어야 하는데,
+// 전부 한 사람 이름이면 "가족이 같은 목록을 본다"는 게 그림으로 드러나지 않는다.
+// 실제 이름을 쓰면 그대로 배포물에 남으므로 호칭으로 둔다.
 const SAMPLES = [
   {
     code: SAMPLE_CODE,
     name: '아이스 아메리카노 T',
+    owner: '엄마',
     thumb: 'coffee',
     category: '카페',
     brand: '스타벅스',
@@ -40,6 +45,7 @@ const SAMPLES = [
   {
     code: '9000111122001',
     name: '허니콤보 + 콜라 1.25L',
+    owner: '아빠',
     thumb: 'chicken',
     category: '외식/배달',
     brand: 'BBQ',
@@ -50,6 +56,7 @@ const SAMPLES = [
   {
     code: '9000111122002',
     name: 'GS25 모바일교환권 5,000원',
+    owner: '아들',
     thumb: 'store',
     category: '편의점',
     brand: 'GS25',
@@ -60,6 +67,7 @@ const SAMPLES = [
   {
     code: '9000111122003',
     name: '뚜레쥬르 초코 생크림 케이크',
+    owner: '딸',
     thumb: 'cake',
     category: '카페',
     brand: '뚜레쥬르',
@@ -70,6 +78,7 @@ const SAMPLES = [
   {
     code: '9000111122010',
     name: '포테이토 피자 L + 콜라',
+    owner: '아들',
     thumb: 'pizza',
     category: '외식/배달',
     brand: '도미노피자',
@@ -80,6 +89,7 @@ const SAMPLES = [
   {
     code: '9000111122004',
     name: '메가커피 아메리카노',
+    owner: '딸',
     thumb: 'coffee',
     category: '카페',
     brand: '메가MGC커피',
@@ -90,6 +100,7 @@ const SAMPLES = [
   {
     code: '9000111122005',
     name: 'CGV 영화관람권',
+    owner: '아빠',
     thumb: 'movie',
     category: '문화/영화',
     brand: 'CGV',
@@ -107,6 +118,7 @@ const SAMPLES = [
   {
     code: '9000111122008',
     name: '신세계상품권 5만원권',
+    owner: '엄마',
     thumb: 'voucher',
     category: '백화점/상품권',
     brand: '신세계백화점',
@@ -117,6 +129,7 @@ const SAMPLES = [
   {
     code: '9000111122009',
     name: '스타벅스 금액권 1만원',
+    owner: '딸',
     thumb: 'voucher',
     category: '카페',
     brand: '스타벅스',
@@ -173,7 +186,7 @@ export async function ensureSampleGifticon({ familyId, ownerName, userId, force 
         brand: sample.brand,
         amount: sample.amount,
         is_voucher: Boolean(sample.is_voucher),
-        owner: ownerName || null,
+        owner: sample.owner || ownerName || null,
         code: sample.code,
         code_type: 'CODE_128',
         expires_at: sample.days === null ? null : dateAfter(sample.days),

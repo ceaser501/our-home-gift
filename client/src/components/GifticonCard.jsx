@@ -3,7 +3,7 @@ import { CheckCircle2, Heart, Info, MapPin, MoreVertical, Pencil, RotateCcw, Tic
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { CATEGORIES } from '../constants';
 import { formatDday, formatDate, ddayUrgency } from '../utils/date';
-import { tagColorClass } from '../utils/tagColor';
+import { nameTagColorClass, tagColorClass } from '../utils/tagColor';
 import { cn } from '@/lib/utils';
 import { useFamily } from '../FamilyContext';
 
@@ -43,7 +43,12 @@ export default function GifticonCard({
   // 정하면 누가 빠졌을 때 남은 사람들 색이 밀린다. 아직 번호가 없는(예전) 데이터는
   // 예전과 같은 순서 기준으로 보여준다.
   const ownerIndex = members.findIndex((m) => m.display_name === gifticon.owner);
-  const ownerDotClass = tagColorClass(members[ownerIndex]?.tag_color ?? ownerIndex) || 'bg-muted-foreground';
+  // 지금 가족에 있는 사람은 그 사람의 색 번호를, 없는 이름(나간 사람 등)은 이름에서 뽑은
+  // 색을 쓴다. 전부 회색으로 뭉개면 목록에서 누구 것인지 구분이 사라진다.
+  const ownerDotClass =
+    tagColorClass(members[ownerIndex]?.tag_color ?? ownerIndex) ||
+    nameTagColorClass(gifticon.owner) ||
+    'bg-muted-foreground';
 
   // 이미 쓴 것과 기한이 지난 것은 매장에서 쓸 수 없으니 바코드를 열지 않는다.
   // 둘은 "이제 못 쓰는 것"이라는 점에서 같아서, 흐리게 깔고 목록 아래로 내리는 것까지
