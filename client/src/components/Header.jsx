@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ChevronDown, Users } from 'lucide-react';
 import Logo from './Logo';
+import TestDataMenu from './ResetAllDataButton';
 import FamilyMembersSheet from './FamilyMembersSheet';
 import NotificationBell from './NotificationBell';
 import FamilySwitcherSheet from './FamilySwitcherSheet';
@@ -20,7 +21,11 @@ export default function Header() {
   return (
     <header className="px-5 pt-[max(16px,env(safe-area-inset-top))] pb-2">
       <div className="flex items-center gap-2.5">
-        <Logo className="size-7 shrink-0" />
+        {/* ⚠️ 테스트 전용. 로고를 0.8초 길게 누르면 테스트 도구가 열린다.
+            출시 전에 이 감싸개를 풀고 Logo만 남긴다. */}
+        <TestDataMenu familyId={family.id} ownerName={myName} userId={user.id}>
+          <Logo className="size-7 shrink-0" />
+        </TestDataMenu>
 
         {/* 가족 이름을 누르면 보는 가족을 바꾼다(여러 가족에 속할 수 있다). */}
         <button

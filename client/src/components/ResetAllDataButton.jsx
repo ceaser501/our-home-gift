@@ -1,29 +1,28 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { DatabaseBackup, PackagePlus, Trash2 } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { deleteSampleGifticons, resetAllData } from '../api';
 import { SAMPLE_PREFIX, ensureSampleGifticon, setSampleOptOut } from '../sampleData';
 import AlertDialog from './AlertDialog';
 
-// ⚠️ 테스트 전용입니다. 실사용 배포 전에 이 파일을 지우고, LoginScreen과 App에서
-// 부르는 곳도 함께 빼세요. supabase/functions/reset-all-data도 같이 지웁니다.
+// ⚠️ 테스트 전용입니다. 실사용 배포 전에 이 파일을 지우고, Header와 LoginScreen에서
+// 로고를 감싼 곳도 풀어주세요. supabase/functions/reset-all-data도 같이 지웁니다.
 //
-// 보이는 버튼이 없습니다. 첫 화면과 목록 화면을 스크린샷으로 찍어야 하는데 "전체 데이터
-// 초기화 (테스트)" 같은 것이 붙어 있으면 그대로 사진에 남기 때문입니다. 대신 화면
-// 오른쪽 위 빈 구석을 길게 누르면 열립니다.
+// 눌러야 할 것이 화면에 보이지 않습니다. 첫 화면과 목록 화면을 스크린샷으로 찍어야 하는데
+// "전체 데이터 초기화 (테스트)" 같은 것이 붙어 있으면 그대로 사진에 남기 때문입니다.
+// 대신 가운데 모아콘 로고를 0.8초 길게 누르면 열립니다.
 //
-// 왜 길게 누르기인가: 처음에는 세 번 두드리기로 했는데 잘 안 열렸습니다. 세 번을
-// 같은 자리에, 정해진 시간 안에 맞춰 눌러야 해서 손이 조금만 미끄러져도 처음부터
-// 다시였습니다. 길게 누르기는 한 번만 정확하면 되고, 얼마나 눌렀는지는 손가락이
-// 스스로 압니다.
-//
-// 덮어씌우는 판을 깔지 않고 좌표만 봅니다. 그 자리에는 알림 배너의 닫기(✕)나 내 이름
-// 동그라미처럼 진짜 눌러야 할 것이 있는데, 판을 깔면 그것들이 안 눌립니다.
-const CORNER = 90; // 오른쪽 위에서 이만큼 안쪽까지를 구석으로 친다
-const HOLD_MS = 900; // 이만큼 누르고 있으면 열린다. 실수로 열리지 않을 만큼은 길게.
-const MOVE_TOLERANCE = 14; // 이만큼까지 흔들려도 누르고 있는 것으로 본다(px)
+// 여는 방법을 두 번 바꿨습니다. 세 번 두드리기 → 오른쪽 위 구석 길게 누르기 → 로고 길게
+// 누르기. 앞의 둘은 "화면의 어느 자리"를 좌표로 재서 판단했는데, 그 자리가 비어 있는지는
+// 화면마다 다르고 노치·상태바·안전영역까지 얽혀서 실제 폰에서 잘 안 잡혔습니다.
+// 로고는 실재하는 요소라 그 위에서 눌렸는지를 브라우저가 직접 알려줍니다 — 잴 것이 없습니다.
+const HOLD_MS = 800;
+// 가만히 눌러도 손가락은 미세하게 흔들린다. 조금이라도 움직이면 취소하게 두면 0.8초를
+// 버틸 수가 없다. 로고를 벗어날 만큼(pointerleave) 움직이면 어차피 취소되므로 여기서는
+// 넉넉하게 둔다.
+const MOVE_TOLERANCE = 16;
 
-export default function TestDataMenu({ familyId, ownerName, userId }) {
+export default function TestDataMenu({ familyId, ownerName, userId, children }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [running, setRunning] = useState('');
   // 되돌릴 수 없는 작업이라 확인을 두 번 받는다. 'first' → 'second' 순서로 물어본다.
@@ -36,49 +35,27 @@ export default function TestDataMenu({ familyId, ownerName, userId }) {
   // 목데이터는 가족 안에만 존재한다. 로그인 전 화면에서는 넣을 곳도 지울 곳도 없다.
   const hasFamily = Boolean(familyId);
 
-  useEffect(() => {
-    if (!enabled) return undefined;
+  function startHold(e) {
+    if (!enabled) return;
+    startRef.current = { x: e.clientX, y: e.clientY };
+    clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => setMenuOpen(true), HOLD_MS);
+  }
 
-    function clear() {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
-      startRef.current = null;
-    }
+  function cancelHold() {
+    clearTimeout(timerRef.current);
+    timerRef.current = null;
+    startRef.current = null;
+  }
 
-    function onDown(e) {
-      const inCorner = e.clientX > window.innerWidth - CORNER && e.clientY < CORNER;
-      if (!inCorner) return;
-      clear();
-      startRef.current = { x: e.clientX, y: e.clientY };
-      timerRef.current = setTimeout(() => setMenuOpen(true), HOLD_MS);
-    }
+  function onMove(e) {
+    const start = startRef.current;
+    if (!start) return;
+    if (Math.hypot(e.clientX - start.x, e.clientY - start.y) > MOVE_TOLERANCE) cancelHold();
+  }
 
-    // 가만히 누르고 있어도 손가락은 미세하게 흔들린다. 조금이라도 움직이면 취소하게 두면
-    // 0.9초를 버틸 수가 없어서 영영 안 열린다(세 번 두드리기가 안 됐던 것과 같은 종류의
-    // 문제다). 목록을 넘기려는 동작과 구별될 만큼만 움직였을 때 취소한다.
-    function onMove(e) {
-      const start = startRef.current;
-      if (!start) return;
-      if (Math.hypot(e.clientX - start.x, e.clientY - start.y) > MOVE_TOLERANCE) clear();
-    }
 
-    window.addEventListener('pointerdown', onDown);
-    window.addEventListener('pointerup', clear);
-    window.addEventListener('pointercancel', clear);
-    window.addEventListener('pointermove', onMove);
-    window.addEventListener('scroll', clear, true);
-
-    return () => {
-      clear();
-      window.removeEventListener('pointerdown', onDown);
-      window.removeEventListener('pointerup', clear);
-      window.removeEventListener('pointercancel', clear);
-      window.removeEventListener('pointermove', onMove);
-      window.removeEventListener('scroll', clear, true);
-    };
-  }, [enabled]);
-
-  if (!enabled) return null;
+  if (!enabled) return children ?? null;
 
   async function handleReset() {
     setAsking(null);
@@ -188,6 +165,22 @@ export default function TestDataMenu({ familyId, ownerName, userId }) {
 
   return (
     <>
+      {/* 로고를 감싸는 자리. 길게 누르는 동안 브라우저가 끼어들지 않게 해둔다 —
+          안드로이드는 이미지 저장 메뉴를, iOS는 확대·복사 팝업을 띄우려 든다.
+          touch-none은 이 안에서 스크롤 제스처를 브라우저에 넘기지 않게 해서, 로고를
+          누른 채 있어도 목록이 딸려 움직이지 않게 한다. */}
+      <span
+        onPointerDown={startHold}
+        onPointerUp={cancelHold}
+        onPointerCancel={cancelHold}
+        onPointerLeave={cancelHold}
+        onPointerMove={onMove}
+        onContextMenu={(e) => e.preventDefault()}
+        className="inline-flex touch-none select-none [-webkit-touch-callout:none]"
+      >
+        {children}
+      </span>
+
       {/* 무엇을 하는 중인지 화면 어딘가에는 보여야 한다. 눌렀는지 알 수 없으면 또 누른다. */}
       {running && (
         <div className="fixed inset-x-0 bottom-6 z-50 flex justify-center">

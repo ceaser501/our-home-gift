@@ -12,7 +12,6 @@ import NearbyStoresSheet from './components/NearbyStoresSheet';
 import InstallPrompt from './components/InstallPrompt';
 import NoticeBanner from './components/NoticeBanner';
 import NearbyBanner from './components/NearbyBanner';
-import TestDataMenu from './components/ResetAllDataButton';
 import AlertDialog from './components/AlertDialog';
 import PullToRefresh from './components/PullToRefresh';
 import { listGifticons, updateGifticon, deleteGifticon, claimGifticon, releaseGifticon, spendVoucher } from './api';
@@ -311,10 +310,6 @@ export default function App() {
           />
         )}
       </main>
-
-      {/* ⚠️ 테스트 전용. 오른쪽 위 구석을 길게 누르면 열린다. 목데이터를 넣고 빼려면
-          가족이 있어야 해서 로그인 화면이 아니라 여기에도 둔다. 출시 전에 뺀다. */}
-      <TestDataMenu familyId={family.id} ownerName={myName} userId={user.id} />
 
       <button
         type="button"

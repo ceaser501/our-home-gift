@@ -119,7 +119,11 @@ export default function LoginScreen() {
 
       <div className="flex flex-1 flex-col items-center justify-center gap-6 px-6 py-8">
       <div className="flex flex-col items-center gap-3">
-        <Logo className="size-12" />
+        {/* ⚠️ 테스트 전용. 로고를 0.8초 길게 누르면 테스트 도구가 열린다.
+            여기서는 가족이 없어서 목데이터 항목 없이 일괄삭제만 나온다. */}
+        <TestDataMenu>
+          <Logo className="size-12" />
+        </TestDataMenu>
         <h1 className="m-0 text-xl font-bold text-foreground">모아콘</h1>
         {/* 이 앱의 중심은 가족과 함께 보는 것이다. 개인용으로 방향을 틀면 카카오톡 선물함과
             겨루는 싸움이 되고, 유일한 차별점을 잃는다. 그래서 문구에서 가족을 빼지 않는다.
@@ -227,9 +231,6 @@ export default function LoginScreen() {
         </>
       )}
 
-        {/* ⚠️ 테스트 전용. 오른쪽 위 구석을 길게 누르면 열린다. 출시 전에 뺀다.
-            여기서는 가족이 없어서 목데이터 항목 없이 일괄삭제만 나온다. */}
-        <TestDataMenu />
       </div>
     </div>
   );
