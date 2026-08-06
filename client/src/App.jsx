@@ -9,6 +9,7 @@ import ImageViewerModal from './components/ImageViewerModal';
 import NearbyStoresSheet from './components/NearbyStoresSheet';
 import InstallPrompt from './components/InstallPrompt';
 import NoticeBanner from './components/NoticeBanner';
+import NearbyBanner from './components/NearbyBanner';
 import AlertDialog from './components/AlertDialog';
 import PullToRefresh from './components/PullToRefresh';
 import { listGifticons, updateGifticon, deleteGifticon, claimGifticon, releaseGifticon } from './api';
@@ -230,6 +231,10 @@ export default function App() {
       {/* 운영자 공지. 설치 안내 아래에 둔다. 설치 안내는 "앱을 제대로 쓰는 법"이라
           한 번 하고 사라지는 안내이고, 공지는 그때그때 바뀌는 소식이다. */}
       <NoticeBanner />
+
+      {/* 근처 매장 안내는 공지 아래. 운영자가 하는 말보다는 낮고, 목록보다는 급한 소식이다.
+          누르면 그 브랜드로 목록을 걸러준다. */}
+      <NearbyBanner gifticons={gifticons} onPick={setSearch} />
 
       <FilterBar
         search={search}
