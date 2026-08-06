@@ -11,6 +11,15 @@
 <link rel="apple-touch-icon" href="../icon-192.png">
 <meta name="theme-color" content="#0b0b0b">
 <title>모아콘 관리자</title>
+<script>
+// beforeinstallprompt는 페이지가 뜨자마자 지나간다. 아래 본문은 모듈 스크립트라 그보다
+// 늦게 실행되므로, 여기서 미리 잡아두지 않으면 설치 버튼을 띄울 기회를 놓친다.
+window.addEventListener('beforeinstallprompt', function(e){
+  e.preventDefault();
+  window.__installEvent = e;
+  window.dispatchEvent(new Event('installready'));
+});
+</script>
 <!--
   모아콘 관리자 대시보드 (실동작 버전).
 
@@ -203,38 +212,102 @@ td.strong{font-weight:650}
   .kpi-value{font-size:20px}
   .kpi{padding:12px 14px}
   .setup{margin:40px 14px}
+  .auth-main{padding:20px 16px}
   .seg button{padding:6px 10px}
   .icon-btn{padding:6px 10px}
+}
+
+/* ----- 로그인·차단 화면 -----
+   대시보드는 큰 모니터에 펼쳐두고 보는 화면이라 폭을 안 잡지만, 여기는 정반대다.
+   할 일이 "이메일 한 줄 넣기" 하나뿐이라, 가운데로 모으고 폭을 좁혀야 그 하나가 보인다.
+   예전에는 대시보드용 카드(.setup)를 그대로 빌려 써서 화면 위쪽에 상자 하나가
+   덩그러니 놓인 모양이었다. */
+.auth-main{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:32px 24px}
+body.has-bar .auth-main{min-height:calc(100vh - 58px)}
+.auth{width:100%;max-width:360px;display:flex;flex-direction:column}
+.auth-brand{display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;margin-bottom:28px}
+/* 로고를 헤더의 30px 그대로 쓰면 첫 화면에서 존재감이 없다. 여기서는 이것 말고
+   볼 것이 없으니 크게 둔다. */
+.auth-mark{display:inline-flex;align-items:center;justify-content:center;width:54px;height:54px;border-radius:17px;background:var(--accent);color:var(--accent-ink);font-weight:800;font-size:25px}
+.auth-title{font-size:19px;font-weight:750;letter-spacing:-0.02em}
+.auth-sub{font-size:12.5px;color:var(--muted);line-height:1.65}
+.auth-label{font-size:12px;color:var(--ink2);font-weight:600;margin-bottom:7px}
+.auth input{width:100%;font:inherit;padding:11px 13px;border:1px solid var(--border);border-radius:10px;background:var(--card);color:var(--ink)}
+.auth input::placeholder{color:var(--muted)}
+.auth input:focus{outline:2px solid var(--accent);outline-offset:0;border-color:transparent}
+.auth-go{margin-top:12px;background:var(--accent);color:var(--accent-ink);border:0;border-radius:10px;padding:12px;font:inherit;font-weight:650;cursor:pointer}
+.auth-go:disabled{opacity:.55;cursor:default}
+.auth .err,.auth .ok{font-size:12px;border-radius:8px;padding:9px 11px;margin-top:12px;display:none;line-height:1.6}
+.auth .err{color:var(--bad);background:color-mix(in srgb,var(--bad) 8%,transparent)}
+.auth .ok{color:var(--good);background:color-mix(in srgb,var(--good) 8%,transparent)}
+/* 들어올 수 있는 조건은 눌러야 할 것들 아래로 내린다. 읽어야 할 문장이 입력칸 위에
+   있으면 할 일이 뒤로 밀린다. */
+.auth-foot{margin-top:20px;padding-top:16px;border-top:1px solid var(--border);font-size:11.5px;color:var(--muted);line-height:1.7;text-align:center}
+.auth-alt{margin-top:14px;display:flex;justify-content:center}
+.auth-alt button{border:0;background:none;color:var(--ink2);font:inherit;font-size:12px;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+
+/* ----- 설치 안내 띠 -----
+   헤더 구석의 작은 버튼 하나로는 아무도 못 찾는다(겨우 설치했다는 이야기를 들었다).
+   화면 맨 위를 가로로 채워서 로그인하기 전에 먼저 눈에 걸리게 한다. 앱(모아콘)의
+   상단 안내와 같은 자리·같은 역할이다. */
+#install-bar{display:none;align-items:center;gap:10px;padding:11px 16px;background:var(--accent-soft);border-bottom:1px solid var(--border)}
+#install-bar.on{display:flex}
+#install-bar p{flex:1;font-size:12.5px;color:var(--ink);line-height:1.5;word-break:keep-all}
+#install-bar .go{border:0;background:var(--accent);color:var(--accent-ink);border-radius:8px;padding:7px 13px;font:inherit;font-size:12px;font-weight:650;cursor:pointer;flex-shrink:0}
+#install-bar .x{border:0;background:none;color:var(--muted);font:inherit;font-size:16px;line-height:1;cursor:pointer;padding:4px;flex-shrink:0}
+#install-guide{display:none;padding:0 16px 12px;background:var(--accent-soft);border-bottom:1px solid var(--border);font-size:12px;color:var(--ink2);line-height:1.7;word-break:keep-all}
+#install-guide.on{display:block}
+#install-guide b{color:var(--ink);font-weight:700}
 </style>
 </head>
 <body>
 
+<!-- 설치 안내 띠. 로그인 전 화면들 위에 걸린다(대시보드에서는 헤더 버튼이 그 일을 한다). -->
+<div id="install-bar">
+  <p id="install-msg">홈 화면에 추가하면 앱처럼 바로 열 수 있어요.</p>
+  <button class="go" id="btn-install-bar">설치</button>
+  <button class="x" id="btn-install-close" aria-label="안내 닫기">✕</button>
+</div>
+<div id="install-guide"></div>
+
 <!-- 로그인 화면. 앱과 같은 계정으로 들어온다. -->
 <div id="view-login" style="display:none">
-  <div class="setup">
-    <h1><span class="logo-mark">모</span>모아콘 관리자</h1>
-    <div class="hint">
-      앱에서 쓰는 이메일로 로그인해주세요. 로그인 링크를 보내드려요.<br>
-      관리자로 등록된 계정만 통계를 볼 수 있어요.
-    </div>
-    <label>이메일
+  <div class="auth-main">
+    <div class="auth">
+      <div class="auth-brand">
+        <span class="auth-mark">모</span>
+        <div class="auth-title">모아콘 관리자</div>
+        <div class="auth-sub">운영 현황을 보는 화면이에요.<br>앱에서 쓰는 계정으로 들어옵니다.</div>
+      </div>
+
+      <label class="auth-label" for="in-email">이메일</label>
       <input id="in-email" type="email" placeholder="you@example.com" autocomplete="email">
-    </label>
-    <div class="err" id="login-err"></div>
-    <div class="ok" id="login-ok"></div>
-    <button class="go" id="btn-login">로그인 링크 받기</button>
+
+      <div class="err" id="login-err"></div>
+      <div class="ok" id="login-ok"></div>
+
+      <button class="auth-go" id="btn-login">로그인 링크 받기</button>
+
+      <p class="auth-foot">
+        비밀번호는 없어요. 메일로 받은 링크를 누르면 들어옵니다.<br>
+        관리자 명단에 있는 계정만 통계를 볼 수 있어요.
+      </p>
+    </div>
   </div>
 </div>
 
 <!-- 로그인은 했지만 관리자 명단에 없는 경우. -->
 <div id="view-denied" style="display:none">
-  <div class="setup">
-    <h1><span class="logo-mark">모</span>모아콘 관리자</h1>
-    <div class="hint">
-      <b id="denied-email"></b> 계정은 관리자가 아니에요.<br>
-      다른 계정으로 들어오려면 로그아웃 후 다시 로그인해주세요.
+  <div class="auth-main">
+    <div class="auth">
+      <div class="auth-brand">
+        <span class="auth-mark">모</span>
+        <div class="auth-title">들어올 수 없는 계정이에요</div>
+        <div class="auth-sub"><b id="denied-email"></b> 계정은<br>관리자 명단에 없어요.</div>
+      </div>
+      <button class="auth-go" id="btn-logout-denied">로그아웃</button>
+      <p class="auth-foot">다른 계정으로 들어오시려면 로그아웃한 뒤 그 계정으로 다시 로그인해주세요.</p>
     </div>
-    <button class="go" id="btn-logout-denied">로그아웃</button>
   </div>
 </div>
 
@@ -634,9 +707,13 @@ function loadConfig(){
 function saveConfig(cfg){ localStorage.setItem(CONFIG_KEY, JSON.stringify(cfg)); }
 
 const VIEWS=['view-login','view-denied','view-config','view-loading','view-dash'];
+// 설치 안내 띠는 로그인 전 화면에만 걸린다. 화면이 바뀔 때마다 다시 판단해야 해서
+// 아래 start()에서 만든 함수를 여기에 걸어둔다(그 전에 show가 불릴 수도 있어 기본은 없음).
+let INSTALL_SYNC=null;
 function show(view){
   for(const id of VIEWS)
     document.getElementById(id).style.display = id===view? (id==='view-dash'?'grid':'block') : 'none';
+  INSTALL_SYNC?.();
 }
 function showErr(id,message){
   const box=document.getElementById(id);
@@ -1214,30 +1291,72 @@ async function start(){
   document.getElementById('n-save').addEventListener('click',saveNotice);
   document.getElementById('n-cancel').addEventListener('click',resetNoticeForm);
 
-  // ----- 설치 버튼 -----
-  // 크롬·엣지·안드로이드는 설치할 수 있게 되면 beforeinstallprompt를 쏴준다. 그때만
-  // 버튼을 보인다(설치할 수 없는 환경에서 눌러도 아무 일도 없는 버튼을 두지 않는다).
-  // iOS 사파리는 그 이벤트가 없고 공유 메뉴로만 설치되므로, 버튼을 보여주되 방법을 알려준다.
-  let installEvent=null;
+  // ----- 설치 안내 -----
+  // 크롬·엣지·안드로이드는 설치할 수 있게 되면 beforeinstallprompt를 쏴준다. 그 이벤트가
+  // 있으면 눌렀을 때 네이티브 설치창이 뜨고, 없으면(아이폰 사파리, 또는 크롬이 조건을
+  // 아직 안 봤을 때) 메뉴 위치를 글로 알려준다. 예전에는 이벤트가 없으면 아무것도 안
+  // 띄워서, 정작 설치해야 하는 사람에게 아무 안내도 보이지 않았다.
+  //
+  // 자리는 둘이다. 대시보드는 헤더의 작은 버튼, 로그인 화면은 위쪽 띠. 로그인 화면에
+  // 띠를 두는 이유는 설치하려는 사람이 아직 로그인도 안 한 상태이기 때문이다 — 헤더
+  // 버튼은 로그인해야 나오는 자리에 있어서 영영 못 만난다.
+  const INSTALL_DISMISS_KEY='moacon-admin-install-dismissed';
+  let installEvent=window.__installEvent||null;
   const installBtn=document.getElementById('btn-install');
-  window.addEventListener('beforeinstallprompt',e=>{
-    e.preventDefault();
-    installEvent=e;
-    installBtn.style.display='';
-  });
+  const bar=document.getElementById('install-bar');
+  const guide=document.getElementById('install-guide');
   const isIos=/iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isAndroid=/android/i.test(navigator.userAgent);
   const isStandalone=matchMedia('(display-mode: standalone)').matches||navigator.standalone;
-  if(isIos&&!isStandalone) installBtn.style.display='';
-  installBtn.addEventListener('click',async()=>{
+  let barDismissed=localStorage.getItem(INSTALL_DISMISS_KEY)==='1';
+
+  // 설치된 채로 열었으면 안내할 것이 없다. 설치창을 띄울 수도, 메뉴로 안내할 수도 없는
+  // 데스크톱 브라우저에서도 마찬가지다(눌러도 아무 일 없는 버튼을 두지 않는다).
+  function canInstall(){ return !isStandalone && (Boolean(installEvent)||isIos||isAndroid); }
+
+  function syncInstall(){
+    installBtn.style.display=canInstall()?'':'none';
+    const onAuth=document.getElementById('view-dash').style.display==='none';
+    const on=canInstall()&&onAuth&&!barDismissed;
+    bar.classList.toggle('on',on);
+    document.body.classList.toggle('has-bar',on);
+    if(!on) hideGuide();
+    document.getElementById('btn-install-bar').textContent=installEvent?'설치':'설치방법';
+  }
+  function hideGuide(){ guide.classList.remove('on'); }
+
+  function toggleGuide(){
+    if(guide.classList.contains('on')){ hideGuide(); return; }
+    guide.innerHTML = isIos
+      ? '사파리 아래쪽 <b>공유</b> 버튼을 누른 뒤 <b>홈 화면에 추가</b>를 선택해주세요.'
+      : '브라우저 오른쪽 위 <b>⋮</b> 버튼을 누른 뒤 <b>앱 설치</b> 또는 <b>홈 화면에 추가</b>를 선택해주세요.';
+    guide.classList.add('on');
+  }
+
+  async function doInstall(){
     if(installEvent){
       installEvent.prompt();
-      await installEvent.userChoice;
+      const { outcome } = await installEvent.userChoice;
       installEvent=null;
-    }else{
-      alert('사파리에서는 공유 버튼(⬆︎) → "홈 화면에 추가"를 누르면 설치돼요.');
+      if(outcome==='accepted') barDismissed=true;
+      syncInstall();
+      return;
     }
+    toggleGuide();
+  }
+
+  installBtn.addEventListener('click',doInstall);
+  document.getElementById('btn-install-bar').addEventListener('click',doInstall);
+  document.getElementById('btn-install-close').addEventListener('click',()=>{
+    localStorage.setItem(INSTALL_DISMISS_KEY,'1');
+    barDismissed=true;
+    syncInstall();
   });
-  window.addEventListener('appinstalled',()=>{installBtn.style.display='none';});
+  // 이벤트가 늦게 와도 그때 띠를 띄운다.
+  window.addEventListener('installready',()=>{ installEvent=window.__installEvent; syncInstall(); });
+  window.addEventListener('appinstalled',()=>{ barDismissed=true; installEvent=null; syncInstall(); });
+  INSTALL_SYNC=syncInstall;
+  syncInstall();
   document.getElementById('btn-save-config').addEventListener('click',()=>{
     const cfg={url:document.getElementById('in-url').value.trim(),anonKey:document.getElementById('in-anon').value.trim()};
     if(!cfg.url||!cfg.anonKey){ showErr('config-err','두 값을 모두 입력해주세요.'); return; }
