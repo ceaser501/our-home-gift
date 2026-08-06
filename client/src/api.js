@@ -392,6 +392,21 @@ export async function deleteGifticon(id) {
   if (paths.length) await removeImages(paths);
 }
 
+// ⚠️ 테스트 전용. 샘플로 넣어둔 기프티콘만 골라 지운다(번호 앞자리로 알아본다).
+// 실사용 배포 전에 이 함수와 부르는 곳을 함께 지운다 — client/src/components/ResetAllDataButton.jsx.
+//
+// 이미지는 신경 쓰지 않는다. 샘플은 사진 없이 만들어져서 지울 파일이 없다.
+export async function deleteSampleGifticons(familyId, codePrefix) {
+  const { data, error } = await supabase
+    .from(GIFTICON_TABLE)
+    .delete()
+    .eq('family_id', familyId)
+    .like('code', `${codePrefix}%`)
+    .select('id');
+  if (error) throw new Error(error.message);
+  return data?.length ?? 0;
+}
+
 // 운영자 공지. 아직 시작 안 된 글은 RLS가 걸러주고, 여기서는 끝난 글만 더 걸러낸다.
 // 끝난 글까지 받아오는 이유: "지난 공지"로 모아 보여줘야 해서다. 화면에서 나눠 쓴다.
 export async function listNotices() {

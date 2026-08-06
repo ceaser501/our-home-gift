@@ -10,7 +10,7 @@ import { createGifticon, listGifticons } from './api';
 
 // 샘플은 이 번호로 시작한다. supabase/mock-data.sql이 지울 때 쓰는 기준과 같아서,
 // SQL로 넣어둔 것과 여기서 넣은 것을 함께 정리할 수 있다.
-const SAMPLE_PREFIX = '9000111122';
+export const SAMPLE_PREFIX = '9000111122';
 
 // 예전에 하나만 넣던 시절의 번호. 이미 이걸 가진 가족은 나머지만 채워 넣으면 된다.
 export const SAMPLE_CODE = '9000111122223';
@@ -111,9 +111,33 @@ export function isSampleDataEnabled() {
   return Boolean(import.meta.env.VITE_RESET_TOKEN);
 }
 
+// 테스트 도구에서 목데이터를 지웠다는 표시. 이게 없으면 앱을 열 때마다 자동으로 다시
+// 채워 넣어서, 지워도 새로고침 한 번에 되살아난다. "지웠다"는 뜻을 기기에 기억해둔다.
+// 다시 넣기를 누르면 이 표시가 풀린다.
+const OPT_OUT_KEY = 'sample-data-opt-out';
+
+export function setSampleOptOut(optedOut) {
+  try {
+    if (optedOut) localStorage.setItem(OPT_OUT_KEY, '1');
+    else localStorage.removeItem(OPT_OUT_KEY);
+  } catch {
+    /* 저장이 막힌 곳에서는 자동 채우기가 그대로 도는 것뿐이라 넘어간다 */
+  }
+}
+
+function isSampleOptedOut() {
+  try {
+    return localStorage.getItem(OPT_OUT_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
 // 하나라도 새로 넣었으면 true. 이미 다 있거나 테스트 빌드가 아니면 false.
-export async function ensureSampleGifticon({ familyId, ownerName, userId }) {
+// force: 테스트 도구에서 직접 "추가"를 누른 경우. 지웠다는 표시를 무시하고 넣는다.
+export async function ensureSampleGifticon({ familyId, ownerName, userId, force = false }) {
   if (!isSampleDataEnabled() || !familyId) return false;
+  if (!force && isSampleOptedOut()) return false;
 
   try {
     // 샘플이 여섯이라 하나씩 물어보면 왕복이 여섯 번이다. 목록을 한 번만 읽고 맞춰본다.

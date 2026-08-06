@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Logo from './Logo';
 import InstallPrompt from './InstallPrompt';
-import ResetAllDataButton from './ResetAllDataButton';
+import TestDataMenu from './ResetAllDataButton';
 
 function GoogleIcon({ className }) {
   return (
@@ -227,7 +227,9 @@ export default function LoginScreen() {
         </>
       )}
 
-        <ResetAllDataButton />
+        {/* ⚠️ 테스트 전용. 오른쪽 위 구석을 길게 누르면 열린다. 출시 전에 뺀다.
+            여기서는 가족이 없어서 목데이터 항목 없이 일괄삭제만 나온다. */}
+        <TestDataMenu />
       </div>
     </div>
   );
