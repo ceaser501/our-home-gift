@@ -83,10 +83,15 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
-    # 게시 단계가 GitHub 쪽 사정으로 멈춰 있을 때가 있다. 기본값으로 두면 10분을 꽉 채우고
-    # 실패해서, 그동안 다음 배포도 줄줄이 밀린다. 4분이면 정상일 때는 넉넉하고(보통 1분 안에
-    # 끝난다) 막혔을 때는 빨리 포기하고 자리를 비켜준다.
-    timeout-minutes: 4
+    # 짧게 자르지 않는다. 한 번 4분으로 줄여봤다가 오히려 일을 키웠다.
+    #
+    # 작업이 시간 제한에 걸리면 실패가 아니라 "취소"로 끝나는데, 그러면 Pages 쪽에 배포가
+    # 진행 중인 채로 남는다. 그 하나가 이후 모든 배포를 막는다("Please cancel <SHA> first").
+    # 즉 빨리 포기하게 만든 것이 자리를 비켜주기는커녕 자리를 잠가버렸다.
+    #
+    # 게시가 밀릴 때는 그냥 기다리는 편이 낫다. deploy-pages 액션 자체가 10분 뒤 스스로
+    # 실패하므로(그때는 배포도 같이 정리된다) 여기서는 그보다 넉넉하게만 둔다.
+    timeout-minutes: 20
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
