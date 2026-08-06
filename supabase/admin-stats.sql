@@ -430,6 +430,58 @@ as $$
   );
 $$;
 
+-- ===================== 관리자 명단 고치기 =====================
+
+-- 관리자 화면의 "회원 관리"에서 다른 사람을 관리자로 넣고 빼는 데 쓴다.
+-- 넣고 빼는 판단 자체는 여기서 한다. 화면이나 함수 쪽에서 검사하면 두 사람이 동시에
+-- 눌렀을 때 둘 다 통과해버릴 수 있는데, 여기서는 한 트랜잭션 안에서 세고 지우므로
+-- 그 틈이 없다.
+--
+-- actor_id는 지금 누르고 있는 사람이다. 자기 자신을 빼는 것을 막는 데 쓴다.
+create or replace function public.admin_set_admin(
+  target_id uuid,
+  make_admin boolean,
+  actor_id uuid,
+  memo_text text default null
+)
+returns json
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  target_email text;
+  remaining int;
+begin
+  select email into target_email from auth.users where id = target_id;
+  if target_email is null then
+    return json_build_object('ok', false, 'error', '그런 계정이 없어요.');
+  end if;
+
+  if make_admin then
+    -- 이미 있으면 이메일만 최신으로 맞춘다(계정이 이메일을 바꿨을 수 있다).
+    insert into public.admin_users (user_id, email, memo)
+    values (target_id, target_email, coalesce(nullif(btrim(memo_text), ''), '관리자 화면에서 추가'))
+    on conflict (user_id) do update set email = excluded.email;
+    return json_build_object('ok', true, 'email', target_email);
+  end if;
+
+  -- 자기 자신은 뺄 수 없다. 실수로 스스로를 빼면 화면으로는 다시 들어올 길이 없고
+  -- SQL 편집기를 열어야 한다.
+  if target_id = actor_id then
+    return json_build_object('ok', false, 'error', '자기 자신은 관리자에서 뺄 수 없어요.');
+  end if;
+
+  -- 마지막 한 명은 남긴다. 명단이 비면 아무도 관리자 화면에 못 들어온다.
+  select count(*) into remaining from public.admin_users;
+  if remaining <= 1 then
+    return json_build_object('ok', false, 'error', '관리자가 한 명뿐이라 뺄 수 없어요.');
+  end if;
+
+  delete from public.admin_users where user_id = target_id;
+  return json_build_object('ok', true, 'email', target_email);
+end $$;
+
 -- 목록도 통계와 같은 이유로 서버 전용이다.
 do $$
 declare
@@ -438,7 +490,8 @@ begin
   foreach fn in array array[
     'public.admin_list_users(text, int, int)',
     'public.admin_list_gifticons(text, text, uuid, int, int)',
-    'public.admin_list_families(text, int, int)'
+    'public.admin_list_families(text, int, int)',
+    'public.admin_set_admin(uuid, boolean, uuid, text)'
   ] loop
     execute format('revoke all on function %s from public', fn);
     execute format('revoke all on function %s from anon', fn);

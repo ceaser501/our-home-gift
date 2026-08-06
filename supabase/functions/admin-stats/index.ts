@@ -143,6 +143,46 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ rows }), { headers: jsonHeaders });
   }
 
+  // 관리자 명단 고치기. 회원 관리 화면에서 다른 사람을 관리자로 넣고 뺀다.
+  // 여기까지 온 사람은 이미 관리자다(위에서 확인했다). 자기 자신을 빼거나 마지막 한 명을
+  // 빼는 것은 admin_set_admin이 막는다. 그 판단을 함수 안에 둔 이유는 admin-stats.sql 주석 참고.
+  if (resource === 'admins') {
+    if (req.method !== 'POST') {
+      return new Response(JSON.stringify({ error: '알 수 없는 동작이에요.' }), { status: 400, headers: jsonHeaders });
+    }
+    let payload: { action?: string; user_id?: string; memo?: string };
+    try {
+      payload = await req.json();
+    } catch {
+      return new Response(JSON.stringify({ error: '요청 형식이 올바르지 않아요.' }), { status: 400, headers: jsonHeaders });
+    }
+
+    if (payload.action !== 'add' && payload.action !== 'remove') {
+      return new Response(JSON.stringify({ error: '알 수 없는 동작이에요.' }), { status: 400, headers: jsonHeaders });
+    }
+    if (!payload.user_id) {
+      return new Response(JSON.stringify({ error: '어떤 계정인지 알 수 없어요.' }), { status: 400, headers: jsonHeaders });
+    }
+
+    const { data: result, error: setError } = await admin.rpc('admin_set_admin', {
+      target_id: payload.user_id,
+      make_admin: payload.action === 'add',
+      actor_id: auth.user.id,
+      memo_text: payload.memo ?? null,
+    });
+    if (setError) {
+      return new Response(
+        JSON.stringify({ error: `관리자 명단을 고치지 못했어요: ${setError.message} (supabase/admin-stats.sql을 다시 실행했는지 확인해주세요)` }),
+        { status: 500, headers: jsonHeaders },
+      );
+    }
+    // 함수가 막은 경우(자기 자신·마지막 한 명 등)는 이유를 그대로 화면에 보여준다.
+    if (!result?.ok) {
+      return new Response(JSON.stringify({ error: result?.error || '관리자 명단을 고치지 못했어요.' }), { status: 400, headers: jsonHeaders });
+    }
+    return new Response(JSON.stringify({ ok: true, email: result.email }), { headers: jsonHeaders });
+  }
+
   if (resource !== 'stats') {
     // 목록마다 인자가 달라서 이름을 맞춰 넘긴다. 화면이 보낸 값을 그대로 믿지 않고,
     // 한 번에 가져갈 수 있는 줄 수에 천장을 둔다(실수로 전부 끌어오는 것을 막는다).

@@ -147,6 +147,9 @@ td.strong{font-weight:650}
 .pager{display:flex;align-items:center;justify-content:center;gap:12px;padding:12px}
 .page-info{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
 .icon-btn:disabled{opacity:.4;cursor:default}
+.row-btn{border:1px solid var(--border);background:var(--card);color:var(--ink2);border-radius:7px;padding:3px 10px;font:inherit;font-size:11.5px;cursor:pointer;white-space:nowrap}
+.row-btn:hover{border-color:var(--accent);color:var(--ink)}
+.row-btn:disabled{opacity:.4;cursor:default}
 }
 
 /* ----- 설정/상태 화면 ----- */
@@ -972,7 +975,7 @@ const PAGES={
   users:{
     title:'회원 관리', search:'이메일로 검색', filter:false,
     // {n:1}인 칸은 숫자라 값·머리글을 오른쪽 정렬한다.
-    columns:['이메일','가입 방법','소속 가족','가족에서 이름',{l:'등록',n:1},{l:'사용',n:1},{l:'알림',n:1},'약관','최근 로그인','가입일'],
+    columns:['이메일','가입 방법','소속 가족','가족에서 이름',{l:'등록',n:1},{l:'사용',n:1},{l:'알림',n:1},'약관','최근 로그인','가입일','관리자'],
     row:r=>{
       const fams=r.families||[];
       // 이름이 같은 가족이 둘이면(예: 테스트로 만든 "우리집" 두 개) 같은 가족이 두 번
@@ -994,7 +997,10 @@ const PAGES={
       <td class="num">${r.push_devices?nf.format(r.push_devices):'<span class="muted">—</span>'}</td>
       <td>${r.agreed?'<span class="tag tag-unused">동의</span>':'<span class="tag tag-hidden">미동의</span>'}</td>
       <td class="muted">${dt(r.last_sign_in_at)}</td>
-      <td class="muted">${dt(r.created_at)}</td>`;
+      <td class="muted">${dt(r.created_at)}</td>
+      <td>${r.is_admin
+        ? `<button class="row-btn" data-admin-off data-uid="${esc(r.id)}" data-email="${esc(r.email)}">해제</button>`
+        : `<button class="row-btn" data-admin-on data-uid="${esc(r.id)}" data-email="${esc(r.email)}">지정</button>`}</td>`;
     },
   },
   gifticons:{
@@ -1041,6 +1047,31 @@ async function fetchList(){
   return callApi('?'+p.toString());
 }
 
+// 관리자 명단에 넣고 빼기. 실제 판단(자기 자신인지, 마지막 한 명인지)은 서버가 한다.
+// 여기서는 무엇을 하려는지 확인만 받는다.
+function bindAdminToggles(tbody){
+  tbody.querySelectorAll('[data-admin-on],[data-admin-off]').forEach(btn=>{
+    btn.addEventListener('click',async()=>{
+      const on=btn.hasAttribute('data-admin-on');
+      const who=btn.dataset.email||'이 계정';
+      // 관리자로 만드는 것은 통계뿐 아니라 회원 이메일·가족 구성까지 다 열어주는 일이다.
+      // 무엇을 넘기는 것인지 적어두고 확인을 받는다.
+      const ask=on
+        ? who+' 계정을 관리자로 지정할까요?\n\n통계는 물론 회원 이메일과 가족 구성까지 모두 볼 수 있게 되고, 다른 사람을 관리자로 지정할 수도 있게 됩니다.'
+        : who+' 계정을 관리자에서 뺄까요?\n\n다음부터 관리자 화면에 들어오지 못합니다.';
+      if(!confirm(ask)) return;
+      btn.disabled=true;
+      try{
+        await callApi('?resource=admins',{action:on?'add':'remove',user_id:btn.dataset.uid});
+        renderList();
+      }catch(err){
+        alert((on?'관리자로 지정하지 못했어요: ':'관리자에서 빼지 못했어요: ')+err.message);
+        btn.disabled=false;
+      }
+    });
+  });
+}
+
 async function renderList(){
   const def=PAGES[LIST.page];
   const tbody=document.querySelector('#list-table tbody');
@@ -1057,6 +1088,8 @@ async function renderList(){
   tbody.innerHTML = rows.length
     ? rows.map(r=>'<tr>'+def.row(r)+'</tr>').join('')
     : `<tr class="empty-row"><td colspan="${def.columns.length}">${LIST.q?'검색 결과가 없어요':'아직 데이터가 없어요'}</td></tr>`;
+
+  if(LIST.page==='users') bindAdminToggles(tbody);
 
   const count=document.getElementById('list-count');
   count.textContent = LIST.page==='gifticons' && data.amount_sum
