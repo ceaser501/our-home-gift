@@ -137,7 +137,9 @@ Deno.serve(async (req) => {
     // 목록: 앱과 달리 예정/내려간 공지까지 전부 본다(관리 화면이니까).
     const { data: rows, error: e } = await admin
       .from('notices')
-      .select('id, title, body, starts_at, ends_at, created_at')
+      // is_important를 빼면 화면에서 공지를 "수정"으로 열 때 그 값이 undefined로 와서
+      // 체크가 풀린 채 보이고, 그대로 저장하면 중요 표시가 조용히 지워진다.
+      .select('id, title, body, starts_at, ends_at, is_important, created_at')
       .order('starts_at', { ascending: false });
     if (e) return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: jsonHeaders });
     return new Response(JSON.stringify({ rows }), { headers: jsonHeaders });
