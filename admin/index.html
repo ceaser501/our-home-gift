@@ -1158,7 +1158,16 @@ async function connect(){
       document.getElementById('denied-email').textContent=user?.email||'이';
       show('view-denied');
     }else if(err.reason==='unauthenticated'){
+      // 로그인은 돼 있는데 서버가 토큰을 거절한 경우다. 이걸 그냥 로그인 화면으로 넘기면
+      // "로그인했는데 또 로그인하라네"가 되고, 무엇이 잘못됐는지 알 길이 없다.
+      // 세션이 없어서 온 게 아니라는 걸 밝히고, 다음에 볼 곳을 짚어준다.
       show('view-login');
+      const { data:{ session } } = await sb.auth.getSession();
+      if(session){
+        showErr('login-err',
+          '로그인은 돼 있는데 서버가 이 계정을 확인하지 못했어요('+(session.user?.email||'')+'). '+
+          '토큰이 만료됐다면 아래로 다시 받으시고, 계속 이러면 admin-stats 함수가 배포됐는지 확인해주세요.');
+      }
     }else{
       show('view-login');
       showErr('login-err','불러오지 못했어요: '+err.message);
@@ -1269,7 +1278,14 @@ async function start(){
   if(window.location.hash.includes('access_token')){
     history.replaceState(null,'',window.location.pathname+window.location.search);
   }
-  if(!session){ show('view-login'); return; }
+  // 세션이 아예 없어서 로그인 화면이 뜬 것도 그렇다고 말해준다. 같은 브라우저에서 앱에
+  // 로그인해 뒀는데 여기가 비어 있다면 앱과 이 화면이 서로 다른 저장소를 보고 있다는
+  // 뜻이고(설치한 앱과 브라우저가 갈렸을 때 그렇다), 그건 다시 로그인해도 안 풀린다.
+  if(!session){
+    show('view-login');
+    showErr('login-err','이 브라우저에 로그인 기록이 없어요. 앱에는 로그인돼 있는데 여기만 이렇다면, 앱을 설치본이 아니라 이 브라우저에서 열어 로그인한 뒤 다시 와주세요.');
+    return;
+  }
   connect();
 }
 
