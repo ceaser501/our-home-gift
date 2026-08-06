@@ -62,6 +62,8 @@ export default function App() {
   const [error, setError] = useState('');
 
   const [search, setSearch] = useState('');
+  // 중요 공지가 목록 위 띠를 쓰고 있는지. 주변 매장 안내가 이걸 보고 자리를 비켜준다.
+  const [noticeShown, setNoticeShown] = useState(false);
   const [category, setCategory] = useState('');
   const [statusTab, setStatusTab] = useState('all');
 
@@ -269,13 +271,15 @@ export default function App() {
 
       <InstallPrompt />
 
-      {/* 운영자 공지. 설치 안내 아래에 둔다. 설치 안내는 "앱을 제대로 쓰는 법"이라
-          한 번 하고 사라지는 안내이고, 공지는 그때그때 바뀌는 소식이다. */}
-      <NoticeBanner />
+      {/* 목록 위 띠는 한 자리뿐이다. 둘이 같이 뜨면 목록이 두 줄만큼 밀려서 정작 봐야 할
+          기프티콘이 화면 밖으로 나간다. 그래서 서로 자리를 주고받게 했다.
 
-      {/* 근처 매장 안내는 공지 아래. 운영자가 하는 말보다는 낮고, 목록보다는 급한 소식이다.
-          누르면 그 브랜드로 목록을 걸러준다. */}
-      <NearbyBanner gifticons={gifticons} onPick={setSearch} />
+          평소 그 자리는 주변 매장 안내가 쓴다 — 지금 당장 쓸 수 있는 것을 알려주는
+          쪽이라 자주 쓸모가 있다. 급한 공지(중요 표시)가 게시된 동안에만 공지가 자리를
+          가져가고, 공지가 끝나거나 사용자가 그 공지를 닫으면 다시 매장 안내로 돌아온다. */}
+      <NoticeBanner onShownChange={setNoticeShown} />
+
+      <NearbyBanner gifticons={gifticons} onPick={setSearch} yielded={noticeShown} />
 
       <FilterBar
         search={search}

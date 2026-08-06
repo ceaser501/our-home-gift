@@ -436,19 +436,22 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
               {/* 금액권은 한 번에 다 쓰지 않고 쓴 만큼 깎아 나간다. 켜두면 사용할 때
                   "얼마 썼어요?"를 묻고 잔액을 남긴다. 금액이 없으면 깎아 나갈 값이
                   없으므로 이 스위치도 보이지 않는다. */}
+              {/* 설명이 두 문장이라 작은 글씨로 두 줄을 잡고 "잔액이 / 남아요"처럼 어정쩡하게
+                  접혔다. 글자를 키우면 자리를 더 먹으니, 키우는 대신 말을 줄였다 — 두 문장이
+                  같은 얘기를 하고 있어서 하나만 남겨도 뜻이 그대로다. 한 줄로 줄어든 만큼
+                  글자는 오히려 키울 수 있었다(11 → 12px, 이름표는 12 → 14px).
+                  체크 상자도 손가락으로 짚기 쉽게 조금 키운다. */}
               {onlyDigits(form.amount) && (
-                <label className="flex cursor-pointer items-start gap-2 pt-0.5">
+                <label className="flex cursor-pointer items-center gap-2.5 pt-0.5">
                   <input
                     type="checkbox"
                     checked={Boolean(form.is_voucher)}
                     onChange={(e) => updateField('is_voucher', e.target.checked)}
-                    className="mt-0.5 size-4 shrink-0 accent-primary"
+                    className="size-4.5 shrink-0 accent-primary"
                   />
-                  <span className="flex flex-col">
-                    <span className="text-xs font-semibold text-foreground">금액권이에요</span>
-                    <span className="text-[11px] break-keep text-muted-foreground">
-                      상품권처럼 나눠 쓸 수 있어요. 쓸 때마다 금액을 입력하면 잔액이 남아요.
-                    </span>
+                  <span className="flex min-w-0 flex-col">
+                    <span className="text-sm font-semibold text-foreground">금액권이에요</span>
+                    <span className="text-xs break-keep text-muted-foreground">쓴 만큼 깎이고 남은 금액이 표시돼요.</span>
                   </span>
                 </label>
               )}

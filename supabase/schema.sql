@@ -857,6 +857,14 @@ create table if not exists public.notices (
   created_at timestamptz not null default now()
 );
 
+-- 목록 맨 위 띠에 띄울 만큼 급한 공지인지. 앱 위쪽에는 띠를 하나만 두기로 했고(둘이
+-- 겹치면 목록이 두 줄만큼 밀린다), 평소 그 자리는 주변 매장 안내가 쓴다. 중요 공지가
+-- 게시 중일 때만 그 자리를 가져간다.
+--
+-- 중요하지 않은 공지도 사라지지 않는다. 띠에 안 뜰 뿐, 종 아이콘 옆 "공지사항"에는
+-- 그대로 쌓인다. 그래서 이 값은 "보여줄까 말까"가 아니라 "끼어들까 말까"에 가깝다.
+alter table public.notices add column if not exists is_important boolean not null default false;
+
 create index if not exists notices_starts_at_idx on public.notices (starts_at desc);
 
 alter table public.notices enable row level security;

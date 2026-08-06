@@ -19,7 +19,7 @@ function readDismissed() {
   }
 }
 
-export default function NoticeBanner() {
+export default function NoticeBanner({ onShownChange }) {
   const [notices, setNotices] = useState([]);
   const [dismissed, setDismissed] = useState(readDismissed);
   const [listOpen, setListOpen] = useState(false);
@@ -36,8 +36,19 @@ export default function NoticeBanner() {
 
   // 아직 시작 안 된 공지는 서버(RLS)가 걸러주고, 여기서는 끝난 것만 더 걸러낸다.
   // 끝난 공지도 받아오는 이유는 "공지사항"에서 지난 것까지 보여주기 위해서다.
+  //
+  // 띠에 오르는 건 '중요'로 표시한 공지뿐이다. 이 자리는 하나뿐이고 평소에는 주변 매장
+  // 안내가 쓰는데, 안내성 공지까지 끼어들면 정작 지금 쓸 수 있는 기프티콘이 가려진다.
+  // 중요하지 않은 공지도 사라지지 않는다 — 종 옆 "공지사항"에는 그대로 쌓인다.
   const now = Date.now();
-  const current = notices.find((n) => (!n.ends_at || new Date(n.ends_at).getTime() > now) && !dismissed.includes(n.id));
+  const current = notices.find(
+    (n) => n.is_important && (!n.ends_at || new Date(n.ends_at).getTime() > now) && !dismissed.includes(n.id)
+  );
+
+  // 이 띠가 자리를 쓰고 있는지 바깥(App)에 알린다. 주변 매장 안내가 그걸 보고 비켜준다.
+  useEffect(() => {
+    onShownChange?.(Boolean(current));
+  }, [current, onShownChange]);
 
   function dismiss(id) {
     // 오래 쓰면 닫은 id가 계속 쌓인다. 지난 공지의 id는 다시 뜰 일이 없으므로 최근 것만 남긴다.

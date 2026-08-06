@@ -106,6 +106,9 @@ Deno.serve(async (req) => {
         body: String(n?.body ?? '').trim() || null,
         starts_at: n?.starts_at ? String(n.starts_at) : new Date().toISOString(),
         ends_at: n?.ends_at ? String(n.ends_at) : null,
+        // 앱 목록 맨 위 띠를 가져갈 공지인지. 그 자리는 하나뿐이라 평소에는 주변 매장
+        // 안내가 쓰고, 이 표시가 붙은 공지만 게시 기간 동안 자리를 넘겨받는다.
+        is_important: Boolean(n?.is_important),
       });
 
       if (payload.action === 'create') {

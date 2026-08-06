@@ -63,7 +63,13 @@ function formatDistance(meters) {
   return `${(meters / 1000).toFixed(1)}km`;
 }
 
-export default function NearbyBanner({ gifticons, onPick }) {
+// yielded: 중요 공지가 위 띠를 쓰고 있다는 뜻. 앱 맨 위 띠는 하나만 둔다 — 둘이 겹치면
+// 목록이 두 줄만큼 밀린다. 급한 공지가 있는 동안에는 그쪽에 자리를 내주고, 공지가
+// 끝나거나 사용자가 그 공지를 닫으면 다시 이 자리로 돌아온다.
+//
+// 자리를 내주는 동안에도 주변 검색은 그대로 해둔다. 공지를 닫는 순간 빈 띠가 잠깐
+// 떴다가 내용이 채워지는 것보다, 이미 알아둔 것을 바로 보여주는 편이 낫다.
+export default function NearbyBanner({ gifticons, onPick, yielded = false }) {
   const [best, setBest] = useState(null);
   const [dismissed, setDismissed] = useState(() => sessionStorage.getItem(DISMISS_KEY) === '1');
   // 목록은 검색어를 칠 때마다 다시 오는데, 그때마다 주변을 다시 뒤질 일은 아니다.
@@ -130,7 +136,7 @@ export default function NearbyBanner({ gifticons, onPick }) {
     };
   }, [gifticons]);
 
-  if (!best || dismissed) return null;
+  if (!best || dismissed || yielded) return null;
 
   function dismiss() {
     sessionStorage.setItem(DISMISS_KEY, '1');

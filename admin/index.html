@@ -217,6 +217,11 @@ td.strong{font-weight:650}
   .icon-btn{padding:6px 10px}
 }
 
+/* 공지 폼의 체크박스 한 줄. 설명이 길어서 글자를 위로 맞춘다. */
+.field-check{display:flex;align-items:flex-start;gap:8px;font-size:12.5px;color:var(--ink2);line-height:1.55;cursor:pointer}
+.field-check input{margin-top:2px;flex-shrink:0}
+.field-check b{color:var(--ink)}
+
 /* ----- 로그인·차단 화면 -----
    대시보드는 큰 모니터에 펼쳐두고 보는 화면이라 폭을 안 잡지만, 여기는 정반대다.
    할 일이 "이메일 한 줄 넣기" 하나뿐이라, 가운데로 모으고 폭을 좁혀야 그 하나가 보인다.
@@ -403,6 +408,13 @@ body.has-bar .auth-main{min-height:calc(100vh - 58px)}
           <input id="n-ends" class="search" type="datetime-local">
         </label>
       </div>
+      <!-- 앱 목록 맨 위의 띠는 자리가 하나뿐이고, 평소에는 "지금 근처에서 쓸 수 있는
+           기프티콘" 안내가 쓴다. 중요로 표시한 공지만 그 자리를 가져간다. 표시하지 않은
+           공지도 사라지지 않는다 - 앱의 공지사항 화면에는 그대로 쌓인다. -->
+      <label class="field-check">
+        <input id="n-important" type="checkbox">
+        <span><b>중요 공지</b> - 앱 목록 맨 위 띠에 띄웁니다. 게시 기간 동안 주변 매장 안내 대신 이 공지가 보입니다.</span>
+      </label>
       <div class="form-actions">
         <span class="form-err" id="n-err" style="display:none"></span>
         <button class="icon-btn" id="n-cancel" style="display:none">취소</button>
@@ -1110,6 +1122,7 @@ function renderNotices(){
     document.getElementById('n-body').value=n.body||'';
     document.getElementById('n-starts').value=toLocalInput(n.starts_at);
     document.getElementById('n-ends').value=toLocalInput(n.ends_at);
+  document.getElementById('n-important').checked=Boolean(n.is_important);
     document.getElementById('n-save').textContent='저장';
     document.getElementById('n-cancel').style.display='';
     window.scrollTo({top:0,behavior:'smooth'});
@@ -1128,6 +1141,7 @@ function resetNoticeForm(){
   editingNoticeId=null;
   document.getElementById('notice-form-title').textContent='새 공지 쓰기';
   ['n-title','n-body','n-starts','n-ends'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('n-important').checked=false;
   document.getElementById('n-save').textContent='등록';
   document.getElementById('n-cancel').style.display='none';
   document.getElementById('n-err').style.display='none';
@@ -1138,6 +1152,7 @@ async function saveNotice(){
   const body=document.getElementById('n-body').value.trim();
   const startsRaw=document.getElementById('n-starts').value;
   const endsRaw=document.getElementById('n-ends').value;
+  const is_important=document.getElementById('n-important').checked;
   const errBox=document.getElementById('n-err');
   errBox.style.display='none';
   if(!title){ errBox.textContent='제목을 입력해주세요.'; errBox.style.display='block'; return; }
@@ -1148,8 +1163,8 @@ async function saveNotice(){
   btn.disabled=true;
   try{
     await callApi('?resource=notices', editingNoticeId
-      ? {action:'update',id:editingNoticeId,notice:{title,body,starts_at,ends_at}}
-      : {action:'create',notice:{title,body,starts_at,ends_at}});
+      ? {action:'update',id:editingNoticeId,notice:{title,body,starts_at,ends_at,is_important}}
+      : {action:'create',notice:{title,body,starts_at,ends_at,is_important}});
     resetNoticeForm();
     loadNotices();
   }catch(err){
