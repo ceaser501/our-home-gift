@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { listUsageHistory } from '../api';
+import FamilyReport from './FamilyReport';
+import { listGifticonStats, listUsageHistory } from '../api';
 import { useFamily } from '../FamilyContext';
 import { formatDate } from '../utils/date';
 
@@ -11,11 +12,20 @@ function formatAmount(amount) {
 export default function UsageReportSheet({ onClose }) {
   const { family } = useFamily();
   const [rows, setRows] = useState([]);
+  const [all, setAll] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
     let cancelled = false;
+    // 결산은 안 쓴 것과 지나간 것까지 봐야 해서 따로 받아온다. 결산을 못 불러와도
+    // 사용 내역은 보여야 하므로 실패는 여기서 삼킨다.
+    listGifticonStats(family.id)
+      .then((data) => {
+        if (!cancelled) setAll(data);
+      })
+      .catch(() => {});
+
     listUsageHistory(family.id)
       .then((data) => {
         if (!cancelled) setRows(data);
@@ -48,11 +58,16 @@ export default function UsageReportSheet({ onClose }) {
         <SheetHeader className="pr-14 pb-1">
           <SheetTitle>사용 내역</SheetTitle>
         </SheetHeader>
-        <p className="m-0 px-5 pb-1 text-xs text-muted-foreground">
-          {family.name} 구성원이 사용 완료로 표시한 기프티콘이 모두 보여요.
-        </p>
 
-        <div className="flex flex-col gap-3 px-5 pt-2">
+        {/* 결산이 먼저다. 목록은 "무엇을 썼나"를 하나씩 보는 자리이고, 결산은 그걸
+            한눈에 요약해준다. 요약을 보고 나서 자세히 보는 순서가 자연스럽다. */}
+        <div className="px-5 pt-1 pb-3">
+          <FamilyReport gifticons={all} />
+        </div>
+
+        <p className="m-0 px-5 pb-1 text-xs font-semibold text-muted-foreground">사용한 기프티콘</p>
+
+        <div className="flex flex-col gap-3 px-5 pt-1">
           {loading && <p className="py-8 text-center text-sm text-muted-foreground">불러오는 중…</p>}
           {!loading && error && <p className="py-8 text-center text-sm text-destructive">{error}</p>}
           {!loading && !error && rows.length === 0 && (

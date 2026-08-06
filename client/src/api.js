@@ -126,6 +126,19 @@ export async function listUsageHistory(familyId) {
   return data;
 }
 
+// 결산에 쓸 최소한의 값만 가져온다. 사용 내역(listUsageHistory)은 이미 쓴 것만 주는데,
+// 결산은 "받은 것 중 얼마나 썼나"를 봐야 해서 안 쓴 것과 지나간 것까지 있어야 한다.
+// 사진 주소는 서명이 붙어 비싸니 부르지 않는다 — 숫자를 세는 데는 필요 없다.
+export async function listGifticonStats(familyId) {
+  const { data, error } = await supabase
+    .from(GIFTICON_TABLE)
+    .select('id, amount, status, expires_at, created_at')
+    .eq('family_id', familyId)
+    .is('hidden_at', null);
+  if (error) throw new Error(error.message);
+  return data || [];
+}
+
 // 같은 바코드/QR 값을 가진 기프티콘이 이미 등록돼 있는지 확인한다(중복 등록 방지 안내용).
 export async function findGifticonByCode(familyId, code, excludeId) {
   if (!code) return null;
