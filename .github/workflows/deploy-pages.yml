@@ -83,6 +83,10 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    # 게시 단계가 GitHub 쪽 사정으로 멈춰 있을 때가 있다. 기본값으로 두면 10분을 꽉 채우고
+    # 실패해서, 그동안 다음 배포도 줄줄이 밀린다. 4분이면 정상일 때는 넉넉하고(보통 1분 안에
+    # 끝난다) 막혔을 때는 빨리 포기하고 자리를 비켜준다.
+    timeout-minutes: 4
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
