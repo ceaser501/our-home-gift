@@ -130,11 +130,11 @@ export default function BarcodeModal({ gifticon, onClose, onUsed }) {
               메모가 없으면 아무것도 보이지 않는다.
 
               색은 경고색(앰버)을 쓰다가 앱 색과 따로 놀아서 앱의 연보라로 바꿨다. 메모는
-              조심하라는 경고가 아니라 가족이 남긴 말이라, 톤도 그쪽이 맞다. 대신 왼쪽에
-              색 띠를 세워 "누가 적어둔 글"로 읽히게 한다. 바탕색만으로는 바코드 위에서
-              그냥 지나치기 쉽다. */}
+              조심하라는 경고가 아니라 가족이 남긴 말이라, 톤도 그쪽이 맞다.
+              테두리나 띠는 두지 않는다. 이 창에서 진한 선은 바코드 하나만 가져야
+              계산대에서 눈이 거기로 곧장 간다. */}
           {gifticon.memo?.trim() && (
-            <div className="w-full rounded-xl border-l-[3px] border-primary/50 bg-accent px-3.5 py-2.5">
+            <div className="w-full rounded-xl bg-accent px-3.5 py-2.5">
               <p className="m-0 mb-1 flex items-center gap-1.5 text-xs font-semibold text-accent-foreground">
                 <StickyNote className="size-3.5 shrink-0" />
                 <span className="min-w-0 truncate">{memoWriter ? `${memoWriter}님의 메모` : '메모'}</span>
