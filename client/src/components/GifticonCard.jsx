@@ -254,14 +254,16 @@ export default function GifticonCard({
             </button>
 
             {/* 금액권은 한 번에 다 쓰는 게 아니라 얼마를 썼는지 받아야 한다. 그래서 같은
-                자리에서 바로 완료로 넘기지 않고 금액을 묻는 창을 연다. */}
+                자리에서 바로 완료로 넘기지 않고 금액을 묻는 창을 연다.
+                라벨도 "사용하기"가 아니라 "잔액입력"이다 — 눌렀을 때 실제로 하는 일이
+                금액을 적는 것이라, 그대로 적어야 누르기 전에 무슨 일이 일어날지 안다. */}
             <button
               type="button"
               onClick={() => (isVoucher ? onSpend(gifticon) : onToggleUsed(gifticon))}
               className={cn(BAR_BUTTON, 'border-l border-border text-foreground')}
             >
               <CheckCircle2 className="size-4 text-muted-foreground" />
-              {isVoucher ? '사용하기' : '사용완료'}
+              {isVoucher ? '잔액입력' : '사용완료'}
             </button>
           </>
         )}

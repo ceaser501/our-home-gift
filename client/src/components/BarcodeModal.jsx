@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
 import JsBarcode from 'jsbarcode';
-import { CheckCircle2, ChevronLeft, ChevronRight, Image as ImageIcon, ScanLine, StickyNote } from 'lucide-react';
+import { CheckCircle2, ChevronLeft, ChevronRight, Image as ImageIcon, ScanLine, StickyNote, Wallet } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import CopyButton from './CopyButton';
@@ -20,7 +20,9 @@ const ZXING_TO_JSBARCODE = {
   CODABAR: 'codabar',
 };
 
-export default function BarcodeModal({ gifticon, onClose, onUsed }) {
+export default function BarcodeModal({ gifticon, onClose, onUsed, onSpend }) {
+  // 금액권은 쓴 만큼 깎아 나가는 것이라, 이 창에서도 "다 썼다"가 아니라 "얼마 썼다"를 받는다.
+  const isVoucher = Boolean(gifticon.is_voucher) && Number(gifticon.amount) > 0;
   const { members } = useFamily();
   const [canvas, setCanvas] = useState(null);
   const [renderError, setRenderError] = useState(false);
@@ -185,12 +187,23 @@ export default function BarcodeModal({ gifticon, onClose, onUsed }) {
 
           {/* 계산이 끝난 그 자리에서 바로 눌러 끝낼 수 있게 한다. 창을 닫고 목록에서 다시
               카드를 찾아 누르게 하면, 그 한 걸음 때문에 표시를 미루다 잊는다.
-              눌러도 되돌릴 수 있다(카드에서 "사용취소"). 그래서 다시 묻지 않고 바로 처리한다. */}
-          {onUsed && (
-            <Button type="button" size="lg" onClick={onUsed} className="mt-1 w-full rounded-xl">
-              <CheckCircle2 className="size-4.5" />
-              사용완료
+              눌러도 되돌릴 수 있다(카드에서 "사용취소"). 그래서 다시 묻지 않고 바로 처리한다.
+
+              금액권은 다르다. 계산대에서 오만원권으로 만이천원을 긁으면 남는 게 있어서,
+              여기서 바로 완료로 넘기면 남은 삼만팔천원이 사라진다. 그래서 완료 대신 얼마를
+              썼는지 묻는 창을 연다. 카드 아래 버튼과 같은 동작·같은 이름이다. */}
+          {isVoucher && onSpend ? (
+            <Button type="button" size="lg" onClick={onSpend} className="mt-1 w-full rounded-xl">
+              <Wallet className="size-4.5" />
+              잔액입력
             </Button>
+          ) : (
+            onUsed && (
+              <Button type="button" size="lg" onClick={onUsed} className="mt-1 w-full rounded-xl">
+                <CheckCircle2 className="size-4.5" />
+                사용완료
+              </Button>
+            )
           )}
 
           {photos.length > 0 && (

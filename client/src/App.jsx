@@ -340,6 +340,12 @@ export default function App() {
             handleToggleUsed(codeTarget);
             setCodeTarget(null);
           }}
+          // 금액권은 완료로 넘기지 않고 얼마 썼는지 묻는다. 바코드 창을 닫고 그 창을 여는
+          // 이유는 둘 다 아래에서 올라오는 창이라, 겹쳐 띄우면 뒤엣것이 앞엣것에 가린다.
+          onSpend={() => {
+            setSpendTarget(codeTarget);
+            setCodeTarget(null);
+          }}
         />
       )}
       {imageTarget && <ImageViewerModal gifticon={imageTarget} onClose={() => setImageTarget(null)} />}
