@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { MessageCircle } from 'lucide-react';
-import { sendMagicLink, signInWithGoogle, signInWithNaver } from '../auth';
+import { lastLoginMethod, sendMagicLink, signInWithGoogle, signInWithKakao, signInWithNaver } from '../auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -28,6 +28,19 @@ function GoogleIcon({ className }) {
   );
 }
 
+// 지난번에 쓴 수단 위에 붙는 말풍선.
+//
+// 로그인 수단마다 이메일이 달라서(구글은 gmail, 네이버는 naver.com) 다른 걸 누르면
+// 아예 다른 계정이 된다 — 같은 사람이 가족 구성원 두 명으로 늘어난다. 앱은 그 둘이
+// 같은 사람인지 알 수 없으니, 애초에 헷갈리지 않게 하는 것이 유일한 방법이다.
+function LastUsedBadge() {
+  return (
+    <span className="pointer-events-none absolute -top-2 right-3 z-10 rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold text-primary-foreground shadow-sm">
+      최근 로그인
+    </span>
+  );
+}
+
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [sending, setSending] = useState(false);
@@ -35,6 +48,9 @@ export default function LoginScreen() {
   const [error, setError] = useState('');
   const [googleLoading, setGoogleLoading] = useState(false);
   const [naverLoading, setNaverLoading] = useState(false);
+  const [kakaoLoading, setKakaoLoading] = useState(false);
+  // 화면이 그려질 때 한 번만 읽는다. 이 화면에 머무는 동안 바뀔 값이 아니다.
+  const [lastUsed] = useState(() => lastLoginMethod());
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -84,6 +100,17 @@ export default function LoginScreen() {
     }
   }
 
+  async function handleKakaoLogin() {
+    setKakaoLoading(true);
+    setError('');
+    try {
+      await signInWithKakao();
+    } catch (err) {
+      setError(err.message || '카카오 로그인에 실패했어요.');
+      setKakaoLoading(false);
+    }
+  }
+
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col bg-background">
       <div className="pt-[env(safe-area-inset-top)]">
@@ -110,39 +137,51 @@ export default function LoginScreen() {
           <p className="mt-1.5 mb-0 text-xs text-muted-foreground">메일함에서 링크를 눌러 로그인을 완료해주세요.</p>
         </div>
       ) : (
+        <>
         <div className="flex w-full flex-col gap-3">
-          <Button
-            type="button"
-            size="lg"
-            onClick={handleGoogleLogin}
-            disabled={googleLoading}
-            variant="outline"
-            className="w-full rounded-xl"
-          >
-            <GoogleIcon className="size-4" />
-            {googleLoading ? '연결 중…' : '구글로 로그인'}
-          </Button>
+          {/* 말풍선이 버튼 위로 튀어나오므로 relative가 필요하다. */}
+          <div className="relative">
+            {lastUsed === 'kakao' && <LastUsedBadge />}
+            <Button
+              type="button"
+              size="lg"
+              onClick={handleKakaoLogin}
+              disabled={kakaoLoading}
+              className="w-full rounded-xl bg-[#FEE500] text-[#191919] hover:bg-[#FEE500]/90"
+            >
+              <MessageCircle className="size-4 fill-[#191919]" />
+              {kakaoLoading ? '연결 중…' : '카카오로 로그인'}
+            </Button>
+          </div>
 
-          <Button
-            type="button"
-            size="lg"
-            onClick={handleNaverLogin}
-            disabled={naverLoading}
-            className="w-full rounded-xl bg-[#03C75A] text-white hover:bg-[#03C75A]/90"
-          >
-            <span className="flex size-4 items-center justify-center text-[13px] leading-none font-bold">N</span>
-            {naverLoading ? '연결 중…' : '네이버로 로그인'}
-          </Button>
+          <div className="relative">
+            {lastUsed === 'google' && <LastUsedBadge />}
+            <Button
+              type="button"
+              size="lg"
+              onClick={handleGoogleLogin}
+              disabled={googleLoading}
+              variant="outline"
+              className="w-full rounded-xl"
+            >
+              <GoogleIcon className="size-4" />
+              {googleLoading ? '연결 중…' : '구글로 로그인'}
+            </Button>
+          </div>
 
-          <Button
-            type="button"
-            size="lg"
-            disabled
-            className="w-full rounded-xl bg-[#FEE500] text-[#191919] opacity-60 hover:bg-[#FEE500] disabled:opacity-60"
-          >
-            <MessageCircle className="size-4 fill-[#191919]" />
-            카카오로 로그인 (서비스 예정)
-          </Button>
+          <div className="relative">
+            {lastUsed === 'naver' && <LastUsedBadge />}
+            <Button
+              type="button"
+              size="lg"
+              onClick={handleNaverLogin}
+              disabled={naverLoading}
+              className="w-full rounded-xl bg-[#03C75A] text-white hover:bg-[#03C75A]/90"
+            >
+              <span className="flex size-4 items-center justify-center text-[13px] leading-none font-bold">N</span>
+              {naverLoading ? '연결 중…' : '네이버로 로그인'}
+            </Button>
+          </div>
 
           <div className="flex items-center gap-2.5 text-xs text-muted-foreground">
             <span className="h-px flex-1 bg-border" />
@@ -165,11 +204,23 @@ export default function LoginScreen() {
               />
             </div>
             {error && <p className="text-sm text-destructive">{error}</p>}
-            <Button type="submit" size="lg" variant="outline" className="w-full rounded-xl" disabled={sending}>
-              {sending ? '전송 중…' : '이메일로 로그인 링크 받기'}
-            </Button>
+            <div className="relative">
+              {lastUsed === 'email' && <LastUsedBadge />}
+              <Button type="submit" size="lg" variant="outline" className="w-full rounded-xl" disabled={sending}>
+                {sending ? '전송 중…' : '이메일로 로그인 링크 받기'}
+              </Button>
+            </div>
           </form>
         </div>
+
+        {/* 수단을 바꾸면 왜 곤란한지 한 줄로 말해준다. 표시만 있고 이유가 없으면
+            "그냥 지난번 것"으로 읽혀서, 다른 걸 눌러도 되는 줄 안다. */}
+        {lastUsed && (
+          <p className="m-0 -mt-2 text-center text-[11px] leading-relaxed break-keep text-muted-foreground">
+            다른 방법으로 로그인하면 새 계정이 만들어져요. 지난번과 같은 것을 눌러주세요.
+          </p>
+        )}
+        </>
       )}
 
         <ResetAllDataButton />
