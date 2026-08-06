@@ -147,7 +147,6 @@ export default function TestDataMenu({ familyId, ownerName, userId, children }) 
       label: '목데이터 삭제',
       hint: `번호가 ${SAMPLE_PREFIX}로 시작하는 샘플만 지워요. 직접 올린 건 그대로 둡니다.`,
       danger: true,
-      show: hasFamily,
       onClick: () => {
         setMenuOpen(false);
         setAsking('remove');
@@ -158,10 +157,15 @@ export default function TestDataMenu({ familyId, ownerName, userId, children }) 
       icon: PackagePlus,
       label: '목데이터 추가',
       hint: '케이스마다 하나씩 넣어요. 이미 있는 건 건너뜁니다.',
-      show: hasFamily,
       onClick: handleAddSamples,
     },
-  ].filter((item) => item.show);
+  ];
+
+  // 목데이터는 가족 안에만 존재한다. 로그인 전에는 넣을 곳도 지울 곳도 없다.
+  //
+  // 예전에는 이 둘을 아예 감췄는데, 그러면 로그인 화면에서 열었을 때 "일괄삭제 하나만
+  // 있네, 안 만들어줬나?"로 읽힌다. 없는 이유와 어디로 가야 하는지를 대신 적어둔다.
+  const lockedReason = hasFamily ? null : '로그인한 뒤 목록 화면에서 왼쪽 위 로고를 길게 눌러주세요.';
 
   return (
     <>
@@ -195,22 +199,34 @@ export default function TestDataMenu({ familyId, ownerName, userId, children }) 
               <SheetTitle>테스트 도구</SheetTitle>
             </SheetHeader>
             <div className="flex flex-col px-5 pt-2">
-              {items.map((item) => (
-                <button
-                  key={item.key}
-                  type="button"
-                  onClick={item.onClick}
-                  className="flex w-full items-start gap-3 border-b border-border px-1 py-3.5 text-left last:border-b-0"
-                >
-                  <item.icon className={`mt-0.5 size-4.5 shrink-0 ${item.danger ? 'text-destructive' : 'text-muted-foreground'}`} />
-                  <span className="flex min-w-0 flex-col">
-                    <span className={`text-sm font-semibold ${item.danger ? 'text-destructive' : 'text-foreground'}`}>
-                      {item.label}
+              {items.map((item) => {
+                // 일괄삭제는 가족이 없어도 된다(계정째 지우는 일이라). 나머지 둘만 잠긴다.
+                const locked = item.key !== 'reset' && Boolean(lockedReason);
+
+                return (
+                  <button
+                    key={item.key}
+                    type="button"
+                    disabled={locked}
+                    onClick={item.onClick}
+                    className="flex w-full items-start gap-3 border-b border-border px-1 py-3.5 text-left last:border-b-0 disabled:opacity-50"
+                  >
+                    <item.icon
+                      className={`mt-0.5 size-4.5 shrink-0 ${item.danger && !locked ? 'text-destructive' : 'text-muted-foreground'}`}
+                    />
+                    <span className="flex min-w-0 flex-col">
+                      <span
+                        className={`text-sm font-semibold ${item.danger && !locked ? 'text-destructive' : 'text-foreground'}`}
+                      >
+                        {item.label}
+                      </span>
+                      <span className="mt-0.5 text-xs break-keep text-muted-foreground">
+                        {locked ? lockedReason : item.hint}
+                      </span>
                     </span>
-                    <span className="mt-0.5 text-xs break-keep text-muted-foreground">{item.hint}</span>
-                  </span>
-                </button>
-              ))}
+                  </button>
+                );
+              })}
               <p className="m-0 py-4 text-center text-[11px] break-keep text-muted-foreground">
                 테스트 중에만 있는 창이에요. 출시할 때 없어집니다.
               </p>
