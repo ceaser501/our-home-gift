@@ -1,0 +1,442 @@
+<title>모아콘 사용 안내</title>
+<style>
+  /* ============================================================
+     모아콘 사용 안내서
+     읽는 사람이 20대부터 아버지 세대까지라, 크기와 대비를 먼저 잡았다.
+     본문 18px · 캡션 15.5px · 줄길이 40자 안쪽.
+     색은 앱이 쓰는 보라(#5B4FE8)를 그대로 가져와 한 식구로 만든다.
+     ============================================================ */
+  :root {
+    --paper: #fbfafd;
+    --card: #ffffff;
+    --ink: #1b1726;
+    --ink2: #443d57;
+    --muted: #6c6580;
+    --line: #e5e1ee;
+    --line-soft: #f0edf6;
+    --accent: #5b4fe8;
+    --accent-soft: #efedfe;
+    --done: #167a4b;
+    --done-soft: #e4f3ea;
+    --wait: #8a6a12;
+    --wait-soft: #f8f0dc;
+
+    --sans: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont,
+            "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #121016;
+      --card: #1b1922;
+      --ink: #edeaf5;
+      --ink2: #c6c0d6;
+      --muted: #948da6;
+      --line: #2c2838;
+      --line-soft: #221f2b;
+      --accent: #8478f5;
+      --accent-soft: #241f3a;
+      --done: #4cc78a;
+      --done-soft: #16281f;
+      --wait: #d8a83a;
+      --wait-soft: #2a2317;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #121016; --card: #1b1922; --ink: #edeaf5; --ink2: #c6c0d6;
+    --muted: #948da6; --line: #2c2838; --line-soft: #221f2b;
+    --accent: #8478f5; --accent-soft: #241f3a;
+    --done: #4cc78a; --done-soft: #16281f; --wait: #d8a83a; --wait-soft: #2a2317;
+  }
+  :root[data-theme="light"] {
+    --paper: #fbfafd; --card: #ffffff; --ink: #1b1726; --ink2: #443d57;
+    --muted: #6c6580; --line: #e5e1ee; --line-soft: #f0edf6;
+    --accent: #5b4fe8; --accent-soft: #efedfe;
+    --done: #167a4b; --done-soft: #e4f3ea; --wait: #8a6a12; --wait-soft: #f8f0dc;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 18px;
+    line-height: 1.75;
+    letter-spacing: -0.01em;
+    -webkit-font-smoothing: antialiased;
+    word-break: keep-all;
+  }
+
+  .wrap { width: min(100% - 40px, 1060px); margin-inline: auto; }
+  .narrow { max-width: 42em; }
+
+  /* ---------- 표지 ---------- */
+  .cover {
+    padding: 72px 0 56px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .mark {
+    display: inline-flex;
+    align-items: center;
+    gap: 11px;
+    margin-bottom: 30px;
+  }
+  .mark-box {
+    width: 42px; height: 42px;
+    border-radius: 13px;
+    background: var(--accent);
+    display: grid; place-items: center;
+    color: #fff; font-weight: 800; font-size: 19px;
+  }
+  .mark-name { font-size: 17px; font-weight: 750; letter-spacing: -0.02em; }
+  .mark-sub { font-size: 13.5px; color: var(--muted); }
+
+  h1 {
+    margin: 0;
+    font-size: clamp(34px, 6vw, 54px);
+    line-height: 1.22;
+    font-weight: 800;
+    letter-spacing: -0.035em;
+    text-wrap: balance;
+  }
+
+  .lede {
+    margin: 22px 0 0;
+    max-width: 30em;
+    font-size: 19px;
+    color: var(--ink2);
+  }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 26px; }
+  .chip {
+    border: 1px solid var(--line);
+    background: var(--card);
+    border-radius: 999px;
+    padding: 7px 15px;
+    font-size: 14.5px;
+    color: var(--ink2);
+  }
+
+  /* ---------- 진행 상황 ----------
+     이 문서는 한 장씩 채워나가는 중이다. 어디까지 왔는지가 목차 자리에서
+     바로 읽혀야, 다음에 무엇을 찍어 보내면 되는지 헤매지 않는다. */
+  .toc { padding: 44px 0 8px; }
+
+  .toc h2 {
+    margin: 0 0 6px;
+    font-size: 22px;
+    font-weight: 750;
+    letter-spacing: -0.02em;
+  }
+  .toc-note { margin: 0 0 22px; font-size: 15.5px; color: var(--muted); }
+
+  .toc-list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+
+  .toc-item {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    padding: 13px 2px;
+    border-bottom: 1px solid var(--line);
+  }
+  .toc-no {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--muted);
+    min-width: 1.6em;
+  }
+  .toc-name { flex: 1; font-size: 17px; font-weight: 600; }
+  .toc-name a { color: inherit; text-decoration: none; }
+  .toc-name a:hover, .toc-name a:focus-visible { text-decoration: underline; text-underline-offset: 3px; }
+
+  .state {
+    font-size: 13px;
+    font-weight: 700;
+    border-radius: 999px;
+    padding: 3px 11px;
+    white-space: nowrap;
+  }
+  .state.done { background: var(--done-soft); color: var(--done); }
+  .state.wait { background: var(--wait-soft); color: var(--wait); }
+
+  /* ---------- 장 ---------- */
+  .chapter { padding: 56px 0; border-top: 1px solid var(--line); }
+  .chapter:first-of-type { border-top: 0; }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 9px;
+  }
+
+  h2.ch {
+    margin: 0;
+    font-size: clamp(25px, 3.6vw, 33px);
+    line-height: 1.3;
+    font-weight: 780;
+    letter-spacing: -0.028em;
+    text-wrap: balance;
+  }
+
+  .ch-lede { margin: 16px 0 0; font-size: 18px; color: var(--ink2); max-width: 34em; }
+
+  /* 아직 안 쓴 장. 무엇을 보내야 하는지 이 자리에서 알려준다. */
+  .pending {
+    margin-top: 26px;
+    border: 1px dashed var(--line);
+    background: var(--line-soft);
+    border-radius: 14px;
+    padding: 20px 22px;
+  }
+  .pending h3 {
+    margin: 0 0 10px;
+    font-size: 15px;
+    font-weight: 750;
+    color: var(--wait);
+    letter-spacing: -0.01em;
+  }
+  .pending ol { margin: 0; padding-left: 1.35em; }
+  .pending li { font-size: 16px; color: var(--ink2); margin-bottom: 6px; }
+  .pending li:last-child { margin-bottom: 0; }
+  .pending li b { color: var(--ink); font-weight: 700; }
+
+  /* 화면에 적힌 글자를 그대로 인용할 때 */
+  .ui {
+    font-weight: 700;
+    background: var(--accent-soft);
+    color: var(--accent);
+    border-radius: 6px;
+    padding: 1px 7px;
+    font-size: 0.94em;
+    white-space: nowrap;
+  }
+
+  footer {
+    padding: 40px 0 64px;
+    border-top: 1px solid var(--line);
+    color: var(--muted);
+    font-size: 15px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+
+<div class="wrap">
+
+  <!-- ══════════ 표지 ══════════ -->
+  <header class="cover">
+    <div class="mark">
+      <span class="mark-box" aria-hidden="true">모</span>
+      <span>
+        <span class="mark-name">모아콘</span><br>
+        <span class="mark-sub">사용 안내</span>
+      </span>
+    </div>
+
+    <h1>받아두고<br>잊어버린 기프티콘.</h1>
+
+    <p class="lede">
+      사진 한 장만 올리면 상품명·금액·유효기한을 알아서 채웁니다.
+      가족이 같은 목록을 보고, 기한이 오기 전에 폰으로 알려드려요.
+    </p>
+
+    <div class="chips">
+      <span class="chip">설치 없이 웹으로</span>
+      <span class="chip">초대코드 6자리로 가족 연결</span>
+      <span class="chip">안드로이드 · 아이폰</span>
+    </div>
+  </header>
+
+  <!-- ══════════ 진행 상황 ══════════ -->
+  <section class="toc">
+    <h2>차례</h2>
+    <p class="toc-note">위에서부터 한 장씩 채웁니다. 지금 어디까지 왔는지 여기서 보세요.</p>
+
+    <ul class="toc-list" id="toc"></ul>
+  </section>
+
+  <!-- ══════════ 각 장 ══════════ -->
+  <div id="chapters"></div>
+
+  <footer class="wrap narrow">
+    모아콘 사용 안내 · 만드는 중
+  </footer>
+
+</div>
+
+<script>
+  /* 장 하나하나가 여기서 나온다. 다 쓴 장은 body를 채우고 state를 'done'으로 바꾼다.
+     아직인 장은 need에 "무엇을 찍어 보내야 하는지"를 적어둔다 — 그게 곧 다음 할 일이다. */
+  const CHAPTERS = [
+    {
+      id: 'intro',
+      no: '0',
+      label: '표지',
+      title: '모아콘이 하는 일',
+      lede: '위 표지가 이 장입니다. 문구는 화면을 보고 다듬습니다.',
+      state: 'wait',
+      need: [
+        '<b>바코드를 크게 띄운 화면</b> — 계산대에서 보여주는 그 화면',
+        '<b>기프티콘 목록</b> — 카드가 네다섯 장 보이게',
+        '<b>유효기한 알림</b> — 폰 잠금화면이나 알림창에 뜬 모습',
+      ],
+    },
+    {
+      id: 'start',
+      no: '1',
+      label: '시작하기',
+      title: '로그인하고 들어오기',
+      lede: '비밀번호는 없습니다. 카카오·구글·네이버 계정이나 이메일 링크로 들어옵니다.',
+      state: 'wait',
+      need: [
+        '<b>로그인 화면</b> — 버튼 네 개가 다 보이게',
+        '<b>최근 로그인 표시가 붙은 로그인 화면</b> — 한 번 로그인했다 로그아웃하면 말풍선이 붙습니다',
+        '<b>약관 동의 화면</b>',
+        '<b>설치 안내 띠</b> — 화면 맨 위 <span class="ui">홈 화면에 추가하면…</span> 줄',
+      ],
+    },
+    {
+      id: 'family',
+      no: '2',
+      label: '가족 만들기',
+      title: '가족을 만들거나, 초대코드로 참여하기',
+      lede: '코드를 아는 사람만 신청할 수 있고, 신청은 승인해야 들어옵니다.',
+      state: 'wait',
+      need: [
+        '<b>가족 만들기 / 참여 고르는 화면</b>',
+        '<b>초대코드를 넣는 화면</b>',
+        '<b>승인 기다리는 중 화면</b>',
+        '<b>승인해주는 쪽 화면</b> — 참여 신청이 뜬 가족 구성원 창',
+        '<b>초대코드 영역</b> — 사람 아이콘을 눌러 나오는 창 (공유·복사 버튼 보이게)',
+      ],
+    },
+    {
+      id: 'main',
+      no: '3',
+      label: '메인 화면',
+      title: '메인 화면 한눈에',
+      lede: '이 장은 화면 하나에 설명을 붙이는 그림 한 장짜리입니다. 어디에 무엇이 있는지 한 번에 보여줍니다.',
+      state: 'wait',
+      need: [
+        '<b>메인 목록 전체</b> — 헤더부터 카드 네다섯 장까지 세로로 길게',
+        '기한 임박(붉은 칩) · 여유(회색 칩) · <b>금액권</b>이 섞이게',
+        '<b>근처 매장 띠</b>나 <b>공지 띠</b>가 떠 있으면 더 좋습니다',
+      ],
+    },
+    {
+      id: 'add',
+      no: '4',
+      label: '올리기',
+      title: '사진만 올리면 알아서 채웁니다',
+      lede: '상품명·상호·금액·유효기한을 읽어서 넣어줍니다. 바코드는 폰 안에서 읽어요.',
+      state: 'wait',
+      need: [
+        '<b>사진 고르는 중 화면</b>',
+        '<b>읽는 중 화면</b> — 진행 표시가 뜬 상태',
+        '<b>다 채워진 등록 화면</b> — 금액·기한·바코드가 들어간 상태',
+        '<b>금액권 체크</b>가 보이는 부분 (금액이 있는 기프티콘)',
+        '<b>가격 검색</b> 버튼이 보이는 부분 (금액이 비어 있을 때)',
+      ],
+    },
+    {
+      id: 'use',
+      no: '5',
+      label: '매장에서 쓰기',
+      title: '계산대에서는 카드만 누르면 됩니다',
+      lede: '카드 윗칸 아무 데나 누르면 바코드가 크게 뜹니다.',
+      state: 'wait',
+      need: [
+        '<b>바코드 화면</b> — 메모와 아래 버튼이 보이게',
+        '<b>금액권 바코드 화면</b> — 아래가 <span class="ui">잔액입력</span>인 것',
+        '<b>잔액 입력 창</b> — 얼마 썼는지 넣는 화면',
+        '<b>사용완료된 카드</b> — 목록에서 흐려진 모습',
+      ],
+    },
+    {
+      id: 'watch',
+      no: '6',
+      label: '놓치지 않기',
+      title: '기한이 오기 전에 알려드립니다',
+      lede: '남은 날이 카드에 붙고, 만료가 가까우면 폰으로 알림이 옵니다.',
+      state: 'wait',
+      need: [
+        '<b>유효기한 알림</b> — 폰에 뜬 모습',
+        '<b>기한 연장 안내 창</b> — 붉은 D-day 칩을 누르면 열립니다',
+        '<b>찜하기</b>가 켜진 카드 — 하트가 채워진 모습',
+        '<b>기한이 지난 카드</b> — 목록 아래쪽의 흐려진 카드',
+      ],
+    },
+    {
+      id: 'near',
+      no: '7',
+      label: '근처에서 쓰기',
+      title: '지금 있는 자리에서 쓸 수 있는 것',
+      lede: '가까운 매장을 찾아주고, 길찾기까지 이어집니다.',
+      state: 'wait',
+      need: [
+        '<b>근처 매장 띠</b> — 목록 맨 위에 뜬 모습',
+        '<b>매장 목록</b> — 가까운 순',
+        '<b>매장 상세</b> — 지도·주소·전화·길찾기',
+        '<b>길찾기 지도</b> — 걸어서 / 차로',
+      ],
+    },
+    {
+      id: 'news',
+      no: '8',
+      label: '가족 소식',
+      title: '누가 무엇을 했는지, 우리가 얼마나 챙겼는지',
+      lede: '알림·공지사항·사용 내역을 한 장에 묶습니다.',
+      state: 'wait',
+      need: [
+        '<b>알림 목록</b> — 종 아이콘을 눌러 나오는 화면',
+        '<b>공지사항 화면</b>',
+        '<b>사용 내역</b> — 위쪽 결산(받은 것·쓴 것·놓친 것)이 보이게',
+      ],
+    },
+    {
+      id: 'me',
+      no: '9',
+      label: '내 메뉴',
+      title: '이름 바꾸기, 알림 켜기, 가족 옮기기',
+      lede: '오른쪽 위 내 이름 동그라미를 누르면 나옵니다.',
+      state: 'wait',
+      need: [
+        '<b>내 메뉴 전체</b>',
+        '<b>내 이름 바꾸기 창</b>',
+        '<b>가족 바꾸기 창</b> — 가족이 둘 이상일 때',
+        '<b>알림 설정</b> 부분',
+      ],
+    },
+  ];
+
+  const STATE_LABEL = { done: '작성됨', wait: '캡처 대기' };
+
+  document.getElementById('toc').innerHTML = CHAPTERS.map((c) => `
+    <li class="toc-item">
+      <span class="toc-no">${c.no}</span>
+      <span class="toc-name"><a href="#${c.id}">${c.label}</a></span>
+      <span class="state ${c.state}">${STATE_LABEL[c.state]}</span>
+    </li>`).join('');
+
+  document.getElementById('chapters').innerHTML = CHAPTERS.map((c) => `
+    <section class="chapter" id="${c.id}">
+      <p class="eyebrow">${c.no} · ${c.label}</p>
+      <h2 class="ch">${c.title}</h2>
+      <p class="ch-lede">${c.lede}</p>
+      ${c.body || ''}
+      ${c.state === 'wait' && c.need ? `
+        <div class="pending">
+          <h3>보내주실 화면</h3>
+          <ol>${c.need.map((n) => `<li>${n}</li>`).join('')}</ol>
+        </div>` : ''}
+    </section>`).join('');
+</script>
