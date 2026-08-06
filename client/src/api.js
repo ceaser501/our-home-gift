@@ -185,6 +185,11 @@ export async function createGifticon(familyId, fields, files = [], crops = {}) {
       code_type: fields.code_type || null,
       expires_at: fields.expires_at || null,
       memo: fields.memo || null,
+      // 메모를 쓴 사람. 메모가 없으면 남기지 않는다 — 빈 메모에 작성자만 붙어 있으면
+      // 나중에 "누가 지웠나"로 읽힌다.
+      memo_by: fields.memo ? fields.memo_by || null : null,
+      memo_by_name: fields.memo ? fields.memo_by_name || null : null,
+      memo_at: fields.memo ? new Date().toISOString() : null,
       // 등록한 사람. 가족에서 나갈 때 이 사람의 기프티콘을 감추는 기준이 된다.
       created_by: fields.created_by || null,
       image_paths,
@@ -208,6 +213,22 @@ export async function updateGifticon(familyId, id, fields, imageChanges = {}) {
 
   if ('amount' in updates) {
     updates.amount = updates.amount === '' || updates.amount === undefined || updates.amount === null ? null : Number(updates.amount);
+  }
+
+  // 메모 작성자는 화면이 보낸 값을 그대로 쓰지 않는다. 메모가 실제로 바뀌었을 때만 갈아끼운다.
+  // 금액만 고치려고 저장했을 뿐인데 메모 작성자까지 바뀌면, 쓰지도 않은 사람 이름이 붙는다.
+  const memoAuthor = { by: fields.memo_by ?? null, name: fields.memo_by_name ?? null };
+  delete updates.memo_by;
+  delete updates.memo_by_name;
+
+  if ('memo' in updates) {
+    const { data: before } = await supabase.from(GIFTICON_TABLE).select('memo').eq('id', id).single();
+    const nextMemo = updates.memo || null;
+    if ((before?.memo || null) !== nextMemo) {
+      updates.memo_by = nextMemo ? memoAuthor.by : null;
+      updates.memo_by_name = nextMemo ? memoAuthor.name : null;
+      updates.memo_at = nextMemo ? new Date().toISOString() : null;
+    }
   }
 
   // uploaded: 이번에 새로 올린 것(저장이 실패하면 지운다)

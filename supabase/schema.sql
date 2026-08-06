@@ -43,6 +43,14 @@ alter table public.gifticons add column if not exists used_by_name text;
 -- 가족에서 나간 사람의 기프티콘을 감추는 표시. 지우지는 않고 목록에서만 빼둔다.
 alter table public.gifticons add column if not exists hidden_at timestamptz;
 
+-- 메모를 마지막으로 쓴 사람과 시각. 메모는 가족 누구나 고칠 수 있어서, 등록자 이름을
+-- 붙여두면 다른 사람이 고쳤을 때 "태수님의 메모"인데 지연이 쓴 글이 되어버린다.
+-- 이름을 그대로 적어두는 이유는 used_by_name과 같다. 그 사람이 가족에서 나가도
+-- "누가 남긴 말인지"는 남아 있어야 한다.
+alter table public.gifticons add column if not exists memo_by uuid references auth.users(id);
+alter table public.gifticons add column if not exists memo_by_name text;
+alter table public.gifticons add column if not exists memo_at timestamptz;
+
 -- 이 컬럼이 생기기 전에 이미 "사용 완료"로 표시된 것들은 사용한 사람을 알 수 없으니,
 -- 받은 사람 이름으로 채워둔다.
 update public.gifticons set used_by_name = owner where status = 'used' and used_by_name is null;

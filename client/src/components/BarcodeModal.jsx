@@ -6,6 +6,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { Button } from '@/components/ui/button';
 import CopyButton from './CopyButton';
 import { cn } from '@/lib/utils';
+import { formatDate } from '../utils/date';
 import { useFamily } from '../FamilyContext';
 
 const ZXING_TO_JSBARCODE = {
@@ -27,9 +28,14 @@ export default function BarcodeModal({ gifticon, onClose, onUsed }) {
   const [view, setView] = useState('code');
   const [photoIndex, setPhotoIndex] = useState(0);
 
-  // 메모를 남긴 사람. 등록자를 모르는 예전 기프티콘은 받은 사람으로 대신 표시한다.
+  // 메모를 마지막으로 쓴 사람. 메모는 가족 누구나 고칠 수 있어서 등록자와 다를 수 있다.
+  // 이 칸이 생기기 전에 쓴 메모는 작성자를 알 수 없으니, 그때처럼 등록자(없으면 받은 사람)로
+  // 대신 보여준다.
   const memoWriter =
-    members.find((m) => m.user_id === gifticon?.created_by)?.display_name || gifticon?.owner || null;
+    gifticon?.memo_by_name ||
+    members.find((m) => m.user_id === gifticon?.created_by)?.display_name ||
+    gifticon?.owner ||
+    null;
 
   // 기프티콘이 바뀌면 다시 그려볼 수 있게 실패 표시를 되돌린다.
   // (아래 그리기 효과 안에서 되돌리면 canvas가 붙었다 떨어졌다 하며 무한 반복이 된다.)
@@ -130,8 +136,15 @@ export default function BarcodeModal({ gifticon, onClose, onUsed }) {
           {gifticon.memo?.trim() && (
             <div className="w-full rounded-xl border-l-[3px] border-primary/50 bg-accent px-3.5 py-2.5">
               <p className="m-0 mb-1 flex items-center gap-1.5 text-xs font-semibold text-accent-foreground">
-                <StickyNote className="size-3.5" />
-                {memoWriter ? `${memoWriter}님의 메모` : '메모'}
+                <StickyNote className="size-3.5 shrink-0" />
+                <span className="min-w-0 truncate">{memoWriter ? `${memoWriter}님의 메모` : '메모'}</span>
+                {/* 언제 쓴 말인지 밝힌다. 메모는 고쳐 쓸 수 있어서, 날짜가 없으면 반년 전
+                    당부인지 어제 남긴 말인지 구분이 안 된다. */}
+                {gifticon.memo_at && (
+                  <span className="ml-auto shrink-0 font-normal text-muted-foreground">
+                    {formatDate(gifticon.memo_at)}
+                  </span>
+                )}
               </p>
               <p className="m-0 text-sm leading-relaxed break-keep whitespace-pre-wrap text-foreground">{gifticon.memo}</p>
             </div>

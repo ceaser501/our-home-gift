@@ -256,6 +256,9 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
         code_type: form.code_type || null,
         expires_at: form.expires_at || null,
         memo: form.memo || null,
+        // 메모를 남긴 사람. 저장하는 쪽에서 메모가 실제로 바뀌었을 때만 반영한다.
+        memo_by: user.id,
+        memo_by_name: myName || null,
       };
 
       if (mode === 'create') {
