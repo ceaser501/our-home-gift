@@ -41,10 +41,10 @@ export default function Header() {
         >
           <Users className="size-4.5" />
           {/* 참여를 기다리는 사람이 있으면 여기서만 알 수 있으니 점으로 표시한다.
-              점 하나만으로는 헤더 구석이라 그냥 지나치게 돼서, 심장이 뛰듯 살짝 커졌다
-              돌아오게 했다. */}
+              점 하나만으로는 헤더 구석이라 그냥 지나치게 돼서, 숨쉬듯 살짝 커졌다
+              작아지기를 반복하게 했다. */}
           {joinRequests.length > 0 && (
-            <span className="animate-dot-heartbeat absolute top-0.5 right-0.5 size-2 rounded-full bg-destructive ring-2 ring-background" />
+            <span className="animate-dot-pulse absolute top-0.5 right-0.5 size-2 rounded-full bg-destructive ring-2 ring-background" />
           )}
         </button>
 
