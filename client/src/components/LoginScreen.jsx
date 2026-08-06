@@ -217,7 +217,11 @@ export default function LoginScreen() {
             "그냥 지난번 것"으로 읽혀서, 다른 걸 눌러도 되는 줄 안다. */}
         {lastUsed && (
           <p className="m-0 -mt-2 text-center text-[11px] leading-relaxed break-keep text-muted-foreground">
-            다른 방법으로 로그인하면 새 계정이 만들어져요. 지난번과 같은 것을 눌러주세요.
+            {/* 사실("새 계정이 만들어져요")과 부탁("같은 것을 눌러주세요")은 다른 말이라
+                줄을 나눈다. 한 줄에 붙이면 뒤엣것이 앞엣것의 꼬리처럼 읽혀서 흘려보낸다. */}
+            다른 방법으로 로그인하면 새 계정이 만들어져요.
+            <br />
+            지난번과 같은 것을 눌러주세요.
           </p>
         )}
         </>
