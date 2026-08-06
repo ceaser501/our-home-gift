@@ -49,26 +49,24 @@ export default function FamilyReport({ gifticons }) {
     <div className="rounded-2xl border border-border bg-card px-4 py-3.5">
       <p className="m-0 text-xs font-semibold text-muted-foreground">{stat.scope} 우리 가족</p>
 
-      <div className="mt-2 flex items-end gap-5">
-        <span className="flex flex-col">
+      {/* 셋을 폭에 고르게 나눠 놓는다. 왼쪽에 몰아두면 숫자가 한 자리일 때 오른쪽이
+          휑하게 비어서 덩그러니 놓인 것처럼 보인다. 가운데 선으로 칸을 나눠 세 값이
+          한 묶음이라는 것도 같이 말해준다. */}
+      <div className="mt-2.5 flex">
+        <span className="flex flex-1 flex-col items-center">
           <span className="text-xl font-bold text-foreground">{stat.received}</span>
           <span className="text-[11px] text-muted-foreground">받은 것</span>
         </span>
-        <span className="flex flex-col">
+        <span className="flex flex-1 flex-col items-center border-l border-border">
           <span className="text-xl font-bold text-success">{stat.used}</span>
           <span className="text-[11px] text-muted-foreground">쓴 것</span>
         </span>
-        <span className="flex flex-col">
-          <span className="text-xl font-bold text-destructive">{stat.missed}</span>
+        <span className="flex flex-1 flex-col items-center border-l border-border">
+          <span className={stat.missed > 0 ? 'text-xl font-bold text-destructive' : 'text-xl font-bold text-muted-foreground'}>
+            {stat.missed}
+          </span>
           <span className="text-[11px] text-muted-foreground">놓친 것</span>
         </span>
-        {/* 금액은 오른쪽 끝에 붙인다. 건수 셋과 나란히 두면 어느 숫자가 개수고 어느 게
-            돈인지 헷갈린다. 놓친 게 없으면 아무것도 적지 않는다. */}
-        {stat.missedAmount > 0 && (
-          <span className="ml-auto text-right text-sm font-bold text-destructive">
-            {formatWon(stat.missedAmount)}
-          </span>
-        )}
       </div>
 
       {/* 비율 띠. 쓴 것(초록) · 아직 쓸 수 있는 것(회색) · 놓친 것(빨강) 순으로 잇는다. */}
@@ -78,11 +76,18 @@ export default function FamilyReport({ gifticons }) {
         <span className="bg-destructive" style={{ width: `${pct(stat.missed)}%` }} />
       </div>
 
+      {/* 금액은 숫자 칸에 끼워 넣지 않고 이 문장 안에서 말한다. 건수 셋과 나란히 두면
+          어느 게 개수고 어느 게 돈인지 헷갈리고, 칸도 좁아 자리가 안 난다.
+          손실을 보여주면서 동시에 고칠 길을 연다 — 쓰고 표시만 안 한 것이 여기 섞이는데,
+          그 사실을 감추면 사용자는 숫자를 믿지 않게 된다. */}
       {stat.missed > 0 ? (
-        // 손실을 보여주면서 동시에 고칠 길을 연다. 쓰고 표시만 안 한 것도 여기 섞이는데,
-        // 그 사실을 감추면 사용자는 숫자를 믿지 않게 된다.
         <p className="m-0 mt-2.5 text-[11px] leading-relaxed break-keep text-muted-foreground">
-          기한이 지났는데 사용완료로 표시되지 않은 것을 놓친 것으로 셌어요. 이미 쓰셨다면 목록에서 사용완료로 바꿔주세요.
+          {stat.missedAmount > 0 && (
+            <>
+              놓친 기프티콘이 <b className="font-semibold text-destructive">{formatWon(stat.missedAmount)}</b>어치예요.{' '}
+            </>
+          )}
+          기한이 지났는데 사용완료로 표시되지 않은 것들이에요. 이미 쓰셨다면 목록에서 사용완료로 바꿔주세요.
         </p>
       ) : (
         <p className="m-0 mt-2.5 text-[11px] text-muted-foreground">기한을 넘긴 기프티콘이 없어요.</p>
