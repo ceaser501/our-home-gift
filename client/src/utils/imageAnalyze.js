@@ -246,5 +246,6 @@ export async function analyzeImages(files, { onProgress } = {}) {
     amount: info.amount ?? null,
     expiresAt: info.expiresAt || null,
     name: info.name || '',
+    isVoucher: Boolean(info.isVoucher),
   };
 }

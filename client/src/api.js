@@ -126,13 +126,49 @@ export async function listUsageHistory(familyId) {
   return data;
 }
 
+// 금액권을 쓴 만큼 깎는다. 잔액이 남으면 상태는 그대로 두고(아직 쓸 수 있는 돈이다),
+// 0이 되는 순간에만 사용완료로 넘긴다.
+//
+// 쓴 금액을 더하는 계산을 화면이 아니라 여기서 하는 이유: 두 사람이 거의 동시에 썼을 때
+// 화면이 들고 있던 옛 잔액으로 덮어쓰면 한 번 쓴 것이 사라진다. 지금 저장된 값을 다시
+// 읽어와 그 위에 더한다.
+export async function spendVoucher(familyId, id, { spent, user, userName }) {
+  const { data: before, error: readError } = await supabase
+    .from(GIFTICON_TABLE)
+    .select('amount, spent_amount')
+    .eq('id', id)
+    .single();
+  if (readError) throw new Error(readError.message);
+
+  const face = Number(before?.amount || 0);
+  // 액면가를 넘겨 쓸 수는 없다. 남은 것보다 크게 넣으면 남은 만큼만 쓴 것으로 본다.
+  const nextSpent = Math.min(face, Number(before?.spent_amount || 0) + Number(spent));
+  const done = nextSpent >= face;
+
+  const { data, error } = await supabase
+    .from(GIFTICON_TABLE)
+    .update({
+      spent_amount: nextSpent,
+      status: done ? 'used' : 'unused',
+      used_at: done ? new Date().toISOString().slice(0, 10) : null,
+      used_by: done ? user : null,
+      used_by_name: done ? userName : null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  return withImageUrls(data);
+}
+
 // 결산에 쓸 최소한의 값만 가져온다. 사용 내역(listUsageHistory)은 이미 쓴 것만 주는데,
 // 결산은 "받은 것 중 얼마나 썼나"를 봐야 해서 안 쓴 것과 지나간 것까지 있어야 한다.
 // 사진 주소는 서명이 붙어 비싸니 부르지 않는다 — 숫자를 세는 데는 필요 없다.
 export async function listGifticonStats(familyId) {
   const { data, error } = await supabase
     .from(GIFTICON_TABLE)
-    .select('id, amount, status, expires_at, created_at')
+    .select('id, amount, status, expires_at, created_at, is_voucher, spent_amount')
     .eq('family_id', familyId)
     .is('hidden_at', null);
   if (error) throw new Error(error.message);

@@ -43,6 +43,17 @@ alter table public.gifticons add column if not exists used_by_name text;
 -- 가족에서 나간 사람의 기프티콘을 감추는 표시. 지우지는 않고 목록에서만 빼둔다.
 alter table public.gifticons add column if not exists hidden_at timestamptz;
 
+-- 금액권(3만원권처럼 값이 적힌 상품권)인지, 그리고 지금까지 얼마를 썼는지.
+--
+-- 금액권은 한 번에 다 쓰지 않는다. 3만원권으로 1만 2천원을 썼으면 아직 1만 8천원이
+-- 남아 있는데, 사용/미사용 두 칸만으로는 이걸 담을 데가 없었다. 다 썼다고 하면 남은
+-- 돈이 사라지고, 안 썼다고 하면 얼마가 남았는지 아무도 모른다.
+--
+-- 그래서 "쓴 금액"을 따로 센다. amount(액면가)에서 이만큼을 뺀 것이 잔액이고,
+-- 잔액이 0이 되는 순간에만 status가 used로 넘어간다.
+alter table public.gifticons add column if not exists is_voucher boolean not null default false;
+alter table public.gifticons add column if not exists spent_amount integer not null default 0;
+
 -- 메모를 마지막으로 쓴 사람과 시각. 메모는 가족 누구나 고칠 수 있어서, 등록자 이름을
 -- 붙여두면 다른 사람이 고쳤을 때 "태수님의 메모"인데 지연이 쓴 글이 되어버린다.
 -- 이름을 그대로 적어두는 이유는 used_by_name과 같다. 그 사람이 가족에서 나가도
@@ -879,8 +890,12 @@ create table if not exists public.activities (
   gifticon_id bigint references public.gifticons(id) on delete set null,
   -- 기프티콘이 지워져도 "무엇을 썼는지"는 남아야 해서 이름도 함께 적어둔다.
   gifticon_name text not null,
+  -- 금액권을 쓴 경우 이번에 쓴 금액. 나머지 활동에서는 비어 있다.
+  amount integer,
   created_at timestamptz not null default now()
 );
+
+alter table public.activities add column if not exists amount integer;
 
 create index if not exists activities_family_idx on public.activities (family_id, created_at desc);
 
@@ -904,11 +919,20 @@ as $$
 declare
   what text;
   who text;
+  spent integer := null;
 begin
   if TG_OP = 'INSERT' then
     what := 'created';
   elsif new.status is distinct from old.status then
     what := case when new.status = 'used' then 'used' else 'unused' end;
+    -- 금액권을 마지막 한 번에 다 써서 사용완료로 넘어간 경우, 그 마지막 금액도 함께 적는다.
+    if new.spent_amount > coalesce(old.spent_amount, 0) then
+      spent := new.spent_amount - coalesce(old.spent_amount, 0);
+    end if;
+  elsif new.spent_amount is distinct from coalesce(old.spent_amount, 0) and new.spent_amount > coalesce(old.spent_amount, 0) then
+    -- 금액권을 조금 썼다. 아직 잔액이 남아서 상태는 그대로다.
+    what := 'spent';
+    spent := new.spent_amount - coalesce(old.spent_amount, 0);
   else
     -- 이름이나 금액만 고친 것은 알릴 일이 아니다.
     return new;
@@ -923,8 +947,8 @@ begin
   from public.family_members
   where family_id = new.family_id and user_id = auth.uid();
 
-  insert into public.activities (family_id, kind, actor_id, actor_name, gifticon_id, gifticon_name)
-  values (new.family_id, what, auth.uid(), coalesce(who, new.used_by_name, new.owner), new.id, new.name);
+  insert into public.activities (family_id, kind, actor_id, actor_name, gifticon_id, gifticon_name, amount)
+  values (new.family_id, what, auth.uid(), coalesce(who, new.used_by_name, new.owner), new.id, new.name, spent);
 
   return new;
 end;
@@ -932,7 +956,7 @@ $$;
 
 drop trigger if exists gifticons_activity on public.gifticons;
 create trigger gifticons_activity
-  after insert or update of status on public.gifticons
+  after insert or update of status, spent_amount on public.gifticons
   for each row execute function public.log_gifticon_activity();
 
 -- 어디까지 봤는지. 항목마다 읽음 표시를 두지 않고 사람별로 "마지막으로 본 시각" 한 줄만

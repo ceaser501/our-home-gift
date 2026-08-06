@@ -6,6 +6,7 @@ import GifticonList from './components/GifticonList';
 import UploadSheet from './components/UploadSheet';
 import BarcodeModal from './components/BarcodeModal';
 import ExtendSheet from './components/ExtendSheet';
+import SpendSheet from './components/SpendSheet';
 import ImageViewerModal from './components/ImageViewerModal';
 import NearbyStoresSheet from './components/NearbyStoresSheet';
 import InstallPrompt from './components/InstallPrompt';
@@ -13,7 +14,7 @@ import NoticeBanner from './components/NoticeBanner';
 import NearbyBanner from './components/NearbyBanner';
 import AlertDialog from './components/AlertDialog';
 import PullToRefresh from './components/PullToRefresh';
-import { listGifticons, updateGifticon, deleteGifticon, claimGifticon, releaseGifticon } from './api';
+import { listGifticons, updateGifticon, deleteGifticon, claimGifticon, releaseGifticon, spendVoucher } from './api';
 import { subscribeToGifticons, subscribeToFamily } from './realtime';
 import { ensureSampleGifticon } from './sampleData';
 import { daysUntil, todayStr } from './utils/date';
@@ -58,6 +59,7 @@ export default function App() {
   const [imageTarget, setImageTarget] = useState(null);
   const [storesTarget, setStoresTarget] = useState(null);
   const [extendTarget, setExtendTarget] = useState(null);
+  const [spendTarget, setSpendTarget] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [notice, setNotice] = useState(null);
 
@@ -220,6 +222,16 @@ export default function App() {
     }
   }
 
+  // 금액권을 쓴 만큼 깎는다. 잔액이 0이 되면 서버 쪽에서 사용완료로 넘긴다.
+  async function handleSpend(gifticon, spent) {
+    try {
+      await spendVoucher(family.id, gifticon.id, { spent, user: user.id, userName: myName });
+      fetchList();
+    } catch (err) {
+      setNotice({ tone: 'warning', title: '사용 금액을 기록하지 못했어요', description: err.message });
+    }
+  }
+
   async function handleConfirmDelete() {
     const target = deleteTarget;
     setDeleteTarget(null);
@@ -279,6 +291,7 @@ export default function App() {
             onFindStores={setStoresTarget}
             onToggleClaim={handleToggleClaim}
             onExtend={setExtendTarget}
+            onSpend={setSpendTarget}
           />
         )}
       </main>
@@ -320,6 +333,8 @@ export default function App() {
       {extendTarget && (
         <ExtendSheet gifticon={extendTarget} onExtend={handleExtend} onClose={() => setExtendTarget(null)} />
       )}
+
+      {spendTarget && <SpendSheet gifticon={spendTarget} onSpend={handleSpend} onClose={() => setSpendTarget(null)} />}
 
       {deleteTarget && (
         <AlertDialog

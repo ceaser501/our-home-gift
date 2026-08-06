@@ -1,4 +1,4 @@
-import { CheckCircle2, PackagePlus, RotateCcw } from 'lucide-react';
+import { CheckCircle2, PackagePlus, RotateCcw, Wallet } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 
 // 무슨 일이 있었는지 한 줄로 읽히게 한다. 아이콘은 카드 아래 버튼과 같은 것을 쓴다.
@@ -7,6 +7,8 @@ const KIND = {
   created: { icon: PackagePlus, tone: 'text-primary', verb: '올렸어요' },
   used: { icon: CheckCircle2, tone: 'text-success', verb: '썼어요' },
   unused: { icon: RotateCcw, tone: 'text-muted-foreground', verb: '사용을 취소했어요' },
+  // 금액권을 조금 쓴 것. 얼마를 썼는지가 핵심이라 아래에서 금액을 끼워 넣는다.
+  spent: { icon: Wallet, tone: 'text-success', verb: '썼어요' },
 };
 
 // "3분 전"처럼 적는다. 알림은 방금 무슨 일이 있었나를 보는 자리라, 날짜보다 얼마나
@@ -66,7 +68,9 @@ export default function ActivitySheet({ activities, lastReadAt, onClose }) {
                     {item.gifticon_name}
                   </p>
                   <p className="m-0 mt-0.5 text-xs text-muted-foreground">
-                    {item.actor_name || '누군가'}님이 {kind.verb} · {timeAgo(item.created_at)}
+                    {item.actor_name || '누군가'}님이{' '}
+                    {item.amount ? `${Number(item.amount).toLocaleString('ko-KR')}원 ` : ''}
+                    {kind.verb} · {timeAgo(item.created_at)}
                   </p>
                 </div>
                 {isNew && <i className="mt-2 size-1.5 shrink-0 rounded-full bg-primary" aria-label="새 알림" />}

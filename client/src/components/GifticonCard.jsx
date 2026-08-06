@@ -33,6 +33,7 @@ export default function GifticonCard({
   onFindStores,
   onToggleClaim,
   onExtend,
+  onSpend,
 }) {
   const { members, user } = useFamily();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -52,6 +53,10 @@ export default function GifticonCard({
   const photoCount = gifticon.image_urls?.filter(Boolean).length ?? 0;
   // 기한이 급한 것과 이미 지난 것만 연장 안내를 열 수 있다. 넉넉한 것은 아직 할 일이 없다.
   const canExtend = !isUsed && Boolean(gifticon.expires_at) && urgency !== 'normal';
+  // 금액권은 쓴 만큼 깎아 나간다. 잔액이 남아 있으면 아직 쓸 수 있는 돈이라 사용완료가 아니다.
+  const isVoucher = Boolean(gifticon.is_voucher) && Number(gifticon.amount) > 0;
+  const spent = Number(gifticon.spent_amount || 0);
+  const left = Math.max(0, Number(gifticon.amount || 0) - spent);
   // 상품 사진만 잘라낸 그림이 있으면 그걸 쓴다. 이 기능이 생기기 전에 올렸거나 잘라낼
   // 자리를 못 찾은 것은 예전처럼 첫 사진 그대로 보여준다.
   const thumbUrl = gifticon.thumb_image_url || gifticon.image_url;
@@ -117,8 +122,19 @@ export default function GifticonCard({
               언제까지 써야 하는지는 성격이 달라서 맨 아래에 따로 앉힌다.
               찜은 아래 버튼이 직접 "○○ 찜"으로 말해주므로 여기에 또 적지 않는다. */}
           <p className="mt-0.5 mb-0.5 truncate pr-7 text-[15px] font-bold text-foreground">{gifticon.name}</p>
+          {/* 금액권은 액면가보다 "지금 얼마 남았나"가 먼저다. 계산대 앞에서 알아야 할 값이라
+              잔액을 진하게 적고, 얼마짜리였는지는 옆에 옅게 붙인다. */}
           {gifticon.amount ? (
-            <p className="mb-1 text-[13px] text-muted-foreground">{Number(gifticon.amount).toLocaleString()}원</p>
+            isVoucher && spent > 0 ? (
+              <p className="mb-1 text-[13px] text-foreground">
+                <b className="font-bold">{left.toLocaleString()}원</b>
+                <span className="ml-1 text-muted-foreground">남음 · {Number(gifticon.amount).toLocaleString()}원권</span>
+              </p>
+            ) : (
+              <p className="mb-1 text-[13px] text-muted-foreground">
+                {Number(gifticon.amount).toLocaleString()}원{isVoucher ? '권' : ''}
+              </p>
+            )
           ) : null}
 
           {!isUsed &&
@@ -213,13 +229,15 @@ export default function GifticonCard({
               </span>
             </button>
 
+            {/* 금액권은 한 번에 다 쓰는 게 아니라 얼마를 썼는지 받아야 한다. 그래서 같은
+                자리에서 바로 완료로 넘기지 않고 금액을 묻는 창을 연다. */}
             <button
               type="button"
-              onClick={() => onToggleUsed(gifticon)}
+              onClick={() => (isVoucher ? onSpend(gifticon) : onToggleUsed(gifticon))}
               className={cn(BAR_BUTTON, 'border-l border-border text-foreground')}
             >
               <CheckCircle2 className="size-4 text-muted-foreground" />
-              사용완료
+              {isVoucher ? '사용하기' : '사용완료'}
             </button>
           </>
         )}

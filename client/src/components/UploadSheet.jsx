@@ -29,6 +29,7 @@ function buildEmptyForm(defaultOwner) {
     code_type: '',
     expires_at: '',
     memo: '',
+    is_voucher: false,
   };
 }
 
@@ -45,6 +46,7 @@ function buildForm(initial, defaultOwner) {
         code_type: initial.code_type ?? '',
         expires_at: initial.expires_at ?? '',
         memo: initial.memo ?? '',
+        is_voucher: Boolean(initial.is_voucher),
       }
     : empty;
 }
@@ -157,6 +159,7 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
         code: result.code || '',
         code_type: result.codeType || '',
         expires_at: result.expiresAt || '',
+        is_voucher: result.isVoucher,
       }));
 
       setBarcodeCropFile(
@@ -256,6 +259,8 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
         code_type: form.code_type || null,
         expires_at: form.expires_at || null,
         memo: form.memo || null,
+        // 금액이 없으면 금액권일 수 없다. 깎아 나갈 값이 없으면 잔액이 성립하지 않는다.
+        is_voucher: Boolean(form.is_voucher) && Boolean(onlyDigits(form.amount)),
         // 메모를 남긴 사람. 저장하는 쪽에서 메모가 실제로 바뀌었을 때만 반영한다.
         memo_by: user.id,
         memo_by_name: myName || null,
@@ -428,6 +433,25 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
                 )}
               </div>
               {priceSearchNote && <p className="text-xs text-muted-foreground">{priceSearchNote}</p>}
+              {/* 금액권은 한 번에 다 쓰지 않고 쓴 만큼 깎아 나간다. 켜두면 사용할 때
+                  "얼마 썼어요?"를 묻고 잔액을 남긴다. 금액이 없으면 깎아 나갈 값이
+                  없으므로 이 스위치도 보이지 않는다. */}
+              {onlyDigits(form.amount) && (
+                <label className="flex cursor-pointer items-start gap-2 pt-0.5">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(form.is_voucher)}
+                    onChange={(e) => updateField('is_voucher', e.target.checked)}
+                    className="mt-0.5 size-4 shrink-0 accent-primary"
+                  />
+                  <span className="flex flex-col">
+                    <span className="text-xs font-semibold text-foreground">금액권이에요</span>
+                    <span className="text-[11px] break-keep text-muted-foreground">
+                      상품권처럼 나눠 쓸 수 있어요. 쓸 때마다 금액을 입력하면 잔액이 남아요.
+                    </span>
+                  </span>
+                </label>
+              )}
             </div>
 
             <div className="flex flex-col gap-1.5">

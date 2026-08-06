@@ -28,7 +28,12 @@ export default function FamilyReport({ gifticons }) {
     // 안 쓴 채로 기한이 지난 것. 쓰고도 표시를 안 한 것이 여기 섞이는데, 그건 아래
     // 안내에서 밝히고 목록에서 고칠 수 있게 한다.
     const missed = pool.filter((g) => g.status !== 'used' && g.expires_at && g.expires_at < today);
-    const missedAmount = missed.reduce((sum, g) => sum + (g.amount || 0), 0);
+    // 금액권은 이미 쓴 만큼을 뺀 잔액만 손실이다. 3만원권으로 2만원을 쓰고 남은 1만원을
+    // 못 썼다면 잃은 건 1만원이지 3만원이 아니다.
+    const missedAmount = missed.reduce((sum, g) => {
+      const face = Number(g.amount || 0);
+      return sum + (g.is_voucher ? Math.max(0, face - Number(g.spent_amount || 0)) : face);
+    }, 0);
 
     return {
       scope,
@@ -36,8 +41,6 @@ export default function FamilyReport({ gifticons }) {
       used: used.length,
       missed: missed.length,
       missedAmount,
-      // 아직 쓸 수 있는 것. 띠에서 나머지 자리를 채운다.
-      left: Math.max(0, pool.length - used.length - missed.length),
     };
   }, [gifticons]);
 
@@ -69,10 +72,12 @@ export default function FamilyReport({ gifticons }) {
         </span>
       </div>
 
-      {/* 비율 띠. 쓴 것(초록) · 아직 쓸 수 있는 것(회색) · 놓친 것(빨강) 순으로 잇는다. */}
+      {/* 비율 띠. 띠 전체가 "받은 것"이고, 그 위에 끝난 것부터 왼쪽으로 채운다 —
+          쓴 것(초록) · 놓친 것(빨강). 남은 회색 자리가 "아직 쓸 수 있는 것"이다.
+          결판난 둘을 붙여놓아야 초록이 어디서 끝나고 빨강이 어디서 시작하는지 한눈에
+          보인다. 사이에 회색을 끼우면 초록과 빨강이 떨어져서 비교가 안 된다. */}
       <div className="mt-3 flex h-2 w-full overflow-hidden rounded-full bg-secondary" aria-hidden="true">
         <span className="bg-success" style={{ width: `${pct(stat.used)}%` }} />
-        <span className="bg-border" style={{ width: `${pct(stat.left)}%` }} />
         <span className="bg-destructive" style={{ width: `${pct(stat.missed)}%` }} />
       </div>
 

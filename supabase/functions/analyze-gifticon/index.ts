@@ -26,6 +26,11 @@ const SYSTEM_PROMPT = `너는 한국 모바일 기프티콘 이미지를 읽어 
   쓰는 표기를 그대로 쓴다(bbq가 아니라 BBQ).
 - 금액은 "금액권/권종"처럼 상품 자체의 가격이 인쇄돼 있을 때만 숫자로 적는다.
   결제 금액, 할인 금액, 배송비는 금액이 아니다.
+- isVoucher는 이것이 "금액권"인지다. 정해진 상품 하나와 바꾸는 교환권(아메리카노 T,
+  치킨 세트)이 아니라, 적힌 금액만큼 값을 치르는 데 쓰는 상품권이면 true다.
+  상품명에 "금액권", "상품권", "○○원권", "기프트카드"가 들어가거나, 상품명 자리에
+  금액만 적혀 있으면 금액권으로 본다. 애매하면 false로 둔다 — 교환권을 금액권으로
+  잘못 보면 쓸 때마다 금액을 묻게 되어 번거롭다.
 - 여러 장이 들어오면 같은 기프티콘을 여러 각도에서 찍은 것으로 보고 하나로 합쳐서 답한다.
 - thumbnail은 목록에 작게 보여줄 "상품 이미지"의 위치다. 기프티콘 화면 한가운데에 상품을
   보여주는 그림이 한 장 있는데(치킨 사진, 음료 사진, 상품권 그림 등), 그 그림 한 장이
@@ -54,6 +59,7 @@ function buildSchema(categories: string[]) {
         type: 'string',
         description: '바코드 아래 인쇄된 번호. 숫자만(공백·하이픈 제거). 안 보이면 빈 문자열',
       },
+      isVoucher: { type: 'boolean', description: '금액권이면 true, 정해진 상품과 바꾸는 교환권이면 false' },
       thumbnail: {
         type: 'object',
         description: '상품 사진이 있는 네모 영역',
@@ -68,7 +74,7 @@ function buildSchema(categories: string[]) {
         additionalProperties: false,
       },
     },
-    required: ['name', 'brand', 'amount', 'expiresAt', 'category', 'code', 'thumbnail'],
+    required: ['name', 'brand', 'amount', 'expiresAt', 'category', 'code', 'isVoucher', 'thumbnail'],
     additionalProperties: false,
   };
 }
@@ -201,6 +207,8 @@ Deno.serve(async (req) => {
         expiresAt: /^\d{4}-\d{2}-\d{2}$/.test(parsed.expiresAt || '') ? parsed.expiresAt : null,
         category: categories.includes(parsed.category) ? parsed.category : '기타',
         code: digits(parsed.code) || null,
+        // 금액이 없으면 금액권일 수 없다. 깎아 나갈 값이 없으면 잔액이라는 개념이 성립하지 않는다.
+        isVoucher: Boolean(parsed.isVoucher) && Boolean(amount),
         thumbnail: parseThumbnail(parsed.thumbnail, imageBlocks.length),
       }),
       { headers: jsonHeaders }
