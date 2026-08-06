@@ -121,10 +121,15 @@ export default function BarcodeModal({ gifticon, onClose, onUsed }) {
           {/* 등록할 때 적어둔 메모. "엄마, 아래 바코드를 매장에서 보여주세요" 같은 안내를
               바코드 바로 위에서 읽을 수 있게 한다. 그냥 글만 있으면 이게 안내문인지
               앱이 하는 말인지 헷갈려서, 누가 남긴 메모인지 이름표를 함께 보여준다.
-              메모가 없으면 아무것도 보이지 않는다. */}
+              메모가 없으면 아무것도 보이지 않는다.
+
+              색은 경고색(앰버)을 쓰다가 앱 색과 따로 놀아서 앱의 연보라로 바꿨다. 메모는
+              조심하라는 경고가 아니라 가족이 남긴 말이라, 톤도 그쪽이 맞다. 대신 왼쪽에
+              색 띠를 세워 "누가 적어둔 글"로 읽히게 한다. 바탕색만으로는 바코드 위에서
+              그냥 지나치기 쉽다. */}
           {gifticon.memo?.trim() && (
-            <div className="w-full rounded-xl border border-warning/30 bg-warning/10 px-3.5 py-2.5">
-              <p className="m-0 mb-1 flex items-center gap-1.5 text-xs font-semibold text-warning">
+            <div className="w-full rounded-xl border-l-[3px] border-primary/50 bg-accent px-3.5 py-2.5">
+              <p className="m-0 mb-1 flex items-center gap-1.5 text-xs font-semibold text-accent-foreground">
                 <StickyNote className="size-3.5" />
                 {memoWriter ? `${memoWriter}님의 메모` : '메모'}
               </p>
