@@ -454,18 +454,19 @@ export async function markActivitiesRead(familyId, userId) {
   if (error) throw new Error(error.message);
 }
 
-export async function savePushSubscription({ userId, familyId, subscription }) {
+// 표에 직접 upsert하지 않고 함수를 거친다. endpoint는 사람이 아니라 브라우저에 딸린
+// 값이라, 같은 폰에서 다른 계정으로 로그인하면 그 주소를 가진 줄이 예전 계정 소유로
+// 남는다. 그 줄은 RLS가 지금 사람에게 안 보여줘서 upsert가 통째로 막혔다
+// (new row violates row-level security policy (USING expression)).
+// 함수 안에서 예전 줄을 지우고 새로 적는다 — 자세한 사정은 supabase/schema.sql 참고.
+export async function savePushSubscription({ familyId, subscription }) {
   const json = subscription.toJSON();
-  const { error } = await supabase.from('push_subscriptions').upsert(
-    {
-      user_id: userId,
-      family_id: familyId,
-      endpoint: json.endpoint,
-      p256dh: json.keys.p256dh,
-      auth: json.keys.auth,
-    },
-    { onConflict: 'endpoint' }
-  );
+  const { error } = await supabase.rpc('save_push_subscription', {
+    p_endpoint: json.endpoint,
+    p_p256dh: json.keys.p256dh,
+    p_auth: json.keys.auth,
+    p_family_id: familyId ?? null,
+  });
   if (error) throw new Error(error.message);
 }
 

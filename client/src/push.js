@@ -34,7 +34,7 @@ export async function getExistingSubscription() {
   return registration.pushManager.getSubscription();
 }
 
-export async function subscribeToPush({ userId, familyId }) {
+export async function subscribeToPush({ familyId }) {
   if (!isPushSupported()) throw new Error('이 브라우저(또는 이 방식으로 연 페이지)는 푸시 알림을 지원하지 않아요.');
 
   const permission = await Notification.requestPermission();
@@ -46,7 +46,8 @@ export async function subscribeToPush({ userId, familyId }) {
     applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
   });
 
-  await savePushSubscription({ userId, familyId, subscription });
+  // 누구 것인지는 보내지 않는다. 서버가 로그인한 사람으로 직접 적는다.
+  await savePushSubscription({ familyId, subscription });
   return subscription;
 }
 

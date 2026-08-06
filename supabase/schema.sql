@@ -524,6 +524,50 @@ create policy "push_subscriptions manage own" on public.push_subscriptions
   using (user_id = auth.uid())
   with check (user_id = auth.uid() and (family_id is null or public.is_family_member(family_id)));
 
+-- 알림 구독 저장. 화면에서 upsert로 바로 넣지 않고 이 함수를 거친다.
+--
+-- endpoint는 "이 브라우저"를 가리키는 주소다. 사람이 아니라 기기에 딸린 값이라, 같은
+-- 폰에서 다른 계정으로 로그인하면(구글로 들어왔다가 네이버로 들어오는 식) 그 주소를
+-- 가진 줄이 예전 계정 소유로 남아 있다.
+--
+-- 그 상태에서 upsert(on conflict endpoint)를 하면 안쪽에서 update로 바뀌는데, update는
+-- 위 정책의 using(user_id = auth.uid())을 예전 줄에 대고 따져본다. 남의 줄이니 거짓이고,
+-- "new row violates row-level security policy (USING expression)"로 끊긴다. 화면에서는
+-- 알림 설정 실패로만 보였다.
+--
+-- 브라우저의 지금 주인은 지금 로그인한 사람이다. 예전 줄을 지우고 새로 적는 게 맞다.
+-- 그냥 두면 그 폰으로 예전 계정의 알림이 계속 온다.
+create or replace function public.save_push_subscription(
+  p_endpoint text,
+  p_p256dh text,
+  p_auth text,
+  p_family_id uuid
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if auth.uid() is null then
+    raise exception '로그인이 필요해요.';
+  end if;
+
+  -- security definer라 RLS를 지나가므로, 정책이 하던 확인을 여기서 직접 한다.
+  if p_family_id is not null and not public.is_family_member(p_family_id) then
+    raise exception '이 가족의 구성원이 아니에요.';
+  end if;
+
+  delete from public.push_subscriptions where endpoint = p_endpoint;
+
+  insert into public.push_subscriptions (user_id, family_id, endpoint, p256dh, auth)
+  values (auth.uid(), p_family_id, p_endpoint, p_p256dh, p_auth);
+end;
+$$;
+
+revoke all on function public.save_push_subscription(text, text, text, uuid) from public;
+grant execute on function public.save_push_subscription(text, text, text, uuid) to authenticated;
+
 -- 유효기한이 임박했다고 이미 알림을 보냈는지 표시. expires_at이 바뀌면(수정/재등록)
 -- 다시 알려줘야 하니 아래 트리거로 자동으로 false로 되돌린다.
 alter table public.gifticons add column if not exists expiry_notified boolean not null default false;

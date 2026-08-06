@@ -26,7 +26,7 @@ export default function NotificationToggle({ asRow = false }) {
         await unsubscribeFromPush(user.id);
         setEnabled(false);
       } else {
-        await subscribeToPush({ userId: user.id, familyId: family.id });
+        await subscribeToPush({ familyId: family.id });
         setEnabled(true);
       }
     } catch (err) {
