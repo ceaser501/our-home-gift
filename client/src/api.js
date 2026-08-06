@@ -395,15 +395,20 @@ export async function deleteGifticon(id) {
 // ⚠️ 테스트 전용. 샘플로 넣어둔 기프티콘만 골라 지운다(번호 앞자리로 알아본다).
 // 실사용 배포 전에 이 함수와 부르는 곳을 함께 지운다 — client/src/components/ResetAllDataButton.jsx.
 //
-// 이미지는 신경 쓰지 않는다. 샘플은 사진 없이 만들어져서 지울 파일이 없다.
+// 샘플에도 그려 넣은 썸네일이 딸려 있어서, 줄만 지우면 그림 파일이 버킷에 남는다.
+// 넣고 지우기를 반복하는 도구라 쌓이면 금방 지저분해진다.
 export async function deleteSampleGifticons(familyId, codePrefix) {
   const { data, error } = await supabase
     .from(GIFTICON_TABLE)
     .delete()
     .eq('family_id', familyId)
     .like('code', `${codePrefix}%`)
-    .select('id');
+    .select('id, image_paths, barcode_image_path, thumb_image_path');
   if (error) throw new Error(error.message);
+
+  const paths = (data || []).flatMap((row) => imagePathsOf(row));
+  if (paths.length) await removeImages(paths);
+
   return data?.length ?? 0;
 }
 

@@ -1,4 +1,5 @@
 import { createGifticon, listGifticons } from './api';
+import { makeSampleThumb } from './sampleThumbs';
 
 // ⚠️ 테스트 전용. 가족마다 상태가 제각각인 샘플 기프티콘을 갖게 한다.
 //
@@ -28,6 +29,7 @@ const SAMPLES = [
   {
     code: SAMPLE_CODE,
     name: '아이스 아메리카노 T',
+    thumb: 'coffee',
     category: '카페',
     brand: '스타벅스',
     amount: 4500,
@@ -38,6 +40,7 @@ const SAMPLES = [
   {
     code: '9000111122001',
     name: '허니콤보 + 콜라 1.25L',
+    thumb: 'chicken',
     category: '외식/배달',
     brand: 'BBQ',
     amount: 26000,
@@ -47,6 +50,7 @@ const SAMPLES = [
   {
     code: '9000111122002',
     name: 'GS25 모바일교환권 5,000원',
+    thumb: 'store',
     category: '편의점',
     brand: 'GS25',
     amount: 5000,
@@ -56,6 +60,7 @@ const SAMPLES = [
   {
     code: '9000111122003',
     name: '뚜레쥬르 초코 생크림 케이크',
+    thumb: 'cake',
     category: '카페',
     brand: '뚜레쥬르',
     amount: 32000,
@@ -63,8 +68,19 @@ const SAMPLES = [
     days: -6,
   },
   {
+    code: '9000111122010',
+    name: '포테이토 피자 L + 콜라',
+    thumb: 'pizza',
+    category: '외식/배달',
+    brand: '도미노피자',
+    amount: 28900,
+    // 두 주쯤 남은 것. 급하지도 넉넉하지도 않은 가운데 값이라 목록에 층이 생긴다.
+    days: 14,
+  },
+  {
     code: '9000111122004',
     name: '메가커피 아메리카노',
+    thumb: 'coffee',
     category: '카페',
     brand: '메가MGC커피',
     amount: 2000,
@@ -74,6 +90,7 @@ const SAMPLES = [
   {
     code: '9000111122005',
     name: 'CGV 영화관람권',
+    thumb: 'movie',
     category: '문화/영화',
     brand: 'CGV',
     amount: 14000,
@@ -90,6 +107,7 @@ const SAMPLES = [
   {
     code: '9000111122008',
     name: '신세계상품권 5만원권',
+    thumb: 'voucher',
     category: '백화점/상품권',
     brand: '신세계백화점',
     amount: 50000,
@@ -99,6 +117,7 @@ const SAMPLES = [
   {
     code: '9000111122009',
     name: '스타벅스 금액권 1만원',
+    thumb: 'voucher',
     category: '카페',
     brand: '스타벅스',
     amount: 10000,
@@ -162,7 +181,7 @@ export async function ensureSampleGifticon({ familyId, ownerName, userId, force 
         memo_by: sample.memo ? userId : null,
         memo_by_name: sample.memo ? ownerName || null : null,
         created_by: userId,
-      });
+      }, [], { thumbCropFile: await makeSampleThumb(sample.thumb) });
     }
     return true;
   } catch {

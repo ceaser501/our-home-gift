@@ -136,7 +136,13 @@ export default function NearbyBanner({ gifticons, onPick, yielded = false }) {
     };
   }, [gifticons]);
 
-  if (!best || dismissed || yielded) return null;
+  // 찾아둔 결과는 10분간 캐시에 남는다(같은 자리에서 앱을 여닫을 때마다 매장을 다시 뒤지지
+  // 않으려고). 그런데 그사이 그 브랜드 기프티콘을 다 쓰거나 지웠다면, 캐시만 믿고 "쓸 수
+  // 있는 기프티콘 3개"라고 말하게 된다 — 없는 것을 있다고 하는 셈이다.
+  // 그래서 띄우기 직전에 지금 목록으로 다시 세어본다. 개수도 여기서 맞춘다.
+  const liveCount = best ? gifticons.filter((g) => g.status !== 'used' && g.brand?.trim() === best.brand).length : 0;
+
+  if (!best || liveCount === 0 || dismissed || yielded) return null;
 
   function dismiss() {
     sessionStorage.setItem(DISMISS_KEY, '1');
@@ -155,7 +161,7 @@ export default function NearbyBanner({ gifticons, onPick, yielded = false }) {
         <span className="block truncate text-xs text-foreground">
           <b className="font-semibold">{best.store}</b>
           {` ${formatDistance(best.distance)} · 쓸 수 있는 기프티콘 `}
-          <b className="font-semibold">{best.count}개</b>
+          <b className="font-semibold">{liveCount}개</b>
         </span>
       </button>
       <button type="button" onClick={dismiss} aria-label="주변 매장 안내 닫기" className="shrink-0 text-muted-foreground">
