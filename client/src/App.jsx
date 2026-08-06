@@ -64,6 +64,8 @@ export default function App() {
   const [search, setSearch] = useState('');
   // 중요 공지가 목록 위 띠를 쓰고 있는지. 주변 매장 안내가 이걸 보고 자리를 비켜준다.
   const [noticeShown, setNoticeShown] = useState(false);
+  // 목록을 다시 읽을 때마다 오르는 수. 공지 띠가 이걸 보고 같이 다시 읽는다.
+  const [refreshTick, setRefreshTick] = useState(0);
   const [category, setCategory] = useState('');
   const [statusTab, setStatusTab] = useState('all');
 
@@ -120,7 +122,12 @@ export default function App() {
   // 검색어를 한 글자 칠 때마다 fetchList가 새로 만들어지는데, 그때마다 구독을 끊었다 다시
   // 맺으면 낭비라서 최신 함수만 여기에 담아두고 구독은 가족이 바뀔 때만 다시 맺는다.
   const refreshRef = useRef(null);
-  refreshRef.current = () => Promise.all([fetchList({ silent: true }), refreshFamily()]);
+  refreshRef.current = () => {
+    // 기프티콘만 다시 읽으면 공지는 옛것 그대로다. 사용자가 "최신으로 맞춰줘"라고 한
+    // 순간이니 위쪽 띠도 함께 맞춘다.
+    setRefreshTick((n) => n + 1);
+    return Promise.all([fetchList({ silent: true }), refreshFamily()]);
+  };
 
   // 당겨서 새로고침은 사용자에게 "최신으로 맞춰줘"라는 뜻이다. 그런데 데이터만 다시 읽으면
   // 그사이 배포된 새 화면은 옛것 그대로라, 당겼는데도 안 바뀌었다고 느끼게 된다.
@@ -277,7 +284,7 @@ export default function App() {
           평소 그 자리는 주변 매장 안내가 쓴다 — 지금 당장 쓸 수 있는 것을 알려주는
           쪽이라 자주 쓸모가 있다. 급한 공지(중요 표시)가 게시된 동안에만 공지가 자리를
           가져가고, 공지가 끝나거나 사용자가 그 공지를 닫으면 다시 매장 안내로 돌아온다. */}
-      <NoticeBanner onShownChange={setNoticeShown} />
+      <NoticeBanner refreshKey={refreshTick} onShownChange={setNoticeShown} />
 
       <NearbyBanner gifticons={gifticons} onPick={setSearch} yielded={noticeShown} />
 

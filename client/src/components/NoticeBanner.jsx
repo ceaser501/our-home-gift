@@ -29,11 +29,17 @@ function readDismissed() {
   }
 }
 
-export default function NoticeBanner({ onShownChange }) {
+export default function NoticeBanner({ refreshKey = 0, onShownChange }) {
   const [notices, setNotices] = useState([]);
   const [dismissed, setDismissed] = useState(readDismissed);
   const [listOpen, setListOpen] = useState(false);
 
+  // 공지는 운영자가 언제든 새로 올린다. 그런데 예전에는 화면이 처음 그려질 때 한 번만
+  // 불러와서, 새 공지를 올려도 사용자가 앱을 완전히 껐다 켜기 전까지는 못 봤다.
+  // 급한 일을 알리려고 만든 자리인데 그때까지 기다린다면 자리값을 못 한다.
+  //
+  // refreshKey는 목록을 다시 읽는 순간(당겨서 새로고침, 다른 앱 다녀오기)마다 바뀐다.
+  // 공지도 그때 같이 맞춘다 — 사용자가 "최신으로 맞춰줘"라고 한 순간이 곧 그 순간이다.
   useEffect(() => {
     let cancelled = false;
     listNotices().then((rows) => {
@@ -42,7 +48,7 @@ export default function NoticeBanner({ onShownChange }) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [refreshKey]);
 
   // 아직 시작 안 된 공지는 서버(RLS)가 걸러주고, 여기서는 끝난 것만 더 걸러낸다.
   // 끝난 공지도 받아오는 이유는 "공지사항"에서 지난 것까지 보여주기 위해서다.
