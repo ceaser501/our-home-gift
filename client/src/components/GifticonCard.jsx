@@ -74,8 +74,11 @@ export default function GifticonCard({
   const claimed = Boolean(gifticon.claimed_by);
   const claimedByMe = gifticon.claimed_by === user.id;
 
+  // 카드가 여러 장 쌓이면 연한 테두리만으로는 어디서 끊기는지 잘 안 보인다. 선을 진하게
+  // 하면 목록이 격자처럼 딱딱해지므로, 대신 카드를 배경에서 살짝 띄운다(shadow-sm) —
+  // 그림자는 경계를 그리지 않고도 "이건 한 장"이라고 말해준다. 목록 쪽 간격도 조금 벌렸다.
   return (
-    <li className={cn('relative overflow-hidden rounded-2xl border border-border bg-card shadow-xs', codeLocked && 'opacity-60')}>
+    <li className={cn('relative overflow-hidden rounded-2xl border border-border bg-card shadow-sm', codeLocked && 'opacity-60')}>
       <div className="relative flex gap-3 p-3">
         {/* 계산대 앞에서 제일 급한 동작이 바코드 열기라, 이 윗칸 전체를 그 버튼으로 쓴다.
             사진만 눌리게 두면 68px짜리 과녁을 조준해야 하는데, 계산대 앞에서 그건 작다.

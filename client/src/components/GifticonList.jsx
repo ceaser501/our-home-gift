@@ -54,7 +54,7 @@ export default function GifticonList({ gifticons, onViewCode, onViewImage, onTog
         </p>
       )}
 
-      <ul className="m-0 flex list-none flex-col gap-3 p-0">
+      <ul className="m-0 flex list-none flex-col gap-3.5 p-0">
         {gifticons.map((g) => (
           <GifticonCard
             key={g.id}

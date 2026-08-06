@@ -50,7 +50,7 @@ export default function FilterBar({
           type="button"
           onClick={() => setStatusOpen(true)}
           className={cn(
-            'flex h-10 shrink-0 items-center gap-1 rounded-full border px-3.5 text-[13px] font-semibold transition-colors',
+            'flex h-10 shrink-0 items-center gap-1 rounded-full border px-3.5 text-[13px] font-semibold shadow-xs transition-colors',
             statusIsDefault ? 'border-border bg-card text-muted-foreground' : 'border-primary bg-primary text-primary-foreground'
           )}
         >
@@ -85,7 +85,7 @@ export default function FilterBar({
           type="button"
           onClick={() => onCategoryChange('')}
           className={cn(
-            'flex shrink-0 items-center rounded-full border px-3 py-1.5 text-[13px] whitespace-nowrap transition-colors',
+            'flex h-10 shrink-0 items-center rounded-full border px-3.5 text-[13px] whitespace-nowrap shadow-xs transition-colors',
             category === '' ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card text-muted-foreground'
           )}
         >
@@ -98,7 +98,7 @@ export default function FilterBar({
             type="button"
             onClick={() => onCategoryChange(cat.key)}
             className={cn(
-              'flex shrink-0 items-center rounded-full border px-3 py-1.5 text-[13px] whitespace-nowrap transition-colors',
+              'flex h-10 shrink-0 items-center rounded-full border px-3.5 text-[13px] whitespace-nowrap shadow-xs transition-colors',
               category === cat.key
                 ? 'border-primary bg-primary text-primary-foreground'
                 : 'border-border bg-card text-muted-foreground'

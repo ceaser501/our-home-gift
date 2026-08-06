@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pencil, UserPlus } from 'lucide-react';
+import { Pencil, Share2, UserPlus } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import RenameSheet from './RenameSheet';
@@ -8,6 +8,40 @@ import { useFamily } from '../FamilyContext';
 import { approveJoinRequest, rejectJoinRequest, renameFamily } from '../family';
 import { OWNER_TAG_PALETTE, memberTagColorClass } from '../utils/tagColor';
 import { formatDate } from '../utils/date';
+
+// 초대를 카카오톡 대화방으로 바로 보낸다.
+//
+// 카카오 SDK로 직접 보내는 방법도 있지만 그러려면 JS 키·도메인 등록·메시지 템플릿이
+// 먼저 갖춰져야 하고, 그래봐야 갈 수 있는 곳이 카카오톡 하나로 줄어든다. 폰이 가진
+// 공유창을 부르면 카카오톡·문자·메일이 한꺼번에 뜨고, 어느 것을 고를지는 보내는
+// 사람이 정한다.
+//
+// 공유창이 없는 곳(대개 데스크톱 브라우저)에서는 버튼을 아예 그리지 않는다. 옆에
+// 복사가 있어서 할 일이 막히지는 않는다.
+function ShareInviteButton({ family }) {
+  const canShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
+  if (!canShare) return null;
+
+  async function handleShare() {
+    const url = `${window.location.origin}${import.meta.env.BASE_URL}`;
+    try {
+      await navigator.share({
+        title: '모아콘 가족 초대',
+        text: `모아콘에서 '${family.name}' 가족에 참여해보세요.\n초대코드: ${family.invite_code}\n\n`,
+        url,
+      });
+    } catch {
+      // 공유창을 그냥 닫은 것도 여기로 온다. 취소한 사람에게 오류를 보여줄 이유는 없다.
+    }
+  }
+
+  return (
+    <Button type="button" onClick={handleShare} className="h-9 flex-1 rounded-xl text-sm">
+      <Share2 className="size-4" />
+      공유
+    </Button>
+  );
+}
 
 export default function FamilyMembersSheet({ onClose }) {
   const { family, members, user, joinRequests, refreshFamily } = useFamily();
@@ -45,17 +79,38 @@ export default function FamilyMembersSheet({ onClose }) {
           </SheetTitle>
         </SheetHeader>
 
-        {/* 이 창을 여는 이유의 절반은 "누구 초대하려고"다. 그래서 코드를 읽어서 옮겨 적지
-            않아도 되게 복사 버튼을 코드 바로 옆에 둔다. */}
-        <div className="px-5 pb-2">
-          <div className="flex items-center gap-1">
-            <p className="m-0 text-xs text-muted-foreground">
-              초대코드 <span className="font-mono font-semibold tracking-wider text-foreground">{family.invite_code}</span>
-            </p>
-            <CopyButton value={family.invite_code} label="복사" />
+        {/* 이 창을 여는 이유의 절반은 "누구 초대하려고"다. 그런데 예전에는 코드가 본문과
+            같은 크기의 회색 글씨로 적혀 있어서, 열어놓고도 뭘 해야 하는지 몰랐다.
+            상자로 떼어내고 코드를 크게 키운다 — 열자마자 "이걸 보내면 되는구나"가
+            먼저 읽혀야 한다. */}
+        <div className="mx-5 mb-3 rounded-2xl border border-primary/25 bg-primary/5 px-4 py-3.5">
+          <p className="m-0 text-xs font-semibold text-primary">가족 초대코드</p>
+          <p className="m-0 mt-1 font-mono text-[26px] leading-tight font-bold tracking-[0.18em] text-foreground">
+            {family.invite_code}
+          </p>
+          {/* 복사만 있으면 붙여넣을 곳을 사용자가 직접 찾아가야 한다. 공유를 옆에 두면
+              누르는 즉시 카카오톡 대화방을 고르는 화면이 뜬다 — 초대는 대개 거기서 끝난다. */}
+          <div className="mt-2.5 flex gap-2">
+            <ShareInviteButton family={family} />
+            {/* CopyButton은 스스로 shrink-0이라 flex-1을 직접 주면 서로 어긋난다. 감싸서 늘린다. */}
+            <div className="flex flex-1">
+              <CopyButton
+                value={family.invite_code}
+                label="복사"
+                className="h-9 w-full justify-center rounded-xl border border-border bg-card text-sm"
+              />
+            </div>
           </div>
-          <p className="m-0 text-xs text-muted-foreground">알려주면 가족이 참여를 신청할 수 있어요.</p>
+          <p className="m-0 mt-2.5 text-xs break-keep text-muted-foreground">
+            코드를 받은 사람이 참여를 신청하면, 여기서 승인해야 들어와요.
+          </p>
         </div>
+
+        {/* 헤더에 있던 "가족 3명"이 여기로 왔다. 구성원 목록 바로 위가 그 숫자를 세는
+            자리라, 헤더에서보다 오히려 제자리다. */}
+        <p className="m-0 px-5 pb-1 text-xs font-semibold text-muted-foreground">
+          {members.length > 1 ? `가족 ${members.length}명` : '혼자 쓰는 중'}
+        </p>
 
         {/* 초대 코드는 짧아서 우연히 맞힐 수도 있다. 그래서 코드가 맞아도 여기서 승인해야 들어온다. */}
         {joinRequests.length > 0 && (

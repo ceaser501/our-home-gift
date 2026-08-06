@@ -18,7 +18,7 @@ export default function Header() {
   const [profileOpen, setProfileOpen] = useState(false);
 
   return (
-    <header className="flex flex-col gap-1 px-5 pt-[max(16px,env(safe-area-inset-top))] pb-2">
+    <header className="px-5 pt-[max(16px,env(safe-area-inset-top))] pb-2">
       <div className="flex items-center gap-2.5">
         <Logo className="size-7 shrink-0" />
 
@@ -57,7 +57,7 @@ export default function Header() {
           type="button"
           onClick={() => setProfileOpen(true)}
           aria-label="내 메뉴"
-          className={`flex size-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white ${
+          className={`flex size-8.5 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white ${
             memberTagColorClass(me) ?? OWNER_TAG_PALETTE[0]
           }`}
         >
@@ -65,11 +65,10 @@ export default function Header() {
         </button>
       </div>
 
-      {/* 혼자 쓰는 사람에게 "가족 1명"은 빈자리를 세는 말처럼 읽힌다. 혼자일 때는 그렇게
-          말하지 않는다. 초대 코드는 그대로 둔다 — 초대는 여전히 여기서 시작한다. */}
-      <p className="m-0 pl-9.5 text-xs text-muted-foreground">
-        {members.length > 1 ? `가족 ${members.length}명` : '혼자 쓰는 중'} · 초대코드 {family.invite_code}
-      </p>
+      {/* 예전에는 여기 "가족 3명 · 초대코드 ABCD" 한 줄이 더 있었다. 둘 다 늘 보고
+          있어야 하는 값이 아니다 — 가족 수는 궁금할 때 사람 아이콘을 누르면 되고,
+          초대 코드는 누구를 부를 때만 필요하다. 그래서 둘 다 그 창 안으로 넣고
+          헤더는 한 줄로 줄였다. 목록이 그만큼 위로 올라온다. */}
 
       {switcherOpen && <FamilySwitcherSheet onClose={() => setSwitcherOpen(false)} />}
       {membersOpen && <FamilyMembersSheet onClose={() => setMembersOpen(false)} />}
