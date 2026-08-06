@@ -190,27 +190,34 @@
 }
 
 /* 가족 참여 신청처럼 "사람이 손대야 끝나는" 알림에 붙는 점. 점만 찍어두면 헤더 구석이라
-   그냥 지나치게 돼서, 둘레로 옅은 물결이 한 번씩 번지게 해 눈길만 끈다.
-   빠르게 깜빡이면 재촉당하는 기분이 들어서 느리게 돌리고, 번지는 동안 옅어지며 사라진다. */
-@keyframes dot-ping {
-  0% {
-    transform: scale(1);
-    opacity: 0.5;
-  }
-  70%,
+   그냥 지나치게 돼서, 심장이 뛰듯 살짝 커졌다 돌아오게 한다.
+   한 번에 두 번 뛰고(쿵-쿵) 나머지 시간은 가만히 있는다. 쉬는 구간이 길어야 눈에는
+   들어오면서도 목록을 보는 내내 거슬리지 않는다. 크기는 1.3배까지만 — 더 키우면
+   옆의 아이콘을 건드리는 것처럼 보인다. */
+@keyframes dot-heartbeat {
+  0%,
+  45%,
   100% {
-    transform: scale(2.6);
-    opacity: 0;
+    transform: scale(1);
+  }
+  12% {
+    transform: scale(1.3);
+  }
+  24% {
+    transform: scale(1);
+  }
+  34% {
+    transform: scale(1.22);
   }
 }
 
-.animate-dot-ping {
-  animation: dot-ping 2.4s cubic-bezier(0, 0, 0.2, 1) infinite;
+.animate-dot-heartbeat {
+  animation: dot-heartbeat 2.2s ease-in-out infinite;
 }
 
-/* 움직임을 줄여달라고 설정해둔 사람에게는 물결 없이 점만 보여준다. */
+/* 움직임을 줄여달라고 설정해둔 사람에게는 가만히 있는 점만 보여준다. */
 @media (prefers-reduced-motion: reduce) {
-  .animate-dot-ping {
+  .animate-dot-heartbeat {
     animation: none;
   }
 }
