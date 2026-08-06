@@ -909,6 +909,32 @@ create table if not exists public.notices (
 -- 그대로 쌓인다. 그래서 이 값은 "보여줄까 말까"가 아니라 "끼어들까 말까"에 가깝다.
 alter table public.notices add column if not exists is_important boolean not null default false;
 
+-- 마지막으로 손댄 시각. 화면에서 "이 공지를 닫았다"를 기억할 때 id가 아니라 id와 이 값을
+-- 함께 쓴다.
+--
+-- 닫기를 id로만 기억하면, 한 번 닫은 공지는 그 기기에서 영영 다시 못 뜬다. 그런데 운영자가
+-- 그 글을 고쳐서 다시 올리거나, 안내성이던 것을 중요로 올리는 일이 있다. 그때는 같은 공지라도
+-- 다시 보여줘야 한다 — 사용자가 닫은 것은 "그때의 그 내용"이지 이 글의 모든 판이 아니다.
+--
+-- 반대로 아무도 손대지 않은 공지가 자꾸 되살아나면 닫기 버튼이 거짓말이 된다. 그래서
+-- "고쳤을 때만" 되살아나게 이 값을 기준으로 삼는다.
+alter table public.notices add column if not exists updated_at timestamptz not null default now();
+
+create or replace function public.touch_notice_updated_at()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at := now();
+  return new;
+end;
+$$;
+
+drop trigger if exists notices_touch_updated_at on public.notices;
+create trigger notices_touch_updated_at
+  before update on public.notices
+  for each row execute function public.touch_notice_updated_at();
+
 create index if not exists notices_starts_at_idx on public.notices (starts_at desc);
 
 alter table public.notices enable row level security;
