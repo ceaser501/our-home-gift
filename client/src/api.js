@@ -220,6 +220,8 @@ export async function createGifticon(familyId, fields, files = [], crops = {}) {
       code: fields.code || null,
       code_type: fields.code_type || null,
       expires_at: fields.expires_at || null,
+      // 금액권이면 잔액을 깎아 나간다. 금액이 없으면 깎을 것도 없어서 금액권일 수 없다.
+      is_voucher: Boolean(fields.is_voucher) && Boolean(fields.amount),
       memo: fields.memo || null,
       // 메모를 쓴 사람. 메모가 없으면 남기지 않는다 — 빈 메모에 작성자만 붙어 있으면
       // 나중에 "누가 지웠나"로 읽힌다.
@@ -249,6 +251,12 @@ export async function updateGifticon(familyId, id, fields, imageChanges = {}) {
 
   if ('amount' in updates) {
     updates.amount = updates.amount === '' || updates.amount === undefined || updates.amount === null ? null : Number(updates.amount);
+  }
+
+  // 금액을 지웠으면 금액권일 수 없다. 깎아 나갈 액면가가 없는데 금액권으로 남아 있으면
+  // 카드에 "0원 남음"만 뜬다.
+  if ('is_voucher' in updates) {
+    updates.is_voucher = Boolean(updates.is_voucher) && Boolean(updates.amount);
   }
 
   // 메모 작성자는 화면이 보낸 값을 그대로 쓰지 않는다. 메모가 실제로 바뀌었을 때만 갈아끼운다.

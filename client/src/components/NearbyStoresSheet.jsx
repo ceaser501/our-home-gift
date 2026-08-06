@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { ChevronRight, Loader2, LocateFixed, MapPin, Phone } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import StoreDetailSheet from './StoreDetailSheet';
 import { searchNearbyStores } from '../api';
 import {
@@ -146,11 +147,16 @@ export default function NearbyStoresSheet({ gifticon, onClose }) {
 
         {phase === 'done' && stores.length > 0 && (
           <ul className="m-0 flex list-none flex-col p-0 px-5">
-            {stores.map((store) => (
+            {/* 목록은 가까운 순으로 온다. 거리를 전부 포인트색으로 칠하면 다 같은 무게로
+                보여서, 정작 "제일 가까운 데가 어디냐"를 눈이 아니라 순서로 세어야 한다.
+                맨 위 하나만 색을 갖고 나머지는 물러난다. */}
+            {stores.map((store, index) => (
               <li key={store.id} className="flex items-center gap-2 border-b border-border py-3 last:border-b-0">
                 <button type="button" onClick={() => setDetail(store)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
                   <span className="flex w-13 shrink-0 flex-col items-center">
-                    <span className="text-sm font-bold text-primary">{formatDistance(store.distance) ?? '?'}</span>
+                    <span className={cn('text-sm font-bold', index === 0 ? 'text-primary' : 'text-muted-foreground')}>
+                      {formatDistance(store.distance) ?? '?'}
+                    </span>
                   </span>
                   <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                     <span className="truncate text-sm font-semibold text-foreground">{store.name}</span>

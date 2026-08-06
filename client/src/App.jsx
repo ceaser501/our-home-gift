@@ -21,11 +21,19 @@ import { daysUntil, todayStr } from './utils/date';
 import { hasNewVersion } from './utils/version';
 import { useFamily } from './FamilyContext';
 
+// 목록은 "지금 쓸 수 있는 것 → 기한이 지난 것 → 다 쓴 것" 세 덩어리다.
+// 급한 순으로만 세우면 기한이 지난 것이 D-1보다 더 급한 값(음수)이라 맨 위를 차지한다.
+// 못 쓰는 것이 제일 먼저 눈에 들어오는 목록은 계산대 앞에서 방해만 된다.
+// 지난 것도 아주 내리지는 않는다 — 90% 환불이 남아 있어서 다 쓴 것보다는 할 일이 있다.
 function sortGifticons(items) {
-  const unused = items.filter((g) => g.status !== 'used');
+  const today = todayStr();
+  const isExpired = (g) => Boolean(g.expires_at) && g.expires_at < today;
+
+  const live = items.filter((g) => g.status !== 'used' && !isExpired(g));
+  const expired = items.filter((g) => g.status !== 'used' && isExpired(g));
   const used = items.filter((g) => g.status === 'used');
 
-  unused.sort((a, b) => {
+  live.sort((a, b) => {
     const da = daysUntil(a.expires_at);
     const db = daysUntil(b.expires_at);
     if (da === null && db === null) return b.id - a.id;
@@ -34,13 +42,16 @@ function sortGifticons(items) {
     return da - db;
   });
 
+  // 최근에 지난 것부터. 오래된 것일수록 손쓸 일이 적어서 아래로 내려간다.
+  expired.sort((a, b) => (b.expires_at || '').localeCompare(a.expires_at || ''));
+
   used.sort((a, b) => {
     const ua = a.used_at || a.updated_at || '';
     const ub = b.used_at || b.updated_at || '';
     return ub.localeCompare(ua);
   });
 
-  return [...unused, ...used];
+  return [...live, ...expired, ...used];
 }
 
 export default function App() {

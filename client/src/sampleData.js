@@ -83,20 +83,26 @@ const SAMPLES = [
   // 금액권 둘. 한 번에 다 쓰지 않고 쓴 만큼 깎아 나가는 것들이라, 잔액 관리를 만들 때
   // 실제로 어떻게 보이는지 볼 수 있어야 한다. 액수를 다르게 둬서 한쪽은 큰 금액권
   // (여러 번에 나눠 쓰는 쪽), 한쪽은 작은 금액권으로 잡았다.
+  //
+  // 번호가 006·007이 아니라 008·009인 이유: 앞의 둘은 is_voucher가 저장되지 않던 때
+  // 들어가서 일반 기프티콘으로 남았다. 같은 번호로 두면 "이미 있다"고 판단해 고쳐지지
+  // 않으므로, 새 번호로 다시 넣는다(예전 둘은 supabase/mock-data.sql로 지운다).
   {
-    code: '9000111122006',
+    code: '9000111122008',
     name: '신세계상품권 5만원권',
     category: '백화점/상품권',
     brand: '신세계백화점',
     amount: 50000,
+    is_voucher: true,
     days: 45,
   },
   {
-    code: '9000111122007',
+    code: '9000111122009',
     name: '스타벅스 금액권 1만원',
     category: '카페',
     brand: '스타벅스',
     amount: 10000,
+    is_voucher: true,
     days: 20,
   },
 ];
@@ -123,6 +129,7 @@ export async function ensureSampleGifticon({ familyId, ownerName, userId }) {
         category: sample.category,
         brand: sample.brand,
         amount: sample.amount,
+        is_voucher: Boolean(sample.is_voucher),
         owner: ownerName || null,
         code: sample.code,
         code_type: 'CODE_128',

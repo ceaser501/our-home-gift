@@ -46,6 +46,8 @@ export default function GifticonCard({
   const ownerDotClass = tagColorClass(members[ownerIndex]?.tag_color ?? ownerIndex) || 'bg-muted-foreground';
 
   // 이미 쓴 것과 기한이 지난 것은 매장에서 쓸 수 없으니 바코드를 열지 않는다.
+  // 둘은 "이제 못 쓰는 것"이라는 점에서 같아서, 흐리게 깔고 목록 아래로 내리는 것까지
+  // 같이 간다. 기한이 지난 것만 멀쩡한 얼굴로 맨 위에 있으면 쓸 수 있는 줄 안다.
   const isExpired = urgency === 'expired';
   const codeLocked = isUsed || isExpired;
   // 열 바코드가 실제로 있는지. 없는데 띠를 붙이면 눌러보고 나서야 없는 걸 알게 된다.
@@ -61,12 +63,19 @@ export default function GifticonCard({
   // 자리를 못 찾은 것은 예전처럼 첫 사진 그대로 보여준다.
   const thumbUrl = gifticon.thumb_image_url || gifticon.image_url;
 
+  // 기한이 지난 것은 "며칠 지났나"를 아래 버튼 라벨이 맡는다. 여기서까지 되풀이하면
+  // "기한 만료 (6일 지남) · 2026.07.31까지"가 되어 칩 하나가 두 줄로 접힌다.
+  // 날짜는 남긴다 — 언제까지였는지는 다른 카드와 같은 자리에서 읽혀야 한다.
+  const ddayLabel = isExpired
+    ? `${formatDate(gifticon.expires_at)}까지`
+    : `${formatDday(gifticon.expires_at)} · ${formatDate(gifticon.expires_at)}까지`;
+
   // "이건 내가 쓸게" 표시. 잠금이 아니라 표시라, 남이 찜해뒀어도 바코드는 그대로 열린다.
   const claimed = Boolean(gifticon.claimed_by);
   const claimedByMe = gifticon.claimed_by === user.id;
 
   return (
-    <li className={cn('relative overflow-hidden rounded-2xl border border-border bg-card shadow-xs', isUsed && 'opacity-60')}>
+    <li className={cn('relative overflow-hidden rounded-2xl border border-border bg-card shadow-xs', codeLocked && 'opacity-60')}>
       <div className="relative flex gap-3 p-3">
         {/* 계산대 앞에서 제일 급한 동작이 바코드 열기라, 이 윗칸 전체를 그 버튼으로 쓴다.
             사진만 눌리게 두면 68px짜리 과녁을 조준해야 하는데, 계산대 앞에서 그건 작다.
@@ -96,9 +105,9 @@ export default function GifticonCard({
           ) : (
             <Ticket className="size-6 text-primary/60" />
           )}
-          {isUsed && (
+          {codeLocked && (
             <span className="absolute inset-0 flex items-center justify-center bg-black/55 text-[11px] font-bold text-white">
-              사용완료
+              {isUsed ? '사용완료' : '기한만료'}
             </span>
           )}
           {photoCount > 1 && (
@@ -153,12 +162,12 @@ export default function GifticonCard({
                     DDAY_CLASS[urgency]
                   )}
                 >
-                  {formatDday(gifticon.expires_at)} · {formatDate(gifticon.expires_at)}까지
+                  {ddayLabel}
                   <Info className="size-3.5" />
                 </button>
               ) : (
                 <p className={cn('mt-0.5 inline-block self-start rounded-full px-2 py-0.5 text-xs font-bold', DDAY_CLASS[urgency])}>
-                  {formatDday(gifticon.expires_at)} · {formatDate(gifticon.expires_at)}까지
+                  {ddayLabel}
                 </p>
               )
             ) : (
@@ -197,14 +206,26 @@ export default function GifticonCard({
       <div className="flex border-t border-border">
         {codeLocked ? (
           <>
-            <span className={cn(BAR_BUTTON, 'text-muted-foreground')}>{isUsed ? '사용완료' : '기한 만료'}</span>
+            {/* 왼쪽은 상태를 말하는 이름표다. 기한이 지난 것은 여기서 "며칠 지났는지"까지
+                말해준다 — 위 칩에서 뺀 그 말이 이 자리로 왔다. */}
+            <span className={cn(BAR_BUTTON, 'text-muted-foreground')}>
+              {isUsed ? '사용완료' : formatDday(gifticon.expires_at)}
+            </span>
+            {/* 사용취소는 사용완료로 표시한 것만 되돌린다. 기한이 지난 것은 완료로 표시한
+                적이 없어서 되돌릴 것이 없고, 대신 반대쪽 길이 필요하다 — 실제로는 썼는데
+                표시를 안 해둔 것. 결산에서 "이미 쓰셨다면 사용완료로 바꿔주세요"라고
+                안내하는 그 동작이 여기다. */}
             <button
               type="button"
               onClick={() => onToggleUsed(gifticon)}
               className={cn(BAR_BUTTON, 'border-l border-border text-foreground')}
             >
-              <RotateCcw className="size-4 text-muted-foreground" />
-              사용취소
+              {isUsed ? (
+                <RotateCcw className="size-4 text-muted-foreground" />
+              ) : (
+                <CheckCircle2 className="size-4 text-muted-foreground" />
+              )}
+              {isUsed ? '사용취소' : '사용완료'}
             </button>
           </>
         ) : (
