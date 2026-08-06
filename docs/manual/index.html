@@ -1,0 +1,1238 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>모아콘 사용 안내</title>
+<meta name="description" content="기프티콘을 가족과 함께 모아두고, 기한 전에 챙기는 앱 — 모아콘 사용 안내서">
+<style>
+/* ─────────────────────────────────────────────
+   모아콘 사용 안내 — 티켓 한 장에서 가져온 조판
+   ───────────────────────────────────────────── */
+
+:root {
+  color-scheme: light;
+
+  /* 원료 색 */
+  --violet:   #5B4BE8;
+  --violet-2: #8C7FF0;
+  --magenta:  #C93F92;
+  --ember:    #E0523F;
+  --moss:     #2F9E5E;
+
+  /* 라이트: 종이 */
+  --bg:        #F4F1F8;
+  --surface:   #FFFFFF;
+  --surface-2: #EDE9F4;
+  --text:      #191327;
+  --text-2:    #5E5573;
+  --text-3:    #8A82A0;
+  --line:      #DCD5E8;
+  --line-2:    #C9C0DA;
+  --accent:    var(--violet);
+  --bar:       #2A2338;
+  --shadow:    0 1px 2px rgba(25,19,39,.05), 0 12px 32px -12px rgba(25,19,39,.22);
+  --shadow-lg: 0 2px 4px rgba(25,19,39,.06), 0 34px 60px -22px rgba(25,19,39,.34);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --bg:        #14101D;
+    --surface:   #1D1829;
+    --surface-2: #262034;
+    --text:      #EFEBF7;
+    --text-2:    #ADA3C2;
+    --text-3:    #7E7595;
+    --line:      #322B44;
+    --line-2:    #453C5C;
+    --accent:    var(--violet-2);
+    --bar:       #CFC7E0;
+    --shadow:    0 1px 2px rgba(0,0,0,.4), 0 12px 32px -12px rgba(0,0,0,.6);
+    --shadow-lg: 0 2px 4px rgba(0,0,0,.4), 0 34px 60px -22px rgba(0,0,0,.75);
+  }
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg:        #F4F1F8;
+  --surface:   #FFFFFF;
+  --surface-2: #EDE9F4;
+  --text:      #191327;
+  --text-2:    #5E5573;
+  --text-3:    #8A82A0;
+  --line:      #DCD5E8;
+  --line-2:    #C9C0DA;
+  --accent:    var(--violet);
+  --bar:       #2A2338;
+  --shadow:    0 1px 2px rgba(25,19,39,.05), 0 12px 32px -12px rgba(25,19,39,.22);
+  --shadow-lg: 0 2px 4px rgba(25,19,39,.06), 0 34px 60px -22px rgba(25,19,39,.34);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg:        #14101D;
+  --surface:   #1D1829;
+  --surface-2: #262034;
+  --text:      #EFEBF7;
+  --text-2:    #ADA3C2;
+  --text-3:    #7E7595;
+  --line:      #322B44;
+  --line-2:    #453C5C;
+  --accent:    var(--violet-2);
+  --bar:       #CFC7E0;
+  --shadow:    0 1px 2px rgba(0,0,0,.4), 0 12px 32px -12px rgba(0,0,0,.6);
+  --shadow-lg: 0 2px 4px rgba(0,0,0,.4), 0 34px 60px -22px rgba(0,0,0,.75);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont,
+               "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", system-ui, sans-serif;
+  font-size: 17px;
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: -0.011em;
+  overflow-x: hidden;
+}
+
+img { max-width: 100%; height: auto; display: block; }
+
+/* ── 뼈대 ───────────────────────────────── */
+
+.wrap {
+  width: min(100% - 40px, 1140px);
+  margin-inline: auto;
+}
+.wrap--tight { width: min(100% - 40px, 860px); }
+
+/* ── 티켓 부속 ───────────────────────────── */
+
+/* 바코드 줄: 챕터마다 다른 패턴이 JS로 그려진다 */
+.barcode {
+  height: 30px;
+  width: 116px;
+  flex: none;
+  border-radius: 1px;
+  opacity: .85;
+}
+.barcode--wide { width: 100%; height: 22px; opacity: .16; }
+
+/* 절취선 + 양 끝 노치 */
+.perf {
+  position: relative;
+  height: 0;
+  border-top: 2px dashed var(--line-2);
+  margin: 0;
+}
+.perf::before, .perf::after {
+  content: "";
+  position: absolute;
+  top: -13px;
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 2px solid var(--line-2);
+}
+.perf::before { left: -13px;  clip-path: inset(0 0 0 50%); }
+.perf::after  { right: -13px; clip-path: inset(0 50% 0 0); }
+
+/* ── 타이포 ─────────────────────────────── */
+
+.eyebrow {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin: 0;
+}
+
+h1 {
+  font-size: clamp(38px, 6.4vw, 76px);
+  line-height: 1.06;
+  letter-spacing: -0.042em;
+  font-weight: 800;
+  margin: 0;
+  text-wrap: balance;
+}
+
+h2 {
+  font-size: clamp(28px, 3.8vw, 42px);
+  line-height: 1.16;
+  letter-spacing: -0.034em;
+  font-weight: 800;
+  margin: 0;
+  text-wrap: balance;
+}
+
+h3 {
+  font-size: 19px;
+  line-height: 1.4;
+  letter-spacing: -0.02em;
+  font-weight: 700;
+  margin: 0;
+}
+
+p { margin: 0; }
+
+.lead {
+  font-size: clamp(17px, 2vw, 20px);
+  line-height: 1.65;
+  color: var(--text-2);
+  max-width: 40ch;
+}
+
+.small { font-size: 15px; color: var(--text-2); }
+
+strong { font-weight: 700; color: var(--text); }
+
+/* 앱 안 문구를 그대로 인용할 때 */
+.ui {
+  font-weight: 600;
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border-radius: 5px;
+  padding: 1px 6px;
+  white-space: nowrap;
+}
+
+/* ── 머리말 ─────────────────────────────── */
+
+.hero {
+  padding: clamp(52px, 8vw, 104px) 0 clamp(40px, 6vw, 72px);
+  position: relative;
+  overflow: hidden;
+}
+.hero::after {
+  content: "";
+  position: absolute;
+  inset: auto -10% -70% 40%;
+  height: 620px;
+  background: radial-gradient(ellipse at center,
+              color-mix(in srgb, var(--violet) 22%, transparent), transparent 68%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.hero .wrap { position: relative; z-index: 1; }
+
+.hero-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 460px);
+  gap: clamp(32px, 5vw, 64px);
+  align-items: center;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 26px;
+}
+.brand-mark {
+  width: 44px; height: 44px;
+  border-radius: 13px;
+  background: linear-gradient(145deg, #A25BE6, #C93F92);
+  display: grid;
+  place-items: center;
+  box-shadow: 0 6px 16px -6px rgba(162,91,230,.7);
+  flex: none;
+}
+.brand-name {
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+.brand-sub {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .14em;
+  color: var(--text-3);
+  text-transform: uppercase;
+}
+
+.hero h1 { margin-bottom: 22px; }
+.hero .lead { max-width: 34ch; }
+
+.hero-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 30px;
+}
+.chip {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-2);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 6px 14px;
+}
+
+/* 히어로 화면 3장 겹치기 */
+.fan {
+  position: relative;
+  height: clamp(430px, 58vw, 620px);
+}
+.fan img {
+  position: absolute;
+  border-radius: 20px;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-lg);
+  background: var(--surface);
+  width: 57%;
+}
+.fan img:nth-child(1) { left: 0;    top: 8%;  transform: rotate(-6deg); z-index: 1; }
+.fan img:nth-child(2) { left: 20%;  top: 0;   z-index: 3; }
+.fan img:nth-child(3) { right: 0;   top: 12%; transform: rotate(6deg);  z-index: 2; }
+
+/* ── 요약 카드 3장 ──────────────────────── */
+
+.pitch {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  padding-bottom: clamp(56px, 8vw, 96px);
+}
+.pitch-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 26px 24px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: var(--shadow);
+}
+.pitch-card .icon { width: 26px; height: 26px; color: var(--accent); }
+.pitch-card p { color: var(--text-2); font-size: 15.5px; line-height: 1.62; }
+
+/* ── 챕터 ───────────────────────────────── */
+
+.chapter { padding: clamp(56px, 8vw, 92px) 0; }
+
+.chapter-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: clamp(24px, 4vw, 56px);
+  align-items: end;
+  margin-bottom: clamp(32px, 4vw, 52px);
+}
+.chapter-label {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+/* 화면 배치 — 챕터마다 리듬을 바꾼다 */
+.shots {
+  display: grid;
+  gap: clamp(16px, 2.4vw, 28px);
+}
+.shots--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.shots--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.shots--4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+/* 폰 화면은 실물만 한 크기에서 가장 읽기 좋다 — 그 이상 키우지 않는다 */
+.shots figure { max-width: 330px; margin-inline: auto; }
+
+figure { margin: 0; }
+figure img {
+  width: 100%;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+figcaption {
+  margin-top: 12px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--text-2);
+}
+figcaption b {
+  display: block;
+  color: var(--text);
+  font-weight: 700;
+  font-size: 14.5px;
+}
+
+/* 화면 옆에 설명이 붙는 배치 */
+.split {
+  display: grid;
+  grid-template-columns: minmax(0, 340px) minmax(0, 1fr);
+  gap: clamp(28px, 4.5vw, 64px);
+  align-items: center;
+}
+.split--flip { grid-template-columns: minmax(0, 1fr) minmax(0, 340px); }
+.split--flip .split-shot { order: 2; }
+
+/* 짚어주는 항목들 */
+.points {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 20px;
+}
+.points li {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+.points .tick {
+  margin-top: 6px;
+  width: 22px; height: 22px;
+  color: var(--accent);
+}
+.points b { display: block; font-weight: 700; margin-bottom: 3px; }
+.points span { color: var(--text-2); font-size: 15.5px; line-height: 1.62; }
+
+/* 참고 상자 */
+.note {
+  border-left: 3px solid var(--accent);
+  background: var(--surface);
+  border-radius: 0 12px 12px 0;
+  padding: 16px 20px;
+  font-size: 15px;
+  line-height: 1.62;
+  color: var(--text-2);
+}
+.note b { color: var(--text); }
+.note--warn { border-left-color: var(--ember); }
+
+/* 상태 배지 — 앱에서 쓰는 표기 그대로 */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13.5px;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 3px 11px;
+  font-variant-numeric: tabular-nums;
+}
+.badge--soon { color: var(--ember); background: color-mix(in srgb, var(--ember) 14%, transparent); }
+.badge--done { color: var(--moss);  background: color-mix(in srgb, var(--moss) 15%, transparent); }
+.badge--far  { color: var(--text-2); background: var(--surface-2); }
+
+/* 가족 이름표 */
+.tags { display: flex; flex-wrap: wrap; gap: 8px; }
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-2);
+}
+.tag i {
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  display: block;
+}
+
+/* 결산 숫자 */
+.figures {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+  overflow: hidden;
+}
+.figures div {
+  padding: 20px 16px;
+  text-align: center;
+  border-right: 1px solid var(--line);
+}
+.figures div:last-child { border-right: 0; }
+.figures dt {
+  font-size: 13.5px;
+  color: var(--text-2);
+  margin-top: 4px;
+}
+.figures dd {
+  margin: 0;
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 안심 섹션 표 */
+.facts {
+  display: grid;
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.facts > div {
+  background: var(--surface);
+  padding: 18px 22px;
+  display: grid;
+  grid-template-columns: minmax(0, 200px) minmax(0, 1fr);
+  gap: 8px 24px;
+}
+.facts dt { font-weight: 700; font-size: 15.5px; }
+.facts dd { margin: 0; color: var(--text-2); font-size: 15.5px; line-height: 1.6; }
+
+/* ── 맺음말 ─────────────────────────────── */
+
+.outro {
+  padding: clamp(60px, 9vw, 110px) 0 clamp(48px, 7vw, 80px);
+  text-align: center;
+}
+.outro h2 { margin-bottom: 18px; }
+.outro .lead { margin-inline: auto; max-width: 46ch; }
+.addr {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 30px;
+  padding: 13px 22px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  text-decoration: none;
+  box-shadow: var(--shadow);
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+.addr:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+.addr:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+.addr svg { width: 18px; height: 18px; color: var(--accent); }
+
+footer {
+  padding: 30px 0 60px;
+  text-align: center;
+  font-size: 13.5px;
+  color: var(--text-3);
+}
+
+/* ── 등장 ───────────────────────────────── */
+
+.rise { opacity: 0; transform: translateY(18px); }
+.rise.seen {
+  opacity: 1;
+  transform: none;
+  transition: opacity .7s cubic-bezier(.2,.7,.3,1), transform .7s cubic-bezier(.2,.7,.3,1);
+}
+.fan img { opacity: 0; transform-origin: bottom center; }
+.fan.seen img { animation: deal .8s cubic-bezier(.2,.8,.3,1) forwards; }
+.fan.seen img:nth-child(1) { animation-delay: .10s; }
+.fan.seen img:nth-child(2) { animation-delay: 0s; }
+.fan.seen img:nth-child(3) { animation-delay: .18s; }
+@keyframes deal {
+  from { opacity: 0; transform: translateY(26px) scale(.97); }
+  to   { opacity: 1; transform: none; }
+}
+.fan.seen img:nth-child(1) { animation-name: deal-l; }
+.fan.seen img:nth-child(3) { animation-name: deal-r; }
+@keyframes deal-l {
+  from { opacity: 0; transform: translateY(26px) rotate(0deg) scale(.97); }
+  to   { opacity: 1; transform: rotate(-6deg); }
+}
+@keyframes deal-r {
+  from { opacity: 0; transform: translateY(26px) rotate(0deg) scale(.97); }
+  to   { opacity: 1; transform: rotate(6deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rise, .rise.seen { opacity: 1; transform: none; transition: none; }
+  .fan img { opacity: 1; }
+  .fan.seen img { animation: none; }
+  .fan img:nth-child(1) { transform: rotate(-6deg); }
+  .fan img:nth-child(3) { transform: rotate(6deg); }
+  .addr { transition: none; }
+}
+
+/* ── 좁은 화면 ──────────────────────────── */
+
+@media (max-width: 980px) {
+  .hero-grid { grid-template-columns: minmax(0, 1fr); }
+  /* 좁은 화면에서는 세 장을 더 눕혀 늘어놓는다 — 넘쳐서 제목을 덮지 않게 */
+  .fan { height: clamp(380px, 108vw, 520px); order: -1; }
+  .fan img { width: 48%; }
+  .fan img:nth-child(1) { top: 6%; }
+  .fan img:nth-child(2) { left: 26%; }
+  .fan img:nth-child(3) { top: 10%; }
+  .chapter-head { grid-template-columns: minmax(0, 1fr); align-items: start; }
+  .split, .split--flip { grid-template-columns: minmax(0, 1fr); }
+  .split--flip .split-shot { order: 0; }
+  .split-shot { max-width: 360px; }
+  .pitch { grid-template-columns: minmax(0, 1fr); }
+  .shots--4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .facts > div { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (max-width: 620px) {
+  body { font-size: 16px; }
+  .shots--2, .shots--3, .shots--4 { grid-template-columns: minmax(0, 1fr); }
+  .shots figure { max-width: 340px; margin-inline: auto; }
+  .figures { grid-template-columns: minmax(0, 1fr); }
+  .figures div { border-right: 0; border-bottom: 1px solid var(--line); }
+  .figures div:last-child { border-bottom: 0; }
+  .split-shot { max-width: 340px; margin-inline: auto; }
+}
+
+/* ── 인쇄 ───────────────────────────────── */
+
+@page { size: A4; margin: 14mm 13mm; }
+
+@media print {
+  :root {
+    --bg: #fff; --surface: #fff; --surface-2: #f2f0f6;
+    --text: #191327; --text-2: #4b4360; --text-3: #7b7392;
+    --line: #d8d2e4; --line-2: #c4bcd6; --accent: #5B4BE8; --bar: #2A2338;
+    --shadow: none; --shadow-lg: none;
+  }
+  body { font-size: 11.5pt; }
+  .hero::after { display: none; }
+  .chapter { padding: 22px 0; }
+  .hero { padding: 0 0 20px; }
+  figure img, .fan img { box-shadow: none; }
+  .rise, .fan img { opacity: 1 !important; transform: none !important; animation: none !important; }
+  .fan img:nth-child(1) { transform: rotate(-6deg) !important; }
+  .fan img:nth-child(3) { transform: rotate(6deg) !important; }
+  .addr { border: 1px solid var(--line); }
+  h2 { break-after: avoid; }
+  .wrap, .wrap--tight { width: 100%; }
+
+  /* 종이는 A4 폭으로 조판된다 — 좁은 화면용 1단 배치가 걸리지 않게 되돌린다 */
+  .hero-grid { grid-template-columns: minmax(0, 1fr) 40%; gap: 20px; }
+  .pitch { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .chapter-head { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: end; }
+  .shots--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .shots--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .shots--4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .split { grid-template-columns: 36% minmax(0, 1fr); }
+  .split--flip { grid-template-columns: minmax(0, 1fr) 36%; }
+  .split--flip .split-shot { order: 2; }
+  .split-shot { max-width: none; margin-inline: 0; }
+  .facts > div { grid-template-columns: minmax(0, 170px) minmax(0, 1fr); }
+
+  .fan { height: 250px; order: 0; }
+  .fan img { width: 52%; }
+  .fan img:nth-child(1) { top: 8%; }
+  .fan img:nth-child(2) { left: 20%; }
+  .fan img:nth-child(3) { top: 12%; }
+  .pitch { padding-bottom: 18px; gap: 12px; }
+  .split, .pitch-card, .facts > div, figure, .note, .points li { break-inside: avoid; }
+  .chapter-head { break-after: avoid; }
+  .shots figure { max-width: none; }
+  .outro { padding: 30px 0 10px; }
+  footer { padding: 12px 0 0; }
+}
+</style>
+</head>
+<body>
+
+<!-- ══ 머리말 ═══════════════════════════════════════════ -->
+<header class="hero">
+  <div class="wrap">
+    <div class="hero-grid">
+      <div>
+        <div class="brand rise">
+          <span class="brand-mark" aria-hidden="true">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="9" width="18" height="12" rx="2"/>
+              <path d="M3 13h18M12 9v12"/>
+              <path d="M12 9c-1.6-2.4-5.5-3-5.5-.6C6.5 9.6 9.4 9 12 9zm0 0c1.6-2.4 5.5-3 5.5-.6C17.5 9.6 14.6 9 12 9z"/>
+            </svg>
+          </span>
+          <span>
+            <span class="brand-name">모아콘</span><br>
+            <span class="brand-sub">사용 안내</span>
+          </span>
+        </div>
+
+        <h1 class="rise">받아두고<br>잊어버린<br>기프티콘.</h1>
+        <p class="lead rise" style="margin-top:22px">
+          사진 한 장만 올리면 상품명·금액·유효기한을 알아서 채우고,
+          가족이 같은 목록을 보고, 기한이 오기 전에 폰으로 알려줍니다.
+        </p>
+
+        <div class="hero-meta rise">
+          <span class="chip">설치 없이 웹으로</span>
+          <span class="chip">초대코드 6자리로 가족 연결</span>
+          <span class="chip">안드로이드 · 아이폰</span>
+        </div>
+      </div>
+
+      <div class="fan" aria-hidden="false">
+        <img src="shots/barcode.jpg" width="700" height="1357" alt="바코드를 크게 띄운 사용 화면">
+        <img src="shots/list.jpg" width="700" height="1357" alt="가족이 함께 보는 기프티콘 목록 화면">
+        <img src="shots/push.jpg" width="700" height="1357" alt="유효기한이 곧 만료된다는 폰 알림">
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ══ 세 줄 요약 ═══════════════════════════════════════ -->
+<section class="wrap pitch">
+  <article class="pitch-card rise">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <rect x="3" y="5" width="18" height="14" rx="2.5"/><circle cx="9" cy="10.5" r="1.8"/><path d="m4 17 4.5-4.2 3.2 3 3-2.6L20 17"/>
+    </svg>
+    <h3>사진만 올리면 끝</h3>
+    <p>갤러리에서 기프티콘 사진을 고르면 상품명·상호·금액·유효기한이 자동으로 채워집니다. 바코드는 폰 안에서 읽어요.</p>
+  </article>
+
+  <article class="pitch-card rise">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <circle cx="9" cy="8" r="3.2"/><path d="M2.5 19.5c.6-3.4 3.2-5.2 6.5-5.2s5.9 1.8 6.5 5.2"/><path d="M16.5 5.2a3.2 3.2 0 0 1 0 6M18 14.6c2.2.5 3.4 2.2 3.5 4.9"/>
+    </svg>
+    <h3>가족이 같은 목록을 봐요</h3>
+    <p>초대코드를 아는 가족끼리만 같은 목록을 봅니다. 누가 올렸는지 이름표로 구분되고, 누가 썼는지도 바로 보여요.</p>
+  </article>
+
+  <article class="pitch-card rise">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M18 8.5a6 6 0 1 0-12 0c0 6-2.2 7.5-2.2 7.5h16.4S18 14.5 18 8.5"/><path d="M10.3 20a2 2 0 0 0 3.4 0"/>
+    </svg>
+    <h3>기한을 대신 세어줘요</h3>
+    <p>남은 날이 <span class="badge badge--soon">D-4</span> 처럼 카드에 붙고, 만료가 가까워지면 폰으로 알림이 옵니다.</p>
+  </article>
+</section>
+
+<div class="wrap"><hr class="perf"></div>
+
+<!-- ══ 시작하기 ═════════════════════════════════════════ -->
+<section class="chapter">
+  <div class="wrap">
+    <div class="chapter-head">
+      <div>
+        <div class="chapter-label rise">
+          <span class="barcode" data-barcode="start" aria-hidden="true"></span>
+          <span class="eyebrow">시작하기</span>
+        </div>
+        <h2 class="rise">로그인하고,<br>가족을 하나 만들면 됩니다.</h2>
+      </div>
+      <p class="lead rise">
+        구글·네이버 계정이나 이메일로 들어옵니다. 비밀번호는 없어요 —
+        이메일을 넣으면 로그인 링크가 메일함으로 갑니다.
+      </p>
+    </div>
+
+    <div class="shots shots--4">
+      <figure class="rise">
+        <img src="shots/login.jpg" width="700" height="1357" loading="lazy" alt="구글·네이버·이메일 로그인 버튼이 있는 로그인 화면">
+        <figcaption><b>1 · 로그인</b>구글, 네이버, 이메일 링크 중 편한 걸로. 카카오는 준비 중이에요.</figcaption>
+      </figure>
+      <figure class="rise">
+        <img src="shots/join-code.jpg" width="700" height="1357" loading="lazy" alt="새로 만들기와 초대 코드로 참여를 고르는 화면">
+        <figcaption><b>2 · 가족 만들기 또는 참여</b>처음이면 <span class="ui">새로 만들기</span>, 가족이 이미 쓰고 있으면 <span class="ui">초대 코드로 참여</span>.</figcaption>
+      </figure>
+      <figure class="rise">
+        <img src="shots/waiting.jpg" width="700" height="1357" loading="lazy" alt="승인을 기다리는 중이라는 안내 화면">
+        <figcaption><b>3 · 승인 기다리기</b>코드를 넣으면 그 가족의 누군가가 확인해줄 때까지 잠깐 기다립니다.</figcaption>
+      </figure>
+      <figure class="rise">
+        <img src="shots/family-approve.jpg" width="700" height="1357" loading="lazy" alt="참여를 기다리는 사람을 승인하거나 거절하는 화면">
+        <figcaption><b>4 · 받아주기</b>기존 가족에게는 <span class="ui">승인</span> 버튼이 뜹니다. 누르면 바로 같은 목록을 봐요.</figcaption>
+      </figure>
+    </div>
+
+    <div class="note rise" style="margin-top:28px">
+      <b>초대코드는 6자리예요.</b> 헤더의 가족 이름 옆 사람 아이콘을 누르면 언제든 다시 보고 복사할 수 있습니다.
+      코드를 아는 사람만 참여를 신청할 수 있고, 신청은 승인해야 들어옵니다.
+    </div>
+  </div>
+</section>
+
+<div class="wrap"><hr class="perf"></div>
+
+<!-- ══ 올리기 ═══════════════════════════════════════════ -->
+<section class="chapter">
+  <div class="wrap">
+    <div class="chapter-head">
+      <div>
+        <div class="chapter-label rise">
+          <span class="barcode" data-barcode="upload" aria-hidden="true"></span>
+          <span class="eyebrow">올리기</span>
+        </div>
+        <h2 class="rise">받은 사진 그대로<br>올리기만 하세요.</h2>
+      </div>
+      <p class="lead rise">
+        카카오톡이나 문자로 받은 기프티콘 사진을 고르면, 몇 초 안에 상품명·상호·금액·유효기한·카테고리가 채워집니다.
+      </p>
+    </div>
+
+    <div class="split">
+      <div class="split-shot rise">
+        <figure>
+          <img src="shots/add-reading.jpg" width="700" height="1357" loading="lazy" alt="상품명·금액·유효기한을 읽고 있다는 진행 표시가 뜬 등록 화면">
+          <figcaption>사진을 넣으면 바로 읽기 시작합니다. 몇 초면 끝나요.</figcaption>
+        </figure>
+      </div>
+      <ul class="points rise">
+        <li>
+          <svg class="tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+          <span><b>여러 장을 한꺼번에</b>기프티콘은 업체마다 생김새가 달라서, 상품명은 첫 화면에 있고 금액·기한은 다음 화면에 있는 경우가 많아요. 두 장을 같이 올리면 양쪽에서 찾은 정보를 <strong>합쳐서</strong> 채워줍니다.</span>
+        </li>
+        <li>
+          <svg class="tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+          <span><b>금액이 안 적힌 기프티콘은 검색으로</b>"카페 음료 1잔"처럼 금액이 안 찍혀 나오는 상품형은 <span class="ui">가격 검색</span>으로 지금 판매가를 찾아 채웁니다.</span>
+        </li>
+        <li>
+          <svg class="tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+          <span><b>못 읽은 칸은 짚어줘요</b>자동 인식이 100% 맞지는 않아서, 저장 전에 확인하고 고칠 수 있게 되어 있습니다. 비어 있는 칸은 화면이 알려줍니다.</span>
+        </li>
+      </ul>
+    </div>
+
+    <div class="split split--flip" style="margin-top:clamp(36px,5vw,64px)">
+      <div class="split-shot rise">
+        <figure>
+          <img src="shots/add-filled.jpg" width="700" height="1357" loading="lazy" alt="상품명·상호·카테고리·유효기한·바코드 값이 자동으로 채워진 등록 화면">
+          <figcaption><span class="ui">자동으로 정보를 채웠어요</span> — 확인하고 <span class="ui">저장하기</span>만 누르면 됩니다.</figcaption>
+        </figure>
+      </div>
+      <div style="display:grid;gap:26px">
+        <ul class="points rise">
+          <li>
+            <svg class="tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+            <span><b>카테고리도 알아서</b>카페/디저트, 외식/배달처럼 어울리는 칸에 넣어줍니다. 마음에 안 들면 눌러서 바꾸면 돼요.</span>
+          </li>
+          <li>
+            <svg class="tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+            <span><b>받은 사람을 지정해두기</b>누구 앞으로 온 기프티콘인지 골라두면, 목록 카드와 결산에 그 이름으로 잡힙니다.</span>
+          </li>
+          <li>
+            <svg class="tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+            <span><b>메모 한 줄</b>"이건 엄마가 준 것", "주말에 쓸 것"처럼 남겨두면 나중에 가족이 바코드를 열 때 같이 보여요.</span>
+          </li>
+        </ul>
+        <div class="note rise">
+          <b>바코드와 QR은 폰 밖으로 나가지 않아요.</b>
+          바코드 인식은 브라우저 안에서 처리하고, 글자를 읽기 위한 축소본 이미지만 서버로 올라갑니다.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="wrap"><hr class="perf"></div>
+
+<!-- ══ 함께 보기 ════════════════════════════════════════ -->
+<section class="chapter">
+  <div class="wrap">
+    <div class="chapter-head">
+      <div>
+        <div class="chapter-label rise">
+          <span class="barcode" data-barcode="share" aria-hidden="true"></span>
+          <span class="eyebrow">함께 보기</span>
+        </div>
+        <h2 class="rise">기한이 급한 것부터<br>위로 올라옵니다.</h2>
+      </div>
+      <p class="lead rise">
+        아직 안 쓴 기프티콘이 유효기한 임박한 순서로 정렬되고, 사용 완료한 건 아래로 내려갑니다.
+        이름·브랜드로 검색하거나 카테고리로 걸러 볼 수 있어요.
+      </p>
+    </div>
+
+    <div class="split">
+      <div class="split-shot rise">
+        <figure>
+          <img src="shots/list.jpg" width="700" height="1357" loading="lazy" alt="카테고리 칩과 기프티콘 카드가 나열된 목록 화면">
+          <figcaption>카드마다 올린 사람 이름표, 카테고리, 금액, 남은 날이 함께 보입니다.</figcaption>
+        </figure>
+      </div>
+      <ul class="points rise">
+        <li>
+          <svg class="tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-4.6-9.2-9A5.3 5.3 0 0 1 12 6.6 5.3 5.3 0 0 1 21.2 12C19 16.4 12 21 12 21z"/></svg>
+          <span><b>찜하기 — "이건 내가 쓸게"</b>하트를 눌러두면 가족에게 내가 쓸 거라고 알려집니다. 같은 걸 두 사람이 들고 매장에 가는 일이 없어져요.</span>
+        </li>
+        <li>
+          <svg class="tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <span><b>찾기</b>이름·브랜드·메모로 검색하고, <span class="ui">카페/디저트</span> <span class="ui">외식/배달</span> 같은 카테고리 칩으로 걸러 봅니다. 전체 / 사용 전 / 사용 완료 탭도 있어요.</span>
+        </li>
+        <li>
+          <svg class="tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3v18M16 3v18M3 8h18M3 16h18"/></svg>
+          <span><b>남은 날 표기</b><span class="badge badge--soon">D-4 · 2026.08.10까지</span> <span class="badge badge--far">D-275</span> <span class="badge badge--done">사용완료</span> — 급한 건 빨갛게 눈에 띕니다.</span>
+        </li>
+      </ul>
+    </div>
+
+    <div class="split split--flip" style="margin-top:clamp(36px,5vw,64px)">
+      <div class="split-shot rise">
+        <figure>
+          <img src="shots/family-members.jpg" width="700" height="1357" loading="lazy" alt="가족 구성원과 초대코드가 보이는 화면">
+          <figcaption>가족 이름은 언제든 바꿀 수 있고, 들어온 날짜가 함께 남습니다.</figcaption>
+        </figure>
+      </div>
+      <div style="display:grid;gap:20px">
+        <h3 class="rise">이름표 색은 한 번 정해지면 안 바뀝니다</h3>
+        <p class="small rise" style="max-width:44ch">
+          가족에 들어올 때 색이 하나 정해지고, 그 뒤로는 그대로예요.
+          카드 위 이름표만 봐도 누가 올린 기프티콘인지 바로 알 수 있습니다.
+        </p>
+        <div class="tags rise">
+          <span class="tag"><i style="background:#3B6FE0"></i>태수</span>
+          <span class="tag"><i style="background:#C93F92"></i>보연</span>
+          <span class="tag"><i style="background:#2F9E5E"></i>세 번째</span>
+          <span class="tag"><i style="background:#E0842F"></i>네 번째</span>
+          <span class="tag"><i style="background:#7B4BE8"></i>다섯 번째</span>
+          <span class="tag"><i style="background:#22A0A8"></i>여섯 번째</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="wrap"><hr class="perf"></div>
+
+<!-- ══ 쓰기 ═════════════════════════════════════════════ -->
+<section class="chapter">
+  <div class="wrap">
+    <div class="chapter-head">
+      <div>
+        <div class="chapter-label rise">
+          <span class="barcode" data-barcode="use" aria-hidden="true"></span>
+          <span class="eyebrow">쓰기</span>
+        </div>
+        <h2 class="rise">계산대에서는<br>카드 윗칸만 누르면 됩니다.</h2>
+      </div>
+      <p class="lead rise">
+        원본 스크린샷을 찾아 헤맬 필요 없이, 상호와 상품명 아래 바코드가 크고 선명하게 뜹니다.
+        인식이 안 된 사진이었다면 바코드를 새로 그려서 보여줘요.
+      </p>
+    </div>
+
+    <div class="split">
+      <div class="split-shot rise">
+        <figure>
+          <img src="shots/barcode.jpg" width="700" height="1357" loading="lazy" alt="상호·메뉴·메모와 큰 바코드, 사용완료 버튼이 있는 화면">
+          <figcaption>바코드 아래 숫자도 함께 나오고, 필요하면 <span class="ui">복사</span>해서 직접 입력할 수 있어요.</figcaption>
+        </figure>
+      </div>
+      <ul class="points rise">
+        <li>
+          <svg class="tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg>
+          <span><b>다 쓰면 사용완료</b>바코드 창에서 바로 누를 수 있습니다. 쓴 날짜가 기록되고, 잘못 눌렀으면 <span class="ui">사용취소</span>로 되돌려요.</span>
+        </li>
+        <li>
+          <svg class="tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v14H4z"/><path d="M4 15l4.5-4.2 3.2 3 3-2.6L20 15"/></svg>
+          <span><b>원본 사진도 남아 있어요</b>매장에서 원본을 요구하면 <span class="ui">원본 사진 보기</span>로 올렸던 사진을 그대로 볼 수 있습니다.</span>
+        </li>
+        <li>
+          <svg class="tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4h9l4 4v12H6z"/><path d="M9 12h7M9 16h5"/></svg>
+          <span><b>메모는 남긴 사람 이름으로</b><span class="ui">태수님의 메모</span>처럼 표시돼서, 가족 중 누가 적어둔 말인지 알 수 있어요.</span>
+        </li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<div class="wrap"><hr class="perf"></div>
+
+<!-- ══ 근처에서 쓰기 ════════════════════════════════════ -->
+<section class="chapter">
+  <div class="wrap">
+    <div class="chapter-head">
+      <div>
+        <div class="chapter-label rise">
+          <span class="barcode" data-barcode="nearby" aria-hidden="true"></span>
+          <span class="eyebrow">근처에서 쓰기</span>
+        </div>
+        <h2 class="rise">지금 서 있는 자리에서<br>쓸 수 있는 게 있는지 알려줍니다.</h2>
+      </div>
+      <p class="lead rise">
+        가까운 곳에 쓸 수 있는 매장이 있으면 화면 위쪽에 띠로 뜹니다.
+        카드의 <span class="ui">매장</span> 버튼을 누르면 그 브랜드 매장이 가까운 순으로 나와요.
+      </p>
+    </div>
+
+    <div class="shots shots--4">
+      <figure class="rise">
+        <img src="shots/store-list.jpg" width="700" height="1357" loading="lazy" alt="가까운 순으로 정렬된 스타벅스 매장 목록">
+        <figcaption><b>가까운 순으로</b>거리·주소·전화번호가 함께 나옵니다. 전화 버튼으로 바로 걸 수도 있어요.</figcaption>
+      </figure>
+      <figure class="rise">
+        <img src="shots/store-detail.jpg" width="700" height="1357" loading="lazy" alt="매장 지도와 주소·전화·길찾기 버튼이 있는 상세 화면">
+        <figcaption><b>매장을 누르면</b>지도와 주소, 전화, 길찾기, 카카오맵으로 열기가 한 화면에 모입니다.</figcaption>
+      </figure>
+      <figure class="rise">
+        <img src="shots/map-walk.jpg" width="700" height="1357" loading="lazy" alt="도보 경로가 표시된 지도">
+        <figcaption><b>걸어서</b>도보 3.0km · 약 40분 — 걸어갈 만한지 바로 판단됩니다.</figcaption>
+      </figure>
+      <figure class="rise">
+        <img src="shots/map-car.jpg" width="700" height="1357" loading="lazy" alt="차량 경로가 표시된 지도">
+        <figcaption><b>차로</b>차량 5.2km · 약 11분 — 도보와 차를 눌러가며 비교해요.</figcaption>
+      </figure>
+    </div>
+
+    <div class="note note--warn rise" style="margin-top:28px">
+      <b>매장마다 사용 가능 여부가 달라요.</b> 같은 브랜드라도 특수 매장에서는 기프티콘이 안 될 수 있어서,
+      화면에도 "기프티콘 사용가능여부는 매장에 확인해주세요"라고 적어두었습니다. 영업시간과 리뷰는 카카오맵에서 볼 수 있어요.
+    </div>
+  </div>
+</section>
+
+<div class="wrap"><hr class="perf"></div>
+
+<!-- ══ 챙기기 ═══════════════════════════════════════════ -->
+<section class="chapter">
+  <div class="wrap">
+    <div class="chapter-head">
+      <div>
+        <div class="chapter-label rise">
+          <span class="barcode" data-barcode="notify" aria-hidden="true"></span>
+          <span class="eyebrow">챙기기</span>
+        </div>
+        <h2 class="rise">기한이 다가오면<br>먼저 알려드립니다.</h2>
+      </div>
+      <p class="lead rise">
+        아직 안 쓴 기프티콘 중 기한이 가까워진 게 있으면 하루 두 번(오전 9시·오후 3시) 폰으로 알립니다.
+        같은 기프티콘은 한 번만 알려요.
+      </p>
+    </div>
+
+    <div class="shots shots--3">
+      <figure class="rise">
+        <img src="shots/push.jpg" width="700" height="1357" loading="lazy" alt="유효기한이 곧 만료된다는 폰 알림">
+        <figcaption><b>폰 알림</b>어느 가족의 무엇이 며칠 남았는지 알림에 그대로 적혀 옵니다.</figcaption>
+      </figure>
+      <figure class="rise">
+        <img src="shots/alerts.jpg" width="700" height="1357" loading="lazy" alt="가족이 쓰거나 사용을 취소한 내역이 쌓인 알림 목록">
+        <figcaption><b>가족 활동</b>헤더의 종을 누르면 누가 무엇을 썼는지, 취소했는지가 모여 있어요. 60일 지난 건 자동으로 지워집니다.</figcaption>
+      </figure>
+      <figure class="rise">
+        <img src="shots/notice.jpg" width="700" height="1357" loading="lazy" alt="공지사항 목록 화면">
+        <figcaption><b>공지사항</b>새 공지는 목록 위에 띠로 뜨고, 끝난 공지는 <span class="ui">지난 공지</span>로 남습니다.</figcaption>
+      </figure>
+    </div>
+
+    <div class="note note--warn rise" style="margin-top:28px">
+      <b>아이폰은 홈 화면에 추가해야 알림이 옵니다.</b>
+      사파리 탭으로 열어두면 알림이 오지 않아요. 공유 버튼 → "홈 화면에 추가"로 설치한 뒤 그 아이콘으로 열어주세요.
+      안드로이드는 이런 제약 없이 바로 됩니다. 알림을 켜기 전에 <span class="ui">알림 테스트</span>로 잘 오는지 먼저 확인할 수 있어요.
+    </div>
+  </div>
+</section>
+
+<div class="wrap"><hr class="perf"></div>
+
+<!-- ══ 돌아보기 ═════════════════════════════════════════ -->
+<section class="chapter">
+  <div class="wrap">
+    <div class="chapter-head">
+      <div>
+        <div class="chapter-label rise">
+          <span class="barcode" data-barcode="report" aria-hidden="true"></span>
+          <span class="eyebrow">돌아보기</span>
+        </div>
+        <h2 class="rise">올해 우리 가족은<br>얼마나 챙겼을까요.</h2>
+      </div>
+      <p class="lead rise">
+        받은 것, 쓴 것, 놓친 것을 한 줄로 보여줍니다.
+        놓친 게 없으면 <span class="ui">기한을 넘긴 기프티콘이 없어요</span>라고 알려줘요.
+      </p>
+    </div>
+
+    <div class="split">
+      <div class="split-shot rise">
+        <figure>
+          <img src="shots/summary-taesu.jpg" width="700" height="1357" loading="lazy" alt="받은 것 2, 쓴 것 1, 놓친 것 0이 표시된 사용 내역 화면">
+          <figcaption>사용 내역 위에 그해 결산이 얹혀 있습니다.</figcaption>
+        </figure>
+      </div>
+      <div style="display:grid;gap:24px">
+        <dl class="figures rise">
+          <div><dd>2</dd><dt>받은 것</dt></div>
+          <div><dd style="color:var(--moss)">1</dd><dt>쓴 것</dt></div>
+          <div><dd style="color:var(--ember)">0</dd><dt>놓친 것</dt></div>
+        </dl>
+        <ul class="points rise">
+          <li>
+            <svg class="tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+            <span><b>사람별로도 보여요</b>누가 몇 건, 얼마어치를 썼는지 이름표별로 나옵니다.</span>
+          </li>
+          <li>
+            <svg class="tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+            <span><b>쓴 기프티콘 목록</b>언제 무엇을 얼마에 썼는지 아래에 그대로 남습니다.</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="wrap"><hr class="perf"></div>
+
+<!-- ══ 가족 여러 개 ═════════════════════════════════════ -->
+<section class="chapter">
+  <div class="wrap">
+    <div class="chapter-head">
+      <div>
+        <div class="chapter-label rise">
+          <span class="barcode" data-barcode="family" aria-hidden="true"></span>
+          <span class="eyebrow">가족 여러 개</span>
+        </div>
+        <h2 class="rise">우리집과 처가를<br>따로 둘 수 있어요.</h2>
+      </div>
+      <p class="lead rise">
+        기프티콘은 가족마다 따로 모입니다. 여러 곳에 속해 있으면 헤더의 가족 이름을 눌러 오갈 수 있어요.
+      </p>
+    </div>
+
+    <div class="split">
+      <div class="split-shot rise">
+        <figure>
+          <img src="shots/family-switch.jpg" width="700" height="1357" loading="lazy" alt="가족을 바꾸거나 새로 만드는 화면">
+          <figcaption><span class="ui">가족 바꾸기</span>에서 새로 만들거나, 다른 초대 코드로 참여할 수 있습니다.</figcaption>
+        </figure>
+      </div>
+      <ul class="points rise">
+        <li>
+          <svg class="tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+          <span><b>목록은 섞이지 않아요</b>보고 있는 가족의 기프티콘만 나옵니다. 알림도 그 가족 기준으로 옵니다.</span>
+        </li>
+        <li>
+          <svg class="tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+          <span><b>혼자 써도 괜찮아요</b>가족을 안 만들고 혼자 쓰면 아무에게도 보이지 않는 나만의 보관함이 됩니다. 나중에 초대해도 돼요.</span>
+        </li>
+        <li>
+          <svg class="tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+          <span><b>이름은 언제든 바꿔요</b>가족 이름 옆 연필을 눌러 "우리집", "처가", "동아리"처럼 알아보기 쉽게 고칠 수 있습니다.</span>
+        </li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<div class="wrap"><hr class="perf"></div>
+
+<!-- ══ 안심하고 쓰기 ════════════════════════════════════ -->
+<section class="chapter">
+  <div class="wrap">
+    <div class="chapter-head">
+      <div>
+        <div class="chapter-label rise">
+          <span class="barcode" data-barcode="trust" aria-hidden="true"></span>
+          <span class="eyebrow">안심하고 쓰기</span>
+        </div>
+        <h2 class="rise">무엇이 어디까지<br>보이는지 밝혀둡니다.</h2>
+      </div>
+      <p class="lead rise">
+        기프티콘에는 바코드가 들어 있어서, 누구에게 보이는지가 중요합니다.
+        앱 안에 이용약관·개인정보처리방침·오픈소스 정보를 모두 열어두었습니다.
+      </p>
+    </div>
+
+    <div class="facts rise">
+      <div>
+        <dt>같은 가족에게는 보여요</dt>
+        <dd>여러 사람이 함께 보려고 만든 서비스입니다. 같은 가족에 있는 사람은 내가 올린 사진과 내용(바코드 포함)을 보고, 수정하거나 사용 완료로 바꿀 수도 있어요. <strong>혼자 쓰면 아무에게도 보이지 않습니다.</strong></dd>
+      </div>
+      <div>
+        <dt>바코드는 기기 안에서</dt>
+        <dd>사진에서 바코드·QR을 읽고 화면에 다시 그리는 일은 모두 폰 안에서 처리되며, 어디로도 전송되지 않습니다.</dd>
+      </div>
+      <div>
+        <dt>자동 인식할 때만 국외 전송</dt>
+        <dd>상품명·유효기한을 자동으로 채우는 기능을 쓸 때만 이미지가 미국으로 전송됩니다. 이 부분은 개인정보처리방침 맨 앞에 적어두었어요.</dd>
+      </div>
+      <div>
+        <dt>가족 나가기와 계정 삭제는 달라요</dt>
+        <dd><span class="ui">가족 나가기</span>는 이 가족에서만 빠지는 것이고, <span class="ui">계정 삭제</span>는 계정이 없어져서 다시 로그인할 수 없습니다. 두 화면 모두 무엇이 지워지는지 먼저 보여주고 물어봅니다.</dd>
+      </div>
+    </div>
+
+    <div class="shots shots--4" style="margin-top:clamp(28px,4vw,44px)">
+      <figure class="rise">
+        <img src="shots/privacy.jpg" width="700" height="1357" loading="lazy" alt="개인정보처리방침 화면">
+        <figcaption>개인정보처리방침 — 가장 먼저 알아두어야 할 두 가지를 맨 앞에 뒀습니다.</figcaption>
+      </figure>
+      <figure class="rise">
+        <img src="shots/terms.jpg" width="700" height="1357" loading="lazy" alt="이용약관 화면">
+        <figcaption>이용약관 — 서비스가 무엇을 제공하는지 조항으로 정리했어요.</figcaption>
+      </figure>
+      <figure class="rise">
+        <img src="shots/opensource.jpg" width="700" height="1357" loading="lazy" alt="오픈소스 및 기술 정보 화면">
+        <figcaption>오픈소스 및 기술 정보 — 어떤 기술을 쓰고 정보가 어디를 거치는지 밝혔습니다.</figcaption>
+      </figure>
+      <figure class="rise">
+        <img src="shots/account-delete.jpg" width="700" height="1357" loading="lazy" alt="계정을 삭제할지 묻는 확인 창">
+        <figcaption>계정 삭제 — 무엇이 사라지는지 하나씩 보여주고 다시 물어봅니다.</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<div class="wrap"><hr class="perf"></div>
+
+<!-- ══ 맺음말 ═══════════════════════════════════════════ -->
+<section class="outro">
+  <div class="wrap wrap--tight">
+    <span class="barcode barcode--wide rise" data-barcode="moacon-outro" aria-hidden="true" style="margin-bottom:34px"></span>
+    <h2 class="rise">가족 한 명만 시작하면,<br>나머지는 코드 여섯 자리면 됩니다.</h2>
+    <p class="lead rise">
+      설치할 것도, 결제할 것도 없습니다. 주소를 열어 로그인하고 가족을 하나 만든 다음,
+      초대코드를 가족 단톡방에 올려주세요.
+    </p>
+    <a class="addr rise" href="https://ceaser501.github.io/our-home-gift/">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18 15 15 0 0 1 0-18"/>
+      </svg>
+      ceaser501.github.io/our-home-gift
+    </a>
+  </div>
+</section>
+
+<footer>
+  모아콘 · 기프티콘을 모아두고, 가족과 함께 볼 수 있어요
+</footer>
+
+<script>
+(function () {
+  // 챕터마다 다른 바코드 — 이름을 씨앗으로 삼아 같은 줄무늬가 항상 나오게
+  document.querySelectorAll("[data-barcode]").forEach(function (el) {
+    var seed = 7;
+    var key = el.dataset.barcode;
+    for (var i = 0; i < key.length; i++) seed = (seed * 31 + key.charCodeAt(i)) >>> 0;
+    var rnd = function () { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
+
+    var x = 0, stops = [];
+    while (x < 100) {
+      var w = 0.9 + rnd() * 3.1;
+      var end = Math.min(x + w, 100);
+      stops.push((rnd() > 0.44 ? "var(--bar)" : "transparent") + " " + x + "% " + end + "%");
+      x = end;
+    }
+    el.style.backgroundImage = "linear-gradient(90deg," + stops.join(",") + ")";
+  });
+
+  // 스크롤에 맞춰 하나씩 올라오기
+  var targets = document.querySelectorAll(".rise, .fan");
+  if (!window.IntersectionObserver ||
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    targets.forEach(function (el) { el.classList.add("seen"); });
+    return;
+  }
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (entry) {
+      if (!entry.isIntersecting) return;
+      entry.target.classList.add("seen");
+      io.unobserve(entry.target);
+    });
+  }, { rootMargin: "0px 0px -8% 0px", threshold: 0.06 });
+  targets.forEach(function (el) { io.observe(el); });
+})();
+</script>
+
+</body>
+</html>
