@@ -33,6 +33,16 @@ export function formatDate(dateStr) {
   return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
 }
 
+// 연장은 오늘이 아니라 원래 만료일에서부터 더해진다. 8월 10일 만료를 90일 연장하면
+// 11월 8일이 되지, 오늘부터 90일이 아니다.
+export function addDays(dateStr, days) {
+  if (!dateStr) return null;
+  const d = new Date(`${dateStr}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return null;
+  d.setDate(d.getDate() + days);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 export function todayStr() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;

@@ -5,6 +5,7 @@ import FilterBar from './components/FilterBar';
 import GifticonList from './components/GifticonList';
 import UploadSheet from './components/UploadSheet';
 import BarcodeModal from './components/BarcodeModal';
+import ExtendSheet from './components/ExtendSheet';
 import ImageViewerModal from './components/ImageViewerModal';
 import NearbyStoresSheet from './components/NearbyStoresSheet';
 import InstallPrompt from './components/InstallPrompt';
@@ -56,6 +57,7 @@ export default function App() {
   const [codeTarget, setCodeTarget] = useState(null);
   const [imageTarget, setImageTarget] = useState(null);
   const [storesTarget, setStoresTarget] = useState(null);
+  const [extendTarget, setExtendTarget] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [notice, setNotice] = useState(null);
 
@@ -202,6 +204,22 @@ export default function App() {
     }
   }
 
+  // 연장은 발행사에서만 할 수 있어서 우리가 대신 해줄 수 없다. 여기서는 사용자가
+  // 연장하고 와서 알려준 날짜를 앱에 맞춰줄 뿐이다.
+  async function handleExtend(gifticon, nextDate) {
+    try {
+      await updateGifticon(family.id, gifticon.id, {
+        expires_at: nextDate,
+        // 이미 "곧 만료" 알림을 보낸 기프티콘이라 표시가 켜져 있다. 되돌리지 않으면
+        // 새 기한이 다가와도 알림이 다시 가지 않는다.
+        expiry_notified: false,
+      });
+      fetchList();
+    } catch (err) {
+      setNotice({ tone: 'warning', title: '기한을 바꾸지 못했어요', description: err.message });
+    }
+  }
+
   async function handleConfirmDelete() {
     const target = deleteTarget;
     setDeleteTarget(null);
@@ -260,6 +278,7 @@ export default function App() {
             onDelete={setDeleteTarget}
             onFindStores={setStoresTarget}
             onToggleClaim={handleToggleClaim}
+            onExtend={setExtendTarget}
           />
         )}
       </main>
@@ -297,6 +316,10 @@ export default function App() {
       )}
       {imageTarget && <ImageViewerModal gifticon={imageTarget} onClose={() => setImageTarget(null)} />}
       {storesTarget && <NearbyStoresSheet gifticon={storesTarget} onClose={() => setStoresTarget(null)} />}
+
+      {extendTarget && (
+        <ExtendSheet gifticon={extendTarget} onExtend={handleExtend} onClose={() => setExtendTarget(null)} />
+      )}
 
       {deleteTarget && (
         <AlertDialog

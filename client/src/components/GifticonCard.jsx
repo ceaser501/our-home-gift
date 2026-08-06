@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CheckCircle2, Heart, MapPin, MoreVertical, Pencil, RotateCcw, Ticket, Trash2 } from 'lucide-react';
+import { CheckCircle2, Heart, Info, MapPin, MoreVertical, Pencil, RotateCcw, Ticket, Trash2 } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { CATEGORIES } from '../constants';
 import { formatDday, formatDate, ddayUrgency } from '../utils/date';
@@ -32,6 +32,7 @@ export default function GifticonCard({
   onDelete,
   onFindStores,
   onToggleClaim,
+  onExtend,
 }) {
   const { members, user } = useFamily();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -49,6 +50,8 @@ export default function GifticonCard({
   // 열 바코드가 실제로 있는지. 없는데 띠를 붙이면 눌러보고 나서야 없는 걸 알게 된다.
   const canOpenCode = !codeLocked && Boolean(gifticon.code || gifticon.barcode_image_url);
   const photoCount = gifticon.image_urls?.filter(Boolean).length ?? 0;
+  // 기한이 급한 것과 이미 지난 것만 연장 안내를 열 수 있다. 넉넉한 것은 아직 할 일이 없다.
+  const canExtend = !isUsed && Boolean(gifticon.expires_at) && urgency !== 'normal';
   // 상품 사진만 잘라낸 그림이 있으면 그걸 쓴다. 이 기능이 생기기 전에 올렸거나 잘라낼
   // 자리를 못 찾은 것은 예전처럼 첫 사진 그대로 보여준다.
   const thumbUrl = gifticon.thumb_image_url || gifticon.image_url;
@@ -120,9 +123,28 @@ export default function GifticonCard({
 
           {!isUsed &&
             (gifticon.expires_at ? (
-              <p className={cn('mt-0.5 inline-block self-start rounded-full px-2 py-0.5 text-xs font-bold', DDAY_CLASS[urgency])}>
-                {formatDday(gifticon.expires_at)} · {formatDate(gifticon.expires_at)}까지
-              </p>
+              // 기한이 급한 것만 눌러서 연장 안내를 연다. 연장이 필요한 순간에는 이미 눈이
+              // 이 붉은 칩에 가 있어서, 정보 아이콘을 따로 두는 것보다 여기가 낫다.
+              // 넉넉한 것(회색 칩)은 안 누르게 둔다 — 아직 할 일이 없는데 눌리면 헛걸음이다.
+              // pointer-events는 위 칸 전체가 꺼져 있어서(카드 어디를 눌러도 바코드가 열린다)
+              // 이 칩에서만 다시 켜준다.
+              canExtend ? (
+                <button
+                  type="button"
+                  onClick={() => onExtend(gifticon)}
+                  className={cn(
+                    'pointer-events-auto mt-0.5 inline-flex items-center gap-1 self-start rounded-full px-2 py-0.5 text-xs font-bold',
+                    DDAY_CLASS[urgency]
+                  )}
+                >
+                  {formatDday(gifticon.expires_at)} · {formatDate(gifticon.expires_at)}까지
+                  <Info className="size-3.5" />
+                </button>
+              ) : (
+                <p className={cn('mt-0.5 inline-block self-start rounded-full px-2 py-0.5 text-xs font-bold', DDAY_CLASS[urgency])}>
+                  {formatDday(gifticon.expires_at)} · {formatDate(gifticon.expires_at)}까지
+                </p>
+              )
             ) : (
               // 기한을 안 적으면 이 자리가 통째로 비어서, 기한이 넉넉한 것과 구분이 안 됐다.
               // 빈칸 대신 "안 적혔다"고 말해준다. 급한 일은 아니므로 붉은색은 쓰지 않는다

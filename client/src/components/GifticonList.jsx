@@ -8,7 +8,7 @@ import GifticonCard from './GifticonCard';
 // 나중에 마음이 바뀌어도 어느 것이 비었는지는 목록에서 알 수 있다.
 const NOTICE_DISMISS_KEY = 'expiry-notice-dismissed';
 
-export default function GifticonList({ gifticons, onViewCode, onViewImage, onToggleUsed, onEdit, onDelete, onFindStores, onToggleClaim }) {
+export default function GifticonList({ gifticons, onViewCode, onViewImage, onToggleUsed, onEdit, onDelete, onFindStores, onToggleClaim, onExtend }) {
   const [noticeDismissed, setNoticeDismissed] = useState(() => localStorage.getItem(NOTICE_DISMISS_KEY) === '1');
 
   if (gifticons.length === 0) {
@@ -66,6 +66,7 @@ export default function GifticonList({ gifticons, onViewCode, onViewImage, onTog
             onDelete={onDelete}
             onFindStores={onFindStores}
             onToggleClaim={onToggleClaim}
+            onExtend={onExtend}
           />
         ))}
       </ul>

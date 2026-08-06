@@ -137,7 +137,13 @@ Deno.serve(async (req) => {
     const familyName = familyNames.get(gifticon.family_id);
     const payload = JSON.stringify({
       title: `${familyName ? `${familyName} · ` : ''}유효기한이 곧 만료돼요`,
-      body: `${gifticon.brand ? `${gifticon.brand} · ` : ''}${gifticon.name}\n${Number(month)}월 ${Number(day)}일까지 · ${remaining}`,
+      // 연장할 수 있다는 걸 여기서 알린다. 연장이 필요한 바로 그 순간에 도착하는 말이라,
+      // 앱 어딘가에 상시 안내를 두는 것보다 이 한 줄이 더 잘 가르쳐준다.
+      // 어디를 눌러야 하는지까지 적어야 앱을 열고 나서 헤매지 않는다.
+      body:
+        `${gifticon.brand ? `${gifticon.brand} · ` : ''}${gifticon.name}\n` +
+        `${Number(month)}월 ${Number(day)}일까지 · ${remaining}\n` +
+        `기한은 늘릴 수도 있어요. 카드의 남은 기간 표시를 눌러보세요.`,
     });
 
     for (const sub of familySubs) {
