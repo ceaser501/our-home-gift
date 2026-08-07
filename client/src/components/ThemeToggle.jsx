@@ -16,6 +16,10 @@ export default function ThemeToggle({ asRow = false }) {
     // "only"를 붙여야 브라우저가 임의로 색을 뒤집지 않는다.
     const meta = document.querySelector('meta[name="color-scheme"]');
     if (meta) meta.content = theme === 'dark' ? 'only dark' : 'only light';
+    // 설치해서 쓰면 폰 상태바가 이 색으로 칠해진다. 배경과 같게 두어야 이어져 보인다.
+    // 값은 index.css의 --background와 맞춘다.
+    const tint = document.querySelector('meta[name="theme-color"]');
+    if (tint) tint.content = theme === 'dark' ? '#121216' : '#ffffff';
     localStorage.setItem('theme', theme);
   }, [theme]);
 
