@@ -84,10 +84,14 @@
   .narrow { max-width: 42em; }
 
   /* ---------- 표지 ---------- */
+  /* 표지만 본문(1060px)보다 넓게 쓴다. 글은 읽기 좋은 폭을 지켜야 하지만
+     표지는 화면 세 장이 들어가야 해서, 같은 폭에 밀어 넣으면 글이 카드에
+     씹히거나 카드가 작아진다. 둘 중 하나를 포기하는 대신 폭을 넓힌다. */
   .cover {
     padding: 72px 0 56px;
     border-bottom: 1px solid var(--line);
   }
+  .cover-wrap { width: min(100% - 40px, 1280px); margin-inline: auto; }
 
   /* 글과 화면을 나란히 놓는다. 좁은 화면에서는 글이 먼저 오고 화면이 아래로
      내려간다 — 폰으로 여는 사람이 제목부터 읽게 된다. */
@@ -97,12 +101,10 @@
     align-items: center;
   }
   @media (min-width: 860px) {
-    .cover-grid { grid-template-columns: 1fr 1.08fr; }
-    /* 화면 뭉치를 글 쪽으로 물린다. 칸을 얌전히 나눠 놓으면 가운데가 비어서
-       휑해 보인다 — 제목 끝자락을 조금 덮는 편이 한 장으로 읽힌다. */
-    /* 왼쪽으로 물린 만큼(14%)만 넓힌다. 그래야 오른쪽 끝이 제자리에 서고,
-       넓힌 폭이 통째로 바깥으로 삐져나가지 않는다. */
-    .cover-grid .fan { width: min(114%, 620px); margin-left: -14%; }
+    .cover-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1.12fr); gap: 0 32px; }
+    /* 남는 칸을 그대로 화면 뭉치에 준다. 넓힌 폭 덕에 이제 글 위로 물리지
+       않고도 화면이 크게 들어간다. */
+    .cover-grid .fan { width: 100%; max-width: 700px; }
   }
 
   /* 화면 세 장을 부채처럼 겹친다. 앞의 목록이 이 앱의 얼굴이고, 뒤 두 장은
@@ -112,31 +114,25 @@
     position: relative;
     width: 100%;
     margin-inline: auto;
-    aspect-ratio: 1 / 0.92;
+    aspect-ratio: 1 / 1.02;
   }
-  /* 폰 전체 비율(9:19)로 두면 한 장에 빈 여백이 너무 많이 딸려 온다 — 특히 알림은
-     화면 위쪽 한 줄이 전부고 나머지는 배경이다. 그래서 카드를 잘라낸 스크린샷
-     비율로 두고, 아래 object-position으로 각 장이 보여줄 자리를 따로 잡는다. */
+  /* 화면은 자르지 않는다. 높이를 정하지 않고 사진 비율이 그대로 카드 높이가 되게
+     둬서, 찍어 보낸 화면이 위아래로 온전히 들어간다. 대신 세 장을 넓게 벌려
+     뒤엣것도 제 몫만큼 보이게 한다. */
   .fan figure {
     position: absolute;
     margin: 0;
-    aspect-ratio: 3 / 4.3;
     border-radius: 18px;
     overflow: hidden;
     background: var(--card);
     border: 1px solid var(--line);
     box-shadow: 0 22px 44px -20px rgba(24, 20, 38, 0.42);
   }
-  .fan img { display: block; width: 100%; height: 100%; object-fit: cover; }
+  .fan img { display: block; width: 100%; height: auto; }
 
-  .fan .front { width: 48%; left: 26%; bottom: 0; z-index: 3; }
-  .fan .back-l { width: 43%; left: 0; top: 0; z-index: 1; transform: rotate(-9deg); }
-  .fan .back-r { width: 43%; right: 0; top: 5%; z-index: 2; transform: rotate(9deg); }
-
-  /* 목록과 알림은 위쪽이, 바코드는 아래쪽이 알맹이다. */
-  .fan .front img,
-  .fan .back-l img { object-position: top center; }
-  .fan .back-r img { object-position: bottom center; }
+  .fan .front { width: 44%; left: 28%; bottom: 0; z-index: 3; }
+  .fan .back-l { width: 40%; left: 0; top: 0; z-index: 1; transform: rotate(-8deg); }
+  .fan .back-r { width: 40%; right: 0; top: 5%; z-index: 2; transform: rotate(8deg); }
 
   @media (prefers-color-scheme: dark) {
     .fan figure { box-shadow: 0 22px 44px -20px rgba(0, 0, 0, 0.75); }
@@ -170,9 +166,9 @@
 
   .lede {
     margin: 22px 0 0;
-    /* 옆의 화면 뭉치 밑으로 글이 흘러들지 않을 만큼만. 넓게 두면 마지막 글자가
-       카드에 잘려서 오타처럼 보인다. */
-    max-width: 21em;
+    /* 옆의 화면 뭉치와 부딪히지 않는 폭. 넓게 두면 마지막 글자가 카드에 잘려
+       오타처럼 보인다. */
+    max-width: 25em;
     font-size: 19px;
     color: var(--ink2);
   }
@@ -325,10 +321,9 @@
   }
 </style>
 
-<div class="wrap">
-
-  <!-- ══════════ 표지 ══════════ -->
-  <header class="cover">
+<!-- ══════════ 표지 ══════════ -->
+<header class="cover">
+  <div class="cover-wrap">
     <div class="cover-grid">
       <div>
         <div class="mark">
@@ -339,10 +334,7 @@
           </span>
         </div>
 
-        <!-- 세 줄로 끊는다. 두 줄이면 둘째 줄이 길어서 옆의 화면 뭉치와 부딪히고,
-             화면을 작게 줄여야 자리가 난다. 줄을 짧게 하면 제목은 그대로 크게 두고
-             화면도 크게 펼칠 수 있다. -->
-        <h1>받아두고<br>잊어버린<br>기프티콘.</h1>
+        <h1>받아두고<br>잊어버린 기프티콘.</h1>
 
         <p class="lede">
           사진 한 장만 올리면 상품명·금액·유효기한을 알아서 채웁니다.
@@ -369,7 +361,10 @@
         </figure>
       </div>
     </div>
-  </header>
+  </div>
+</header>
+
+<div class="wrap">
 
   <!-- ══════════ 진행 상황 ══════════ -->
   <section class="toc">
