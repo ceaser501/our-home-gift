@@ -318,10 +318,8 @@
   /* 차례가 있는 갈래. 여기는 진짜 순서라(먼저 로그인하고, 그다음 동의하고)
      번호가 뜻을 갖는다 — 나란한 이야기였던 0장의 .points와 다른 점이다. */
   .steps { display: grid; gap: 38px; margin-top: 32px; }
-  .step { display: grid; gap: 18px 30px; align-items: center; }
-  @media (min-width: 700px) {
-    .step { grid-template-columns: 250px minmax(0, 1fr); }
-  }
+  .step { display: grid; gap: 18px 30px; align-items: start; }
+
   .step figure {
     margin: 0;
     border-radius: 16px;
@@ -349,6 +347,30 @@
   }
   .step p { margin: 0 0 10px; font-size: 17px; color: var(--ink2); max-width: 32em; }
   .step p:last-child { margin-bottom: 0; }
+
+  /* 넓은 화면에서는 걸음을 가로로 늘어놓는다. 화면 넉 장이 나란히 보이면
+     "이 순서로 흘러간다"가 읽기 전에 먼저 들어오고, 스크롤도 절반으로 준다.
+     좁은 화면은 어쩔 수 없이 위아래로 쌓는다 — 가로로 두면 글씨가 읽을 수 없게 작아진다.
+     (아래 규칙들은 위의 기본값을 덮어써야 해서 반드시 기본값 뒤에 와야 한다.) */
+  @media (min-width: 860px) {
+    .steps { grid-template-columns: repeat(auto-fit, minmax(215px, 1fr)); gap: 40px 26px; }
+    .step { gap: 15px; }
+    /* 칸이 좁아 제목이 두 줄로 넘어간다. 번호를 가운데 맞추면 두 줄 사이에 끼어
+       보이므로 첫 줄에 붙여둔다. */
+    .step h3 { font-size: 19px; align-items: start; }
+    .step .step-no { margin-top: -1px; }
+    .step p { font-size: 16px; }
+    /* 한 줄에 놓인 화면들은 길이가 제각각이다(목록은 길고, 승인 대기는 짧다).
+       사진 칸 높이를 줄에서 가장 긴 것에 맞추고 짧은 화면은 위로 붙여야
+       아래 설명이 나란히 시작한다. subgrid가 그 두 줄을 공유하게 해준다. */
+    .step figure img { height: 100%; object-fit: contain; object-position: top; }
+  }
+  @supports (grid-template-rows: subgrid) {
+    @media (min-width: 860px) {
+      .steps { grid-auto-rows: auto; }
+      .step { grid-row: span 2; grid-template-rows: subgrid; }
+    }
+  }
 
   /* 2장은 두 사람이 번갈아 움직인다(만든 사람 → 초대받은 사람 → 다시 만든 사람).
      화면만 봐서는 지금 누구 차례인지 알 수가 없어서 걸음마다 이름표를 붙인다. */
