@@ -350,6 +350,18 @@
   .step p { margin: 0 0 10px; font-size: 17px; color: var(--ink2); max-width: 32em; }
   .step p:last-child { margin-bottom: 0; }
 
+  /* 2장은 두 사람이 번갈아 움직인다(만든 사람 → 초대받은 사람 → 다시 만든 사람).
+     화면만 봐서는 지금 누구 차례인지 알 수가 없어서 걸음마다 이름표를 붙인다. */
+  .who {
+    display: inline-block;
+    margin-bottom: 9px;
+    padding: 3px 11px;
+    border-radius: 999px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-size: 13px; font-weight: 750; letter-spacing: -0.01em;
+  }
+
   /* 꼭 짚고 가야 하는 것. 놓치면 되돌리기 번거로운 일만 여기 넣는다 —
      아무 데나 붙이면 아무도 안 읽는다. */
   .warn {
@@ -619,14 +631,102 @@
       label: '가족 만들기',
       title: '가족을 만들거나, 초대코드로 참여하기',
       lede: '코드를 아는 사람만 신청할 수 있고, 신청은 승인해야 들어옵니다.',
-      state: 'wait',
-      need: [
-        '<b>가족 만들기 / 참여 고르는 화면</b>',
-        '<b>초대코드를 넣는 화면</b>',
-        '<b>승인 기다리는 중 화면</b>',
-        '<b>승인해주는 쪽 화면</b> — 참여 신청이 뜬 가족 구성원 창',
-        '<b>초대코드 영역</b> — 사람 아이콘을 눌러 나오는 창 (공유·복사 버튼 보이게)',
-      ],
+      state: 'done',
+      body: `
+        <div class="steps">
+
+          <div class="step">
+            <figure><img src="shots/family-new.jpg" alt="새로 만들기를 고르고 가족 이름과 내 이름을 적는 화면"></figure>
+            <div>
+              <span class="who">만드는 사람</span>
+              <h3><span class="step-no">1</span>가족 이름과 내 이름 적기</h3>
+              <p><span class="ui">새로 만들기</span>를 고르고 두 칸을 채웁니다.
+                 위는 <b>우리 가족을 부르는 이름</b>, 아래는 <b>내가 목록에 어떻게 보일지</b>예요.</p>
+              <p>내 이름은 기프티콘 카드에 이름표로 붙습니다. 실명보다
+                 <span class="ui">엄마</span> <span class="ui">아빠</span>처럼
+                 한눈에 알아보는 말이 좋아요.</p>
+            </div>
+          </div>
+
+          <div class="step">
+            <figure><img src="shots/family-code.jpg" alt="가족이 만들어지고 여섯 자리 초대코드가 뜬 화면"></figure>
+            <div>
+              <span class="who">만드는 사람</span>
+              <h3><span class="step-no">2</span>초대코드 받기</h3>
+              <p>만들자마자 <b>여섯 자리 코드</b>가 나옵니다. 이걸 가족에게 알려주면 돼요.</p>
+              <p>지금 아무도 부를 생각이 없어도 괜찮습니다.
+                 <span class="ui">시작하기</span>를 눌러 혼자 쓰다가, 나중에 불러도 됩니다.</p>
+            </div>
+          </div>
+
+          <div class="step">
+            <figure><img src="shots/family-join.jpg" alt="초대 코드로 참여를 고르고 코드와 내 이름을 넣는 화면"></figure>
+            <div>
+              <span class="who">초대받은 사람</span>
+              <h3><span class="step-no">3</span>코드 넣고 신청하기</h3>
+              <p>로그인하면 같은 갈림길이 나옵니다. 여기서는
+                 <span class="ui">초대 코드로 참여</span>를 고르세요.</p>
+              <p>받은 코드와 내 이름을 넣고 <span class="ui">참여하기</span>를 누릅니다.</p>
+            </div>
+          </div>
+
+          <div class="step">
+            <figure><img src="shots/family-wait.jpg" alt="승인을 기다리는 중이라고 알려주는 화면"></figure>
+            <div>
+              <span class="who">초대받은 사람</span>
+              <h3><span class="step-no">4</span>승인 기다리기</h3>
+              <p>코드가 맞아도 바로 들어가지지 않습니다. <b>가족이 승인해야</b> 열려요.</p>
+              <p>코드를 알려준 분에게 확인해달라고 말씀해주세요.</p>
+            </div>
+          </div>
+
+          <div class="step">
+            <figure><img src="shots/family-badge.jpg" alt="헤더의 사람 아이콘에 빨간 점이 붙어 신청이 왔음을 알리는 목록 화면"></figure>
+            <div>
+              <span class="who">만드는 사람</span>
+              <h3><span class="step-no">5</span>빨간 점이 붙으면 신청이 온 것</h3>
+              <p>신청이 들어오면 화면 위쪽 <b>사람 아이콘에 빨간 점</b>이 생깁니다. 눌러주세요.</p>
+            </div>
+          </div>
+
+          <div class="step">
+            <figure><img src="shots/family-approve.jpg" alt="참여를 기다리는 사람이 한 명 있다며 거절과 승인 버튼이 뜬 창"></figure>
+            <div>
+              <span class="who">만드는 사람</span>
+              <h3><span class="step-no">6</span>승인 누르기</h3>
+              <p>누가 신청했는지 이름이 뜹니다. 아는 사람이면
+                 <span class="ui">승인</span>, 모르는 이름이면 <span class="ui">거절</span>이에요.</p>
+              <p>이 창에 초대코드도 함께 있습니다. <span class="ui">공유</span>를 누르면
+                 카카오톡·문자로 바로 보낼 수 있어요.</p>
+            </div>
+          </div>
+
+          <div class="step">
+            <figure><img src="shots/family-members.jpg" alt="가족 2명으로 아들과 엄마가 각자 색 이름표를 달고 나열된 창"></figure>
+            <div>
+              <span class="who">둘 다</span>
+              <h3><span class="step-no">7</span>같은 목록을 함께 보기</h3>
+              <p>승인하는 순간 <b>서로의 기프티콘이 같은 목록에 나옵니다.</b>
+                 사람마다 색이 하나씩 정해져서, 카드 위 이름표만 봐도 누구 것인지 압니다.</p>
+              <p>먼저 만든 사람에게는 <span class="ui">대표</span> 표시가 붙어요.</p>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="warn">
+          <h4>코드를 알아도 마음대로 들어오지 못합니다</h4>
+          <p>코드가 우연히 남에게 넘어가도, 가족이 <span class="ui">승인</span>을 누르기
+             전까지는 목록이 보이지 않습니다. 모르는 이름이 떴다면 그냥
+             <span class="ui">거절</span>하세요.</p>
+        </div>
+
+        <div class="warn">
+          <h4>가족은 한 곳만 만들면 됩니다</h4>
+          <p>이미 있는 가족에 들어갈 사람이 <span class="ui">새로 만들기</span>를 누르면
+             <b>텅 빈 가족</b>이 하나 더 생겨서, 서로의 기프티콘이 보이지 않습니다.
+             초대받은 쪽은 꼭 <span class="ui">초대 코드로 참여</span>를 고르세요.</p>
+        </div>`,
     },
     {
       id: 'main',
