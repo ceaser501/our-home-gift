@@ -354,12 +354,12 @@
      아무 데나 붙이면 아무도 안 읽는다. */
   .warn {
     margin-top: 34px;
-    border: 1px solid var(--line);
-    border-left: 4px solid var(--accent);
-    border-radius: 12px;
-    background: var(--card);
+    border-radius: 14px;
+    background: var(--accent-soft);
     padding: 20px 22px;
   }
+  /* 상자 바탕이 이미 연보라라, 인용 칩도 같은 색이면 칩인 줄 모른다. 여기서만 뒤집는다. */
+  .warn .ui { background: var(--card); }
   .warn h4 { margin: 0 0 8px; font-size: 17px; font-weight: 750; letter-spacing: -0.02em; }
   .warn p { margin: 0; font-size: 16.5px; color: var(--ink2); }
   .warn + .warn { margin-top: 14px; }
