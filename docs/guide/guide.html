@@ -224,6 +224,15 @@
     color: var(--muted);
     font-size: 15px;
   }
+  /* 고지문. 읽히기는 해야 하니 본문보다 한 단만 작게 두고, 줄길이를 좁혀
+     한눈에 "이건 각주구나" 하고 넘어갈 수 있게 한다. */
+  footer .notice {
+    margin: 0 0 14px;
+    max-width: 38em;
+    font-size: 13.5px;
+    line-height: 1.65;
+  }
+  footer .sign { margin: 0; }
 
   @media (prefers-reduced-motion: reduce) {
     * { animation: none !important; transition: none !important; }
@@ -267,8 +276,17 @@
   <!-- ══════════ 각 장 ══════════ -->
   <div id="chapters"></div>
 
+  <!-- 화면 캡처 안에 실제 상호가 그대로 나온다. 기프티콘 관리 앱이 "스타벅스
+       기프티콘"이라는 말 없이 기능을 설명할 방법이 없어서, 상표를 우리 상품의
+       표지로 쓰는 것이 아니라 무엇을 가리키는지 말하는 용도다. 다만 브로셔는
+       밖으로 나가는 물건이라, 제휴로 오해할 여지 하나만은 글로 닫아둔다.
+       로고는 쓰지 않는다 — 썸네일은 직접 그린 그림이다. -->
   <footer class="wrap narrow">
-    모아콘 사용 안내 · 만드는 중
+    <p class="notice">
+      화면 속 상호·상품명은 사용법을 설명하기 위한 예시이며, 각 상표는 해당 권리자의
+      것입니다. 모아콘은 표시된 브랜드와 제휴 관계가 없습니다.
+    </p>
+    <p class="sign">모아콘 사용 안내 · 만드는 중</p>
   </footer>
 
 </div>
