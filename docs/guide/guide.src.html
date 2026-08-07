@@ -406,6 +406,30 @@
     box-shadow: 0 16px 32px -18px rgba(24, 20, 38, 0.38);
   }
   .tour img { display: block; width: 100%; height: auto; }
+
+  /* 번호만 옆에 나열하면 "어디를 말하는 건지" 찾느라 눈이 왔다 갔다 한다.
+     짚는 자리에 상자를 직접 그리고 같은 번호를 붙여, 보자마자 이어지게 한다.
+     자리는 사진 크기에 대한 %로 잡아서 화면 폭이 달라져도 따라 움직인다. */
+  .tour figure { position: relative; }
+  .spot {
+    position: absolute;
+    /* 화면 사진은 페이지 테마와 상관없이 늘 밝다. 그래서 선 색을 토큰에 맡기면
+       다크에서 흰 선이 흰 화면에 묻힌다. 여기만 색을 고정한다. */
+    border: 2px solid #17141f;
+    border-radius: 10px;
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.6);
+  }
+  /* 좁은 상자는 번호가 안쪽 내용을 덮는다. 그런 것만 오른쪽으로 뺀다. */
+  .spot.r b { left: auto; right: -13px; }
+  .spot b {
+    position: absolute; left: -13px; top: -13px;
+    display: grid; place-items: center;
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    background: #17141f; color: #fff;
+    font-size: 13px; font-weight: 750;
+    font-variant-numeric: tabular-nums;
+  }
   .tour ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 28px; }
   .tour li { display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 0 13px; }
   .tour h3 { margin: 0 0 6px; font-size: 19px; font-weight: 760; letter-spacing: -0.022em; }
@@ -782,14 +806,24 @@
       state: 'done',
       body: `
         <div class="tour">
-          <figure><img src="shots/main.jpg" alt="모아콘 메인 목록 화면 전체 — 헤더, 근처 매장 띠, 검색과 분류, 기프티콘 카드 여섯 장"></figure>
+          <figure>
+            <img src="shots/main.jpg" alt="모아콘 메인 목록 화면 전체 — 헤더, 근처 매장 띠, 찾기와 갈래, 기프티콘 카드 다섯 장">
+            <span class="spot" style="left:1.85%;top:0.92%;width:96.30%;height:3.84%"><b>1</b></span>
+            <span class="spot" style="left:1.85%;top:5.23%;width:96.30%;height:3.94%"><b>2</b></span>
+            <span class="spot" style="left:1.85%;top:9.69%;width:96.30%;height:8.61%"><b>3</b></span>
+            <span class="spot" style="left:5.09%;top:21.53%;width:89.81%;height:6.52%"><b>4</b></span>
+            <span class="spot r" style="left:29.63%;top:28.23%;width:41.67%;height:2.21%"><b>5</b></span>
+            <span class="spot" style="left:5.09%;top:30.75%;width:89.81%;height:3.44%"><b>6</b></span>
+            <span class="spot r" style="left:63.43%;top:61.65%;width:31.48%;height:3.17%"><b>7</b></span>
+            <span class="spot" style="left:5.09%;top:66.67%;width:89.81%;height:29.27%"><b>8</b></span>
+            <span class="spot r" style="left:77.59%;top:92.19%;width:17.96%;height:5.97%"><b>9</b></span>
+          </figure>
           <ol>
             <li>
               <span class="step-no">1</span>
               <div>
                 <h3>맨 위 — 어느 가족을 보고 있는지</h3>
-                <p>가족 이름을 누르면 다른 가족으로 바꿉니다. 종은 알림,
-                   오른쪽 동그라미는 내 메뉴예요.</p>
+                <p>가족 이름을 누르면 다른 가족으로 바꿉니다. 종은 알림, 오른쪽 동그라미는 내 메뉴예요.</p>
               </div>
             </li>
             <li>
@@ -803,21 +837,20 @@
               <span class="step-no">3</span>
               <div>
                 <h3>찾기와 갈래</h3>
-                <p>이름·브랜드로 찾거나 <span class="ui">카페/디저트</span> 같은 갈래로
-                   추립니다. 옆의 숫자가 남은 개수예요.</p>
+                <p>이름·브랜드로 찾거나 <span class="ui">카페/디저트</span> 같은 갈래로 추립니다. 옆의 숫자가 남은 개수예요.</p>
               </div>
             </li>
             <li>
               <span class="step-no">4</span>
               <div>
-                <h3>카드 한 장에 담긴 것</h3>
-                <p>누가 받았는지 이름표, 상품명, 금액, 언제까지인지가 한 줄씩 놓입니다.</p>
+                <h3>카드 윗줄 — 누구 것인지</h3>
+                <p>이름표 색으로 누가 받았는지 알아봅니다. 그 아래가 상품명과 금액이에요.</p>
               </div>
             </li>
             <li>
               <span class="step-no">5</span>
               <div>
-                <h3>붉은 칩은 서두르라는 뜻</h3>
+                <h3>남은 날짜</h3>
                 <p>기한이 가까우면 붉게, 여유가 있으면 회색으로 나옵니다.</p>
               </div>
             </li>
@@ -825,33 +858,31 @@
               <span class="step-no">6</span>
               <div>
                 <h3>카드 아래 세 버튼</h3>
-                <p><span class="ui">매장</span>은 가까운 곳 찾기,
-                   <span class="ui">찜하기</span>는 내가 쓰겠다는 표시,
-                   <span class="ui">사용완료</span>는 다 썼다는 표시예요.</p>
+                <p><span class="ui">매장</span>은 가까운 곳 찾기, <span class="ui">찜하기</span>는 내가 쓰겠다는 표시, <span class="ui">사용완료</span>는 다 썼다는 표시예요.</p>
               </div>
             </li>
             <li>
               <span class="step-no">7</span>
+              <div>
+                <h3>금액권은 마지막이 다릅니다</h3>
+                <p>상품권처럼 금액이 남는 것은 <span class="ui">잔액입력</span>이 뜹니다. 쓴 만큼 넣어두면 남은 돈이 카드에 그대로 보여요.</p>
+              </div>
+            </li>
+            <li>
+              <span class="step-no">8</span>
               <div>
                 <h3>다 쓴 것과 기한 지난 것</h3>
                 <p>지워지지 않고 아래로 내려가 흐려집니다. 언제 무엇을 썼는지 남아요.</p>
               </div>
             </li>
             <li>
-              <span class="step-no">8</span>
+              <span class="step-no">9</span>
               <div>
                 <h3>오른쪽 아래 + 버튼</h3>
                 <p>새 기프티콘을 올리는 자리입니다. 다음 장에서 다룹니다.</p>
               </div>
             </li>
           </ol>
-        </div>
-
-        <div class="warn">
-          <h4>금액권은 마지막 버튼이 다릅니다</h4>
-          <p>상품권처럼 금액이 남는 것은 <span class="ui">사용완료</span> 대신
-             <span class="ui">잔액입력</span>이 뜹니다. 쓴 만큼 넣어두면 남은 돈이
-             카드에 그대로 보여요.</p>
         </div>`,
     },
     {
