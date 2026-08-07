@@ -68,23 +68,33 @@ function drawCoffee(ctx, ink) {
 
 function drawChicken(ctx, ink) {
   ctx.fillStyle = ink;
-  // 닭다리 살
-  ctx.beginPath();
-  ctx.ellipse(140, 132, 62, 54, -0.5, 0, Math.PI * 2);
-  ctx.fill();
-  // 뼈
   ctx.strokeStyle = ink;
-  ctx.lineWidth = 22;
   ctx.lineCap = 'round';
+
+  // 뼈를 먼저 놓고 살로 덮는다. 이어붙인 자국이 남지 않는다.
+  ctx.lineWidth = 20;
   ctx.beginPath();
-  ctx.moveTo(168, 160);
-  ctx.lineTo(218, 220);
+  ctx.moveTo(179, 182);
+  ctx.lineTo(223, 225);
   ctx.stroke();
+
+  // 끝의 두 마디. 뼈 축에 직각으로 나란히 붙는 이 한 쌍이 닭다리를 닭다리로 보이게 한다.
+  // 살짝 떨어뜨려 사이에 홈이 생기게 했다 — 붙여두면 방망이 끝처럼 뭉친다.
+  for (const [x, y] of [[209, 239], [237, 211]]) {
+    ctx.beginPath();
+    ctx.arc(x, y, 18, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // 살. 위는 둥글고 뼈 쪽으로 어깨가 오목하게 파이며 좁아진다. 그냥 타원에 막대를
+  // 붙이면 풍선이나 돋보기로 보인다 — 이 오목한 어깨가 닭다리의 표식이다.
   ctx.beginPath();
-  ctx.arc(228, 232, 20, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.arc(206, 244, 18, 0, Math.PI * 2);
+  ctx.moveTo(201, 177);
+  ctx.bezierCurveTo(184, 146, 194, 96, 157, 80);
+  ctx.bezierCurveTo(113, 59, 65, 89, 65, 138);
+  ctx.bezierCurveTo(65, 188, 105, 221, 149, 218);
+  ctx.bezierCurveTo(172, 216, 168, 210, 173, 205);
+  ctx.closePath();
   ctx.fill();
 }
 
