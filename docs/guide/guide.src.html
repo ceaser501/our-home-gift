@@ -393,6 +393,28 @@
 
   /* 2장은 두 사람이 번갈아 움직인다(만든 사람 → 초대받은 사람 → 다시 만든 사람).
      화면만 봐서는 지금 누구 차례인지 알 수가 없어서 걸음마다 이름표를 붙인다. */
+  /* 화면 한 장을 놓고 "여기는 무엇, 저기는 무엇"을 짚는 갈래. 걸음(.steps)과 달리
+     순서가 아니라 자리를 가리키므로, 화면을 옆에 붙여둔 채 설명만 내려간다.
+     넓은 화면에서는 사진이 따라 내려와야 짚는 자리를 눈으로 찾을 수 있다. */
+  .tour { display: grid; gap: 30px; margin-top: 32px; }
+  .tour figure {
+    margin: 0;
+    border-radius: 16px;
+    overflow: hidden;
+    background: var(--card);
+    border: 1px solid var(--line);
+    box-shadow: 0 16px 32px -18px rgba(24, 20, 38, 0.38);
+  }
+  .tour img { display: block; width: 100%; height: auto; }
+  .tour ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 28px; }
+  .tour li { display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 0 13px; }
+  .tour h3 { margin: 0 0 6px; font-size: 19px; font-weight: 760; letter-spacing: -0.022em; }
+  .tour p { margin: 0; font-size: 16.5px; color: var(--ink2); }
+  @media (min-width: 860px) {
+    .tour { grid-template-columns: 330px minmax(0, 1fr); gap: 0 48px; align-items: start; }
+    .tour figure { position: sticky; top: 24px; }
+  }
+
   .who {
     display: inline-block;
     margin-bottom: 9px;
@@ -757,12 +779,80 @@
       label: '메인 화면',
       title: '메인 화면 한눈에',
       lede: '이 장은 화면 하나에 설명을 붙이는 그림 한 장짜리입니다. 어디에 무엇이 있는지 한 번에 보여줍니다.',
-      state: 'wait',
-      need: [
-        '<b>메인 목록 전체</b> — 헤더부터 카드 네다섯 장까지 세로로 길게',
-        '기한 임박(붉은 칩) · 여유(회색 칩) · <b>금액권</b>이 섞이게',
-        '<b>근처 매장 띠</b>나 <b>공지 띠</b>가 떠 있으면 더 좋습니다',
-      ],
+      state: 'done',
+      body: `
+        <div class="tour">
+          <figure><img src="shots/main.jpg" alt="모아콘 메인 목록 화면 전체 — 헤더, 근처 매장 띠, 검색과 분류, 기프티콘 카드 여섯 장"></figure>
+          <ol>
+            <li>
+              <span class="step-no">1</span>
+              <div>
+                <h3>맨 위 — 어느 가족을 보고 있는지</h3>
+                <p>가족 이름을 누르면 다른 가족으로 바꿉니다. 종은 알림,
+                   오른쪽 동그라미는 내 메뉴예요.</p>
+              </div>
+            </li>
+            <li>
+              <span class="step-no">2</span>
+              <div>
+                <h3>근처 매장 띠</h3>
+                <p>지금 서 있는 자리에서 쓸 수 있는 매장이 있으면 뜹니다.</p>
+              </div>
+            </li>
+            <li>
+              <span class="step-no">3</span>
+              <div>
+                <h3>찾기와 갈래</h3>
+                <p>이름·브랜드로 찾거나 <span class="ui">카페/디저트</span> 같은 갈래로
+                   추립니다. 옆의 숫자가 남은 개수예요.</p>
+              </div>
+            </li>
+            <li>
+              <span class="step-no">4</span>
+              <div>
+                <h3>카드 한 장에 담긴 것</h3>
+                <p>누가 받았는지 이름표, 상품명, 금액, 언제까지인지가 한 줄씩 놓입니다.</p>
+              </div>
+            </li>
+            <li>
+              <span class="step-no">5</span>
+              <div>
+                <h3>붉은 칩은 서두르라는 뜻</h3>
+                <p>기한이 가까우면 붉게, 여유가 있으면 회색으로 나옵니다.</p>
+              </div>
+            </li>
+            <li>
+              <span class="step-no">6</span>
+              <div>
+                <h3>카드 아래 세 버튼</h3>
+                <p><span class="ui">매장</span>은 가까운 곳 찾기,
+                   <span class="ui">찜하기</span>는 내가 쓰겠다는 표시,
+                   <span class="ui">사용완료</span>는 다 썼다는 표시예요.</p>
+              </div>
+            </li>
+            <li>
+              <span class="step-no">7</span>
+              <div>
+                <h3>다 쓴 것과 기한 지난 것</h3>
+                <p>지워지지 않고 아래로 내려가 흐려집니다. 언제 무엇을 썼는지 남아요.</p>
+              </div>
+            </li>
+            <li>
+              <span class="step-no">8</span>
+              <div>
+                <h3>오른쪽 아래 + 버튼</h3>
+                <p>새 기프티콘을 올리는 자리입니다. 다음 장에서 다룹니다.</p>
+              </div>
+            </li>
+          </ol>
+        </div>
+
+        <div class="warn">
+          <h4>금액권은 마지막 버튼이 다릅니다</h4>
+          <p>상품권처럼 금액이 남는 것은 <span class="ui">사용완료</span> 대신
+             <span class="ui">잔액입력</span>이 뜹니다. 쓴 만큼 넣어두면 남은 돈이
+             카드에 그대로 보여요.</p>
+        </div>`,
     },
     {
       id: 'add',
