@@ -141,6 +141,25 @@
   .fan .back-l { width: 37%; left: 0; top: 14%; z-index: 1; transform: rotate(-7deg); }
   .fan .back-r { width: 37%; right: 0; top: 14%; z-index: 2; transform: rotate(7deg); }
 
+  /* ⚠️ 고르는 중. 표지 배치 두 안을 위아래로 같이 띄운다.
+     정해지면 진 쪽과 .pick / .fan.v-a 를 같이 지운다. */
+  .pick { background: var(--accent-soft); padding: 12px 0; }
+  .pick > div {
+    width: min(100% - 40px, 1320px);
+    margin-inline: auto;
+    font-size: 15px;
+    font-weight: 750;
+    color: var(--accent);
+    letter-spacing: -0.01em;
+  }
+  .pick span { font-weight: 500; color: var(--ink2); }
+
+  /* A안 — 아래로 정렬. 가운데가 가장 낮고 겹침이 크다. */
+  .fan.v-a { aspect-ratio: 1 / 1.02; }
+  .fan.v-a .front { width: 44%; left: 28%; top: auto; bottom: 0; }
+  .fan.v-a .back-l { width: 40%; top: 0; transform: rotate(-8deg); }
+  .fan.v-a .back-r { width: 40%; top: 5%; transform: rotate(8deg); }
+
   @media (prefers-color-scheme: dark) {
     .fan figure { box-shadow: 0 22px 44px -20px rgba(0, 0, 0, 0.75); }
   }
@@ -328,6 +347,7 @@
   }
 </style>
 
+<div class="pick"><div>A안 &nbsp;아래로 정렬 &nbsp;<span>가운데가 가장 낮습니다. 지금 띄워둔 모양이에요.</span></div></div>
 <!-- ══════════ 표지 ══════════ -->
 <header class="cover">
   <div class="cover-wrap">
@@ -356,7 +376,51 @@
       </div>
 
       <!-- 뒤에 깔리는 두 장을 먼저 놓아야 앞의 목록이 위로 올라온다. -->
-      <div class="fan">
+      <div class="fan v-a">
+        <figure class="back-l">
+          <img src="shots/barcode.jpg" alt="카드를 눌러 바코드가 크게 뜬 화면">
+        </figure>
+        <figure class="back-r">
+          <img src="shots/push.jpg" alt="유효기한이 하루 남았다고 폰에 뜬 알림">
+        </figure>
+        <figure class="front">
+          <img src="shots/list.jpg" alt="아빠·엄마·아들이 받은 기프티콘이 남은 날짜와 함께 모여 있는 목록">
+        </figure>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="pick"><div>B안 &nbsp;가운데가 가장 높은 부채꼴 &nbsp;<span>좌우를 더 벌려서 뒤 두 장의 글이 더 드러납니다.</span></div></div>
+<!-- ══════════ 표지 ══════════ -->
+<header class="cover">
+  <div class="cover-wrap">
+    <div class="cover-grid">
+      <div>
+        <div class="mark">
+          <span class="mark-box" aria-hidden="true">모</span>
+          <span>
+            <span class="mark-name">모아콘</span><br>
+            <span class="mark-sub">사용 안내</span>
+          </span>
+        </div>
+
+        <h1>받아두고<br>잊어버린 기프티콘.</h1>
+
+        <p class="lede">
+          사진 한 장만 올리면 상품명·금액·유효기한을 알아서 채웁니다.
+          가족이 같은 목록을 보고, 기한이 오기 전에 폰으로 알려드려요.
+        </p>
+
+        <div class="chips">
+          <span class="chip">설치 없이 웹으로</span>
+          <span class="chip">초대코드 6자리로 가족 연결</span>
+          <span class="chip">안드로이드 · 아이폰</span>
+        </div>
+      </div>
+
+      <!-- 뒤에 깔리는 두 장을 먼저 놓아야 앞의 목록이 위로 올라온다. -->
+      <div class="fan v-b">
         <figure class="back-l">
           <img src="shots/barcode.jpg" alt="카드를 눌러 바코드가 크게 뜬 화면">
         </figure>
