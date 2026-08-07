@@ -353,16 +353,16 @@
      좁은 화면은 어쩔 수 없이 위아래로 쌓는다 — 가로로 두면 글씨가 읽을 수 없게 작아진다.
      (아래 규칙들은 위의 기본값을 덮어써야 해서 반드시 기본값 뒤에 와야 한다.) */
   @media (min-width: 860px) {
-    .steps { grid-template-columns: repeat(auto-fit, minmax(215px, 1fr)); gap: 40px 26px; }
-    .step { gap: 15px; }
+    .steps { grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 46px 28px; }
+    /* 사진과 글이 붙으면 답답해 보인다. 세로 배치일 때는 더 벌려야 한 칸으로 읽힌다. */
+    .step { gap: 24px; }
     /* 칸이 좁아 제목이 두 줄로 넘어간다. 번호를 가운데 맞추면 두 줄 사이에 끼어
        보이므로 첫 줄에 붙여둔다. */
-    .step h3 { font-size: 19px; align-items: start; }
+    .step h3 { font-size: 19px; align-items: start; margin-bottom: 8px; }
     .step .step-no { margin-top: -1px; }
     .step p { font-size: 16px; }
-    /* 한 줄에 놓인 화면들은 길이가 제각각이다(목록은 길고, 승인 대기는 짧다).
-       사진 칸 높이를 줄에서 가장 긴 것에 맞추고 짧은 화면은 위로 붙여야
-       아래 설명이 나란히 시작한다. subgrid가 그 두 줄을 공유하게 해준다. */
+    /* 화면 사진은 폰에서 찍은 그대로 두어 넉 장의 크기가 똑같다 — 그래야 깔끔하다.
+       띠 하나만 잘라 온 install.jpg처럼 짧은 것만 위로 붙이고 아래를 비운다. */
     .step figure img { height: 100%; object-fit: contain; object-position: top; }
   }
   @supports (grid-template-rows: subgrid) {
@@ -595,10 +595,7 @@
             <figure><img src="shots/login.jpg" alt="카카오·구글·네이버 로그인 버튼이 있는 모아콘 로그인 화면"></figure>
             <div>
               <h3><span class="step-no">1</span>로그인 방법 고르기</h3>
-              <p>평소 쓰는 것으로 누르세요. 계정이 없어도 됩니다 — 누르면 그 자리에서
-                 만들어집니다.</p>
-              <p>두 번째부터는 지난번에 쓴 것에 <span class="ui">최근 로그인</span> 표시가
-                 붙어요.</p>
+              <p>평소 쓰는 것으로 누르세요. 계정이 없어도 그 자리에서 만들어집니다.</p>
             </div>
           </div>
 
@@ -606,8 +603,7 @@
             <figure><img src="shots/kakao.jpg" alt="카카오 로그인 화면으로 넘어간 모습"></figure>
             <div>
               <h3><span class="step-no">2</span>그 서비스 화면에서 로그인</h3>
-              <p>카카오를 골랐다면 카카오 화면으로 넘어갑니다. 화면이 바뀌어도 정상이에요.</p>
-              <p>비밀번호는 그 회사에 넣는 것이고, 모아콘은 넘겨받지 않습니다.</p>
+              <p>화면이 카카오로 넘어가도 정상이에요. 비밀번호는 모아콘에 넘어오지 않습니다.</p>
             </div>
           </div>
 
@@ -615,9 +611,7 @@
             <figure><img src="shots/consent.jpg" alt="이용약관과 개인정보 수집에 동의하는 화면"></figure>
             <div>
               <h3><span class="step-no">3</span>약관에 동의하기</h3>
-              <p>맨 위 <span class="ui">전체 동의</span>를 누르면 아래 셋이 한 번에 켜지고,
-                 <span class="ui">동의하고 시작하기</span> 버튼이 진해집니다.</p>
-              <p>처음 한 번만 나옵니다.</p>
+              <p>맨 위 <span class="ui">전체 동의</span>를 누르면 끝. 처음 한 번만 나옵니다.</p>
             </div>
           </div>
 
@@ -625,10 +619,8 @@
             <figure><img src="shots/install.jpg" alt="화면 맨 위에 홈 화면에 추가하면 앱처럼 바로 열 수 있어요 라는 안내 띠가 뜬 모습"></figure>
             <div>
               <h3><span class="step-no">4</span>홈 화면에 올려두기</h3>
-              <p>화면 맨 위 띠의 <span class="ui">설치</span>를 누르면 홈 화면에 아이콘이
-                 생기고, 앱처럼 바로 열립니다.</p>
-              <p>아이폰은 띠를 누른 뒤 <span class="ui">공유</span> →
-                 <span class="ui">홈 화면에 추가</span>를 골라주세요.</p>
+              <p>위쪽 띠의 <span class="ui">설치</span>를 누르면 앱처럼 열립니다.
+                 아이폰은 <span class="ui">공유</span> → <span class="ui">홈 화면에 추가</span>.</p>
             </div>
           </div>
 
@@ -661,12 +653,8 @@
             <figure><img src="shots/family-new.jpg" alt="새로 만들기를 고르고 가족 이름과 내 이름을 적는 화면"></figure>
             <div>
               <span class="who">만드는 사람</span>
-              <h3><span class="step-no">1</span>가족 이름과 내 이름 적기</h3>
-              <p><span class="ui">새로 만들기</span>를 고르고 두 칸을 채웁니다.
-                 위는 <b>우리 가족을 부르는 이름</b>, 아래는 <b>내가 목록에 어떻게 보일지</b>예요.</p>
-              <p>내 이름은 기프티콘 카드에 이름표로 붙습니다. 실명보다
-                 <span class="ui">엄마</span> <span class="ui">아빠</span>처럼
-                 한눈에 알아보는 말이 좋아요.</p>
+              <h3><span class="step-no">1</span>이름 두 개 적기</h3>
+              <p>위는 <b>가족을 부르는 이름</b>, 아래는 <b>내가 목록에 보일 이름</b>이에요.</p>
             </div>
           </div>
 
@@ -675,9 +663,7 @@
             <div>
               <span class="who">만드는 사람</span>
               <h3><span class="step-no">2</span>초대코드 받기</h3>
-              <p>만들자마자 <b>여섯 자리 코드</b>가 나옵니다. 이걸 가족에게 알려주면 돼요.</p>
-              <p>지금 아무도 부를 생각이 없어도 괜찮습니다.
-                 <span class="ui">시작하기</span>를 눌러 혼자 쓰다가, 나중에 불러도 됩니다.</p>
+              <p><b>여섯 자리 코드</b>가 나옵니다. 가족에게 알려주면 돼요.</p>
             </div>
           </div>
 
@@ -686,9 +672,7 @@
             <div>
               <span class="who">초대받은 사람</span>
               <h3><span class="step-no">3</span>코드 넣고 신청하기</h3>
-              <p>로그인하면 같은 갈림길이 나옵니다. 여기서는
-                 <span class="ui">초대 코드로 참여</span>를 고르세요.</p>
-              <p>받은 코드와 내 이름을 넣고 <span class="ui">참여하기</span>를 누릅니다.</p>
+              <p>같은 갈림길에서 <span class="ui">초대 코드로 참여</span>를 고릅니다.</p>
             </div>
           </div>
 
@@ -697,8 +681,7 @@
             <div>
               <span class="who">초대받은 사람</span>
               <h3><span class="step-no">4</span>승인 기다리기</h3>
-              <p>코드가 맞아도 바로 들어가지지 않습니다. <b>가족이 승인해야</b> 열려요.</p>
-              <p>코드를 알려준 분에게 확인해달라고 말씀해주세요.</p>
+              <p>코드가 맞아도 <b>가족이 승인해야</b> 열립니다.</p>
             </div>
           </div>
 
@@ -706,8 +689,8 @@
             <figure><img src="shots/family-badge.jpg" alt="헤더의 사람 아이콘에 빨간 점이 붙어 신청이 왔음을 알리는 목록 화면"></figure>
             <div>
               <span class="who">만드는 사람</span>
-              <h3><span class="step-no">5</span>빨간 점이 붙으면 신청이 온 것</h3>
-              <p>신청이 들어오면 화면 위쪽 <b>사람 아이콘에 빨간 점</b>이 생깁니다. 눌러주세요.</p>
+              <h3><span class="step-no">5</span>빨간 점이 뜨면 신청</h3>
+              <p>위쪽 <b>사람 아이콘에 빨간 점</b>이 생깁니다. 눌러주세요.</p>
             </div>
           </div>
 
@@ -716,10 +699,8 @@
             <div>
               <span class="who">만드는 사람</span>
               <h3><span class="step-no">6</span>승인 누르기</h3>
-              <p>누가 신청했는지 이름이 뜹니다. 아는 사람이면
-                 <span class="ui">승인</span>, 모르는 이름이면 <span class="ui">거절</span>이에요.</p>
-              <p>이 창에 초대코드도 함께 있습니다. <span class="ui">공유</span>를 누르면
-                 카카오톡·문자로 바로 보낼 수 있어요.</p>
+              <p>이름을 보고 <span class="ui">승인</span> 또는 <span class="ui">거절</span>.
+                 초대코드도 이 창에 있어요.</p>
             </div>
           </div>
 
@@ -727,10 +708,8 @@
             <figure><img src="shots/family-members.jpg" alt="가족 2명으로 아들과 엄마가 각자 색 이름표를 달고 나열된 창"></figure>
             <div>
               <span class="who">둘 다</span>
-              <h3><span class="step-no">7</span>같은 목록을 함께 보기</h3>
-              <p>승인하는 순간 <b>서로의 기프티콘이 같은 목록에 나옵니다.</b>
-                 사람마다 색이 하나씩 정해져서, 카드 위 이름표만 봐도 누구 것인지 압니다.</p>
-              <p>먼저 만든 사람에게는 <span class="ui">대표</span> 표시가 붙어요.</p>
+              <h3><span class="step-no">7</span>함께 보게 됩니다</h3>
+              <p>서로의 기프티콘이 한 목록에 모입니다. 이름표 색으로 누구 것인지 알아봐요.</p>
             </div>
           </div>
 
