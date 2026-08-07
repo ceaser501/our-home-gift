@@ -91,7 +91,7 @@
     padding: 72px 0 56px;
     border-bottom: 1px solid var(--line);
   }
-  .cover-wrap { width: min(100% - 40px, 1280px); margin-inline: auto; }
+  .cover-wrap { width: min(100% - 40px, 1320px); margin-inline: auto; }
 
   /* 글과 화면을 나란히 놓는다. 좁은 화면에서는 글이 먼저 오고 화면이 아래로
      내려간다 — 폰으로 여는 사람이 제목부터 읽게 된다. */
@@ -101,10 +101,10 @@
     align-items: center;
   }
   @media (min-width: 860px) {
-    .cover-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1.12fr); gap: 0 32px; }
+    .cover-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1.22fr); gap: 0 28px; }
     /* 남는 칸을 그대로 화면 뭉치에 준다. 넓힌 폭 덕에 이제 글 위로 물리지
        않고도 화면이 크게 들어간다. */
-    .cover-grid .fan { width: 100%; max-width: 700px; }
+    .cover-grid .fan { width: 100%; max-width: 760px; }
   }
 
   /* 화면 세 장을 부채처럼 겹친다. 앞의 목록이 이 앱의 얼굴이고, 뒤 두 장은
@@ -119,7 +119,7 @@
     position: relative;
     width: 100%;
     margin-inline: auto;
-    aspect-ratio: 1 / 1.02;
+    aspect-ratio: 1 / 0.94;
   }
   /* 화면은 자르지 않는다. 높이를 정하지 않고 사진 비율이 그대로 카드 높이가 되게
      둬서, 찍어 보낸 화면이 위아래로 온전히 들어간다. 대신 세 장을 넓게 벌려
@@ -135,9 +135,11 @@
   }
   .fan img { display: block; width: 100%; height: auto; }
 
-  .fan .front { width: 44%; left: 28%; bottom: 0; z-index: 3; }
-  .fan .back-l { width: 40%; left: 0; top: 0; z-index: 1; transform: rotate(-8deg); }
-  .fan .back-r { width: 40%; right: 0; top: 5%; z-index: 2; transform: rotate(8deg); }
+  /* 가운데가 가장 높고 좌우가 내려앉는 부채꼴. 겹치는 폭은 좁게 잡는다 —
+     뒤 두 장에 적힌 글이 최대한 드러나야 표지가 세 장 몫을 한다. */
+  .fan .front { width: 42%; left: 29%; top: 0; z-index: 3; }
+  .fan .back-l { width: 37%; left: 0; top: 14%; z-index: 1; transform: rotate(-7deg); }
+  .fan .back-r { width: 37%; right: 0; top: 14%; z-index: 2; transform: rotate(7deg); }
 
   @media (prefers-color-scheme: dark) {
     .fan figure { box-shadow: 0 22px 44px -20px rgba(0, 0, 0, 0.75); }
