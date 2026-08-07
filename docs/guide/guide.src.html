@@ -58,6 +58,12 @@
 
   * { box-sizing: border-box; }
 
+  /* 표지의 기울어진 카드가 여백 밖으로 조금 삐져나온다. 그대로 두면 폭이 어중간한
+     화면에서 가로로 몇 px 밀린다. clip은 hidden과 달리 스크롤 상자를 만들지 않아
+     넘친 만큼만 잘리고 세로 스크롤은 그대로다. body에만 걸면 브라우저에 따라
+     화면 전체로 옮겨 붙지 않아서, html에도 같이 건다. */
+  html { overflow-x: clip; }
+
   body {
     margin: 0;
     background: var(--paper);
@@ -68,6 +74,10 @@
     letter-spacing: -0.01em;
     -webkit-font-smoothing: antialiased;
     word-break: keep-all;
+    /* 표지의 기울어진 카드가 여백 밖으로 조금 삐져나온다. 그대로 두면 화면 폭이
+       좁을 때 가로 스크롤이 생긴다. clip은 hidden과 달리 스크롤 상자를 만들지
+       않아서, 넘친 만큼만 잘리고 세로 스크롤은 그대로다. */
+    overflow-x: clip;
   }
 
   .wrap { width: min(100% - 40px, 1060px); margin-inline: auto; }
@@ -83,11 +93,16 @@
      내려간다 — 폰으로 여는 사람이 제목부터 읽게 된다. */
   .cover-grid {
     display: grid;
-    gap: 44px 56px;
+    gap: 44px 0;
     align-items: center;
   }
   @media (min-width: 860px) {
-    .cover-grid { grid-template-columns: 1fr 0.95fr; }
+    .cover-grid { grid-template-columns: 1fr 1.08fr; }
+    /* 화면 뭉치를 글 쪽으로 물린다. 칸을 얌전히 나눠 놓으면 가운데가 비어서
+       휑해 보인다 — 제목 끝자락을 조금 덮는 편이 한 장으로 읽힌다. */
+    /* 왼쪽으로 물린 만큼(14%)만 넓힌다. 그래야 오른쪽 끝이 제자리에 서고,
+       넓힌 폭이 통째로 바깥으로 삐져나가지 않는다. */
+    .cover-grid .fan { width: min(114%, 620px); margin-left: -14%; }
   }
 
   /* 화면 세 장을 부채처럼 겹친다. 앞의 목록이 이 앱의 얼굴이고, 뒤 두 장은
@@ -95,9 +110,9 @@
      것들만 골랐다(알림은 글 두 줄, 바코드는 검은 막대). */
   .fan {
     position: relative;
-    width: min(100%, 430px);
+    width: 100%;
     margin-inline: auto;
-    aspect-ratio: 1 / 0.9;
+    aspect-ratio: 1 / 0.92;
   }
   /* 폰 전체 비율(9:19)로 두면 한 장에 빈 여백이 너무 많이 딸려 온다 — 특히 알림은
      화면 위쪽 한 줄이 전부고 나머지는 배경이다. 그래서 카드를 잘라낸 스크린샷
@@ -114,9 +129,9 @@
   }
   .fan img { display: block; width: 100%; height: 100%; object-fit: cover; }
 
-  .fan .front { width: 46%; left: 27%; bottom: 0; z-index: 3; }
-  .fan .back-l { width: 41%; left: 0; top: 0; z-index: 1; transform: rotate(-8deg); }
-  .fan .back-r { width: 41%; right: 0; top: 4%; z-index: 2; transform: rotate(8deg); }
+  .fan .front { width: 48%; left: 26%; bottom: 0; z-index: 3; }
+  .fan .back-l { width: 43%; left: 0; top: 0; z-index: 1; transform: rotate(-9deg); }
+  .fan .back-r { width: 43%; right: 0; top: 5%; z-index: 2; transform: rotate(9deg); }
 
   /* 목록과 알림은 위쪽이, 바코드는 아래쪽이 알맹이다. */
   .fan .front img,
@@ -155,7 +170,9 @@
 
   .lede {
     margin: 22px 0 0;
-    max-width: 30em;
+    /* 옆의 화면 뭉치 밑으로 글이 흘러들지 않을 만큼만. 넓게 두면 마지막 글자가
+       카드에 잘려서 오타처럼 보인다. */
+    max-width: 21em;
     font-size: 19px;
     color: var(--ink2);
   }
@@ -322,7 +339,10 @@
           </span>
         </div>
 
-        <h1>받아두고<br>잊어버린 기프티콘.</h1>
+        <!-- 세 줄로 끊는다. 두 줄이면 둘째 줄이 길어서 옆의 화면 뭉치와 부딪히고,
+             화면을 작게 줄여야 자리가 난다. 줄을 짧게 하면 제목은 그대로 크게 두고
+             화면도 크게 펼칠 수 있다. -->
+        <h1>받아두고<br>잊어버린<br>기프티콘.</h1>
 
         <p class="lede">
           사진 한 장만 올리면 상품명·금액·유효기한을 알아서 채웁니다.
