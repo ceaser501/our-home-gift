@@ -354,8 +354,13 @@
      (아래 규칙들은 위의 기본값을 덮어써야 해서 반드시 기본값 뒤에 와야 한다.) */
   @media (min-width: 860px) {
     .steps { grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 46px 28px; }
-    /* 사진과 글이 붙으면 답답해 보인다. 세로 배치일 때는 더 벌려야 한 칸으로 읽힌다. */
+    /* 사진과 글이 붙으면 답답해 보인다. 세로 배치일 때는 더 벌려야 한 칸으로 읽힌다.
+       subgrid를 쓰면 사진과 글 사이도 위 .steps의 세로 gap을 그대로 따라간다. */
     .step { gap: 24px; }
+    /* 그런데 그러면 "사진과 글 사이"와 "윗줄 글과 아랫줄 사진 사이"가 같은 간격이 되어,
+       넉 장이 한 줄로 끊기지 않고 죽 이어져 보인다. 글 아래에만 여백을 더 붙여
+       줄과 줄 사이를 두 배로 벌린다. */
+    .step > div { padding-bottom: 46px; }
     /* 칸이 좁아 제목이 두 줄로 넘어간다. 번호를 가운데 맞추면 두 줄 사이에 끼어
        보이므로 첫 줄에 붙여둔다. */
     .step h3 { font-size: 19px; align-items: start; margin-bottom: 8px; }
