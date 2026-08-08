@@ -12,6 +12,48 @@ import { corsFor, limitFromEnv, requireUser, tooManyMessage, withinDailyLimit } 
 
 const MAX_RESULTS = 15;
 
+// 카카오 키워드 검색은 상호만 보지 않는다. 카테고리와 태그까지 훑기 때문에 "BBQ"로 찾으면
+// 세 종류가 섞여 나온다.
+//   1) 진짜 그 브랜드      — BBQ 성수3점
+//   2) 이름에 없는 남의 가게 — 호감도본 (치킨집이라 카테고리로 걸린다)
+//   3) 이름에만 든 남의 가게 — 인생BBQ 양키고기, 제주옥탑 블랙BBQ점
+// 기프티콘을 낼 수 있는 곳은 1)뿐이라, 나머지는 목록에 있으면 안 된다. 헛걸음을 시킨다.
+//
+// 프랜차이즈 상호는 거의 브랜드로 시작하므로(BBQ ○○점 · 스타벅스 ○○점) 그것만 남긴다.
+// 2)는 브랜드가 아예 없어서, 3)은 앞에 다른 말이 붙어서 걸러진다.
+function normalizeName(value: string): string {
+  // 표기 흔들림을 없앤다. "메가 MGC 커피"와 "메가MGC커피"가 같은 것이 되도록.
+  return value.replace(/[\s·・.\-_'"()]/g, '').toUpperCase();
+}
+
+function onlyBrandStores<T extends { name: string }>(stores: T[], query: string): T[] {
+  const key = normalizeName(query);
+  if (!key) return stores;
+
+  const names = stores.map((store) => normalizeName(store.name));
+
+  const byPrefix = stores.filter((_, i) => names[i].startsWith(key));
+  if (byPrefix.length) return byPrefix;
+
+  // 여기부터는 기프티콘에 적힌 브랜드와 간판이 어긋나는 경우다.
+  // 이름 어딘가에 통째로 들어 있으면 그것부터 본다.
+  const byPart = stores.filter((_, i) => names[i].includes(key));
+  if (byPart.length) return byPart;
+
+  // 그래도 없으면 브랜드를 뒤에서 한 글자씩 줄여가며 다시 앞을 맞춰본다.
+  // "메가커피"는 간판이 "메가MGC커피 ○○점"이라 통째로는 안 맞지만 "메가"로는 맞는다.
+  // 두 글자까지만 줄인다 — 더 줄이면 "파리"가 파리크라상까지 데려온다.
+  for (let len = key.length - 1; len >= 2; len -= 1) {
+    const head = key.slice(0, len);
+    const hit = stores.filter((_, i) => names[i].startsWith(head));
+    if (hit.length) return hit;
+  }
+
+  // 끝내 못 맞추면 거르지 않는다. 우리가 못 알아본 것을 "이 근처에 없다"로 알려주는
+  // 편이, 남의 가게가 섞이는 것보다 나쁘다.
+  return stores;
+}
+
 // 카카오가 돌려준 오류를 사람이 읽을 한국어로 바꾼다. 원문(JSON)을 그대로 내보내면
 // 화면에 영어 에러가 떠서 무슨 말인지 알 수 없다. 설정 문제(관리자가 고쳐야 하는 것)와
 // 일시적인 문제(다시 시도하면 되는 것)를 구분해서 알려준다.
@@ -209,21 +251,9 @@ Deno.serve(async (req) => {
       return reply({ error: '현재 위치가 필요해요.' }, 400);
     }
 
-    const url = new URL('https://dapi.kakao.com/v2/local/search/keyword.json');
-    url.searchParams.set('query', String(query).trim());
-    url.searchParams.set('y', String(lat));
-    url.searchParams.set('x', String(lng));
-    url.searchParams.set('sort', 'distance');
-    url.searchParams.set('size', String(MAX_RESULTS));
+    const keyword = String(query).trim();
 
-    const res = await fetch(url.toString(), { headers: { Authorization: `KakaoAK ${apiKey}` } });
-    if (!res.ok) {
-      const detail = await res.text().catch(() => '');
-      return reply({ error: friendlyKakaoError(res.status, detail) }, 502);
-    }
-
-    const data = await res.json();
-    const stores = (data.documents || []).map((d: Record<string, string>) => ({
+    const toStore = (d: Record<string, string>) => ({
       id: d.id,
       name: d.place_name,
       phone: d.phone || null,
@@ -236,9 +266,40 @@ Deno.serve(async (req) => {
       // 앱 안에서 지도를 그릴 때 쓸 좌표
       lat: d.y ? Number(d.y) : null,
       lng: d.x ? Number(d.x) : null,
-    }));
+    });
 
-    return reply({ stores });
+    // 남의 가게를 걸러내고 나면 한 쪽(15개)에서 몇 개 안 남는다 — "BBQ"는 열다섯 중 넷뿐이다.
+    // 그래서 목록이 찰 때까지 다음 쪽을 더 가져온다. 카카오는 15개씩 세 쪽(45개)까지 준다.
+    // 호출이 늘지만 카카오 로컬 무료 쿼터는 하루 십만 건이라 여유가 있고, 사람 쪽 한도
+    // (PLACES_DAILY_LIMIT)는 이 함수를 부른 횟수로 세니 그대로다.
+    const found: ReturnType<typeof toStore>[] = [];
+    for (let page = 1; page <= 3; page += 1) {
+      const url = new URL('https://dapi.kakao.com/v2/local/search/keyword.json');
+      url.searchParams.set('query', keyword);
+      url.searchParams.set('y', String(lat));
+      url.searchParams.set('x', String(lng));
+      url.searchParams.set('sort', 'distance');
+      url.searchParams.set('size', String(MAX_RESULTS));
+      url.searchParams.set('page', String(page));
+
+      const res = await fetch(url.toString(), { headers: { Authorization: `KakaoAK ${apiKey}` } });
+      if (!res.ok) {
+        // 첫 쪽이 실패하면 보여줄 것이 없다. 두 번째부터는 더 못 채웠을 뿐이라 있는 것으로 답한다.
+        if (page === 1) {
+          const detail = await res.text().catch(() => '');
+          return reply({ error: friendlyKakaoError(res.status, detail) }, 502);
+        }
+        break;
+      }
+
+      const data = await res.json();
+      for (const document of data.documents || []) found.push(toStore(document));
+
+      if (data.meta?.is_end !== false) break;
+      if (onlyBrandStores(found, keyword).length >= MAX_RESULTS) break;
+    }
+
+    return reply({ stores: onlyBrandStores(found, keyword).slice(0, MAX_RESULTS) });
   } catch (err) {
     const message = err instanceof Error ? err.message : '매장 검색에 실패했어요.';
     return reply({ error: message }, 500);
