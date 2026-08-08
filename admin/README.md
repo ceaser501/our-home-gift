@@ -186,6 +186,11 @@ Supabase URL·anon key를 파일에 넣어줍니다(둘 다 브라우저에 공�
   읽을 수 없습니다. 항상 admin-stats 함수를 거칩니다.
 - 누군가를 막아야 하면 `admin_users`에서 지우면 끝입니다. 재배포도, 다른 관리자의 재설정도
   필요 없습니다.
+- **전체 데이터 초기화를 눌러도 관리자 계정은 남습니다.** `admin_users.user_id`가
+  `auth.users`를 `on delete cascade`로 참조해서(`supabase/admin-stats.sql:22`), 예전에는
+  초기화 한 번에 명단이 통째로 딸려 나가 SQL editor를 다시 열어야 했습니다. 지금은
+  `supabase/functions/reset-all-data/index.ts`가 명단에 있는 계정만 건너뜁니다. 그 계정이
+  만든 가족·기프티콘은 그대로 지워지니, 다시 로그인하면 가족 만드는 화면부터 시작합니다.
 - API 호출 건수의 하루 경계는 UTC(집계 원본이 그렇게 적혀 있음), 나머지 앱 데이터는
   한국 시간 기준입니다. 추이를 보는 데는 지장이 없습니다.
 - `supabase/schema.sql`을 다시 실행해도 이제 `api_usage_total`(호출 이력 원본)은 지우지
