@@ -1,4 +1,4 @@
-<title>모아콘 사용 안내</title>
+<title>모아콘 — 가족 기프티콘 보관함</title>
 <style>
   /* ============================================================
      모아콘 사용 안내서
@@ -153,25 +153,6 @@
   .fan .back-l { width: 37%; left: 0; top: 14%; z-index: 1; transform: rotate(-7deg); }
   .fan .back-r { width: 37%; right: 0; top: 14%; z-index: 2; transform: rotate(7deg); }
 
-  /* ⚠️ 고르는 중. 표지 배치 두 안을 위아래로 같이 띄운다.
-     정해지면 진 쪽과 .pick / .fan.v-a 를 같이 지운다. */
-  .pick { background: var(--accent-soft); padding: 12px 0; }
-  .pick > div {
-    width: min(100% - 40px, 1320px);
-    margin-inline: auto;
-    font-size: 15px;
-    font-weight: 750;
-    color: var(--accent);
-    letter-spacing: -0.01em;
-  }
-  .pick span { font-weight: 500; color: var(--ink2); }
-
-  /* A안 — 아래로 정렬. 가운데가 가장 낮고 겹침이 크다. */
-  .fan.v-a { aspect-ratio: 1 / 1.02; }
-  .fan.v-a .front { width: 44%; left: 28%; top: auto; bottom: 0; }
-  .fan.v-a .back-l { width: 40%; top: 0; transform: rotate(-8deg); }
-  .fan.v-a .back-r { width: 40%; top: 5%; transform: rotate(8deg); }
-
   @media (prefers-color-scheme: dark) {
     .fan figure { box-shadow: 0 22px 44px -20px rgba(0, 0, 0, 0.75); }
   }
@@ -221,48 +202,6 @@
     color: var(--ink2);
   }
 
-  /* ---------- 진행 상황 ----------
-     이 문서는 한 장씩 채워나가는 중이다. 어디까지 왔는지가 목차 자리에서
-     바로 읽혀야, 다음에 무엇을 찍어 보내면 되는지 헤매지 않는다. */
-  .toc { padding: 44px 0 8px; }
-
-  .toc h2 {
-    margin: 0 0 6px;
-    font-size: 22px;
-    font-weight: 750;
-    letter-spacing: -0.02em;
-  }
-  .toc-note { margin: 0 0 22px; font-size: 15.5px; color: var(--muted); }
-
-  .toc-list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
-
-  .toc-item {
-    display: flex;
-    align-items: baseline;
-    gap: 14px;
-    padding: 13px 2px;
-    border-bottom: 1px solid var(--line);
-  }
-  .toc-no {
-    font-family: var(--mono);
-    font-size: 13px;
-    color: var(--muted);
-    min-width: 1.6em;
-  }
-  .toc-name { flex: 1; font-size: 17px; font-weight: 600; }
-  .toc-name a { color: inherit; text-decoration: none; }
-  .toc-name a:hover, .toc-name a:focus-visible { text-decoration: underline; text-underline-offset: 3px; }
-
-  .state {
-    font-size: 13px;
-    font-weight: 700;
-    border-radius: 999px;
-    padding: 3px 11px;
-    white-space: nowrap;
-  }
-  .state.done { background: var(--done-soft); color: var(--done); }
-  .state.wait { background: var(--wait-soft); color: var(--wait); }
-
   /* ---------- 장 ---------- */
   .chapter { padding: 56px 0; border-top: 1px solid var(--line); }
   .chapter:first-of-type { border-top: 0; }
@@ -287,25 +226,27 @@
 
   .ch-lede { margin: 16px 0 0; font-size: 18px; color: var(--ink2); max-width: 34em; }
 
-  /* 아직 안 쓴 장. 무엇을 보내야 하는지 이 자리에서 알려준다. */
-  .pending {
-    margin-top: 26px;
-    border: 1px dashed var(--line);
-    background: var(--line-soft);
-    border-radius: 14px;
-    padding: 20px 22px;
+  /* 화면을 설명 없이 나란히 보여주는 자리. 브로셔는 "이렇게 생겼다"를 먼저 보여주고
+     설명은 한 줄만 붙인다 — 걸음(.steps)처럼 따라 하게 만드는 것이 목적이 아니다. */
+  .gallery { display: grid; gap: 30px; margin-top: 32px; }
+  @media (min-width: 760px) {
+    .gallery { grid-template-columns: repeat(3, 1fr); gap: 34px 28px; }
+    /* 화면마다 길이가 조금씩 다르다(잠금화면이 목록보다 길다). 그대로 두면 아래 설명이
+       제각각 다른 높이에서 시작해 지저분하다. 사진 줄과 글 줄을 나눠 써서 맞춘다. */
+    .gallery { grid-auto-rows: auto; }
+    .gallery figure { grid-row: span 2; grid-template-rows: subgrid; }
+    .gallery img { height: 100%; object-fit: contain; object-position: top; }
   }
-  .pending h3 {
-    margin: 0 0 10px;
-    font-size: 15px;
-    font-weight: 750;
-    color: var(--wait);
-    letter-spacing: -0.01em;
+  .gallery figure { display: grid; margin: 0; }
+  .gallery img {
+    display: block; width: 100%; height: auto;
+    border-radius: 16px;
+    border: 1px solid var(--line);
+    box-shadow: 0 16px 32px -18px rgba(24, 20, 38, 0.38);
   }
-  .pending ol { margin: 0; padding-left: 1.35em; }
-  .pending li { font-size: 16px; color: var(--ink2); margin-bottom: 6px; }
-  .pending li:last-child { margin-bottom: 0; }
-  .pending li b { color: var(--ink); font-weight: 700; }
+  .gallery figcaption { margin-top: 16px; }
+  .gallery b { display: block; font-size: 17px; font-weight: 760; letter-spacing: -0.02em; }
+  .gallery span { display: block; margin-top: 4px; font-size: 15.5px; color: var(--ink2); }
 
   /* 나란한 여러 갈래를 늘어놓을 때. 순서가 있는 것이 아니라 각각 다른 이야기라
      번호는 붙이지 않는다 — 위에 짧은 색 막대만 두어 한 덩어리임을 표시한다. */
@@ -391,8 +332,6 @@
     }
   }
 
-  /* 2장은 두 사람이 번갈아 움직인다(만든 사람 → 초대받은 사람 → 다시 만든 사람).
-     화면만 봐서는 지금 누구 차례인지 알 수가 없어서 걸음마다 이름표를 붙인다. */
   /* 화면 한 장을 놓고 "여기는 무엇, 저기는 무엇"을 짚는 갈래. 걸음(.steps)과 달리
      순서가 아니라 자리를 가리킨다.
 
@@ -506,7 +445,6 @@
   }
 </style>
 
-<div class="pick"><div>A안 &nbsp;아래로 정렬 &nbsp;<span>가운데가 가장 낮습니다. 지금 띄워둔 모양이에요.</span></div></div>
 <!-- ══════════ 표지 ══════════ -->
 <header class="cover">
   <div class="cover-wrap">
@@ -516,7 +454,7 @@
           <span class="mark-box" aria-hidden="true">모</span>
           <span>
             <span class="mark-name">모아콘</span><br>
-            <span class="mark-sub">사용 안내</span>
+            <span class="mark-sub">가족 기프티콘 보관함</span>
           </span>
         </div>
 
@@ -535,51 +473,7 @@
       </div>
 
       <!-- 뒤에 깔리는 두 장을 먼저 놓아야 앞의 목록이 위로 올라온다. -->
-      <div class="fan v-a">
-        <figure class="back-l">
-          <img src="shots/barcode.jpg" alt="카드를 눌러 바코드가 크게 뜬 화면">
-        </figure>
-        <figure class="back-r">
-          <img src="shots/push.jpg" alt="유효기한이 하루 남았다고 폰에 뜬 알림">
-        </figure>
-        <figure class="front">
-          <img src="shots/list.jpg" alt="아빠·엄마·아들이 받은 기프티콘이 남은 날짜와 함께 모여 있는 목록">
-        </figure>
-      </div>
-    </div>
-  </div>
-</header>
-
-<div class="pick"><div>B안 &nbsp;가운데가 가장 높은 부채꼴 &nbsp;<span>좌우를 더 벌려서 뒤 두 장의 글이 더 드러납니다.</span></div></div>
-<!-- ══════════ 표지 ══════════ -->
-<header class="cover">
-  <div class="cover-wrap">
-    <div class="cover-grid">
-      <div>
-        <div class="mark">
-          <span class="mark-box" aria-hidden="true">모</span>
-          <span>
-            <span class="mark-name">모아콘</span><br>
-            <span class="mark-sub">사용 안내</span>
-          </span>
-        </div>
-
-        <h1>받아두고<br>잊어버린 기프티콘.</h1>
-
-        <p class="lede">
-          사진 한 장만 올리면 상품명·금액·유효기한을 알아서 채웁니다.
-          가족이 같은 목록을 보고, 기한이 오기 전에 폰으로 알려드려요.
-        </p>
-
-        <div class="chips">
-          <span class="chip">설치 없이 웹으로</span>
-          <span class="chip">초대코드 6자리로 가족 연결</span>
-          <span class="chip">안드로이드 · 아이폰</span>
-        </div>
-      </div>
-
-      <!-- 뒤에 깔리는 두 장을 먼저 놓아야 앞의 목록이 위로 올라온다. -->
-      <div class="fan v-b">
+      <div class="fan">
         <figure class="back-l">
           <img src="shots/barcode.jpg" alt="카드를 눌러 바코드가 크게 뜬 화면">
         </figure>
@@ -596,16 +490,214 @@
 
 <div class="wrap">
 
-  <!-- ══════════ 진행 상황 ══════════ -->
-  <section class="toc">
-    <h2>차례</h2>
-    <p class="toc-note">위에서부터 한 장씩 채웁니다. 지금 어디까지 왔는지 여기서 보세요.</p>
+  <!-- ══════════ 왜 필요한가 ══════════ -->
+  <section class="chapter">
+    <p class="eyebrow">why</p>
+    <h2 class="ch">기프티콘은 받는 순간부터 잊힙니다</h2>
+    <p class="ch-lede">
+      모아콘은 이 세 가지를 없애려고 만들었습니다.
+    </p>
 
-    <ul class="toc-list" id="toc"></ul>
+    <div class="points">
+      <div class="point">
+        <h3>어디 있는지 못 찾습니다</h3>
+        <p>받은 건 아는데 대화방을 한참 거슬러 올라가야 합니다.
+           찾다가 그냥 카드로 계산하게 돼요.</p>
+      </div>
+      <div class="point">
+        <h3>기한이 지나서야 압니다</h3>
+        <p>쓰려고 열어보면 며칠 지나 있습니다. 유효기한은
+           아무도 대신 세어주지 않아요.</p>
+      </div>
+      <div class="point">
+        <h3>가족끼리 겹칩니다</h3>
+        <p>같은 기프티콘을 둘이 쓰러 갔다 옵니다.
+           누가 뭘 가지고 있는지 서로 모르니까요.</p>
+      </div>
+    </div>
   </section>
 
-  <!-- ══════════ 각 장 ══════════ -->
-  <div id="chapters"></div>
+  <!-- ══════════ 무엇을 하나 ══════════ -->
+  <section class="chapter">
+    <p class="eyebrow">what</p>
+    <h2 class="ch">올려두면, 나머지는 알아서</h2>
+    <p class="ch-lede">
+      직접 적을 것이 거의 없습니다. 사진을 올리는 것으로 끝나요.
+    </p>
+
+    <div class="points">
+      <div class="point">
+        <h3>사진 한 장이면 끝</h3>
+        <p>올리면 상품명·금액·유효기한·바코드를 알아서 읽어 채웁니다.
+           고칠 것만 손보면 돼요.</p>
+      </div>
+      <div class="point">
+        <h3>가족이 같은 목록을 봅니다</h3>
+        <p>초대코드 여섯 자리로 연결합니다. 카드마다 이름표가 붙어서
+           누가 받은 것인지 한눈에 보여요.</p>
+      </div>
+      <div class="point">
+        <h3>기한 전에 알려줍니다</h3>
+        <p>남은 날짜가 카드에 붙고, 기한이 다가오면 폰으로 알림이 갑니다.
+           놓쳐서 버리는 일이 없어져요.</p>
+      </div>
+      <div class="point">
+        <h3>계산대에서는 바코드만</h3>
+        <p>카드를 누르면 바코드가 크게 뜹니다. 점원에게 보여주고
+           <span class="ui">사용완료</span>를 누르면 끝이에요.</p>
+      </div>
+      <div class="point">
+        <h3>근처에서 쓸 곳을 찾아줍니다</h3>
+        <p>지금 서 있는 자리에서 가까운 매장을 알려줍니다.
+           길찾기까지 그 자리에서 열려요.</p>
+      </div>
+      <div class="point">
+        <h3>금액권은 잔액까지</h3>
+        <p>상품권처럼 금액이 남는 것은 쓴 만큼 적어두면
+           남은 돈이 카드에 그대로 보입니다.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════ 화면 셋 ══════════ -->
+  <section class="chapter">
+    <p class="eyebrow">screens</p>
+    <h2 class="ch">쓰는 모습은 이렇습니다</h2>
+
+    <div class="gallery">
+      <figure>
+        <img src="shots/list.jpg" alt="가족이 받은 기프티콘이 남은 날짜와 함께 모여 있는 목록">
+        <figcaption>
+          <b>한 목록에 모입니다</b>
+          <span>이름표 색으로 누가 받은 것인지 구분됩니다.</span>
+        </figcaption>
+      </figure>
+      <figure>
+        <img src="shots/lock.jpg" alt="잠금화면에 하루 남았다고 뜬 알림">
+        <figcaption>
+          <b>기한 전에 알려줍니다</b>
+          <span>잠금화면에서 바로 보입니다.</span>
+        </figcaption>
+      </figure>
+      <figure>
+        <img src="shots/barcode.jpg" alt="카드를 눌러 바코드가 크게 뜬 화면">
+        <figcaption>
+          <b>계산대에서는 이 화면만</b>
+          <span>바코드를 크게 띄우고 밝기를 올려줍니다.</span>
+        </figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ══════════ 메인 화면 한눈에 ══════════ -->
+  <section class="chapter">
+    <p class="eyebrow">main</p>
+    <h2 class="ch">메인 화면 한눈에</h2>
+    <p class="ch-lede">이 화면 하나가 앱의 거의 전부입니다.</p>
+
+    <div class="call">
+      <div class="stage">
+        <img src="shots/main-a.jpg" alt="모아콘 메인 화면 — 헤더, 근처 매장 띠, 찾기와 갈래, 기프티콘 카드">
+        <span class="pin" style="left:4.54%;top:8.53%">1</span>
+        <span class="pin" style="left:4.54%;top:20.26%">2</span>
+        <span class="pin" style="left:4.54%;top:32.76%">3</span>
+        <span class="pin" style="left:4.54%;top:68.28%">4</span>
+        <span class="pin" style="left:27.78%;top:82.07%">5</span>
+        <span class="pin" style="left:4.54%;top:93.19%">6</span>
+      </div>
+      <div class="notes">
+        <div class="note">
+          <h3><b>1</b>맨 위</h3>
+          <p>보고 있는 가족, 알림, 내 메뉴가 모여 있습니다.</p>
+        </div>
+        <div class="note">
+          <h3><b>2</b>근처 매장 띠</h3>
+          <p>지금 자리에서 쓸 수 있는 매장이 있으면 뜹니다.</p>
+        </div>
+        <div class="note">
+          <h3><b>3</b>찾기와 갈래</h3>
+          <p>이름·브랜드로 찾거나 갈래로 추립니다.</p>
+        </div>
+        <div class="note">
+          <h3><b>4</b>카드 윗줄</h3>
+          <p>이름표 색으로 누가 받았는지 압니다.</p>
+        </div>
+        <div class="note">
+          <h3><b>5</b>남은 날짜</h3>
+          <p>기한이 가까우면 붉게, 여유가 있으면 회색으로.</p>
+        </div>
+        <div class="note">
+          <h3><b>6</b>아래 세 버튼</h3>
+          <p>가까운 매장 찾기 · 내가 쓸게요 · 다 썼어요.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════ 시작하기 ══════════ -->
+  <section class="chapter">
+    <p class="eyebrow">start</p>
+    <h2 class="ch">시작은 세 걸음</h2>
+    <p class="ch-lede">
+      내려받을 것도, 외울 비밀번호도 없습니다.
+    </p>
+
+    <div class="steps">
+      <div class="step">
+        <figure><img src="shots/login.jpg" alt="카카오·구글·네이버 로그인 버튼이 있는 모아콘 로그인 화면"></figure>
+        <div>
+          <h3><span class="step-no">1</span>로그인</h3>
+          <p>카카오·구글·네이버 중 늘 쓰던 것으로. 계정이 없어도 그 자리에서 만들어집니다.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <figure><img src="shots/family-code.jpg" alt="가족을 만들면 여섯 자리 초대코드가 뜬 화면"></figure>
+        <div>
+          <h3><span class="step-no">2</span>가족 연결</h3>
+          <p>여섯 자리 코드를 가족에게 알려주면 끝. 혼자 써도 괜찮습니다.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <figure><img src="shots/install.jpg" alt="홈 화면에 추가하면 앱처럼 바로 열 수 있다는 안내 띠"></figure>
+        <div>
+          <h3><span class="step-no">3</span>홈 화면에</h3>
+          <p>띠의 <span class="ui">설치</span>를 누르면 앱처럼 열립니다. 아이폰은 <span class="ui">공유</span> → <span class="ui">홈 화면에 추가</span>.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="warn">
+      <h4>다음에도 같은 것으로 들어오세요</h4>
+      <p>카카오로 시작했으면 카카오로. 다른 것을 누르면 이메일이 같아도
+         <b>새 계정</b>이 만들어져서 모아둔 기프티콘이 보이지 않습니다.</p>
+    </div>
+  </section>
+
+  <!-- ══════════ 안심 ══════════ -->
+  <section class="chapter">
+    <p class="eyebrow">safe</p>
+    <h2 class="ch">가족 것은 가족만 봅니다</h2>
+
+    <div class="points">
+      <div class="point">
+        <h3>코드를 알아도 승인해야 들어옵니다</h3>
+        <p>초대코드가 남에게 넘어가도, 가족이 승인을 누르기 전까지는
+           목록이 보이지 않습니다.</p>
+      </div>
+      <div class="point">
+        <h3>올린 사진은 잠가둡니다</h3>
+        <p>기프티콘 이미지는 주소를 알아도 열리지 않고,
+           우리 가족에게만 그때그때 열어줍니다.</p>
+      </div>
+      <div class="point">
+        <h3>비밀번호를 만들지 않습니다</h3>
+        <p>늘 쓰던 계정으로 들어옵니다. 모아콘은 비밀번호를
+           받지도, 가지고 있지도 않습니다.</p>
+      </div>
+    </div>
+  </section>
 
   <!-- 화면 캡처 안에 실제 상호가 그대로 나온다. 기프티콘 관리 앱이 "스타벅스
        기프티콘"이라는 말 없이 기능을 설명할 방법이 없어서, 상표를 우리 상품의
@@ -617,363 +709,7 @@
       화면 속 상호·상품명은 사용법을 설명하기 위한 예시이며, 각 상표는 해당 권리자의
       것입니다. 모아콘은 표시된 브랜드와 제휴 관계가 없습니다.
     </p>
-    <p class="sign">모아콘 사용 안내 · 만드는 중</p>
+    <p class="sign">모아콘</p>
   </footer>
 
 </div>
-
-<script>
-  /* 장 하나하나가 여기서 나온다. 다 쓴 장은 body를 채우고 state를 'done'으로 바꾼다.
-     아직인 장은 need에 "무엇을 찍어 보내야 하는지"를 적어둔다 — 그게 곧 다음 할 일이다. */
-  const CHAPTERS = [
-    {
-      id: 'intro',
-      no: '0',
-      label: '표지',
-      title: '모아콘이 하는 일',
-      lede: '표지의 화면 세 장이 이 앱의 전부입니다. 모으고, 알려주고, 꺼내 보여줍니다.',
-      state: 'done',
-      body: `
-        <div class="points">
-          <div class="point">
-            <h3>한 곳에 모입니다</h3>
-            <p>받은 기프티콘을 사진으로 올리면 목록이 됩니다. 누가 받은 것인지
-               이름표가 붙어서, 가족이 같은 목록을 봅니다.</p>
-          </div>
-          <div class="point">
-            <h3>기한 전에 알려줍니다</h3>
-            <p>유효기간이 가까워지면 폰으로 알림이 옵니다. 받아두고 잊어버려
-               그냥 지나가는 일이 없어집니다.</p>
-          </div>
-          <div class="point">
-            <h3>계산대에서는 누르기만</h3>
-            <p>카드를 누르면 바코드가 크게 뜹니다. 계산대 앞에서 사진첩을
-               뒤질 일이 없습니다.</p>
-          </div>
-        </div>`,
-    },
-    {
-      id: 'start',
-      no: '1',
-      label: '시작하기',
-      title: '로그인하고 들어오기',
-      lede: '외울 비밀번호가 없습니다. 늘 쓰던 카카오·구글·네이버 계정으로 들어옵니다.',
-      state: 'done',
-      body: `
-        <div class="steps">
-
-          <div class="step">
-            <figure><img src="shots/login.jpg" alt="카카오·구글·네이버 로그인 버튼이 있는 모아콘 로그인 화면"></figure>
-            <div>
-              <h3><span class="step-no">1</span>로그인 방법 고르기</h3>
-              <p>평소 쓰는 것으로 누르세요. 계정이 없어도 그 자리에서 만들어집니다.</p>
-            </div>
-          </div>
-
-          <div class="step">
-            <figure><img src="shots/kakao.jpg" alt="카카오 로그인 화면으로 넘어간 모습"></figure>
-            <div>
-              <h3><span class="step-no">2</span>그 서비스 화면에서 로그인</h3>
-              <p>화면이 카카오로 넘어가도 정상이에요. 비밀번호는 모아콘에 넘어오지 않습니다.</p>
-            </div>
-          </div>
-
-          <div class="step">
-            <figure><img src="shots/consent.jpg" alt="이용약관과 개인정보 수집에 동의하는 화면"></figure>
-            <div>
-              <h3><span class="step-no">3</span>약관에 동의하기</h3>
-              <p>맨 위 <span class="ui">전체 동의</span>를 누르면 끝. 처음 한 번만 나옵니다.</p>
-            </div>
-          </div>
-
-          <div class="step">
-            <figure><img src="shots/install.jpg" alt="화면 맨 위에 홈 화면에 추가하면 앱처럼 바로 열 수 있어요 라는 안내 띠가 뜬 모습"></figure>
-            <div>
-              <h3><span class="step-no">4</span>홈 화면에 올려두기</h3>
-              <p>위쪽 띠의 <span class="ui">설치</span>를 누르면 앱처럼 열립니다.
-                 아이폰은 <span class="ui">공유</span> → <span class="ui">홈 화면에 추가</span>.</p>
-            </div>
-          </div>
-
-        </div>
-
-        <div class="warn">
-          <h4>다음에도 같은 것으로 들어오세요</h4>
-          <p>카카오로 시작했으면 카카오로, 구글로 시작했으면 구글로. 다른 것을 누르면
-             이메일이 같아도 <b>새 계정</b>이 만들어져서, 모아둔 기프티콘이 보이지
-             않습니다. 그래서 <span class="ui">최근 로그인</span> 표시를 붙여둔 거예요.</p>
-        </div>
-
-        <div class="warn">
-          <h4>아이폰은 홈 화면에 올려야 알림이 옵니다</h4>
-          <p>아이폰은 홈 화면에 추가한 앱에만 알림을 보낼 수 있습니다. 4번을 건너뛰면
-             유효기한 알림이 오지 않아요. 안드로이드는 올리지 않아도 알림이 옵니다.</p>
-        </div>`,
-    },
-    {
-      id: 'family',
-      no: '2',
-      label: '가족 만들기',
-      title: '가족을 만들거나, 초대코드로 참여하기',
-      lede: '코드를 아는 사람만 신청할 수 있고, 신청은 승인해야 들어옵니다.',
-      state: 'done',
-      body: `
-        <div class="steps">
-
-          <div class="step">
-            <figure><img src="shots/family-new.jpg" alt="새로 만들기를 고르고 가족 이름과 내 이름을 적는 화면"></figure>
-            <div>
-              <span class="who host">만드는 사람</span>
-              <h3><span class="step-no">1</span>이름 두 개 적기</h3>
-              <p>위는 <b>가족을 부르는 이름</b>, 아래는 <b>내가 목록에 보일 이름</b>이에요.</p>
-            </div>
-          </div>
-
-          <div class="step">
-            <figure><img src="shots/family-code.jpg" alt="가족이 만들어지고 여섯 자리 초대코드가 뜬 화면"></figure>
-            <div>
-              <span class="who host">만드는 사람</span>
-              <h3><span class="step-no">2</span>초대코드 받기</h3>
-              <p><b>여섯 자리 코드</b>가 나옵니다. 가족에게 알려주면 돼요.</p>
-            </div>
-          </div>
-
-          <div class="step">
-            <figure><img src="shots/family-join.jpg" alt="초대 코드로 참여를 고르고 코드와 내 이름을 넣는 화면"></figure>
-            <div>
-              <span class="who guest">초대받은 사람</span>
-              <h3><span class="step-no">3</span>코드 넣고 신청하기</h3>
-              <p>같은 갈림길에서 <span class="ui">초대 코드로 참여</span>를 고릅니다.</p>
-            </div>
-          </div>
-
-          <div class="step">
-            <figure><img src="shots/family-wait.jpg" alt="승인을 기다리는 중이라고 알려주는 화면"></figure>
-            <div>
-              <span class="who guest">초대받은 사람</span>
-              <h3><span class="step-no">4</span>승인 기다리기</h3>
-              <p>코드가 맞아도 <b>가족이 승인해야</b> 열립니다.</p>
-            </div>
-          </div>
-
-          <div class="step">
-            <figure><img src="shots/family-badge.jpg" alt="헤더의 사람 아이콘에 빨간 점이 붙어 신청이 왔음을 알리는 목록 화면"></figure>
-            <div>
-              <span class="who host">만드는 사람</span>
-              <h3><span class="step-no">5</span>빨간 점이 뜨면 신청</h3>
-              <p>위쪽 <b>사람 아이콘에 빨간 점</b>이 생깁니다. 눌러주세요.</p>
-            </div>
-          </div>
-
-          <div class="step">
-            <figure><img src="shots/family-approve.jpg" alt="참여를 기다리는 사람이 한 명 있다며 거절과 승인 버튼이 뜬 창"></figure>
-            <div>
-              <span class="who host">만드는 사람</span>
-              <h3><span class="step-no">6</span>승인 누르기</h3>
-              <p>이름을 보고 <span class="ui">승인</span> 또는 <span class="ui">거절</span>.
-                 초대코드도 이 창에 있어요.</p>
-            </div>
-          </div>
-
-          <div class="step">
-            <figure><img src="shots/family-members.jpg" alt="가족 2명으로 아들과 엄마가 각자 색 이름표를 달고 나열된 창"></figure>
-            <div>
-              <span class="who">둘 다</span>
-              <h3><span class="step-no">7</span>함께 보게 됩니다</h3>
-              <p>서로의 기프티콘이 한 목록에 모입니다. 이름표 색으로 누구 것인지 알아봐요.</p>
-            </div>
-          </div>
-
-        </div>
-
-        <div class="warn">
-          <h4>코드를 알아도 마음대로 들어오지 못합니다</h4>
-          <p>코드가 우연히 남에게 넘어가도, 가족이 <span class="ui">승인</span>을 누르기
-             전까지는 목록이 보이지 않습니다. 모르는 이름이 떴다면 그냥
-             <span class="ui">거절</span>하세요.</p>
-        </div>
-
-        <div class="warn">
-          <h4>가족은 한 곳만 만들면 됩니다</h4>
-          <p>이미 있는 가족에 들어갈 사람이 <span class="ui">새로 만들기</span>를 누르면
-             <b>텅 빈 가족</b>이 하나 더 생겨서, 서로의 기프티콘이 보이지 않습니다.
-             초대받은 쪽은 꼭 <span class="ui">초대 코드로 참여</span>를 고르세요.</p>
-        </div>`,
-    },
-    {
-      id: 'main',
-      no: '3',
-      label: '메인 화면',
-      title: '메인 화면 한눈에',
-      lede: '화면 위에 자리를 짚어 설명을 붙였습니다. 어디에 무엇이 있는지 한 번에 보여줍니다.',
-      state: 'done',
-      body: `
-        <div class="call">
-          <div class="stage">
-            <img src="shots/main-a.jpg" alt="모아콘 메인 화면 위쪽 — 헤더, 근처 매장 띠, 찾기와 갈래, 기프티콘 카드 한 장">
-            <span class="pin" style="left:4.54%;top:8.53%">1</span>
-            <span class="pin" style="left:4.54%;top:20.26%">2</span>
-            <span class="pin" style="left:4.54%;top:32.76%">3</span>
-            <span class="pin" style="left:4.54%;top:68.28%">4</span>
-            <span class="pin" style="left:27.78%;top:82.07%">5</span>
-            <span class="pin" style="left:4.54%;top:93.19%">6</span>
-          </div>
-          <div class="notes">
-            <div class="note">
-              <h3><b>1</b>맨 위</h3>
-              <p>가족 이름을 누르면 다른 가족으로 바꿉니다. 종은 알림, 동그라미는 내 메뉴예요.</p>
-            </div>
-            <div class="note">
-              <h3><b>2</b>근처 매장 띠</h3>
-              <p>지금 서 있는 자리에서 쓸 수 있는 매장이 있으면 뜹니다.</p>
-            </div>
-            <div class="note">
-              <h3><b>3</b>찾기와 갈래</h3>
-              <p>이름·브랜드로 찾거나 갈래로 추립니다. 옆의 숫자가 남은 개수예요.</p>
-            </div>
-            <div class="note">
-              <h3><b>4</b>카드 윗줄</h3>
-              <p>이름표 색으로 누가 받았는지 압니다. 아래가 상품명과 금액이에요.</p>
-            </div>
-            <div class="note">
-              <h3><b>5</b>남은 날짜</h3>
-              <p>기한이 가까우면 붉게, 여유가 있으면 회색으로 나옵니다.</p>
-            </div>
-            <div class="note">
-              <h3><b>6</b>아래 세 버튼</h3>
-              <p><span class="ui">매장</span>은 가까운 곳 찾기, <span class="ui">찜하기</span>는 내가 쓰겠다는 표시, <span class="ui">사용완료</span>는 다 썼다는 표시.</p>
-            </div>
-          </div>
-        </div>
-
-        <div class="call">
-          <div class="stage">
-            <img src="shots/main-b.jpg" alt="모아콘 메인 화면 아래쪽 — 금액권 카드와 다 쓴 것·기한 지난 카드, 오른쪽 아래 더하기 버튼">
-            <span class="pin" style="left:67.13%;top:26.11%">7</span>
-            <span class="pin" style="left:4.54%;top:62.12%">8</span>
-            <span class="pin" style="left:74.07%;top:90.86%">9</span>
-          </div>
-          <div class="notes">
-            <div class="note">
-              <h3><b>7</b>금액권은 다릅니다</h3>
-              <p>금액이 남는 것은 <span class="ui">잔액입력</span>이 뜹니다. 쓴 만큼 넣어두면 남은 돈이 카드에 그대로 보여요.</p>
-            </div>
-            <div class="note">
-              <h3><b>8</b>다 쓴 것·지난 것</h3>
-              <p>지워지지 않고 아래로 내려가 흐려집니다. 무엇을 언제 썼는지 남아요.</p>
-            </div>
-            <div class="note">
-              <h3><b>9</b>오른쪽 아래 + 버튼</h3>
-              <p>새 기프티콘을 올리는 자리입니다. 다음 장에서 다룹니다.</p>
-            </div>
-          </div>
-        </div>`,
-    },
-    {
-      id: 'add',
-      no: '4',
-      label: '올리기',
-      title: '사진만 올리면 알아서 채웁니다',
-      lede: '상품명·상호·금액·유효기한을 읽어서 넣어줍니다. 바코드는 폰 안에서 읽어요.',
-      state: 'wait',
-      need: [
-        '<b>사진 고르는 중 화면</b>',
-        '<b>읽는 중 화면</b> — 진행 표시가 뜬 상태',
-        '<b>다 채워진 등록 화면</b> — 금액·기한·바코드가 들어간 상태',
-        '<b>금액권 체크</b>가 보이는 부분 (금액이 있는 기프티콘)',
-        '<b>가격 검색</b> 버튼이 보이는 부분 (금액이 비어 있을 때)',
-      ],
-    },
-    {
-      id: 'use',
-      no: '5',
-      label: '매장에서 쓰기',
-      title: '계산대에서는 카드만 누르면 됩니다',
-      lede: '카드 윗칸 아무 데나 누르면 바코드가 크게 뜹니다.',
-      state: 'wait',
-      need: [
-        '<b>바코드 화면</b> — 메모와 아래 버튼이 보이게',
-        '<b>금액권 바코드 화면</b> — 아래가 <span class="ui">잔액입력</span>인 것',
-        '<b>잔액 입력 창</b> — 얼마 썼는지 넣는 화면',
-        '<b>사용완료된 카드</b> — 목록에서 흐려진 모습',
-      ],
-    },
-    {
-      id: 'watch',
-      no: '6',
-      label: '놓치지 않기',
-      title: '기한이 오기 전에 알려드립니다',
-      lede: '남은 날이 카드에 붙고, 만료가 가까우면 폰으로 알림이 옵니다.',
-      state: 'wait',
-      need: [
-        '<b>유효기한 알림</b> — 폰에 뜬 모습',
-        '<b>기한 연장 안내 창</b> — 붉은 D-day 칩을 누르면 열립니다',
-        '<b>찜하기</b>가 켜진 카드 — 하트가 채워진 모습',
-        '<b>기한이 지난 카드</b> — 목록 아래쪽의 흐려진 카드',
-      ],
-    },
-    {
-      id: 'near',
-      no: '7',
-      label: '근처에서 쓰기',
-      title: '지금 있는 자리에서 쓸 수 있는 것',
-      lede: '가까운 매장을 찾아주고, 길찾기까지 이어집니다.',
-      state: 'wait',
-      need: [
-        '<b>근처 매장 띠</b> — 목록 맨 위에 뜬 모습',
-        '<b>매장 목록</b> — 가까운 순',
-        '<b>매장 상세</b> — 지도·주소·전화·길찾기',
-        '<b>길찾기 지도</b> — 걸어서 / 차로',
-      ],
-    },
-    {
-      id: 'news',
-      no: '8',
-      label: '가족 소식',
-      title: '누가 무엇을 했는지, 우리가 얼마나 챙겼는지',
-      lede: '알림·공지사항·사용 내역을 한 장에 묶습니다.',
-      state: 'wait',
-      need: [
-        '<b>알림 목록</b> — 종 아이콘을 눌러 나오는 화면',
-        '<b>공지사항 화면</b>',
-        '<b>사용 내역</b> — 위쪽 결산(받은 것·쓴 것·놓친 것)이 보이게',
-      ],
-    },
-    {
-      id: 'me',
-      no: '9',
-      label: '내 메뉴',
-      title: '이름 바꾸기, 알림 켜기, 가족 옮기기',
-      lede: '오른쪽 위 내 이름 동그라미를 누르면 나옵니다.',
-      state: 'wait',
-      need: [
-        '<b>내 메뉴 전체</b>',
-        '<b>내 이름 바꾸기 창</b>',
-        '<b>가족 바꾸기 창</b> — 가족이 둘 이상일 때',
-        '<b>알림 설정</b> 부분',
-      ],
-    },
-  ];
-
-  const STATE_LABEL = { done: '작성됨', wait: '캡처 대기' };
-
-  document.getElementById('toc').innerHTML = CHAPTERS.map((c) => `
-    <li class="toc-item">
-      <span class="toc-no">${c.no}</span>
-      <span class="toc-name"><a href="#${c.id}">${c.label}</a></span>
-      <span class="state ${c.state}">${STATE_LABEL[c.state]}</span>
-    </li>`).join('');
-
-  document.getElementById('chapters').innerHTML = CHAPTERS.map((c) => `
-    <section class="chapter" id="${c.id}">
-      <p class="eyebrow">${c.no} · ${c.label}</p>
-      <h2 class="ch">${c.title}</h2>
-      <p class="ch-lede">${c.lede}</p>
-      ${c.body || ''}
-      ${c.state === 'wait' && c.need ? `
-        <div class="pending">
-          <h3>보내주실 화면</h3>
-          <ol>${c.need.map((n) => `<li>${n}</li>`).join('')}</ol>
-        </div>` : ''}
-    </section>`).join('');
-</script>
