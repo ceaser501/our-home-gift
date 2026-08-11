@@ -4,6 +4,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { CATEGORIES, STATUS_TABS } from '../constants';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import useBackClose from '../utils/useBackClose';
 
 // 분류 칩에 붙는 개수. 고른 칩은 배경이 진해서 같은 회색 뱃지를 얹으면 묻히므로,
 // 그 위에서는 글자색을 따라가는 반투명 배경을 쓴다.
@@ -35,6 +36,9 @@ export default function FilterBar({
   onStatusTabChange,
 }) {
   const [statusOpen, setStatusOpen] = useState(false);
+  // 뒤로가기로 이 시트를 닫는다. 훅은 조건부로 부를 수 없어서, 닫혀 있는 동안에는
+  // null을 넘겨 아무것도 하지 않게 한다.
+  useBackClose(statusOpen ? () => setStatusOpen(false) : null);
   // 사용여부는 한 번 정해두면 잘 안 바꾸는 값이라 한 줄을 통째로 내주지 않고 접어둔다.
   // 대신 지금 무엇으로 보고 있는지가 버튼에 그대로 적혀 있어야, 걸어둔 걸 잊지 않는다.
   const currentStatus = STATUS_TABS.find((tab) => tab.key === statusTab) ?? STATUS_TABS[0];

@@ -8,6 +8,7 @@ import CopyButton from './CopyButton';
 import { cn } from '@/lib/utils';
 import { formatDate } from '../utils/date';
 import { useFamily } from '../FamilyContext';
+import useBackClose from '../utils/useBackClose';
 
 const ZXING_TO_JSBARCODE = {
   CODE_128: 'CODE128',
@@ -21,6 +22,8 @@ const ZXING_TO_JSBARCODE = {
 };
 
 export default function BarcodeModal({ gifticon, onClose, onUsed, onSpend }) {
+  // 뒤로가기로 이 창을 닫는다. 안 그러면 설치해서 쓸 때 앱이 통째로 꺼진다.
+  useBackClose(onClose);
   // 금액권은 쓴 만큼 깎아 나가는 것이라, 이 창에서도 "다 썼다"가 아니라 "얼마 썼다"를 받는다.
   const isVoucher = Boolean(gifticon.is_voucher) && Number(gifticon.amount) > 0;
   const { members } = useFamily();

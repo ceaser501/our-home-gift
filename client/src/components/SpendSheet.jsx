@@ -3,6 +3,7 @@ import { Wallet } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import useBackClose from '../utils/useBackClose';
 
 // 금액권을 얼마나 썼는지 받는 창.
 //
@@ -19,6 +20,8 @@ function onlyDigits(value) {
 }
 
 export default function SpendSheet({ gifticon, onSpend, onClose }) {
+  // 뒤로가기로 이 창을 닫는다. 안 그러면 설치해서 쓸 때 앱이 통째로 꺼진다.
+  useBackClose(onClose);
   const [value, setValue] = useState('');
   const [saving, setSaving] = useState(false);
 

@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { useFamily } from '../FamilyContext';
 import { createFamily, requestJoinFamily } from '../family';
 import { cn } from '@/lib/utils';
+import useBackClose from '../utils/useBackClose';
 
 // 보는 가족을 바꾸는 창. 한 사람이 여러 가족에 속할 수 있어서(연인끼리 하나, 부모님과 하나)
 // 여기서 오가며 본다.
@@ -14,6 +15,8 @@ import { cn } from '@/lib/utils';
 // 새 가족을 만들거나 초대 코드로 들어가는 것도 이 창 안에서 화면만 바꿔 처리한다.
 // 창을 하나 더 띄우면 목록 위에 창이 두 겹 쌓여서, 어디까지 닫아야 하는지 헷갈린다.
 export default function FamilySwitcherSheet({ onClose }) {
+  // 뒤로가기로 이 창을 닫는다. 안 그러면 설치해서 쓸 때 앱이 통째로 꺼진다.
+  useBackClose(onClose);
   const { families, family, members, user, switchFamily } = useFamily();
   const myName = members.find((m) => m.user_id === user.id)?.display_name || '';
 

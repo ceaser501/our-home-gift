@@ -12,6 +12,7 @@ import {
   readCachedPosition,
   saveCachedPosition,
 } from '../utils/geolocation';
+import useBackClose from '../utils/useBackClose';
 
 // "이 기프티콘 어디서 쓰지?"를 보여주는 창. 현재 위치 주변의 브랜드 매장을 가까운 순으로
 // 늘어놓는다. 매장을 누르면 앱 안 상세(지도·주소·거리·전화·길찾기)가 열리고,
@@ -24,6 +25,8 @@ function formatDistance(meters) {
 }
 
 export default function NearbyStoresSheet({ gifticon, onClose }) {
+  // 뒤로가기로 이 창을 닫는다. 안 그러면 설치해서 쓸 때 앱이 통째로 꺼진다.
+  useBackClose(onClose);
   // 상호가 없으면 상품명으로라도 찾아본다(예: 브랜드 칸을 비워두고 등록한 경우).
   const query = (gifticon.brand || '').trim() || gifticon.name;
 

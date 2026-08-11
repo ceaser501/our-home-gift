@@ -12,8 +12,11 @@ import { deleteAccount } from '../auth';
 import { useFamily } from '../FamilyContext';
 import { leaveFamily, renameMember } from '../family';
 import { OWNER_TAG_PALETTE, memberTagColorClass } from '../utils/tagColor';
+import useBackClose from '../utils/useBackClose';
 
 export default function ProfileMenu({ onClose }) {
+  // 뒤로가기로 이 창을 닫는다. 안 그러면 설치해서 쓸 때 앱이 통째로 꺼진다.
+  useBackClose(onClose);
   const { family, members, user, refetchFamily, refreshFamily, signOut } = useFamily();
   const me = members.find((m) => m.user_id === user.id);
   const myName = me?.display_name || '나';

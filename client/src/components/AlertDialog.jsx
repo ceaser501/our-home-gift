@@ -1,6 +1,7 @@
 import { createPortal } from 'react-dom';
 import { AlertCircle, AlertTriangle, CheckCircle2, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import useBackClose from '../utils/useBackClose';
 
 const TONE = {
   info: { Icon: Info, className: 'text-primary' },
@@ -22,6 +23,10 @@ export default function AlertDialog({
   onConfirm,
   onClose,
 }) {
+  // 뒤로가기로 이 창을 닫는다. 안 그러면 설치해서 쓸 때 앱이 통째로 꺼진다.
+  // 물음창(확인/취소)에서 뒤로가기는 취소로 친다 — 되묻는 창을 확인으로 넘기면 안 된다.
+  useBackClose(onClose);
+
   const { Icon, className } = TONE[tone] || TONE.info;
   const asking = typeof onConfirm === 'function';
 

@@ -3,6 +3,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import useBackClose from '../utils/useBackClose';
 
 const MAX_LENGTH = 20;
 
@@ -10,6 +11,8 @@ const MAX_LENGTH = 20;
 // 다른 창(내 메뉴, 가족 목록) 위에 겹쳐서 열리는데, Radix 시트는 겹쳐 열어도
 // 글자 입력 포커스를 맨 위 창이 가져가므로 그대로 겹쳐 쓴다.
 export default function RenameSheet({ title, label, description, initialValue = '', placeholder, onSubmit, onClose }) {
+  // 뒤로가기로 이 창을 닫는다. 안 그러면 설치해서 쓸 때 앱이 통째로 꺼진다.
+  useBackClose(onClose);
   const [value, setValue] = useState(initialValue);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');

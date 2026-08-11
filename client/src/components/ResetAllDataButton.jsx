@@ -4,6 +4,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { deleteSampleGifticons, resetAllData } from '../api';
 import { SAMPLE_PREFIX, ensureSampleGifticon, setSampleOptOut } from '../sampleData';
 import AlertDialog from './AlertDialog';
+import useBackClose from '../utils/useBackClose';
 
 // ⚠️ 테스트 전용입니다. 실사용 배포 전에 이 파일을 지우고, Header에서 로고를 감싼 곳도
 // 풀어주세요. supabase/functions/reset-all-data도 같이 지웁니다.
@@ -29,6 +30,9 @@ const MOVE_TOLERANCE = 16;
 
 export default function TestDataMenu({ familyId, ownerName, userId, children }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  // 뒤로가기로 이 시트를 닫는다. 훅은 조건부로 부를 수 없어서, 닫혀 있는 동안에는
+  // null을 넘겨 아무것도 하지 않게 한다.
+  useBackClose(menuOpen ? () => setMenuOpen(false) : null);
   const [running, setRunning] = useState('');
   // 되돌릴 수 없는 작업이라 확인을 두 번 받는다. 'first' → 'second' 순서로 물어본다.
   const [asking, setAsking] = useState(null);

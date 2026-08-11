@@ -2,10 +2,13 @@ import { useEffect, useState } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { listNotices } from '../api';
 import { formatDate } from '../utils/date';
+import useBackClose from '../utils/useBackClose';
 
 // 지난 공지까지 한자리에 모아 보여준다. 배너는 최신 것 하나만 띄우고 닫으면 사라지는데,
 // "아까 그거 뭐였지"를 다시 찾을 데가 없으면 공지를 낸 의미가 없다.
 export default function NoticesSheet({ onClose }) {
+  // 뒤로가기로 이 창을 닫는다. 안 그러면 설치해서 쓸 때 앱이 통째로 꺼진다.
+  useBackClose(onClose);
   const [notices, setNotices] = useState(null);
 
   useEffect(() => {

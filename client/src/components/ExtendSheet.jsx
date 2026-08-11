@@ -4,6 +4,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { addDays, formatDate, formatDday, todayStr } from '../utils/date';
+import useBackClose from '../utils/useBackClose';
 
 // 유효기한이 임박했거나 지난 기프티콘의 칩을 누르면 열리는 창.
 //
@@ -17,6 +18,8 @@ const DEFAULT_DAYS = 90;
 const GIFT_BOX_URL = 'https://gift.kakao.com/order/history';
 
 export default function ExtendSheet({ gifticon, onExtend, onClose }) {
+  // 뒤로가기로 이 창을 닫는다. 안 그러면 설치해서 쓸 때 앱이 통째로 꺼진다.
+  useBackClose(onClose);
   // 기본은 한 번 탭으로 끝내는 길. 날짜가 다를 때만 직접 넣는다.
   const [custom, setCustom] = useState(false);
   const [date, setDate] = useState('');

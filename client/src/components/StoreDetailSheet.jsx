@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { fetchRoute } from '../api';
 import { loadKakaoMap } from '../utils/kakaoMap';
 import { openTmapRoute } from '../utils/tmap';
+import useBackClose from '../utils/useBackClose';
 
 // 매장 하나의 상세. 지도·주소·거리·전화는 앱 안에서 바로 보여준다.
 // 영업시간·평점·리뷰는 카카오가 API로 주지 않아서(카카오맵 페이지에만 있다)
@@ -38,6 +39,8 @@ function fitTo(kakao, map, points, store) {
 }
 
 export default function StoreDetailSheet({ store, origin, onClose }) {
+  // 뒤로가기로 이 창을 닫는다. 안 그러면 설치해서 쓸 때 앱이 통째로 꺼진다.
+  useBackClose(onClose);
   const mapRef = useRef(null);
   // loading: SDK 받는 중 / ready: 지도 표시됨 / none: 키가 없거나 로드 실패(지도 없이 정보만)
   const [mapState, setMapState] = useState('loading');

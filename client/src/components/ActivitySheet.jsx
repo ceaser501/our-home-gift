@@ -1,5 +1,6 @@
 import { CheckCircle2, PackagePlus, RotateCcw, Wallet } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import useBackClose from '../utils/useBackClose';
 
 // 무슨 일이 있었는지 한 줄로 읽히게 한다. 아이콘은 카드 아래 버튼과 같은 것을 쓴다.
 // 목록에서 "사용완료"를 누른 그 동작이 여기 이 줄이 됐다는 걸 그림으로 잇는다.
@@ -32,6 +33,8 @@ function timeAgo(iso) {
 }
 
 export default function ActivitySheet({ activities, lastReadAt, onClose }) {
+  // 뒤로가기로 이 창을 닫는다. 안 그러면 설치해서 쓸 때 앱이 통째로 꺼진다.
+  useBackClose(onClose);
   const readCutoff = lastReadAt ? new Date(lastReadAt).getTime() : 0;
 
   return (

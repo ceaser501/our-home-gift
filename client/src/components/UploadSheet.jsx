@@ -12,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import AlertDialog from './AlertDialog';
+import useBackClose from '../utils/useBackClose';
 
 // 스토리지 버킷에 걸어둔 제한과 같은 값이어야 한다(supabase/schema.sql).
 // 달라지면 화면에서는 통과했는데 올릴 때 실패하는, 이유를 알 수 없는 오류가 난다.
@@ -86,6 +87,8 @@ function buildExistingImages(initial) {
 }
 
 export default function UploadSheet({ mode, initial, onClose, onSaved }) {
+  // 뒤로가기로 이 창을 닫는다. 안 그러면 설치해서 쓸 때 앱이 통째로 꺼진다.
+  useBackClose(onClose);
   const { family, members, user } = useFamily();
   const myName = members.find((m) => m.user_id === user.id)?.display_name || members[0]?.display_name || '';
   const [form, setForm] = useState(() => buildForm(initial, myName));

@@ -2,8 +2,11 @@ import { useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
+import useBackClose from '../utils/useBackClose';
 
 export default function ImageViewerModal({ gifticon, onClose }) {
+  // 뒤로가기로 이 창을 닫는다. 안 그러면 설치해서 쓸 때 앱이 통째로 꺼진다.
+  useBackClose(onClose);
   const [index, setIndex] = useState(0);
 
   if (!gifticon) return null;

@@ -6,6 +6,7 @@ import { formatDday, formatDate, ddayUrgency } from '../utils/date';
 import { nameTagColorClass, tagColorClass } from '../utils/tagColor';
 import { cn } from '@/lib/utils';
 import { useFamily } from '../FamilyContext';
+import useBackClose from '../utils/useBackClose';
 
 function categoryLabel(key) {
   return CATEGORIES.find((c) => c.key === key)?.label ?? key;
@@ -37,6 +38,9 @@ export default function GifticonCard({
 }) {
   const { members, user } = useFamily();
   const [menuOpen, setMenuOpen] = useState(false);
+  // 뒤로가기로 이 시트를 닫는다. 훅은 조건부로 부를 수 없어서, 닫혀 있는 동안에는
+  // null을 넘겨 아무것도 하지 않게 한다.
+  useBackClose(menuOpen ? () => setMenuOpen(false) : null);
   const isUsed = gifticon.status === 'used';
   const urgency = isUsed ? 'none' : ddayUrgency(gifticon.expires_at);
   // 이름표 색은 가족에 들어올 때 정해진 번호(tag_color)를 쓴다. 목록에서 몇 번째냐로

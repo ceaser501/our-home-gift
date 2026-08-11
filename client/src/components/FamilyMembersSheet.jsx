@@ -8,6 +8,7 @@ import { useFamily } from '../FamilyContext';
 import { approveJoinRequest, rejectJoinRequest, renameFamily } from '../family';
 import { OWNER_TAG_PALETTE, memberTagColorClass } from '../utils/tagColor';
 import { formatDate } from '../utils/date';
+import useBackClose from '../utils/useBackClose';
 
 // 초대를 카카오톡 대화방으로 바로 보낸다.
 //
@@ -44,6 +45,8 @@ function ShareInviteButton({ family }) {
 }
 
 export default function FamilyMembersSheet({ onClose }) {
+  // 뒤로가기로 이 창을 닫는다. 안 그러면 설치해서 쓸 때 앱이 통째로 꺼진다.
+  useBackClose(onClose);
   const { family, members, user, joinRequests, refreshFamily } = useFamily();
   const [renameOpen, setRenameOpen] = useState(false);
   const [deciding, setDeciding] = useState(null);

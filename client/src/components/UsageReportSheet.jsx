@@ -4,12 +4,15 @@ import FamilyReport from './FamilyReport';
 import { listGifticonStats, listUsageHistory } from '../api';
 import { useFamily } from '../FamilyContext';
 import { formatDate } from '../utils/date';
+import useBackClose from '../utils/useBackClose';
 
 function formatAmount(amount) {
   return amount ? `${Number(amount).toLocaleString('ko-KR')}원` : '';
 }
 
 export default function UsageReportSheet({ onClose }) {
+  // 뒤로가기로 이 창을 닫는다. 안 그러면 설치해서 쓸 때 앱이 통째로 꺼진다.
+  useBackClose(onClose);
   const { family } = useFamily();
   const [rows, setRows] = useState([]);
   const [all, setAll] = useState([]);
