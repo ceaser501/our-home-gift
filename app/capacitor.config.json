@@ -1,0 +1,12 @@
+{
+  "appId": "io.github.ceaser501.moacon",
+  "appName": "모아콘",
+  "webDir": "../client/dist",
+  "server": {
+    "url": "https://ceaser501.github.io/our-home-gift/",
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": false
+  }
+}

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">모아콘</string>
+    <string name="title_activity_main">모아콘</string>
+    <string name="package_name">io.github.ceaser501.moacon</string>
+    <string name="custom_url_scheme">io.github.ceaser501.moacon</string>
+</resources>

@@ -9,6 +9,7 @@
 
 ```
 client/     React(Vite) 프론트엔드 — GitHub Pages로 배포되는 정적 사이트
+app/        Capacitor 안드로이드 앱 껍데기 — 위 사이트를 그대로 띄운다
 supabase/   Supabase(DB + 이미지 스토리지) 초기 설정 SQL
 ```
 
@@ -280,6 +281,86 @@ npm run dev
 - **가격 검색(선택 기능)**: 금액이 자동으로 안 채워지면 "가격 검색" 버튼으로 웹 검색을 돌려
   현재 판매가를 찾아 채웁니다. Supabase Edge Function 설정이 필요합니다
   (위 "이미지 자동 인식 + 가격 검색 켜기" 참고).
+
+## 처음 한 번만: 안드로이드 앱 배포 켜기
+
+앱은 웹을 대체하지 않는다. `app/capacitor.config.json`의 `server.url`이 GitHub Pages 주소를
+가리키고 있어서, **앱은 그 사이트를 그대로 띄우는 껍데기**다. 화면 코드를 고치면 웹 배포만으로
+앱에도 그대로 반영되고, 앱을 다시 나눠줄 필요가 없다. APK를 새로 뿌려야 하는 건 앱 껍데기나
+갤러리 스캔 같은 네이티브 부분을 고쳤을 때뿐이다.
+
+대신 앱은 인터넷이 없으면 열리지 않는다. 웹을 띄우는 구조라 어쩔 수 없는 맞바꿈이다.
+
+### 1. 서명 키 만들기 (딱 한 번, 그리고 절대 잃어버리면 안 됨)
+
+안드로이드는 서명된 앱만 설치된다. 스토어에 올리지 않아도 키는 필요한데, 애플과 달리
+**내가 만든 키를 그대로 쓰면 된다**(승인 절차도, 비용도 없다).
+
+```bash
+keytool -genkeypair -v \
+  -keystore moacon.keystore \
+  -alias moacon \
+  -keyalg RSA -keysize 2048 -validity 10000 \
+  -storetype PKCS12
+```
+
+> ⚠️ **이 파일을 잃어버리면 되돌릴 방법이 없다.** 다른 키로 서명한 APK는 이미 깔린 앱 위에
+> 덮어쓰기가 안 되고, 쓰던 사람 전부가 앱을 지우고 다시 깔아야 한다(자료는 서버에 있어서
+> 남지만 다시 로그인해야 한다). 저장소에는 넣지 말고, 비밀번호와 함께 따로 백업해둔다.
+
+### 2. GitHub 시크릿 4개 등록
+
+저장소 `Settings → Secrets and variables → Actions`에 넣는다.
+
+| 이름 | 값 |
+| --- | --- |
+| `ANDROID_KEYSTORE_BASE64` | `base64 -w0 moacon.keystore` 결과 (맥은 `-w0` 빼고) |
+| `ANDROID_KEYSTORE_PASSWORD` | 위에서 정한 비밀번호 |
+| `ANDROID_KEY_ALIAS` | `moacon` |
+| `ANDROID_KEY_PASSWORD` | 비밀번호 (PKCS12는 위와 같은 값) |
+
+### 3. 배포하기
+
+태그를 밀면 `.github/workflows/build-android-apk.yml`이 APK를 만들어 Release에 붙인다.
+
+```bash
+git tag app-v1.0.0
+git push origin app-v1.0.0
+```
+
+끝나면 `https://github.com/ceaser501/our-home-gift/releases` 에 `.apk`가 올라온다. **그 링크를
+카카오톡으로 보내주면 된다.** 받는 사람은 링크를 눌러 받아 설치한다.
+
+시험 삼아 빌드만 해보고 싶으면 Actions 탭에서 이 워크플로를 수동 실행한다. 그때는 Release를
+만들지 않고 실행 결과에 APK만 첨부한다.
+
+### 나눠줄 때 알아둘 것
+
+- **APK 파일을 카톡으로 직접 보내지 않는다.** 카톡에 올린 파일은 일정 기간이 지나면 만료돼서
+  나중에 받은 사람이 못 받는다. Gmail은 아예 `.apk` 첨부를 막는다. **링크로 주는 게 맞다.**
+- **설치할 때 경고가 두세 번 뜬다.** "이런 유형의 파일은 위험할 수 있습니다" → "이 출처의 앱
+  설치 허용" → Play Protect의 "무시하고 설치". 웹 링크와 달리 이 과정이 있다는 걸 미리
+  알려주는 편이 좋다. Release 설명에 이 순서를 적어두게 해뒀다.
+- **자동 업데이트가 없다.** 다만 화면은 웹에서 오므로, 대부분의 수정은 앱을 다시 깔지 않아도
+  반영된다.
+- **아이폰은 이 APK를 쓸 수 없다.** 지금처럼 사이트를 홈 화면에 추가해서 쓰면 된다.
+- **2027년부터 사이드로딩에도 개발자 인증이 필요해진다**([Android developer
+  verification](https://developer.android.com/developer-verification)). 20대까지는 무료 계정으로
+  가능하고, 그보다 많이 뿌리게 되면 25달러짜리 계정이 필요하다.
+
+### 앱 아이콘을 다시 만들려면
+
+`assets/app-icons/`의 원본에서 안드로이드용 아이콘을 다시 뽑는다.
+
+```bash
+cd app
+mkdir -p .assets-src
+cp ../assets/app-icons/store/icon-1024.png .assets-src/icon.png
+cp ../assets/app-icons/android/android-adaptive-foreground.png .assets-src/icon-foreground.png
+cp ../assets/app-icons/android/android-adaptive-background.png .assets-src/icon-background.png
+npx @capacitor/assets generate --android --assetPath .assets-src
+rm -rf .assets-src
+```
 
 ## 공유로 등록은 어떻게 동작하나
 

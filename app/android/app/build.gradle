@@ -1,0 +1,81 @@
+apply plugin: 'com.android.application'
+
+android {
+    namespace = "io.github.ceaser501.moacon"
+    compileSdk = rootProject.ext.compileSdkVersion
+    defaultConfig {
+        applicationId "io.github.ceaser501.moacon"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        // 버전은 빌드할 때 정해진다(.github/workflows/build-android-apk.yml).
+        // versionCode는 폰이 "이게 더 새 버전인가"를 판단하는 유일한 기준이라 반드시
+        // 올라가기만 해야 한다. 워크플로가 실행 번호를 그대로 넣어서 늘 커지게 한다.
+        // 값이 없으면 내 컴퓨터에서 시험 삼아 빌드하는 경우라 아무 값이나 들어가도 된다.
+        versionCode System.getenv("MOACON_VERSION_CODE") ? System.getenv("MOACON_VERSION_CODE").toInteger() : 1
+        versionName System.getenv("MOACON_VERSION_NAME") ?: "0.0.0-dev"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        aaptOptions {
+             // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
+             // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
+            ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+        }
+    }
+    // 서명 키는 저장소에 두지 않는다. GitHub Actions가 시크릿에서 꺼내 파일로 풀고
+    // 그 경로를 환경변수로 넘겨준다(.github/workflows/build-android-apk.yml).
+    //
+    // 이 키를 잃어버리면 다시 만들 수 없고, 다른 키로 서명한 APK는 이미 깔린 앱 위에
+    // 덮어쓰기가 안 된다. 쓰던 사람 전부가 앱을 지우고 다시 깔아야 한다(자료는 서버에
+    // 있어서 남지만, 다시 로그인해야 한다). 키 파일은 반드시 따로 백업해둔다.
+    signingConfigs {
+        release {
+            def keystorePath = System.getenv("MOACON_KEYSTORE_PATH")
+            if (keystorePath) {
+                storeFile file(keystorePath)
+                storePassword System.getenv("MOACON_KEYSTORE_PASSWORD")
+                keyAlias System.getenv("MOACON_KEY_ALIAS")
+                keyPassword System.getenv("MOACON_KEY_PASSWORD")
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            // 서명 정보가 없으면 서명 없는 APK가 나오는데, 그건 폰에 설치되지 않는다.
+            // 나눠줄 APK는 반드시 워크플로를 거쳐야 한다는 뜻이다.
+            if (System.getenv("MOACON_KEYSTORE_PATH")) {
+                signingConfig signingConfigs.release
+            }
+        }
+    }
+}
+
+repositories {
+    flatDir{
+        dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+    }
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
+    implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+    implementation project(':capacitor-android')
+    testImplementation "junit:junit:$junitVersion"
+    androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
+    androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
+    implementation project(':capacitor-cordova-android-plugins')
+}
+
+apply from: 'capacitor.build.gradle'
+
+try {
+    def servicesJSON = file('google-services.json')
+    if (servicesJSON.text) {
+        apply plugin: 'com.google.gms.google-services'
+    }
+} catch(Exception e) {
+    logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
+}
