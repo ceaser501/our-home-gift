@@ -176,6 +176,24 @@ export default function App() {
     };
   }, [family.id, myName, user.id]);
 
+  // + 를 누르면 등록 창을 먼저 띄우지 않고 사진 선택창을 곧바로 연다. 새 기프티콘은
+  // 어차피 사진이 한 장 이상 있어야 저장되는데, 창을 먼저 띄우면 그 안에서 "사진 고르기"를
+  // 또 눌러야 해서 한 단계가 헛돈다. 특히 아이폰은 공유로 넘겨받을 수 없어서(사파리가
+  // 공유 대상을 지원하지 않는다) 이 길이 사실상 유일한 등록 경로라, 여기서 줄이는 한 번이 크다.
+  //
+  // 입력칸을 등록 창 안이 아니라 여기 바깥에 둬야 한다. 창이 열린 뒤에 여는 방식으로는
+  // 사용자가 누른 순간(제스처)이 이미 끊겨서 브라우저가 선택창 열기를 막는다.
+  const addInputRef = useRef(null);
+
+  function handleAddPicked(e) {
+    const picked = Array.from(e.target.files || []);
+    // 같은 사진을 연달아 고를 수도 있어서 비워둔다. 안 비우면 두 번째부터 아무 일도 안 일어난다.
+    e.target.value = '';
+    // 고르지 않고 닫았으면 마음이 바뀐 것이다. 빈 창을 띄우지 않는다.
+    if (picked.length === 0) return;
+    setSheetState({ mode: 'create', initial: null, files: picked });
+  }
+
   // 카카오톡이나 갤러리에서 "공유 → 모아콘"으로 넘어왔으면, 사용자는 이미 등록할 사진을
   // 고른 것이다. 목록을 보여주고 다시 + 를 누르게 하지 않고 등록 창을 바로 열어준다.
   useEffect(() => {
@@ -338,9 +356,11 @@ export default function App() {
         )}
       </main>
 
+      <input ref={addInputRef} type="file" accept="image/*" multiple onChange={handleAddPicked} hidden />
+
       <button
         type="button"
-        onClick={() => setSheetState({ mode: 'create', initial: null })}
+        onClick={() => addInputRef.current?.click()}
         aria-label="기프티콘 추가"
         style={{ right: 'max(20px, calc((100vw - 480px) / 2 + 20px))' }}
         className="fixed bottom-[max(24px,env(safe-area-inset-bottom))] z-20 flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/40"
