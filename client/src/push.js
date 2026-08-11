@@ -1,4 +1,5 @@
 import { savePushSubscription, deleteMyPushSubscriptions, hasPushSubscription } from './api';
+import { isServiceWorkerSupported, readyServiceWorker } from './utils/serviceWorker';
 
 // 이 앱 전용 VAPID 공개키. 비밀값이 아니라(브라우저에 항상 노출되는 값) 그대로 커밋해도 된다.
 // 짝이 되는 개인키(VAPID_PRIVATE_KEY)만 Supabase Edge Function 비밀값으로 따로 보관한다.
@@ -12,19 +13,11 @@ function urlBase64ToUint8Array(base64String) {
 }
 
 export function isPushSupported() {
-  return typeof window !== 'undefined' && 'serviceWorker' in navigator && 'PushManager' in window;
-}
-
-// 서비스워커를 등록하고, 실제로 활성화(active)될 때까지 기다린 등록 객체를 돌려준다.
-// 등록 직후에는 아직 installing/waiting 상태일 수 있어서 바로 showNotification을 부르면
-// 실패할 수 있기 때문에 navigator.serviceWorker.ready로 활성화를 기다린다.
-export async function ensureServiceWorker() {
-  await navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`);
-  return navigator.serviceWorker.ready;
+  return typeof window !== 'undefined' && isServiceWorkerSupported() && 'PushManager' in window;
 }
 
 async function getRegistration() {
-  return ensureServiceWorker();
+  return readyServiceWorker();
 }
 
 export async function getExistingSubscription() {

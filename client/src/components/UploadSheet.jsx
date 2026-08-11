@@ -86,7 +86,7 @@ function buildExistingImages(initial) {
   return (initial?.image_paths || []).map((path, i) => ({ path, url: initial.image_urls[i] }));
 }
 
-export default function UploadSheet({ mode, initial, onClose, onSaved }) {
+export default function UploadSheet({ mode, initial, initialFiles, onClose, onSaved }) {
   // 뒤로가기로 이 창을 닫는다. 안 그러면 설치해서 쓸 때 앱이 통째로 꺼진다.
   useBackClose(onClose);
   const { family, members, user } = useFamily();
@@ -115,6 +115,19 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
     };
   }, [newPreviews]);
 
+  // 공유로 넘어온 사진은 사용자가 이미 "이걸 등록해줘"라고 고른 것이라, 창이 열리자마자
+  // 직접 고른 것과 똑같이 분석을 시작한다.
+  // 개발 모드(StrictMode)에서는 이 효과가 두 번 실행돼서 같은 사진이 두 장 붙는다.
+  // 한 번 받아들인 뒤로는 다시 처리하지 않게 표시해둔다.
+  const sharedHandledRef = useRef(false);
+  useEffect(() => {
+    if (sharedHandledRef.current || !initialFiles?.length) return;
+    sharedHandledRef.current = true;
+    acceptFiles(initialFiles);
+    // acceptFiles는 매번 새로 만들어지는 함수라 의존성에 넣으면 효과가 계속 다시 돈다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialFiles]);
+
   function updateField(key, value) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
@@ -122,6 +135,12 @@ export default function UploadSheet({ mode, initial, onClose, onSaved }) {
   async function handleFileChange(e) {
     const picked = Array.from(e.target.files || []);
     e.target.value = '';
+    await acceptFiles(picked);
+  }
+
+  // 사진이 들어오는 길은 두 갈래다 — 직접 고르거나, 다른 앱에서 "공유 → 모아콘"으로
+  // 보내오거나. 둘 다 같은 검사와 같은 분석을 거치도록 여기 하나로 모았다.
+  async function acceptFiles(picked) {
     if (picked.length === 0) return;
 
     // "파일"로 고르면 이미지가 아닌 것도 집을 수 있어서 여기서 걸러낸다.

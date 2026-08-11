@@ -19,6 +19,7 @@ import { subscribeToGifticons, subscribeToFamily } from './realtime';
 import { ensureSampleGifticon } from './sampleData';
 import { daysUntil, todayStr } from './utils/date';
 import { hasNewVersion } from './utils/version';
+import { hasSharedImages, takeSharedImages, discardSharedImages } from './utils/shareTarget';
 import { useFamily } from './FamilyContext';
 
 // 목록은 "지금 쓸 수 있는 것 → 기한이 지난 것 → 다 쓴 것" 세 덩어리다.
@@ -174,6 +175,25 @@ export default function App() {
       cancelled = true;
     };
   }, [family.id, myName, user.id]);
+
+  // 카카오톡이나 갤러리에서 "공유 → 모아콘"으로 넘어왔으면, 사용자는 이미 등록할 사진을
+  // 고른 것이다. 목록을 보여주고 다시 + 를 누르게 하지 않고 등록 창을 바로 열어준다.
+  useEffect(() => {
+    if (!hasSharedImages()) {
+      // 표시가 없는데 사진이 남아 있다면 지난번 공유가 등록까지 이어지지 않은 것이다
+      // (로그인 화면을 거치면서 주소의 표시가 떨어져 나가는 경우 등). 그냥 치운다.
+      discardSharedImages();
+      return;
+    }
+
+    let cancelled = false;
+    takeSharedImages().then((files) => {
+      if (!cancelled && files.length > 0) setSheetState({ mode: 'create', initial: null, files });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // 폰이 잠들거나 다른 앱에 다녀오는 동안에는 연결이 끊겨서 그사이 바뀐 것을 놓친다.
   // 앱이 다시 화면에 나오면 한 번 맞춰본다.
@@ -332,6 +352,7 @@ export default function App() {
         <UploadSheet
           mode={sheetState.mode}
           initial={sheetState.initial}
+          initialFiles={sheetState.files}
           onClose={() => setSheetState(null)}
           onSaved={handleSaved}
         />
