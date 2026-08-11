@@ -396,11 +396,10 @@
   /* 화면 한 장을 놓고 "여기는 무엇, 저기는 무엇"을 짚는 갈래. 걸음(.steps)과 달리
      순서가 아니라 자리를 가리킨다.
 
-     번호만 옆에 나열하면 어디를 말하는지 찾느라 눈이 왔다 갔다 한다. 짚는 자리에
-     상자를 그리고 거기서 선을 빼, 좌우 여백에 설명을 붙인다. 자리는 사진 크기에
+     짚는 자리에 번호를 얹고, 옆에 같은 번호로 설명을 세운다. 번호 자리는 사진 크기에
      대한 %로 잡아 화면 폭이 달라져도 따라 움직인다. */
-  .call { display: grid; gap: 24px; margin-top: 34px; }
-  .call + .call { margin-top: 56px; }
+  .call { display: grid; gap: 28px; margin-top: 34px; }
+  .call + .call { margin-top: 52px; }
   .stage { position: relative; }
   .stage img {
     display: block; width: 100%; height: auto;
@@ -408,48 +407,39 @@
     border: 1px solid var(--line);
     box-shadow: 0 16px 32px -18px rgba(24, 20, 38, 0.38);
   }
-  .spot {
+  /* 사진 위에 얹는 번호. 화면 사진은 페이지 테마와 상관없이 늘 밝으니, 흰 테두리를
+     둘러 화면 속 보라 버튼과 겹쳐도 번호가 떠 보이게 한다. */
+  .pin {
     position: absolute;
-    /* 화면 사진은 페이지 테마와 상관없이 늘 밝다. 선 색을 토큰에 맡기면 다크에서
-       흰 선이 흰 화면에 묻히므로 여기만 색을 고정한다. */
-    border: 2px solid #17141f;
-    border-radius: 10px;
-    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.6);
+    transform: translate(-50%, -50%);
+    display: grid; place-items: center;
+    width: 27px; height: 27px;
+    border-radius: 50%;
+    background: var(--accent); color: #fff;
+    font-size: 14px; font-weight: 750;
+    font-variant-numeric: tabular-nums;
+    box-shadow: 0 0 0 3px #fff, 0 2px 6px rgba(24, 20, 38, 0.3);
   }
+  .notes { display: grid; gap: 22px; align-content: start; }
   .note h3 {
-    display: flex; align-items: center; gap: 9px;
-    margin: 0 0 4px;
-    font-size: 17px; font-weight: 760; letter-spacing: -0.022em;
+    display: flex; align-items: center; gap: 10px;
+    margin: 0 0 3px;
+    font-size: 18px; font-weight: 760; letter-spacing: -0.022em;
   }
-  .note p { margin: 0; font-size: 15.5px; color: var(--ink2); }
+  .note p { margin: 0 0 0 34px; font-size: 16px; color: var(--ink2); }
   .note b {
     display: grid; place-items: center;
     width: 24px; height: 24px; flex: none;
     border-radius: 50%;
-    background: var(--ink); color: var(--paper);
-    font-size: 12.5px; font-weight: 750;
+    background: var(--accent); color: #fff;
+    font-size: 13px; font-weight: 750;
     font-variant-numeric: tabular-nums;
   }
-  /* 좁은 화면에는 좌우에 설명을 놓을 자리가 없다. 사진 아래로 번호 순서대로 쌓고
-     잇는 선은 지운다 — 상자와 번호만으로 짚는 자리가 전해진다. */
-  .wires { display: none; }
 
   @media (min-width: 900px) {
-    .call { grid-template-columns: 230px minmax(0, 1fr) 230px; gap: 0 42px; position: relative; }
-    .call .stage { grid-column: 2; }
-    .note { position: absolute; width: 230px; margin: 0; transform: translateY(-50%); }
-    .note.l { left: 0; text-align: right; }
-    .note.l h3 { flex-direction: row-reverse; }
-    .note.r { right: 0; }
-    /* 선은 .call 전체를 좌표계로 쓴다. viewBox를 0~100으로 두고 늘려 붙이면
-       끝점을 그냥 %로 적을 수 있다. 늘어나면서 굵기가 뭉개지는 것만 막아준다. */
-    .wires {
-      display: block;
-      position: absolute; inset: 0;
-      width: 100%; height: 100%;
-      pointer-events: none;
-    }
-    .wires line { stroke: #9a94a8; stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+    /* 사진을 화면 폭만큼 키우면 세로로 긴 폰 화면이라 스크롤만 늘어난다.
+       읽을 수 있는 크기까지만 두고 남는 폭은 여백으로 놓는다. */
+    .call { grid-template-columns: 500px 330px; gap: 0 56px; align-items: start; justify-content: center; }
   }
 
   .who {
@@ -819,72 +809,63 @@
       state: 'done',
       body: `
         <div class="call">
-          <svg class="wires" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-          <line x1="21.70" y1="9" x2="27.87" y2="8.58"/>
-          <line x1="21.70" y1="28" x2="26.56" y2="20.30"/>
-          <line x1="21.70" y1="50" x2="27.87" y2="39.53"/>
-          <line x1="78.30" y1="60" x2="72.09" y2="68.32"/>
-          <line x1="78.30" y1="79" x2="60.05" y2="82.11"/>
-          <line x1="78.30" y1="96" x2="72.09" y2="93.19"/>
-          </svg>
           <div class="stage">
             <img src="shots/main-a.jpg" alt="모아콘 메인 화면 위쪽 — 헤더, 근처 매장 띠, 찾기와 갈래, 기프티콘 카드 한 장">
-            <span class="spot" style="left:4.54%;top:3.62%;width:90.83%;height:9.91%"></span>
-            <span class="spot" style="left:1.85%;top:14.48%;width:96.30%;height:11.64%"></span>
-            <span class="spot" style="left:4.54%;top:26.98%;width:90.83%;height:25.09%"></span>
-            <span class="spot" style="left:4.54%;top:57.76%;width:90.83%;height:21.12%"></span>
-            <span class="spot" style="left:30.56%;top:78.97%;width:40.09%;height:6.29%"></span>
-            <span class="spot" style="left:4.54%;top:87.50%;width:90.83%;height:11.38%"></span>
+            <span class="pin" style="left:4.54%;top:8.53%">1</span>
+            <span class="pin" style="left:4.54%;top:20.26%">2</span>
+            <span class="pin" style="left:4.54%;top:32.76%">3</span>
+            <span class="pin" style="left:4.54%;top:68.28%">4</span>
+            <span class="pin" style="left:27.78%;top:82.07%">5</span>
+            <span class="pin" style="left:4.54%;top:93.19%">6</span>
           </div>
-          <div class="note l" style="top:9%">
-            <h3><b>1</b>맨 위</h3>
-            <p>가족 이름을 누르면 다른 가족으로. 종은 알림, 동그라미는 내 메뉴예요.</p>
-          </div>
-          <div class="note l" style="top:28%">
-            <h3><b>2</b>근처 매장 띠</h3>
-            <p>지금 서 있는 자리에서 쓸 수 있는 매장이 있으면 뜹니다.</p>
-          </div>
-          <div class="note l" style="top:50%">
-            <h3><b>3</b>찾기와 갈래</h3>
-            <p>이름으로 찾거나 갈래로 추립니다. 숫자는 남은 개수예요.</p>
-          </div>
-          <div class="note r" style="top:60%">
-            <h3><b>4</b>카드 윗줄</h3>
-            <p>이름표 색으로 누가 받았는지 압니다. 아래가 상품명과 금액이에요.</p>
-          </div>
-          <div class="note r" style="top:79%">
-            <h3><b>5</b>남은 날짜</h3>
-            <p>기한이 가까우면 붉게, 여유가 있으면 회색.</p>
-          </div>
-          <div class="note r" style="top:96%">
-            <h3><b>6</b>아래 세 버튼</h3>
-            <p>가까운 매장 찾기 · 내가 쓸게요 · 다 썼어요.</p>
+          <div class="notes">
+            <div class="note">
+              <h3><b>1</b>맨 위</h3>
+              <p>가족 이름을 누르면 다른 가족으로 바꿉니다. 종은 알림, 동그라미는 내 메뉴예요.</p>
+            </div>
+            <div class="note">
+              <h3><b>2</b>근처 매장 띠</h3>
+              <p>지금 서 있는 자리에서 쓸 수 있는 매장이 있으면 뜹니다.</p>
+            </div>
+            <div class="note">
+              <h3><b>3</b>찾기와 갈래</h3>
+              <p>이름·브랜드로 찾거나 갈래로 추립니다. 옆의 숫자가 남은 개수예요.</p>
+            </div>
+            <div class="note">
+              <h3><b>4</b>카드 윗줄</h3>
+              <p>이름표 색으로 누가 받았는지 압니다. 아래가 상품명과 금액이에요.</p>
+            </div>
+            <div class="note">
+              <h3><b>5</b>남은 날짜</h3>
+              <p>기한이 가까우면 붉게, 여유가 있으면 회색으로 나옵니다.</p>
+            </div>
+            <div class="note">
+              <h3><b>6</b>아래 세 버튼</h3>
+              <p><span class="ui">매장</span>은 가까운 곳 찾기, <span class="ui">찜하기</span>는 내가 쓰겠다는 표시, <span class="ui">사용완료</span>는 다 썼다는 표시.</p>
+            </div>
           </div>
         </div>
 
         <div class="call">
-          <svg class="wires" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-          <line x1="78.30" y1="26" x2="72.09" y2="26.11"/>
-          <line x1="21.70" y1="62" x2="27.87" y2="62.15"/>
-          <line x1="78.30" y1="91" x2="71.95" y2="90.86"/>
-          </svg>
           <div class="stage">
             <img src="shots/main-b.jpg" alt="모아콘 메인 화면 아래쪽 — 금액권 카드와 다 쓴 것·기한 지난 카드, 오른쪽 아래 더하기 버튼">
-            <span class="spot" style="left:64.44%;top:21.92%;width:30.93%;height:8.39%"></span>
-            <span class="spot" style="left:4.54%;top:31.68%;width:90.83%;height:60.93%"></span>
-            <span class="spot" style="left:78.06%;top:84.47%;width:17.04%;height:12.77%"></span>
+            <span class="pin" style="left:67.13%;top:26.11%">7</span>
+            <span class="pin" style="left:4.54%;top:62.12%">8</span>
+            <span class="pin" style="left:74.07%;top:90.86%">9</span>
           </div>
-          <div class="note r" style="top:26%">
-            <h3><b>7</b>금액권은 다릅니다</h3>
-            <p>금액이 남는 것은 <span class="ui">잔액입력</span>이 뜹니다. 쓴 만큼 넣으면 남은 돈이 보여요.</p>
-          </div>
-          <div class="note l" style="top:62%">
-            <h3><b>8</b>다 쓴 것·지난 것</h3>
-            <p>지워지지 않고 아래로 내려가 흐려집니다. 무엇을 언제 썼는지 남아요.</p>
-          </div>
-          <div class="note r" style="top:91%">
-            <h3><b>9</b>오른쪽 아래 + 버튼</h3>
-            <p>새 기프티콘을 올리는 자리입니다. 다음 장에서 다룹니다.</p>
+          <div class="notes">
+            <div class="note">
+              <h3><b>7</b>금액권은 다릅니다</h3>
+              <p>금액이 남는 것은 <span class="ui">잔액입력</span>이 뜹니다. 쓴 만큼 넣어두면 남은 돈이 카드에 그대로 보여요.</p>
+            </div>
+            <div class="note">
+              <h3><b>8</b>다 쓴 것·지난 것</h3>
+              <p>지워지지 않고 아래로 내려가 흐려집니다. 무엇을 언제 썼는지 남아요.</p>
+            </div>
+            <div class="note">
+              <h3><b>9</b>오른쪽 아래 + 버튼</h3>
+              <p>새 기프티콘을 올리는 자리입니다. 다음 장에서 다룹니다.</p>
+            </div>
           </div>
         </div>`,
     },
