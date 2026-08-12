@@ -5,9 +5,8 @@ name: Build Android APK
 #
 #   git tag app-v1.0.0 && git push origin app-v1.0.0
 #
-# 화면(웹) 코드만 고쳤을 때는 태그를 달 필요가 없다. 앱은 GitHub Pages 주소를 그대로
-# 띄우기 때문에(app/capacitor.config.json의 server.url) 웹 배포만으로 앱에도 반영된다.
-# 이 워크플로가 필요한 건 앱 껍데기나 갤러리 스캔 같은 네이티브 부분을 고쳤을 때다.
+# 화면은 앱 안에 담겨 나가므로(app/capacitor.config.ts), 화면을 고쳤을 때도 새로 빌드해야
+# 앱에 반영된다. 웹 배포만으로는 앱이 바뀌지 않는다.
 on:
   push:
     tags:
@@ -41,8 +40,9 @@ jobs:
         with:
           node-version: 22
 
-      # 앱 안에 넣어둘 화면. 평소에는 server.url로 GitHub Pages를 띄우지만, 이 파일들이
-      # 없으면 앱이 아예 빌드되지 않는다.
+      # 앱 안에 담길 화면. 이 단계가 실패하면 화면 없는 앱이 나온다.
+      # MOACON_DEV_SERVER는 일부러 주지 않는다 — 원격 주소를 띄우는 빌드는 스토어에서
+      # 리젝되고(애플 2.5.2/4.2), 나눠줘서도 안 된다.
       - name: Build web assets
         working-directory: client
         env:
@@ -90,25 +90,33 @@ jobs:
           # 폰은 versionCode로만 새 버전인지 판단한다. 실행 번호는 늘 커지므로 그대로 쓴다.
           MOACON_VERSION_CODE: ${{ github.run_number }}
           MOACON_VERSION_NAME: ${{ steps.version.outputs.name }}
+        # 두 가지를 만든다. 쓰임이 다르다.
+        #   APK — 링크로 직접 나눠주는 용도. 폰이 바로 설치할 수 있다.
+        #   AAB — Play 스토어에 올리는 용도. Play는 APK를 받지 않는다.
         run: |
           chmod +x gradlew
-          ./gradlew assembleRelease --no-daemon
+          ./gradlew assembleRelease bundleRelease --no-daemon
 
       # 이름에 버전을 넣어둔다. 받아두고 나중에 "내가 받은 게 어느 것이더라"를 파일
       # 이름만 보고 알 수 있어야 한다.
-      - name: Rename APK
+      - name: Collect artifacts
         id: apk
         run: |
           mkdir -p out
           cp app/android/app/build/outputs/apk/release/app-release.apk \
              "out/moacon-${{ steps.version.outputs.name }}.apk"
+          cp app/android/app/build/outputs/bundle/release/app-release.aab \
+             "out/moacon-${{ steps.version.outputs.name }}.aab"
           echo "path=out/moacon-${{ steps.version.outputs.name }}.apk" >> "$GITHUB_OUTPUT"
 
+      # AAB는 Release에 붙이지 않는다. 사람이 받아서 쓸 수 있는 파일이 아니라서, 옆에
+      # 놓아두면 APK 대신 그걸 받아보고 안 열린다고 하는 일이 생긴다. Play에 올릴 때만
+      # 여기서 꺼내 쓴다.
       - name: Upload as workflow artifact
         uses: actions/upload-artifact@v4
         with:
-          name: moacon-apk-${{ steps.version.outputs.name }}
-          path: ${{ steps.apk.outputs.path }}
+          name: moacon-${{ steps.version.outputs.name }}
+          path: out/
 
       # 태그로 돌렸을 때만 Release를 만든다. 수동 실행은 시험 삼아 돌려보는 경우라
       # 위 첨부까지만 하고, 나눠줄 링크는 만들지 않는다.

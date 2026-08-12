@@ -9,7 +9,7 @@
 
 ```
 client/     React(Vite) 프론트엔드 — GitHub Pages로 배포되는 정적 사이트
-app/        Capacitor 안드로이드 앱 껍데기 — 위 사이트를 그대로 띄운다
+app/        Capacitor 안드로이드 앱 — 위 화면을 감싸 스토어에 올린다
 supabase/   Supabase(DB + 이미지 스토리지) 초기 설정 SQL
 ```
 
@@ -287,14 +287,23 @@ npm run dev
 
 ## 처음 한 번만: 안드로이드 앱 배포 켜기
 
-앱은 웹을 대체하지 않는다. `app/capacitor.config.json`의 `server.url`이 GitHub Pages 주소를
-가리키고 있어서, **앱은 그 사이트를 그대로 띄우는 껍데기**다. 화면 코드를 고치면 웹 배포만으로
-앱에도 그대로 반영되고, 앱을 다시 나눠줄 필요가 없다. APK를 새로 뿌려야 하는 건 앱 껍데기나
-갤러리 스캔 같은 네이티브 부분을 고쳤을 때뿐이다.
+앱은 웹을 대체하지 않는다. 같은 화면을 `app/`이 감싸서 안드로이드 앱으로 만든 것이고,
+화면 코드는 `client/`에 한 벌만 있다.
 
-대신 앱은 인터넷이 없으면 열리지 않는다. 웹을 띄우는 구조라 어쩔 수 없는 맞바꿈이다.
+**화면을 고치면 앱도 새로 빌드해서 나눠줘야 한다.** 한동안은 앱이 GitHub Pages 주소를
+그대로 띄우게 해둬서 웹 배포만으로 앱까지 갱신됐는데, 스토어에 올리기로 하면서 그 방식을
+버렸다(애플·구글 모두 심사 후 화면이 바뀌는 구조를 금지한다). 자세한 사정은
+[docs/store-release.md](docs/store-release.md)에 있다.
 
-> 아래는 요약이다. 앱 배포가 처음이라면 **[docs/app-release.md](docs/app-release.md)**에
+개발 중에만 예전 방식으로 띄울 수 있게 열어뒀다. 이 빌드는 나눠주지 않는다.
+
+```bash
+cd app
+MOACON_DEV_SERVER=https://ceaser501.github.io/our-home-gift/ npx cap sync android
+```
+
+> 스토어 공개 배포를 준비한다면 [docs/store-release.md](docs/store-release.md)를 먼저 본다.
+> 아래는 지인에게 APK로 나눠주는 방법이다. 앱 배포가 처음이라면 **[docs/app-release.md](docs/app-release.md)**에
 > 개념(서명 키·versionCode·설치 출처)부터 받는 사람이 겪는 화면까지 자세히 적어뒀다.
 
 ### 1. 서명 키 만들기 (딱 한 번, 그리고 절대 잃어버리면 안 됨)
