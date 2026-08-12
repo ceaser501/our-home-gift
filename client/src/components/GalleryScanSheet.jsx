@@ -5,7 +5,9 @@ import { Button } from '@/components/ui/button';
 import {
   candidateToFile,
   dismissImages,
+  forgetScanHistory,
   getGalleryStatus,
+  rememberScannedUntil,
   requestGalleryAccess,
   scanGallery,
 } from '../utils/gallery';
@@ -30,6 +32,17 @@ import useBackClose from '../utils/useBackClose';
 //   done    — 다 훑음
 const KOREAN_BUCKETS = '다운로드 · 카카오톡 · 스크린샷';
 
+// 네이티브가 주는 시각은 초 단위다(MediaStore가 그렇게 쓴다). 자바스크립트의 Date는
+// 밀리초라 천 배를 곱해야 한다.
+function formatDay(seconds) {
+  if (!seconds) return null;
+  return new Date(seconds * 1000).toLocaleDateString('ko-KR', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+}
+
 export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
   // 뒤로가기로 이 창을 닫는다. 안 그러면 설치해서 쓸 때 앱이 통째로 꺼진다.
   useBackClose(onClose);
@@ -40,8 +53,14 @@ export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
   const [progress, setProgress] = useState(null);
   const [candidates, setCandidates] = useState([]);
   const [scanned, setScanned] = useState(0);
+  // 실제로 어느 시각 이후를 봤는지(초). 화면에 적어주기 위한 값이다.
+  const [since, setSince] = useState(0);
+  // 끝까지 훑었는지. 중간에 그만뒀으면 "여기까지 봤다"고 적으면 안 된다 —
+  // 못 본 사진들이 다음 번에 통째로 건너뛰어진다.
+  const [complete, setComplete] = useState(false);
   const [error, setError] = useState('');
   const abortRef = useRef(null);
+  const startedAtRef = useRef(0);
 
   // 창을 닫는 순간 훑기를 멈춘다. 안 그러면 닫은 뒤에도 수십 장을 계속 읽어서
   // 폰이 더워지고 배터리만 쓴다.
@@ -70,7 +89,18 @@ export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
     setCandidates((prev) => prev.filter((item) => item.code !== savedCode));
   }, [savedCode]);
 
-  async function start() {
+  // 훑기가 끝난 뒤, 어디까지 봤는지 적어둔다. 다음 번엔 그 이후에 담긴 사진만 본다.
+  //
+  // 남아 있는 후보(등록도 치우기도 하지 않은 것)가 있으면 그중 가장 오래된 것 직전까지만
+  // 적는다. 그러지 않으면 앱이 찾아준 것을 사용자가 결정하기도 전에 잃어버린다.
+  // 등록하거나 치우면 이 효과가 다시 돌면서 표시가 저절로 앞으로 나아간다.
+  useEffect(() => {
+    if (!complete) return;
+    const oldest = candidates.reduce((min, item) => Math.min(min, item.addedAt || Infinity), Infinity);
+    rememberScannedUntil(Number.isFinite(oldest) ? oldest : startedAtRef.current);
+  }, [complete, candidates]);
+
+  async function start({ fromInstall = false } = {}) {
     setError('');
     const status = await requestGalleryAccess();
     if (!status.granted && !status.partial) {
@@ -78,9 +108,14 @@ export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
       return;
     }
 
+    if (fromInstall) forgetScanHistory();
+
     setPartial(Boolean(status.partial));
     setStage('scanning');
+    setComplete(false);
+    setCandidates([]);
     setProgress({ scanned: 0, total: 0, found: 0 });
+    startedAtRef.current = Math.floor(Date.now() / 1000);
 
     const controller = new AbortController();
     abortRef.current?.abort();
@@ -90,6 +125,7 @@ export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
       const result = await scanGallery({
         signal: controller.signal,
         onProgress: setProgress,
+        fromInstall,
         // 이미 목록에 있는 번호는 후보에서 뺀다. 기프티콘 사진은 지우지 않고 그대로
         // 두는 사람이 많아서, 이게 없으면 훑을 때마다 등록한 것들이 계속 다시 나온다.
         isRegistered: async (code) => {
@@ -104,6 +140,8 @@ export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
       if (controller.signal.aborted) return;
       setCandidates(result.candidates);
       setScanned(result.scanned ?? 0);
+      setSince(result.since ?? 0);
+      setComplete(true);
     } catch (err) {
       setError(err?.message || '갤러리를 훑지 못했어요.');
     } finally {
@@ -144,7 +182,7 @@ export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
                 <li>찾은 것을 바로 저장하지 않아요. 확인하고 고른 것만 등록돼요.</li>
                 <li>허용하지 않아도 지금처럼 사진을 직접 올려서 등록할 수 있어요.</li>
               </ul>
-              <Button type="button" size="lg" className="w-full rounded-xl" onClick={start}>
+              <Button type="button" size="lg" className="w-full rounded-xl" onClick={() => start()}>
                 <ScanSearch className="size-4.5" />
                 사진 허용하고 찾기
               </Button>
@@ -222,10 +260,17 @@ export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
               {candidates.length === 0 ? (
                 <div className="flex flex-col items-center gap-2 py-8 text-center">
                   <ImageOff className="size-8 text-muted-foreground" />
-                  <p className="m-0 text-sm font-semibold text-foreground">등록할 만한 게 없었어요</p>
+                  <p className="m-0 text-sm font-semibold text-foreground">
+                    {scanned === 0 ? '새로 담긴 사진이 없어요' : '등록할 만한 게 없었어요'}
+                  </p>
                   <p className="m-0 text-xs leading-relaxed break-keep text-muted-foreground">
-                    {scanned > 0 ? `사진 ${scanned}장을 봤어요. ` : ''}
-                    바코드가 흐리거나 앱에서만 열리는 기프티콘은 이 방법으로 못 찾아요.
+                    {scanned === 0 ? (
+                      '지난번에 찾은 뒤로 갤러리에 새로 담긴 사진이 없어요.'
+                    ) : (
+                      <>
+                        사진 {scanned}장을 봤어요. 바코드가 흐리거나 앱에서만 열리는 기프티콘은 이 방법으로 못 찾아요.
+                      </>
+                    )}
                     <br />+ 버튼으로 직접 올리시면 그때도 정보를 채워드려요.
                   </p>
                 </div>
@@ -271,10 +316,30 @@ export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
                 </>
               )}
 
-              <Button type="button" variant="outline" size="lg" className="w-full rounded-xl" onClick={start}>
-                <ScanSearch className="size-4.5" />
-                다시 찾기
-              </Button>
+              {/* 어디까지 봤는지 적어준다. "왜 예전 사진이 안 나오지?"는 이 줄이 없으면
+                  알 길이 없다. 두 번째부터는 지난번 이후만 보기 때문에 더 그렇다. */}
+              {complete && formatDay(since) && (
+                <p className="m-0 text-xs leading-relaxed break-keep text-muted-foreground">
+                  {formatDay(since)} 이후에 갤러리에 담긴 사진만 봤어요. 다음에 찾을 땐 그 뒤에 새로 담긴 것만 봐서 더
+                  빨라요.
+                </p>
+              )}
+
+              <div className="flex flex-col gap-2">
+                <Button type="button" variant="outline" size="lg" className="w-full rounded-xl" onClick={() => start()}>
+                  <ScanSearch className="size-4.5" />
+                  다시 찾기
+                </Button>
+                {/* 폴더 이름이 안 맞아 못 찾았거나, 실수로 치운 것을 되찾고 싶을 때.
+                    시간이 오래 걸려서 눈에 띄지 않게 아래에 작게 둔다. */}
+                <button
+                  type="button"
+                  onClick={() => start({ fromInstall: true })}
+                  className="w-full py-1 text-xs text-muted-foreground underline"
+                >
+                  설치한 날부터 처음처럼 다시 훑기
+                </button>
+              </div>
             </>
           )}
         </div>

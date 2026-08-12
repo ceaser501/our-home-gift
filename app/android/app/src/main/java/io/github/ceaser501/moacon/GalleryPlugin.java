@@ -194,6 +194,9 @@ public class GalleryPlugin extends Plugin {
         JSObject result = new JSObject();
         result.put("images", images);
         result.put("partial", !hasFullAccess() && hasPartialAccess());
+        // 실제로 어느 시각부터 봤는지. 화면에서 "언제 이후를 봤다"고 적어주려면 필요하다 —
+        // 0을 넘겨 설치 시각으로 대신한 경우, 그 값을 아는 건 여기뿐이다.
+        result.put("since", since);
         call.resolve(result);
     }
 
