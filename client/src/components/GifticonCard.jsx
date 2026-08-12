@@ -96,9 +96,12 @@ export default function GifticonCard({
             글자 위에도 얹혀야 해서 내용 뒤가 아니라 앞에 깔고, 내용 쪽은 pointer-events를
             꺼서 누름이 이 판으로 떨어지게 한다. 오른쪽 위 ⋮ 만 예외로 자기 클릭을 가져간다
             (거긴 수정·삭제라, 바코드를 열려다 잘못 누르면 곤란하다). */}
+        {/* 사진 없이 손으로만 적어 넣은 기프티콘은 열어 보여줄 것이 없다. 그때는 눌리지
+            않게 한다 — 눌러본 뒤에야 빈 창이라는 걸 알게 되는 편이 더 답답하다. */}
         <button
           type="button"
           className="absolute inset-0"
+          disabled={!canOpenCode && photoCount === 0}
           onClick={() => (canOpenCode ? onViewCode(gifticon) : onViewImage(gifticon))}
           aria-label={canOpenCode ? '바코드 보기' : '업로드한 이미지 보기'}
         />

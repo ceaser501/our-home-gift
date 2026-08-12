@@ -278,10 +278,11 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
       setError('상품명을 입력해주세요.');
       return;
     }
-    if (mode === 'create' && newFiles.length === 0) {
-      setError('기프티콘 이미지를 1장 이상 업로드해주세요.');
-      return;
-    }
+    // 사진은 없어도 저장된다. 예전에는 한 장 이상을 요구했는데, 그러면 종이 쿠폰이나
+    // 문자로 번호만 받은 것처럼 사진이 아예 없는 기프티콘을 넣을 길이 없다.
+    // 자동 인식이 실패한 것도 손으로 적어 남길 수 있어야 한다.
+    // 바코드 번호만 있으면 계산대에서 쓰는 데 지장이 없다 — 번호로 바코드를 새로 그려서
+    // 보여주기 때문이다(client/src/components/BarcodeModal.jsx).
 
     setSubmitting(true);
     setError('');
@@ -357,8 +358,10 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
 
         <form className="flex flex-col gap-4 px-5" onSubmit={handleSubmit}>
           <p className="text-xs text-muted-foreground">
-            기프티콘 이미지를 여러 장 올릴 수 있어요 (예: 상품명 보이는 화면 + 금액·기한 보이는 화면). 각 이미지에서
-            찾은 정보를 자동으로 합쳐서 채워드려요.
+            사진을 올리면 상품명·금액·기한을 자동으로 채워드려요. 여러 장 올려도 되고요
+            (예: 상품명 보이는 화면 + 금액·기한 보이는 화면), 각 이미지에서 찾은 정보를 합쳐서 채웁니다.
+            <br />
+            사진 없이 손으로 적어 넣어도 괜찮아요.
           </p>
 
           <div className="grid grid-cols-3 gap-2">
