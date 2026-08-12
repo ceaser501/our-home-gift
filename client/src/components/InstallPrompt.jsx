@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Download, ExternalLink, MoreVertical, Share, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { isStandalone, isIos, isAndroid, detectInAppBrowser, openInExternalBrowser } from '../utils/browser';
+import { isStandalone, isNativeApp, isIos, isAndroid, detectInAppBrowser, openInExternalBrowser } from '../utils/browser';
 
 const DISMISS_KEY = 'install-prompt-dismissed';
 
@@ -34,7 +34,9 @@ export default function InstallPrompt() {
     return () => window.removeEventListener('installpromptready', sync);
   }, []);
 
-  if (dismissed || isStandalone()) return null;
+  // 앱으로 깔아서 쓰는 사람에게 "홈 화면에 추가하세요"는 아무 의미가 없다.
+  // 홈 화면에 추가한 PWA(isStandalone)와 감싼 앱(isNativeApp) 둘 다 여기서 걸러진다.
+  if (dismissed || isStandalone() || isNativeApp()) return null;
 
   const inApp = detectInAppBrowser();
   const canPrompt = Boolean(deferredPrompt);

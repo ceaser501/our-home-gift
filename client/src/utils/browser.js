@@ -2,6 +2,18 @@ export function isStandalone() {
   return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
 }
 
+// Capacitor로 감싼 앱(app/) 안에서 도는지.
+//
+// 앱 안은 웹뷰라 display-mode가 standalone이 아니고 navigator.standalone도 없다.
+// 그래서 isStandalone()으로는 앱과 그냥 브라우저를 구분하지 못한다 — 이미 앱을 깐
+// 사람에게 "홈 화면에 추가하세요" 안내가 뜨던 이유다.
+//
+// Capacitor가 웹뷰에 심어주는 전역으로 판별한다. 앱이 아닌 곳에서는 이 전역이 없어서
+// 그냥 false가 되므로, 웹 사용자에게는 아무 영향이 없다.
+export function isNativeApp() {
+  return Boolean(window.Capacitor?.isNativePlatform?.());
+}
+
 export function isIos() {
   return /iphone|ipad|ipod/i.test(window.navigator.userAgent);
 }
