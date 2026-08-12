@@ -52,6 +52,21 @@ function buildForm(initial, defaultOwner) {
     : empty;
 }
 
+// 이 앱은 결국 계산대에서 바코드를 보여주기 위한 것이다. 사진은 거기 적힌 번호를 꺼내는
+// 수단일 뿐이라 없어도 되지만, 번호가 없으면 등록해둘 이유 자체가 없다.
+//
+// 나머지 넷은 목록에서 이 기프티콘을 찾아내는 데 쓰인다. 상호와 분류로 걸러 보고,
+// 받은 사람으로 누구 것인지 가른다. 하나라도 비면 목록이 금세 알아볼 수 없게 된다.
+//
+// 화면에 뜨는 순서와 같게 둔다. 빠진 것을 알려줬을 때 눈이 위에서 아래로 따라가야 한다.
+const REQUIRED_FIELDS = [
+  { key: 'name', message: '상품명을 입력해주세요.' },
+  { key: 'brand', message: '상호를 입력해주세요. (예: 스타벅스, BBQ)' },
+  { key: 'category', message: '분류를 골라주세요.' },
+  { key: 'code', message: '바코드 번호를 입력해주세요. 계산대에서 이 번호로 결제해요.' },
+  { key: 'owner', message: '받은 사람을 골라주세요.' },
+];
+
 // 금액은 저장할 때 숫자만 쓰고, 화면에는 천 단위 쉼표를 넣어 보여준다. (5000 → 5,000)
 function onlyDigits(value) {
   return String(value ?? '').replace(/\D/g, '');
@@ -274,15 +289,16 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!form.name.trim()) {
-      setError('상품명을 입력해주세요.');
+
+    // 사진은 없어도 저장된다. 종이 쿠폰이나 문자로 번호만 받은 것도 넣을 수 있어야 하고,
+    // 자동 인식이 실패한 것도 손으로 적어 남길 수 있어야 한다. 바코드 번호만 있으면
+    // 계산대에서 쓰는 데 지장이 없다 — 번호로 바코드를 새로 그려서 보여주기 때문이다
+    // (client/src/components/BarcodeModal.jsx). 대신 그 번호는 반드시 있어야 한다.
+    const missing = REQUIRED_FIELDS.find((field) => !String(form[field.key] ?? '').trim());
+    if (missing) {
+      setError(missing.message);
       return;
     }
-    // 사진은 없어도 저장된다. 예전에는 한 장 이상을 요구했는데, 그러면 종이 쿠폰이나
-    // 문자로 번호만 받은 것처럼 사진이 아예 없는 기프티콘을 넣을 길이 없다.
-    // 자동 인식이 실패한 것도 손으로 적어 남길 수 있어야 한다.
-    // 바코드 번호만 있으면 계산대에서 쓰는 데 지장이 없다 — 번호로 바코드를 새로 그려서
-    // 보여주기 때문이다(client/src/components/BarcodeModal.jsx).
 
     setSubmitting(true);
     setError('');
@@ -440,12 +456,12 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="f-brand">상호</Label>
+              <Label htmlFor="f-brand">상호 *</Label>
               <Input id="f-brand" value={form.brand} onChange={(e) => updateField('brand', e.target.value)} />
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label>카테고리</Label>
+              <Label>카테고리 *</Label>
               <Select value={form.category} onValueChange={(v) => updateField('category', v)}>
                 <SelectTrigger>
                   <SelectValue />
@@ -516,7 +532,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="f-code">바코드/QR 값</Label>
+              <Label htmlFor="f-code">바코드/QR 값 *</Label>
               <Input
                 id="f-code"
                 value={form.code}
@@ -526,7 +542,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
             </div>
 
             <div className="col-span-2 flex flex-col gap-1.5">
-              <Label>받은 사람</Label>
+              <Label>받은 사람 *</Label>
               <Select value={form.owner} onValueChange={(v) => updateField('owner', v)}>
                 <SelectTrigger>
                   <SelectValue />
