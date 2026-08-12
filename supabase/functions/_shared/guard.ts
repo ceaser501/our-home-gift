@@ -17,11 +17,25 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 // 나중에 쿠키나 인증 정보를 함께 보내야 할 때 '*'로는 안 되기 때문이다.
 // (ALLOWED_ORIGINS에 쉼표로 나눠 적는다. 설정이 없으면 예전처럼 전부 허용한다 — 이건
 //  막는 장치가 아니라 정리하는 장치라, 설정 누락으로 앱이 통째로 멈추는 편이 더 나쁘다.)
+// 감싼 앱(app/)이 쓰는 출처. 앱 안에서는 화면이 웹 주소가 아니라 이 주소에서 열리기
+// 때문에, 허용 목록에 없으면 앱에서 부르는 모든 요청이 브라우저 단계에서 막힌다.
+// 증상이 "이미지 인식 실패"로만 보여서 원인을 찾기 어렵다.
+//
+// 사람이 ALLOWED_ORIGINS에 적는 것을 잊어도 앱이 멈추지 않게 항상 넣어준다. 이걸 넣어도
+// 느슨해지지 않는다 — 진짜 문지기는 requireUser(로그인 검증)이고, 이 목록은 막는 장치가
+// 아니라 정리하는 장치다.
+const APP_ORIGINS = ['https://localhost', 'capacitor://localhost'];
+
 function allowedOrigins(): string[] {
-  return (Deno.env.get('ALLOWED_ORIGINS') || '')
+  const configured = (Deno.env.get('ALLOWED_ORIGINS') || '')
     .split(',')
     .map((item) => item.trim())
     .filter(Boolean);
+
+  // 설정이 없으면 예전처럼 전부 허용한다. 여기서 앱 주소만 넣어버리면 웹이 막힌다.
+  if (configured.length === 0) return [];
+
+  return [...new Set([...configured, ...APP_ORIGINS])];
 }
 
 export function corsFor(req: Request) {

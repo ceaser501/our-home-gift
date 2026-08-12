@@ -216,8 +216,11 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
         result.thumbCropBlob ? new File([result.thumbCropBlob], 'thumb.jpg', { type: 'image/jpeg' }) : null
       );
       setAutoFilled(true);
-    } catch {
-      setError('이미지 자동 인식에 실패했어요. 직접 입력해주세요.');
+    } catch (err) {
+      // 서버가 왜 거절했는지 그대로 보여준다. 예전에는 무슨 일이 있었든 "실패했어요"만
+      // 띄웠는데, 그러면 오늘 한도를 넘긴 것인지, 로그인이 풀린 것인지, API 키가 없는
+      // 것인지 알 수가 없다. 사용자도 답답하고 고칠 때도 단서가 없다.
+      setError(err?.message ? `${err.message} 직접 입력해주세요.` : '이미지 자동 인식에 실패했어요. 직접 입력해주세요.');
     } finally {
       setAnalyzing(false);
       setProgress(null);
