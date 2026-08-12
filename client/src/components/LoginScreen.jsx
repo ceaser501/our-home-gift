@@ -88,11 +88,11 @@ export default function LoginScreen() {
     }
   }
 
-  function handleNaverLogin() {
+  async function handleNaverLogin() {
     setNaverLoading(true);
     setError('');
     try {
-      signInWithNaver();
+      await signInWithNaver();
     } catch (err) {
       setError(err.message || '네이버 로그인에 실패했어요.');
       setNaverLoading(false);

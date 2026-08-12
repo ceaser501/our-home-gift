@@ -40,6 +40,9 @@ supabase/   Supabase(DB + 이미지 스토리지) 초기 설정 SQL
 2. **Authentication → URL Configuration**에서 로그인 링크가 되돌아올 주소를 등록합니다:
    - **Site URL**: `https://<GitHub 사용자명>.github.io/our-home-gift/`
    - **Redirect URLs**에 위 주소와, 로컬 개발용 `http://localhost:5173/`도 함께 추가
+   - 안드로이드 앱을 쓴다면 **`io.github.ceaser501.moacon://login`도 함께 추가**합니다.
+     앱에서 로그인이 끝난 뒤 앱으로 돌아오는 주소예요. 없으면 로그인이 브라우저에서
+     끝나고 앱은 로그아웃 상태로 남습니다(→ [docs/app-release.md](docs/app-release.md)).
    (등록 안 된 주소로는 로그인 링크가 리다이렉트되지 않아요.)
 3. `supabase/schema.sql`을 실행하면 `families`(가족 그룹) / `family_members`(가족 구성원)
    테이블과, 기프티콘을 가족 단위로만 볼 수 있게 막는 RLS 정책이 함께 만들어집니다.

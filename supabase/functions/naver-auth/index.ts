@@ -39,6 +39,19 @@ function parseState(rawState) {
 //
 // 그래서 우리가 아는 주소로만 돌려보낸다. 허용 목록에 없으면 로그인을 진행하지 않는다.
 // (NAVER_ALLOWED_REDIRECTS에 쉼표로 나눠 적는다. 예: https://ceaser501.github.io,http://localhost:5173)
+// 허용 목록과 견줄 때 쓸 열쇠를 뽑는다.
+//
+// 웹 주소는 출처(origin)로 비교하면 된다. 그런데 앱으로 돌아가는 딥링크
+// (io.github.ceaser501.moacon://login)는 http/https가 아니라서 origin이 "null"로 나온다.
+// 그대로 비교하면 어떤 딥링크든 다 같은 값이 되어 검사가 무의미해진다.
+// 이런 주소는 스킴으로 비교한다 — 안드로이드가 그 스킴을 등록한 앱에만 넘겨주므로,
+// 스킴 자체가 "어느 앱으로 돌아갈지"를 정한다.
+function redirectKey(value: string) {
+  const url = new URL(value);
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') return url.protocol;
+  return url.origin;
+}
+
 function allowedOrigins() {
   // 예전부터 쓰던 기본 주소도 함께 허용 목록에 넣는다. 운영자가 직접 넣은 값이라 믿을 수 있고,
   // NAVER_ALLOWED_REDIRECTS를 아직 안 넣었더라도 로그인이 통째로 막히지는 않게 된다.
@@ -52,7 +65,7 @@ function allowedOrigins() {
     .filter(Boolean)
     .map((item) => {
       try {
-        return new URL(item).origin;
+        return redirectKey(item);
       } catch {
         return null;
       }
@@ -65,7 +78,7 @@ function allowedOrigins() {
 function isAllowedRedirect(target, allowed) {
   if (allowed.length === 0) return false;
   try {
-    return allowed.includes(new URL(target).origin);
+    return allowed.includes(redirectKey(target));
   } catch {
     // 주소 형식이 아니면(상대 경로, 조작된 값) 받아주지 않는다.
     return false;
