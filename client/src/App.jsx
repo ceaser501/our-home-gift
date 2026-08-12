@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, ScanSearch } from 'lucide-react';
 import Header from './components/Header';
 import FilterBar from './components/FilterBar';
 import GifticonList from './components/GifticonList';
@@ -10,6 +10,7 @@ import SpendSheet from './components/SpendSheet';
 import ImageViewerModal from './components/ImageViewerModal';
 import NearbyStoresSheet from './components/NearbyStoresSheet';
 import InstallPrompt from './components/InstallPrompt';
+import GalleryScanSheet from './components/GalleryScanSheet';
 import NoticeBanner from './components/NoticeBanner';
 import NearbyBanner from './components/NearbyBanner';
 import AlertDialog from './components/AlertDialog';
@@ -20,6 +21,7 @@ import { ensureSampleGifticon } from './sampleData';
 import { daysUntil, todayStr } from './utils/date';
 import { hasNewVersion } from './utils/version';
 import { hasSharedImages, takeSharedImages, discardSharedImages } from './utils/shareTarget';
+import { isGalleryScanSupported } from './utils/gallery';
 import { useFamily } from './FamilyContext';
 
 // 목록은 "지금 쓸 수 있는 것 → 기한이 지난 것 → 다 쓴 것" 세 덩어리다.
@@ -71,6 +73,12 @@ export default function App() {
   const [statusTab, setStatusTab] = useState('all');
 
   const [sheetState, setSheetState] = useState(null); // { mode, initial }
+  // 갤러리 훑기는 앱으로 설치했을 때만 있다. 브라우저에는 폴더를 볼 방법이 없다.
+  const [scanSupported] = useState(() => isGalleryScanSupported());
+  const [scanOpen, setScanOpen] = useState(false);
+  // 방금 저장한 바코드. 훑기 창이 이걸 보고 그 후보를 목록에서 뺀다. 안 그러면 등록을
+  // 마치고 돌아왔을 때 방금 넣은 것이 그대로 남아 있어서 또 넣게 된다.
+  const [savedCode, setSavedCode] = useState(null);
   const [codeTarget, setCodeTarget] = useState(null);
   const [imageTarget, setImageTarget] = useState(null);
   const [storesTarget, setStoresTarget] = useState(null);
@@ -283,8 +291,9 @@ export default function App() {
     }
   }
 
-  function handleSaved() {
+  function handleSaved(saved) {
     setSheetState(null);
+    if (saved?.code) setSavedCode(saved.code);
     fetchList();
   }
 
@@ -338,6 +347,21 @@ export default function App() {
         )}
       </main>
 
+      {/* 갤러리 훑기는 + 위에 한 단 작게 놓는다. 거들기 위한 기능이라 등록 버튼과
+          같은 크기로 나란히 두면 어느 쪽이 본길인지 헷갈린다. 앱으로 설치했을 때만
+          보이고, 없어도 아래 + 로 하던 대로 등록할 수 있다. */}
+      {scanSupported && (
+        <button
+          type="button"
+          onClick={() => setScanOpen(true)}
+          aria-label="갤러리에서 기프티콘 찾기"
+          style={{ right: 'max(24px, calc((100vw - 480px) / 2 + 24px))' }}
+          className="fixed bottom-[max(88px,calc(env(safe-area-inset-bottom)+88px))] z-20 flex size-11 items-center justify-center rounded-full border border-border bg-card text-foreground shadow-md"
+        >
+          <ScanSearch className="size-5" />
+        </button>
+      )}
+
       {/* + 는 등록 창만 연다. 한때 여기서 사진 선택창을 곧바로 열어 한 단계를 줄였는데,
           사진 없이 손으로 적어 넣고 싶은 사람에게는 길이 막힌 것처럼 보인다. */}
       <button
@@ -349,6 +373,16 @@ export default function App() {
       >
         <Plus className="size-7" />
       </button>
+
+      {/* 훑기 창은 등록 창 아래에 그대로 열려 있는다. 여러 장을 찾았을 때 한 장 등록하고
+          돌아오면 나머지가 남아 있어야, 매번 처음부터 다시 훑지 않는다. */}
+      {scanOpen && (
+        <GalleryScanSheet
+          savedCode={savedCode}
+          onRegister={(file) => setSheetState({ mode: 'create', initial: null, files: [file] })}
+          onClose={() => setScanOpen(false)}
+        />
+      )}
 
       {sheetState && (
         <UploadSheet

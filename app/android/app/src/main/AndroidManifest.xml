@@ -47,4 +47,20 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- 갤러리에서 기프티콘 후보를 찾기 위한 사진 접근.
+         버전마다 이름이 다르다. 13(TIRAMISU)부터는 사진 전용 권한이 따로 생겼고,
+         12 이하에서는 저장소 읽기 권한 하나로 사진까지 열린다.
+
+         READ_MEDIA_VISUAL_USER_SELECTED는 14부터의 "선택한 사진만 허용"이다. 이때는
+         사용자가 고른 몇 장만 보여서 폴더를 훑는다는 전제가 깨지는데, 그렇더라도 아무것도
+         못 보는 것보다는 낫기 때문에 함께 받아둔다(화면에서 다르게 안내한다).
+
+         셋 다 사용자가 거부할 수 있고, 거부해도 앱은 그대로 동작한다 — 사진을 직접 올리는
+         길이 그대로 있다. 이 기능은 처음부터 선택이다. -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED" />
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
 </manifest>
