@@ -46,6 +46,9 @@ jobs:
       - name: Build web assets
         working-directory: client
         env:
+          # 앱은 화면을 https://localhost/ 루트에서 연다. 웹 기본값(/our-home-gift/)을
+          # 그대로 쓰면 자바스크립트를 못 찾아 흰 화면만 뜬다.
+          VITE_BASE_PATH: /
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_NAVER_CLIENT_ID: ${{ secrets.VITE_NAVER_CLIENT_ID }}
