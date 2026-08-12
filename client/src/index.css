@@ -131,14 +131,25 @@
 
   html,
   body {
-    @apply overflow-x-hidden;
     margin: 0;
     padding: 0;
     width: 100%;
     /* 당겨서 새로고침은 PullToRefresh가 직접 처리한다. 브라우저 기본 동작을 켜두면
        안드로이드에서는 두 벌이 겹쳐 보이고, 아이폰에서는 화면이 고무줄처럼 늘어나
-       당기는 표시와 따로 논다. 두 폰의 동작을 같게 맞추려고 기본 동작은 끈다. */
-    overscroll-behavior-y: none;
+       당기는 표시와 따로 논다. 두 폰의 동작을 같게 맞추려고 기본 동작은 끈다.
+
+       none이 아니라 contain을 쓴다. none은 끝에 닿았을 때의 튕김까지 없애는데,
+       감싼 앱의 웹뷰에서는 그게 스크롤 자체를 먹는 경우가 있다. contain은 바깥으로
+       번지는 것만 막고 안쪽 스크롤은 그대로 둔다. */
+    overscroll-behavior-y: contain;
+  }
+
+  /* 가로 넘침은 body에서만 자른다.
+     html과 body 양쪽에 걸면 스크롤 상자가 둘이 된다 — 화면 전체를 굴리는 것과 body를
+     굴리는 것. 브라우저에서는 대개 티가 안 나지만, 감싼 앱의 웹뷰에서는 어느 쪽이
+     움직여야 하는지 엇갈려 세로 스크롤이 통째로 멈추는 일이 있다. */
+  body {
+    @apply overflow-x-hidden;
   }
 
   body {
