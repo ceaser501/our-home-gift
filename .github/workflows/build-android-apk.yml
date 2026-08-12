@@ -36,6 +36,21 @@ jobs:
           echo "name=$VERSION" >> "$GITHUB_OUTPUT"
           echo "이번 빌드: $VERSION (versionCode ${{ github.run_number }})"
 
+      # 테스트용으로 남겨둔 전체 초기화 기능이 아직 살아 있는지 본다.
+      #
+      # RESET_TOKEN은 VITE_ 변수로 화면에 전달되는데, VITE_ 값은 브라우저 번들에 문자열로
+      # 심긴다 — 비밀이 될 수 없다. 즉 배포된 자바스크립트를 읽는 누구나 그 토큰으로
+      # 가족·기프티콘·이미지·계정을 통째로 지울 수 있다.
+      #
+      # 지금은 브로셔용 스크린샷을 찍느라 일부러 남겨둔 것이라 빌드를 막지 않는다.
+      # 다만 APK를 만드는 순간은 "이걸 남에게 준다"는 뜻이라, 그때마다 눈에 띄게 알린다.
+      # 출시할 때는 이 단계를 exit 1로 바꿔서 아예 못 나가게 한다.
+      - name: Check test-only leftovers
+        run: |
+          if [ -d supabase/functions/reset-all-data ]; then
+            echo "::warning title=전체 초기화 기능이 아직 있습니다::스토어 출시 전에 반드시 제거하세요. RESET_TOKEN이 배포된 JS에 평문으로 들어갑니다. 제거 목록은 docs/store-release.md 맨 위에 있습니다."
+          fi
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -50,10 +65,13 @@ jobs:
           # 그대로 쓰면 자바스크립트를 못 찾아 흰 화면만 뜬다.
           VITE_BASE_PATH: /
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          # 브로셔용 스크린샷을 찍는 동안만 테스트 메뉴를 띄운다. 비밀이 아니다 —
+          # 실제 초기화 권한은 서버가 관리자 명단으로 확인한다.
+          # 출시 전에 이 줄을 지운다(docs/store-release.md).
+          VITE_TEST_TOOLS: '1'
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_NAVER_CLIENT_ID: ${{ secrets.VITE_NAVER_CLIENT_ID }}
           VITE_KAKAO_JS_KEY: ${{ secrets.VITE_KAKAO_JS_KEY }}
-          VITE_RESET_TOKEN: ${{ secrets.VITE_RESET_TOKEN }}
         run: |
           npm ci
           npm run build

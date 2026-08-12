@@ -197,9 +197,10 @@ if (cronSecret && url.searchParams.get('token') !== cronSecret) { ... 401 }
   - [ ] `supabase/functions/reset-all-data/` 삭제 + Supabase에서 함수 삭제(`supabase functions delete reset-all-data`)
   - [ ] `client/src/components/ResetAllDataButton.jsx` 삭제 및 화면에서 제거
   - [ ] `client/src/api.js`의 `resetAllData()` 삭제
-  - [ ] GitHub Actions 시크릿에서 `VITE_RESET_TOKEN` 제거, Supabase 시크릿에서 `RESET_TOKEN` 제거
+  - [ ] 두 워크플로에서 `VITE_TEST_TOOLS` 줄 제거, Supabase 시크릿에서 `RESET_TOKEN` 제거
+        (`VITE_RESET_TOKEN`은 더 이상 쓰지 않는다 — 비밀이 될 수 없어서 관리자 로그인 확인으로 바꿨다)
   - [ ] `supabase/config.toml`의 `[functions.reset-all-data]` 블록 제거
-- [ ] **샘플(목) 데이터 비활성 확인** — `client/src/sampleData.js`는 `VITE_RESET_TOKEN`이 있을 때만 동작한다. 위 항목을 지우면 자동으로 꺼지지만 실제로 안 들어가는지 확인할 것
+- [ ] **샘플(목) 데이터 비활성 확인** — `client/src/sampleData.js`는 `VITE_TEST_TOOLS`가 있을 때만 동작한다. 위 항목을 지우면 자동으로 꺼지지만 실제로 안 들어가는지 확인할 것
 - [ ] 위 1~11번 조치 완료 확인
 - [ ] Anthropic·카카오·TMAP·Supabase 각각 **일일 사용량 상한과 알림** 설정
 - [ ] 개인정보처리방침·이용약관 URL이 앱과 스토어 양쪽에 연결돼 있는지 확인

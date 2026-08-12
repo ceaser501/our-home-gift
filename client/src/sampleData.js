@@ -7,7 +7,7 @@ import { makeSampleThumb } from './sampleThumbs';
 // 있어서(그 가족의 구성원에게만 보인다) 초기화를 견디는 기프티콘은 만들 수 없다. 대신 앱을
 // 열 때마다 "이 가족에 샘플이 있나?"를 보고 없으면 넣어주면, 누가 언제 들어와도 늘 보인다.
 //
-// 실사용 배포에는 VITE_RESET_TOKEN이 없으므로 아무 일도 일어나지 않는다.
+// 실사용 배포에는 VITE_TEST_TOOLS가 없으므로 아무 일도 일어나지 않는다.
 
 // 샘플은 이 번호로 시작한다. supabase/mock-data.sql이 지울 때 쓰는 기준과 같아서,
 // SQL로 넣어둔 것과 여기서 넣은 것을 함께 정리할 수 있다.
@@ -143,7 +143,7 @@ const SAMPLES = [
 ];
 
 export function isSampleDataEnabled() {
-  return Boolean(import.meta.env.VITE_RESET_TOKEN);
+  return Boolean(import.meta.env.VITE_TEST_TOOLS);
 }
 
 // 테스트 도구에서 목데이터를 지웠다는 표시. 이게 없으면 앱을 열 때마다 자동으로 다시

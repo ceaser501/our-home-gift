@@ -40,7 +40,10 @@ export default function TestDataMenu({ familyId, ownerName, userId, children }) 
   const timerRef = useRef(null);
   const startRef = useRef(null);
 
-  const enabled = Boolean(import.meta.env.VITE_RESET_TOKEN);
+  // 이 메뉴를 화면에 띄울지만 정한다. 실제 권한은 서버가 정한다 — 초기화는 관리자
+  // 명단에 있는 계정만 실행할 수 있다(supabase/functions/reset-all-data). 그래서 이 값은
+  // 비밀이 아니어도 되고, 브라우저 번들에 그대로 들어가도 괜찮다.
+  const enabled = Boolean(import.meta.env.VITE_TEST_TOOLS);
 
   function startHold(e) {
     if (!enabled) return;

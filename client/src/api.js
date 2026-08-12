@@ -507,9 +507,9 @@ export async function deleteMyPushSubscriptions(userId) {
 
 // ⚠️ 테스트 전용: 가족/구성원/기프티콘/이미지/가입계정을 전부 지운다.
 export async function resetAllData() {
-  const { data, error } = await supabase.functions.invoke('reset-all-data', {
-    body: { token: import.meta.env.VITE_RESET_TOKEN },
-  });
+  // 토큰을 보내지 않는다. 로그인 토큰은 supabase 클라이언트가 자동으로 실어 보내고,
+  // 서버가 그 사람이 관리자 명단에 있는지 확인한다.
+  const { data, error } = await supabase.functions.invoke('reset-all-data');
   if (error) {
     const detail = await error.context?.json?.().catch(() => null);
     throw new Error(detail?.error || error.message || '초기화에 실패했어요.');

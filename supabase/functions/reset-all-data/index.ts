@@ -1,6 +1,13 @@
 // ⚠️ 테스트 전용 함수입니다. 가족/구성원/기프티콘/알림구독/가입계정을 전부 지웁니다.
-// 로그인하지 않은 상태에서도 지울 수 있어야 해서 service role 권한으로 동작하며,
-// RESET_TOKEN이 맞아야만 실행됩니다. 실사용 배포 전에는 이 함수를 삭제하세요.
+// 실사용 배포 전에는 이 함수를 삭제하세요(docs/store-release.md 맨 위 목록).
+//
+// 예전에는 RESET_TOKEN이 맞으면 누구나 부를 수 있었다. 그 토큰은 화면 쪽에
+// VITE_RESET_TOKEN으로 전달됐는데, VITE_ 값은 브라우저 번들에 문자열로 심긴다 —
+// 비밀이 될 수 없다. 배포된 자바스크립트를 열어보는 누구나 전체 데이터를 지울 수 있었다.
+//
+// 지금은 관리자 명단(admin_users)에 있는 계정만 부를 수 있다. 초기화 메뉴는 로그인한
+// 상태에서 로고를 길게 눌러 여는 것이라(client/src/components/ResetAllDataButton.jsx)
+// 쓰는 쪽은 달라지는 것이 없고, 지울 때 관리자는 남기므로 누른 뒤에도 로그인이 유지된다.
 //
 // 관리자 명단(admin_users)에 있는 계정만 예외로 남깁니다. 아래 삭제 부분에 이유를 적어뒀습니다.
 
@@ -18,23 +25,40 @@ Deno.serve(async (req) => {
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-  const resetToken = Deno.env.get('RESET_TOKEN');
 
-  if (!supabaseUrl || !serviceRoleKey || !resetToken) {
+  if (!supabaseUrl || !serviceRoleKey) {
     return new Response(JSON.stringify({ error: '초기화 기능이 설정되지 않았어요.' }), { status: 500, headers: jsonHeaders });
   }
 
-  let token = null;
-  try {
-    ({ token } = await req.json());
-  } catch {
-    // 본문이 없으면 아래에서 401로 걸린다.
-  }
-  if (token !== resetToken) {
-    return new Response(JSON.stringify({ error: '초기화 권한이 없어요.' }), { status: 401, headers: jsonHeaders });
+  const admin = createClient(supabaseUrl, serviceRoleKey);
+
+  // 1) 진짜 로그인한 사람인지. anon key는 브라우저 번들에 들어 있어서 그것만으로는 부족하다.
+  const authHeader = req.headers.get('Authorization') || '';
+  const accessToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+  const { data: auth, error: authError } = accessToken
+    ? await admin.auth.getUser(accessToken)
+    : { data: null, error: new Error('no token') };
+  if (authError || !auth?.user) {
+    return new Response(JSON.stringify({ error: '로그인이 필요해요.' }), { status: 401, headers: jsonHeaders });
   }
 
-  const admin = createClient(supabaseUrl, serviceRoleKey);
+  // 2) 관리자 명단 확인. 로그인만으로는 부족하다 — 앱 사용자는 누구나 로그인할 수 있고,
+  //    이 함수는 모두의 데이터를 지운다.
+  const { data: adminRow, error: adminError } = await admin
+    .from('admin_users')
+    .select('user_id')
+    .eq('user_id', auth.user.id)
+    .maybeSingle();
+  if (adminError) {
+    return new Response(
+      JSON.stringify({ error: `관리자 확인에 실패했어요: ${adminError.message} (supabase/admin-stats.sql을 실행했는지 확인해주세요)` }),
+      { status: 500, headers: jsonHeaders },
+    );
+  }
+  if (!adminRow) {
+    return new Response(JSON.stringify({ error: '이 계정은 관리자가 아니에요.' }), { status: 403, headers: jsonHeaders });
+  }
+
   const deleted = {};
 
   try {
