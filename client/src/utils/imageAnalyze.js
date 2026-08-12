@@ -14,7 +14,13 @@ import { analyzeGifticonImages } from '../api';
 const MAX_ANALYZE_EDGE = 2000;
 // 너무 작은 이미지는 막대가 뭉개져서 인식률이 떨어진다. 이 정도까지는 키워서 읽는다.
 const MIN_ANALYZE_EDGE = 1600;
-// 서버로 보낼 이미지 크기. 글자를 읽기에 충분하면서 전송량과 비용이 과하지 않은 선.
+// 서버로 보낼 이미지 크기이자, 스토리지에 보관할 크기.
+//
+// 예전에는 사용자가 고른 파일을 원본 그대로 보관했다. 요즘 폰 캡처는 한 장에 1~2MB라
+// 기프티콘 하나가 1.5MB를 넘게 차지했고, 무료 스토리지 1GB가 700건이면 찼다.
+// 원본 화질이 필요한 곳은 없다 — 바코드는 따로 잘라 저장하고, 목록은 썸네일을 쓰고,
+// 사진 보기는 폰 화면에 띄우는 게 전부다. 그래서 이 크기로 줄인 것을 보관한다.
+// (한 건 1.5MB → 150KB 안팎)
 const UPLOAD_EDGE = 1400;
 // 목록 썸네일은 화면에서 68px로 보인다. 고해상도 화면과 나중에 크게 쓸 여지를 감안해도
 // 이 정도면 넉넉하고, 원본을 그대로 두는 것보다 훨씬 가볍게 받는다.
@@ -71,10 +77,21 @@ function loadImage(src) {
   });
 }
 
-async function toUploadImage(canvas) {
+// 서버로 보낼 것과 보관할 것이 같은 그림이라 한 번만 만든다.
+async function toStorageBlob(canvas) {
   const scale = Math.min(1, UPLOAD_EDGE / Math.max(canvas.width, canvas.height));
   const scaled = scale < 1 ? drawScaled(canvas, canvas.width, canvas.height, scale) : canvas;
   const blob = await new Promise((resolve) => scaled.toBlob(resolve, 'image/jpeg', 0.82));
+
+  if (scaled !== canvas) {
+    scaled.width = 0;
+    scaled.height = 0;
+  }
+
+  return blob;
+}
+
+async function toUploadPayload(blob) {
   const bytes = new Uint8Array(await blob.arrayBuffer());
 
   // btoa는 문자열만 받는데 한 번에 다 넘기면 인자 수 제한에 걸려서 나눠서 이어 붙인다.
@@ -83,12 +100,15 @@ async function toUploadImage(canvas) {
     binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
   }
 
-  if (scaled !== canvas) {
-    scaled.width = 0;
-    scaled.height = 0;
-  }
-
   return { mediaType: 'image/jpeg', data: btoa(binary) };
+}
+
+// 보관할 파일 이름. 확장자가 실제 내용과 맞아야 한다 — 스토리지에 올릴 때 이름에서
+// 확장자를 떼어 쓰기 때문에(client/src/api.js), 아이폰에서 고른 .heic을 그대로 두면
+// 내용은 JPEG인데 이름만 heic인 파일이 올라간다.
+function storageName(file) {
+  const base = (file.name || 'gifticon').replace(/\.[^.]+$/, '');
+  return `${base || 'gifticon'}.jpg`;
 }
 
 async function decodeBarcode(canvas) {
@@ -197,12 +217,20 @@ async function cropThumbnail(file, box) {
 }
 
 // 기프티콘 한 건을 여러 장으로 나눠 올릴 수 있다(예: 상품명 화면 + 유효기간 화면).
-// 바코드는 장마다 따로 읽고, 글자 정보는 여러 장을 한 번에 서버로 보내 합쳐서 받는다.
-// onProgress로 지금 어느 단계인지 알려준다. 분석이 몇 초 걸리는데 화면에 아무 변화가
-// 없으면 멈춘 것처럼 보이기 때문에, 화면 쪽에서 진행 상황을 표시할 수 있게 한다.
-export async function analyzeImages(files, { onProgress } = {}) {
+// 처리는 두 단계다.
+//
+//   1) prepareImages — 브라우저에서 할 수 있는 일. 바코드를 읽고, 보관용 축소본을 만든다.
+//   2) readGifticonInfo — 서버(모델)에게 상품명·금액·유효기간을 읽히고 썸네일을 잘라낸다.
+//
+// 나눠둔 이유는 2)가 실패해도 1)의 결과는 살려야 하기 때문이다. 모델 호출은 키가 없거나
+// 인터넷이 끊기면 실패하는데, 그때도 사진은 올라가야 하고 이미 읽은 바코드도 남아야 한다.
+//
+// onProgress로 지금 어느 단계인지 알려준다. 몇 초 걸리는 동안 화면에 아무 변화가 없으면
+// 멈춘 것처럼 보이기 때문에, 화면 쪽에서 진행 상황을 표시할 수 있게 한다.
+export async function prepareImages(files, { onProgress } = {}) {
   const report = (step, extra) => onProgress?.({ step, total: files.length, ...extra });
   const barcode = { code: null, codeType: null, cropBlob: null };
+  const storageFiles = [];
   const uploads = [];
 
   for (const [index, file] of files.entries()) {
@@ -213,7 +241,9 @@ export async function analyzeImages(files, { onProgress } = {}) {
         const found = await decodeBarcode(canvas);
         if (found.code) Object.assign(barcode, found);
       }
-      uploads.push(await toUploadImage(canvas));
+      const blob = await toStorageBlob(canvas);
+      storageFiles.push(new File([blob], storageName(file), { type: 'image/jpeg' }));
+      uploads.push(await toUploadPayload(blob));
     } finally {
       // 다 쓴 캔버스가 메모리에 남지 않게 비워둔다.
       canvas.width = 0;
@@ -221,25 +251,40 @@ export async function analyzeImages(files, { onProgress } = {}) {
     }
   }
 
+  return {
+    code: barcode.code,
+    codeType: barcode.codeType,
+    barcodeCropBlob: barcode.cropBlob,
+    // 스토리지에 올릴 파일. 사용자가 고른 원본이 아니라 줄인 것이다.
+    storageFiles,
+    // 모델에게 보낼 같은 그림의 base64.
+    uploads,
+  };
+}
+
+export async function readGifticonInfo(prepared, { onProgress } = {}) {
+  const total = prepared.uploads.length;
+  const report = (step) => onProgress?.({ step, total });
+
   report('reading');
-  const info = await analyzeGifticonImages(uploads, CATEGORY_KEYS);
+  const info = await analyzeGifticonImages(prepared.uploads, CATEGORY_KEYS);
 
   // 서버가 상품 사진 위치를 못 짚었으면 잘라내지 않는다. 이 경우 목록은 예전처럼
   // 첫 사진을 그대로 보여준다(잘못 자른 그림보다는 캡처 전체가 낫다).
+  // 자를 대상은 축소본이다. 썸네일은 480px이라 원본을 다시 열어 읽을 이유가 없다.
   report('thumbnail');
   const thumbBox = info.thumbnail;
-  const thumbCropBlob = thumbBox ? await cropThumbnail(files[thumbBox.image - 1], thumbBox) : null;
+  const thumbCropBlob = thumbBox ? await cropThumbnail(prepared.storageFiles[thumbBox.image - 1], thumbBox) : null;
   report('done');
 
   // 바코드 막대를 못 읽었을 때는 이미지에 인쇄된 번호를 대신 쓴다.
   // 이 경우 잘라낸 이미지가 없으니 화면에서 바코드를 새로 그려 보여준다.
-  const code = barcode.code || info.code || null;
-  const codeType = barcode.code ? barcode.codeType : info.code ? 'CODE_128' : null;
+  const code = prepared.code || info.code || null;
+  const codeType = prepared.code ? prepared.codeType : info.code ? 'CODE_128' : null;
 
   return {
     code,
     codeType,
-    barcodeCropBlob: barcode.cropBlob,
     thumbCropBlob,
     category: info.category || '기타',
     brand: info.brand || null,

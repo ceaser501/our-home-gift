@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Loader2, Plus, RotateCcw, Search, X } from 'lucide-react';
 import { CATEGORIES } from '../constants';
-import { analyzeImages } from '../utils/imageAnalyze';
+import { prepareImages, readGifticonInfo } from '../utils/imageAnalyze';
 import { createGifticon, updateGifticon, searchPrice, findGifticonByCode } from '../api';
 import { useFamily } from '../FamilyContext';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -158,15 +158,41 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
       return;
     }
 
-    setNewFiles((prev) => [...prev, ...selected]);
-    setNewPreviews((prev) => [...prev, ...selected.map((f) => URL.createObjectURL(f))]);
     setError('');
     setAnalyzing(true);
     setProgress({ step: 'barcode', current: 1, total: selected.length });
     setAutoFilled(false);
 
+    let prepared;
     try {
-      const result = await analyzeImages(selected, { onProgress: setProgress });
+      prepared = await prepareImages(selected, { onProgress: setProgress });
+    } catch {
+      // 여기서 실패하면 올릴 사진이 없다. 원본으로 대신하지는 않는다 — 원본은 한 장에
+      // 몇 MB라, 그대로 쌓이면 저장 공간이 금세 찬다.
+      setError('사진을 읽지 못했어요. 다른 사진으로 다시 시도해주세요.');
+      setAnalyzing(false);
+      setProgress(null);
+      return;
+    }
+
+    // 보관하는 건 사용자가 고른 원본이 아니라 줄인 사본이다(긴 변 1400px JPEG).
+    // 미리보기도 같은 파일로 만들어서, 화면에 보이는 것과 실제로 올라가는 것이 같게 한다.
+    setNewFiles((prev) => [...prev, ...prepared.storageFiles]);
+    setNewPreviews((prev) => [...prev, ...prepared.storageFiles.map((f) => URL.createObjectURL(f))]);
+
+    // 바코드는 브라우저에서 이미 읽었다. 아래 서버 인식이 실패해도 이건 남아야 한다 —
+    // 기한을 못 읽으면 알림을 못 받을 뿐이지만, 바코드가 없으면 계산대에서 쓸 수가 없다.
+    setBarcodeCropFile(
+      prepared.code && prepared.barcodeCropBlob
+        ? new File([prepared.barcodeCropBlob], 'barcode.png', { type: 'image/png' })
+        : null
+    );
+    if (prepared.code) {
+      setForm((prev) => ({ ...prev, code: prepared.code, code_type: prepared.codeType || '' }));
+    }
+
+    try {
+      const result = await readGifticonInfo(prepared, { onProgress: setProgress });
 
       // 이미지를 새로 올리는 건 "이 기프티콘으로 바꾸겠다"는 뜻이라, 기프티콘을 설명하는
       // 칸들은 직접 고쳐둔 값까지 포함해서 새 이미지 결과로 통째로 바꾼다.
@@ -184,11 +210,6 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
         is_voucher: result.isVoucher,
       }));
 
-      setBarcodeCropFile(
-        result.code && result.barcodeCropBlob
-          ? new File([result.barcodeCropBlob], 'barcode.png', { type: 'image/png' })
-          : null
-      );
       // 목록 썸네일로 쓸, 상품 사진만 잘라낸 그림. 못 잘랐으면 null로 두어 예전처럼
       // 올린 사진 그대로를 쓴다.
       setThumbCropFile(
