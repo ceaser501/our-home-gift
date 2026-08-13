@@ -26,7 +26,11 @@ const UPLOAD_EDGE = 1400;
 // 이 정도면 넉넉하고, 원본을 그대로 두는 것보다 훨씬 가볍게 받는다.
 const THUMB_EDGE = 480;
 
-function analyzeScale(longEdge) {
+// 바코드를 읽기 좋은 크기로 맞추는 배율. 큰 것은 줄이고, 작은 것은 오히려 키운다 —
+// 막대가 뭉개지면 아무리 선명한 사진이어도 못 읽는다.
+// 갤러리 훑기(client/src/utils/gallery.js)도 이 함수를 쓴다. 판독 조건이 두 곳에서
+// 달라지면 "직접 올리면 되는데 갤러리로는 안 되는" 일이 생긴다 — 실제로 그랬다.
+export function analyzeScale(longEdge) {
   if (longEdge > MAX_ANALYZE_EDGE) return MAX_ANALYZE_EDGE / longEdge;
   if (longEdge < MIN_ANALYZE_EDGE) return Math.min(2, MIN_ANALYZE_EDGE / longEdge);
   return 1;

@@ -1,7 +1,8 @@
 import { registerPlugin } from '@capacitor/core';
 import { BrowserMultiFormatReader } from '@zxing/browser';
-import { BarcodeFormat } from '@zxing/library';
+import { BarcodeFormat, DecodeHintType } from '@zxing/library';
 import { isNativeApp } from './browser';
+import { analyzeScale } from './imageAnalyze';
 
 // 갤러리를 훑어 아직 등록하지 않은 기프티콘을 찾아온다.
 //
@@ -180,6 +181,10 @@ export async function requestGalleryAccess() {
   return { supported: true, ...status };
 }
 
+// 한 번 더 애써서 찾게 한다. 직접 올릴 때는 사용자가 그 사진을 고른 것이라 못 읽으면
+// 다시 찍으면 되지만, 갤러리 훑기는 놓치면 그냥 없는 것이 된다. 조금 느려도 찾는 쪽이 낫다.
+const DECODE_HINTS = new Map([[DecodeHintType.TRY_HARDER, true]]);
+
 async function decodeBarcode(base64) {
   const image = await new Promise((resolve, reject) => {
     const el = new Image();
@@ -188,13 +193,20 @@ async function decodeBarcode(base64) {
     el.src = `data:image/jpeg;base64,${base64}`;
   });
 
+  // 직접 올릴 때와 똑같은 배율로 맞춘다(imageAnalyze.js의 analyzeScale).
+  // 큰 것은 줄이고 작은 것은 키운다 — 기프티쇼 이미지처럼 가로 660px밖에 안 되는 것은
+  // 그대로 읽으면 막대 하나가 3px이라 인식이 안 된다.
+  const scale = analyzeScale(Math.max(image.naturalWidth, image.naturalHeight));
   const canvas = document.createElement('canvas');
-  canvas.width = image.naturalWidth;
-  canvas.height = image.naturalHeight;
-  canvas.getContext('2d').drawImage(image, 0, 0);
+  canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+  canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+  const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
 
   try {
-    const result = await new BrowserMultiFormatReader().decodeFromCanvas(canvas);
+    const result = await new BrowserMultiFormatReader(DECODE_HINTS).decodeFromCanvas(canvas);
     return {
       code: result.getText(),
       codeType: result.getBarcodeFormat ? BarcodeFormat[result.getBarcodeFormat()] || null : null,
