@@ -98,6 +98,14 @@ const COLLECT_PER_CODE = 4;
 // 유효기간이 다 적혀 있다. 스크린샷은 대개 바코드만 크게 띄워 찍은 것이라 그게 없다.
 const ORIGINAL_KEYS = ['download', 'kakaotalk'];
 
+// 바코드가 사진 가로폭의 이만큼은 차지해야 "바코드를 보여주려고 찍은 사진"으로 본다.
+//
+// 선물하기 화면을 캡처하면 바코드가 폭의 절반을 넘고, 문자로 온 쿠폰 이미지도 그쯤 된다.
+// 반면 목록 화면을 통째로 찍은 스크린샷에서는 68px짜리 썸네일 안에 들어가 있어 15% 안팎이다.
+// 그런 사진은 같은 바코드를 담고 있어도 읽을 정보가 없다 — 오히려 옆에 찍힌 다른
+// 기프티콘의 유효기간을 이 기프티콘 것으로 읽어올 수 있어서 넣지 않느니만 못하다.
+const MIN_BARCODE_COVERAGE = 0.25;
+
 function isOriginal(bucket) {
   return FOLDERS.filter((folder) => ORIGINAL_KEYS.includes(folder.key)).some((folder) =>
     folder.names.some((name) => matchesName(bucket, name))
@@ -194,6 +202,21 @@ export async function requestGalleryAccess() {
 // 다시 찍으면 되지만, 갤러리 훑기는 놓치면 그냥 없는 것이 된다. 조금 느려도 찾는 쪽이 낫다.
 const DECODE_HINTS = new Map([[DecodeHintType.TRY_HARDER, true]]);
 
+/**
+ * 바코드가 사진 가로폭의 얼마를 차지하는지(0~1).
+ *
+ * zxing이 알려주는 인식 좌표로 잰다. 1D 바코드는 스캔선의 양 끝 두 점, QR은 모서리
+ * 세 점이 오는데, 어느 쪽이든 가로로 벌어진 폭이 바코드의 크기다.
+ *
+ * 재는 그림이 이미 배율 조정을 거쳤지만 비율이라 상관없다 — 바코드와 사진이 같이
+ * 커지고 작아지기 때문이다.
+ */
+function barcodeCoverage(points, width) {
+  if (!points || points.length === 0 || !width) return 0;
+  const xs = points.map((point) => point.getX());
+  return (Math.max(...xs) - Math.min(...xs)) / width;
+}
+
 async function decodeBarcode(base64) {
   const image = await new Promise((resolve, reject) => {
     const el = new Image();
@@ -219,6 +242,9 @@ async function decodeBarcode(base64) {
     return {
       code: result.getText(),
       codeType: result.getBarcodeFormat ? BarcodeFormat[result.getBarcodeFormat()] || null : null,
+      // 바코드가 이 사진에서 차지하는 가로 비율. 바코드를 보여주려고 찍은 사진인지,
+      // 어쩌다 화면 한구석에 들어간 것인지를 가른다.
+      coverage: barcodeCoverage(result.getResultPoints?.(), canvas.width),
     };
   } catch {
     // 바코드가 없는 사진이다. 대부분 여기로 온다 — 오류가 아니라 정상적인 결과다.
@@ -308,7 +334,7 @@ export async function scanGallery({ isRegistered, onProgress, signal } = {}) {
     const already = seenCodes.get(found.code);
     if (already) {
       if (already.images.length < COLLECT_PER_CODE) {
-        already.images.push({ data: read.data, bucket: image.bucket });
+        already.images.push({ data: read.data, bucket: image.bucket, coverage: found.coverage });
       }
       continue;
     }
@@ -326,7 +352,7 @@ export async function scanGallery({ isRegistered, onProgress, signal } = {}) {
       codeType: found.codeType,
       // 미리보기와 등록에 그대로 쓴다. 다시 읽지 않기 위해 들고 있는다.
       // 같은 번호의 사진이 더 나오면 여기에 붙고, 마지막에 골라낸다.
-      images: [{ data: read.data, bucket: image.bucket }],
+      images: [{ data: read.data, bucket: image.bucket, coverage: found.coverage }],
     };
     seenCodes.set(found.code, candidate);
     candidates.push(candidate);
@@ -339,8 +365,14 @@ export async function scanGallery({ isRegistered, onProgress, signal } = {}) {
   // 원본이 이렇게 밀려나서, 거기 적힌 유효기간을 못 읽는 일이 있었다.
   // 그래서 자르기 전에 원본 폴더에 있던 것을 앞으로 당긴다.
   candidates.forEach((candidate) => {
-    const sorted = [...candidate.images].sort(
-      (a, b) => Number(isOriginal(b.bucket)) - Number(isOriginal(a.bucket))
+    // 바코드가 너무 작게 찍힌 것은 뺀다. 다만 그것밖에 없으면 그거라도 쓴다 —
+    // 등록 자체가 막히는 것보다는 낫고, 바코드 번호는 이미 읽어놨다.
+    const meaningful = candidate.images.filter((image) => image.coverage >= MIN_BARCODE_COVERAGE);
+    const pool = meaningful.length > 0 ? meaningful : candidate.images;
+
+    const sorted = [...pool].sort(
+      (a, b) =>
+        Number(isOriginal(b.bucket)) - Number(isOriginal(a.bucket)) || b.coverage - a.coverage
     );
     candidate.images = sorted.slice(0, IMAGES_PER_CODE).map((image) => image.data);
   });
