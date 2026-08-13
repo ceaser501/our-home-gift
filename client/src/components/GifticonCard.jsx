@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { CheckCircle2, Heart, Info, MapPin, MoreVertical, Pencil, RotateCcw, Ticket, Trash2 } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { CATEGORIES } from '../constants';
@@ -24,6 +24,63 @@ const DDAY_CLASS = {
 // 카드 아래 한 줄로 붙는 버튼들. 폭을 똑같이 나눠 가져서 누르기 쉽다.
 const BAR_BUTTON = 'flex flex-1 items-center justify-center gap-1.5 py-2.5 text-xs font-semibold';
 
+// 카드의 ⋮ 메뉴. 따로 떼어낸 이유가 둘 있다.
+//
+// 하나는 뒤로가기다. 훅은 조건부로 부를 수 없어서 카드 본체에서는 useBackClose를 걸 수
+// 없었는데, 그러면 이 창이 떠 있을 때 뒤로가기가 앱을 통째로 끈다. 창 아래가 제스처 바에
+// 가까워서 삭제를 누르려다 뒤로가기가 먹는 일도 있다 — 그때 앱이 꺼져버렸다.
+//
+// 다른 하나는 다음 창을 여는 시점이다. 이 창을 닫으면서 같은 순간에 수정 창을 열면,
+// 웹뷰에서 닫히는 창이 body의 클릭을 막아둔 채로 남아 화면 전체가 눌리지 않게 된다.
+// 그래서 이 창이 완전히 닫힌 다음에 다음 창을 연다.
+function CardMenuSheet({ gifticon, onClose, onEdit, onDelete }) {
+  useBackClose(onClose);
+  const pendingRef = useRef(null);
+
+  // 이 창이 화면에서 완전히 사라진 다음에 고른 일을 한다. 순서가 뒤집히면
+  // 새 창이 먼저 뜨고 이 창이 나중에 정리되면서, 정리하는 쪽이 화면 전체의 클릭을
+  // 막아둔 상태를 그대로 남긴다.
+  useEffect(() => {
+    return () => {
+      const action = pendingRef.current;
+      if (action) setTimeout(() => action(gifticon), 0);
+    };
+  }, [gifticon]);
+
+  function choose(action) {
+    pendingRef.current = action;
+    onClose();
+  }
+
+  return (
+    <Sheet open onOpenChange={(open) => !open && onClose()}>
+      <SheetContent className="gap-0 pb-[var(--safe-bottom)]">
+        <SheetHeader className="pr-14 pb-1">
+          <SheetTitle className="truncate">{gifticon.name}</SheetTitle>
+        </SheetHeader>
+        <div className="flex flex-col px-5 pt-2">
+          <button
+            type="button"
+            onClick={() => choose(onEdit)}
+            className="flex w-full items-center gap-3 px-1 py-3 text-left text-sm text-foreground"
+          >
+            <Pencil className="size-4.5 text-muted-foreground" />
+            수정
+          </button>
+          <button
+            type="button"
+            onClick={() => choose(onDelete)}
+            className="flex w-full items-center gap-3 px-1 py-3 text-left text-sm text-destructive"
+          >
+            <Trash2 className="size-4.5" />
+            삭제
+          </button>
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
 export default function GifticonCard({
   gifticon,
   onViewCode,
@@ -37,10 +94,9 @@ export default function GifticonCard({
   onSpend,
 }) {
   const { members, user } = useFamily();
+  // 뒤로가기 처리는 CardMenuSheet가 직접 한다. 여기서도 걸면 표시가 두 번 쌓여서
+  // 뒤로가기를 두 번 눌러야 창이 닫힌다.
   const [menuOpen, setMenuOpen] = useState(false);
-  // 뒤로가기로 이 시트를 닫는다. 훅은 조건부로 부를 수 없어서, 닫혀 있는 동안에는
-  // null을 넘겨 아무것도 하지 않게 한다.
-  useBackClose(menuOpen ? () => setMenuOpen(false) : null);
   const isUsed = gifticon.status === 'used';
   const urgency = isUsed ? 'none' : ddayUrgency(gifticon.expires_at);
   // 이름표 색은 가족에 들어올 때 정해진 번호(tag_color)를 쓴다. 목록에서 몇 번째냐로
@@ -282,37 +338,12 @@ export default function GifticonCard({
       </div>
 
       {menuOpen && (
-        <Sheet open onOpenChange={(open) => !open && setMenuOpen(false)}>
-          <SheetContent className="gap-0 pb-[var(--safe-bottom)]">
-            <SheetHeader className="pr-14 pb-1">
-              <SheetTitle className="truncate">{gifticon.name}</SheetTitle>
-            </SheetHeader>
-            <div className="flex flex-col px-5 pt-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setMenuOpen(false);
-                  onEdit(gifticon);
-                }}
-                className="flex w-full items-center gap-3 px-1 py-3 text-left text-sm text-foreground"
-              >
-                <Pencil className="size-4.5 text-muted-foreground" />
-                수정
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setMenuOpen(false);
-                  onDelete(gifticon);
-                }}
-                className="flex w-full items-center gap-3 px-1 py-3 text-left text-sm text-destructive"
-              >
-                <Trash2 className="size-4.5" />
-                삭제
-              </button>
-            </div>
-          </SheetContent>
-        </Sheet>
+        <CardMenuSheet
+          gifticon={gifticon}
+          onClose={() => setMenuOpen(false)}
+          onEdit={onEdit}
+          onDelete={onDelete}
+        />
       )}
     </li>
   );

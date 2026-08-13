@@ -379,7 +379,7 @@ export default function App() {
       {scanOpen && (
         <GalleryScanSheet
           savedCode={savedCode}
-          onRegister={(file) => setSheetState({ mode: 'create', initial: null, files: [file] })}
+          onRegister={(files) => setSheetState({ mode: 'create', initial: null, files })}
           onClose={() => setScanOpen(false)}
         />
       )}

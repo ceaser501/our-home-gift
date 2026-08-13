@@ -3,7 +3,7 @@ import { ImageOff, Loader2, ScanSearch, X } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import {
-  candidateToFile,
+  candidateToFiles,
   dismissImages,
   FOLDERS,
   summarizeFolders,
@@ -91,9 +91,19 @@ export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
   }, []);
 
   // 등록이 끝난 것은 목록에서 뺀다. 남겨두면 방금 넣은 것을 또 넣게 된다.
+  //
+  // 마지막 하나까지 등록했으면 이 창을 닫는다. 열어둔 채로 두면 방금 등록을 마쳤는데
+  // "등록할 만한 게 없었어요"가 뜬다 — 없어서가 아니라 다 했기 때문인데, 화면만 보면
+  // 실패한 것처럼 읽힌다. 남은 게 있을 때만 계속 열어둔다.
   useEffect(() => {
     if (!savedCode) return;
-    setCandidates((prev) => prev.filter((item) => item.code !== savedCode));
+    setCandidates((prev) => {
+      const left = prev.filter((item) => item.code !== savedCode);
+      if (prev.length > 0 && left.length === 0) onClose();
+      return left;
+    });
+    // onClose는 부모가 매번 새로 만드는 함수라 의존성에 넣으면 효과가 계속 다시 돈다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [savedCode]);
 
   // 훑기가 끝난 뒤, 어디까지 봤는지 적어둔다. 다음 번엔 그 이후에 담긴 사진만 본다.
@@ -170,7 +180,7 @@ export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
   const summary = summarizeFolders(folders);
 
   function handleRegister(candidate) {
-    onRegister(candidateToFile(candidate));
+    onRegister(candidateToFiles(candidate));
   }
 
   return (
@@ -345,7 +355,7 @@ export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
                         className="flex items-center gap-3 rounded-xl border border-border bg-background p-2.5"
                       >
                         <img
-                          src={`data:image/jpeg;base64,${candidate.data}`}
+                          src={`data:image/jpeg;base64,${candidate.images[0]}`}
                           alt=""
                           className="size-16 shrink-0 rounded-lg bg-black object-cover"
                         />

@@ -79,6 +79,9 @@ export function summarizeFolders(folders) {
 
 // 한 번에 살펴볼 최대 장수. 이보다 많으면 오래 걸려서 사용자가 멈춘 줄 안다.
 const MAX_IMAGES = 200;
+// 한 기프티콘에 대해 들고 있을 사진 수. 원본 한 장과 바코드 캡처 한 장이면 충분하고,
+// 더 들고 있어봐야 같은 정보라 메모리만 쓴다.
+const MAX_IMAGES_PER_CODE = 2;
 
 // 바코드를 읽을 크기.
 //
@@ -233,7 +236,8 @@ export async function scanGallery({ isRegistered, onProgress, signal, fromInstal
   const fresh = images.filter((image) => !dismissed.has(String(image.id)));
 
   const candidates = [];
-  const seenCodes = new Set();
+  // 바코드 값 → 그 값을 가진 후보. 같은 기프티콘의 사진 여러 장을 한 후보로 모은다.
+  const seenCodes = new Map();
   // 왜 못 찾았는지 알려주기 위한 집계. 아무것도 안 나왔을 때 "사진이 없어서인지,
   // 바코드를 못 읽어서인지, 이미 다 등록된 것인지"를 구분할 수 있어야 한다.
   const tally = { read: 0, readFailed: 0, noBarcode: 0, alreadyHave: 0 };
@@ -266,15 +270,24 @@ export async function scanGallery({ isRegistered, onProgress, signal, fromInstal
       continue;
     }
 
-    // 같은 기프티콘을 여러 장 캡처해둔 경우가 흔하다. 번호가 같으면 한 번만 보여준다.
-    if (seenCodes.has(found.code)) continue;
+    // 같은 기프티콘을 여러 장 갖고 있는 경우가 흔하다 — 카카오톡에서 받은 원본을
+    // 저장해두고, 계산대에서 쓰려고 바코드만 크게 띄워 캡처해두는 식이다.
+    //
+    // 예전에는 두 번째 것을 그냥 버렸는데, 그러면 어느 한 장만 남는다. 바코드만 찍힌
+    // 캡처에는 유효기간도 금액도 없어서, 그게 남으면 기한을 알 길이 없어진다.
+    // 이제는 함께 들고 있다가 등록할 때 같이 넘긴다 — 직접 올릴 때 여러 장을 올리면
+    // 각 장에서 찾은 정보를 합쳐주는 것과 같은 길이다(client/src/utils/imageAnalyze.js).
+    const already = seenCodes.get(found.code);
+    if (already) {
+      if (already.images.length < MAX_IMAGES_PER_CODE) already.images.push(read.data);
+      continue;
+    }
     if (isRegistered && (await isRegistered(found.code))) {
       tally.alreadyHave += 1;
       continue;
     }
-    seenCodes.add(found.code);
 
-    candidates.push({
+    const candidate = {
       id: image.id,
       name: image.name,
       bucket: image.bucket,
@@ -282,8 +295,11 @@ export async function scanGallery({ isRegistered, onProgress, signal, fromInstal
       code: found.code,
       codeType: found.codeType,
       // 미리보기와 등록에 그대로 쓴다. 다시 읽지 않기 위해 들고 있는다.
-      data: read.data,
-    });
+      // 같은 번호의 사진이 더 나오면 여기에 붙는다.
+      images: [read.data],
+    };
+    seenCodes.set(found.code, candidate);
+    candidates.push(candidate);
   }
 
   onProgress?.({ scanned: fresh.length, total: fresh.length, found: candidates.length });
@@ -293,11 +309,16 @@ export async function scanGallery({ isRegistered, onProgress, signal, fromInstal
   return { ...status, candidates, scanned: fresh.length, since, folders, tally };
 }
 
-// 후보를 등록 창에 넘길 수 있는 파일로 바꾼다.
-export function candidateToFile(candidate) {
-  const binary = atob(candidate.data);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
-  const name = (candidate.name || 'gifticon').replace(/\.[^.]+$/, '');
-  return new File([bytes], `${name}.jpg`, { type: 'image/jpeg' });
+// 후보를 등록 창에 넘길 수 있는 파일들로 바꾼다.
+//
+// 같은 번호의 사진이 여러 장이면 전부 넘긴다. 등록 창은 여러 장을 받으면 각 장에서 찾은
+// 정보를 합쳐 채우기 때문에, 바코드만 찍힌 캡처에 없는 유효기간을 원본 쪽에서 읽어온다.
+export function candidateToFiles(candidate) {
+  const base = (candidate.name || 'gifticon').replace(/\.[^.]+$/, '');
+  return candidate.images.map((data, index) => {
+    const binary = atob(data);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+    return new File([bytes], `${base}${index ? `-${index + 1}` : ''}.jpg`, { type: 'image/jpeg' });
+  });
 }
