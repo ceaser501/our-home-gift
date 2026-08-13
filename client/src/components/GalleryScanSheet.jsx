@@ -43,6 +43,13 @@ function formatDay(seconds) {
   });
 }
 
+// 기준 시각 이후 기기에 있는 폴더 목록에서, 우리가 훑은 것과 아닌 것을 갈라 적는다.
+function folderText(folders, used) {
+  const picked = (folders || []).filter((folder) => Boolean(folder.used) === used);
+  if (picked.length === 0) return '없음';
+  return picked.map((folder) => `${folder.name} ${folder.count}장`).join(' · ');
+}
+
 export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
   // 뒤로가기로 이 창을 닫는다. 안 그러면 설치해서 쓸 때 앱이 통째로 꺼진다.
   useBackClose(onClose);
@@ -57,7 +64,7 @@ export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
   const [since, setSince] = useState(0);
   // 기기에 실제로 있는 폴더 이름과 장수, 그리고 몇 장이 어떤 이유로 걸러졌는지.
   // 못 찾았을 때 그 이유를 짚어주기 위한 값이다.
-  const [folders, setFolders] = useState({});
+  const [folders, setFolders] = useState([]);
   const [tally, setTally] = useState(null);
   // 끝까지 훑었는지. 중간에 그만뒀으면 "여기까지 봤다"고 적으면 안 된다 —
   // 못 본 사진들이 다음 번에 통째로 건너뛰어진다.
@@ -145,7 +152,7 @@ export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
       setCandidates(result.candidates);
       setScanned(result.scanned ?? 0);
       setSince(result.since ?? 0);
-      setFolders(result.folders ?? {});
+      setFolders(result.folders ?? []);
       setTally(result.tally ?? null);
       setComplete(true);
     } catch (err) {
@@ -298,14 +305,13 @@ export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
                             <dd className="m-0">{tally.readFailed}장</dd>
                           </>
                         )}
-                        <dt className="col-span-2 pt-1 font-semibold text-foreground">기기에서 찾은 폴더</dt>
-                        <dd className="col-span-2 m-0 break-all">
-                          {Object.keys(folders).length === 0
-                            ? '없음'
-                            : Object.entries(folders)
-                                .map(([name, count]) => `${name} ${count}장`)
-                                .join(' · ')}
-                        </dd>
+                        {/* 본 폴더와 안 본 폴더를 갈라서 적는다. 한 줄에 섞어두면
+                            "왜 카메라 폴더까지 뒤지지"로 읽힌다 — 아래는 기기에 무엇이
+                            있는지의 목록이지 우리가 훑은 목록이 아니다. */}
+                        <dt className="col-span-2 pt-1 font-semibold text-foreground">본 폴더</dt>
+                        <dd className="col-span-2 m-0 break-all">{folderText(folders, true)}</dd>
+                        <dt className="col-span-2 pt-1 font-semibold text-foreground">안 본 폴더</dt>
+                        <dd className="col-span-2 m-0 break-all">{folderText(folders, false)}</dd>
                       </dl>
                     </details>
                   )}

@@ -24,8 +24,12 @@ import com.getcapacitor.annotation.PermissionCallback;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * 갤러리에서 기프티콘 후보를 찾아오는 플러그인.
@@ -56,6 +60,26 @@ public class GalleryPlugin extends Plugin {
 
     private static final int DEFAULT_LIMIT = 300;
     private static final int DEFAULT_MAX_EDGE = 1400;
+
+    /**
+     * 큰 정수는 문자열로 주고받는다.
+     *
+     * Capacitor의 call.getLong()은 값이 정확히 Long일 때만 돌려주고 아니면 기본값을 준다.
+     * 그런데 자바스크립트에서 넘어온 숫자는 org.json이 파싱하는데, 32비트에 들어가는 값은
+     * Integer가 된다. 사진 id도 기준 시각(초)도 대부분 그 범위라 getLong은 늘 null이었다.
+     * 그래서 readImage가 사진을 한 장도 못 열었고, listImages의 since도 항상 0으로 떨어져
+     * 매번 설치 시점부터 다시 훑고 있었다. 둘 다 조용히 실패해서 눈에 띄지 않았다.
+     *
+     * 문자열로 주고받으면 파서가 어떤 타입을 고르든 상관이 없다.
+     */
+    private static long parseLong(String text, long fallback) {
+        if (text == null) return fallback;
+        try {
+            return Long.parseLong(text.trim());
+        } catch (NumberFormatException e) {
+            return fallback;
+        }
+    }
 
     private String permissionAlias() {
         return Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU ? "media" : "storage";
@@ -133,7 +157,7 @@ public class GalleryPlugin extends Plugin {
             return;
         }
 
-        long since = call.getLong("since", 0L);
+        long since = parseLong(call.getString("since"), 0L);
         if (since <= 0L) since = installedAtSeconds();
         int limit = call.getInt("limit", DEFAULT_LIMIT);
 
@@ -161,7 +185,12 @@ public class GalleryPlugin extends Plugin {
         // 폴더 이름은 제조사·안드로이드 버전·앱 버전마다 다르다. 이름이 안 맞아서 못 찾는
         // 경우가 가장 흔한 실패인데, 이게 없으면 화면에서는 "사진이 없다"와 구분되지 않는다.
         // 실제 이름을 눈으로 보면 BUCKETS에 더해주기만 하면 된다.
-        JSObject folders = new JSObject();
+        //
+        // 우리가 실제로 본 폴더인지(used)도 함께 표시한다. 그게 없으면 목록에 뜬 이름을
+        // 보고 "왜 저기까지 뒤지지"라고 읽게 된다 — 이건 기기에 무엇이 있는지의 목록이지
+        // 우리가 훑은 목록이 아니다.
+        LinkedHashMap<String, Integer> folderCounts = new LinkedHashMap<>();
+        Set<String> usedFolders = new HashSet<>();
         ContentResolver resolver = getContext().getContentResolver();
         Cursor cursor = null;
         try {
@@ -185,13 +214,19 @@ public class GalleryPlugin extends Plugin {
                     // 세는 건 끝까지 한다. 골라 담는 것만 상한에서 멈춘다 — 상한에 걸려
                     // 그만둔 것인지 폴더가 아예 없는 것인지 화면에서 구분해야 한다.
                     String label = bucket == null || bucket.isEmpty() ? "(이름 없음)" : bucket;
-                    folders.put(label, folders.optInt(label, 0) + 1);
+                    Integer seen = folderCounts.get(label);
+                    folderCounts.put(label, seen == null ? 1 : seen + 1);
 
+                    boolean matched = buckets.isEmpty() || matchesBucket(bucket, buckets);
+                    if (matched) usedFolders.add(label);
+
+                    if (!matched) continue;
                     if (images.length() >= limit) continue;
-                    if (!buckets.isEmpty() && !matchesBucket(bucket, buckets)) continue;
 
                     JSObject item = new JSObject();
-                    item.put("id", cursor.getLong(idCol));
+                    // id는 문자열로 준다. 이 값이 그대로 readImage로 돌아오는데, 숫자로
+                    // 주고받으면 Capacitor가 Integer로 파싱해 getLong이 못 읽는다.
+                    item.put("id", String.valueOf(cursor.getLong(idCol)));
                     item.put("name", cursor.getString(nameCol));
                     item.put("addedAt", cursor.getLong(addedCol));
                     item.put("bucket", bucket == null ? "" : bucket);
@@ -211,6 +246,15 @@ public class GalleryPlugin extends Plugin {
         // 실제로 어느 시각부터 봤는지. 화면에서 "언제 이후를 봤다"고 적어주려면 필요하다 —
         // 0을 넘겨 설치 시각으로 대신한 경우, 그 값을 아는 건 여기뿐이다.
         result.put("since", since);
+
+        JSArray folders = new JSArray();
+        for (Map.Entry<String, Integer> entry : folderCounts.entrySet()) {
+            JSObject folder = new JSObject();
+            folder.put("name", entry.getKey());
+            folder.put("count", entry.getValue().intValue());
+            folder.put("used", usedFolders.contains(entry.getKey()));
+            folders.put(folder);
+        }
         result.put("folders", folders);
         call.resolve(result);
     }
@@ -235,8 +279,8 @@ public class GalleryPlugin extends Plugin {
      */
     @PluginMethod
     public void readImage(PluginCall call) {
-        Long id = call.getLong("id");
-        if (id == null) {
+        long id = parseLong(call.getString("id"), -1L);
+        if (id < 0L) {
             call.reject("사진 id가 없어요.", "no_id");
             return;
         }

@@ -182,10 +182,13 @@ export async function scanGallery({ isRegistered, onProgress, signal, fromInstal
 
   // 0을 넘기면 네이티브가 설치 시각을 기준으로 삼는다. 설치 전부터 갤러리에 쌓여 있던
   // 사진까지 뒤지지 않기 위한 바닥이라, 어느 경우에도 그보다 앞으로는 가지 않는다.
-  const { images = [], since = 0, folders = {} } = await MoaconGallery.listImages({
+  // since와 id는 문자열로 주고받는다. 숫자로 보내면 Capacitor가 32비트에 들어가는 값을
+  // Integer로 파싱하는데, 네이티브의 call.getLong()은 정확히 Long일 때만 값을 돌려주고
+  // 아니면 기본값을 준다. 그래서 사진을 한 장도 못 열고 있었다.
+  const { images = [], since = 0, folders = [] } = await MoaconGallery.listImages({
     buckets: BUCKETS,
     limit: MAX_IMAGES,
-    since: fromInstall ? 0 : readScannedUntil(),
+    since: String(fromInstall ? 0 : readScannedUntil()),
   });
 
   const dismissed = readDismissed();
@@ -203,7 +206,7 @@ export async function scanGallery({ isRegistered, onProgress, signal, fromInstal
 
     let read;
     try {
-      read = await MoaconGallery.readImage({ id: image.id, maxEdge: READ_EDGE });
+      read = await MoaconGallery.readImage({ id: String(image.id), maxEdge: READ_EDGE });
     } catch {
       // 한 장을 못 읽는다고 전체가 멈추면 안 된다. 너무 큰 사진이거나 지워진 것이다.
       tally.readFailed += 1;
