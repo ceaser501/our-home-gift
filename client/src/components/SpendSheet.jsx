@@ -43,7 +43,7 @@ export default function SpendSheet({ gifticon, onSpend, onClose }) {
 
   return (
     <Sheet open onOpenChange={(open) => !open && onClose()}>
-      <SheetContent className="gap-0 pb-[max(24px,env(safe-area-inset-bottom))]">
+      <SheetContent className="gap-0 pb-[var(--safe-bottom)]">
         <SheetHeader className="pr-14 pb-1">
           <SheetTitle>얼마 쓰셨어요?</SheetTitle>
         </SheetHeader>

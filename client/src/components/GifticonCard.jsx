@@ -283,7 +283,7 @@ export default function GifticonCard({
 
       {menuOpen && (
         <Sheet open onOpenChange={(open) => !open && setMenuOpen(false)}>
-          <SheetContent className="gap-0 pb-[max(24px,env(safe-area-inset-bottom))]">
+          <SheetContent className="gap-0 pb-[var(--safe-bottom)]">
             <SheetHeader className="pr-14 pb-1">
               <SheetTitle className="truncate">{gifticon.name}</SheetTitle>
             </SheetHeader>

@@ -94,7 +94,7 @@ export default function BarcodeModal({ gifticon, onClose, onUsed, onSpend }) {
 
   return (
     <Sheet open onOpenChange={(open) => !open && onClose()}>
-      <SheetContent className="max-h-[92dvh] gap-0 overflow-y-auto pb-[max(24px,env(safe-area-inset-bottom))]">
+      <SheetContent className="max-h-[92dvh] gap-0 overflow-y-auto pb-[var(--safe-bottom)]">
         <SheetHeader className="pr-14 pb-2">
           <SheetTitle className="flex items-center gap-1.5">
             {view === 'photo' && (

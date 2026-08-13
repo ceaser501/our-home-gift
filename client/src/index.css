@@ -31,6 +31,21 @@
   --input: #e7e7ec;
   --ring: #5b4fe8;
   --radius: 1rem;
+
+  /* 화면 맨 아래에서 비워둬야 하는 높이.
+     아이폰의 홈 인디케이터는 env(safe-area-inset-bottom)으로 정확히 알 수 있다. */
+  --safe-bottom: max(24px, env(safe-area-inset-bottom));
+}
+
+/* 안드로이드 앱에서는 env(safe-area-inset-bottom)이 늘 0으로 나온다.
+   크롬은 이 값을 디스플레이 컷아웃(노치)에만 쓰고 내비게이션 바에는 쓰지 않기 때문이다.
+   그래서 시트 아래쪽이 제스처 바에 물려서, 맨 밑 버튼(수정·삭제 같은)이 눌리지 않았다.
+
+   제스처 바는 24dp 남짓, 3버튼 바는 48dp 남짓이라 둘 다 덮는 값을 바닥으로 둔다.
+   제대로 하려면 네이티브에서 WindowInsets를 읽어 CSS 변수로 내려줘야 하는데,
+   그건 기기별로 확인이 필요해서 우선 이렇게 막아둔다. */
+html.is-native-android {
+  --safe-bottom: 52px;
 }
 
 /* 폰이 다크모드여도 앱은 항상 화이트가 기본이다. 헤더의 토글로 직접 다크를

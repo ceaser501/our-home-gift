@@ -55,6 +55,10 @@ export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
   const [scanned, setScanned] = useState(0);
   // 실제로 어느 시각 이후를 봤는지(초). 화면에 적어주기 위한 값이다.
   const [since, setSince] = useState(0);
+  // 기기에 실제로 있는 폴더 이름과 장수, 그리고 몇 장이 어떤 이유로 걸러졌는지.
+  // 못 찾았을 때 그 이유를 짚어주기 위한 값이다.
+  const [folders, setFolders] = useState({});
+  const [tally, setTally] = useState(null);
   // 끝까지 훑었는지. 중간에 그만뒀으면 "여기까지 봤다"고 적으면 안 된다 —
   // 못 본 사진들이 다음 번에 통째로 건너뛰어진다.
   const [complete, setComplete] = useState(false);
@@ -141,6 +145,8 @@ export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
       setCandidates(result.candidates);
       setScanned(result.scanned ?? 0);
       setSince(result.since ?? 0);
+      setFolders(result.folders ?? {});
+      setTally(result.tally ?? null);
       setComplete(true);
     } catch (err) {
       setError(err?.message || '갤러리를 훑지 못했어요.');
@@ -163,7 +169,7 @@ export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
 
   return (
     <Sheet open onOpenChange={(open) => !open && onClose()}>
-      <SheetContent className="max-h-[92dvh] gap-0 overflow-y-auto pb-[max(20px,env(safe-area-inset-bottom))]">
+      <SheetContent className="max-h-[92dvh] gap-0 overflow-y-auto pb-[var(--safe-bottom)]">
         <SheetHeader className="pr-14 pb-1">
           <SheetTitle>갤러리에서 찾기</SheetTitle>
         </SheetHeader>
@@ -264,15 +270,45 @@ export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
                     {scanned === 0 ? '새로 담긴 사진이 없어요' : '등록할 만한 게 없었어요'}
                   </p>
                   <p className="m-0 text-xs leading-relaxed break-keep text-muted-foreground">
-                    {scanned === 0 ? (
-                      '지난번에 찾은 뒤로 갤러리에 새로 담긴 사진이 없어요.'
-                    ) : (
-                      <>
-                        사진 {scanned}장을 봤어요. 바코드가 흐리거나 앱에서만 열리는 기프티콘은 이 방법으로 못 찾아요.
-                      </>
-                    )}
+                    {scanned === 0
+                      ? '지난번에 찾은 뒤로 갤러리에 새로 담긴 사진이 없어요.'
+                      : `사진 ${scanned}장을 봤어요. 바코드가 흐리거나 앱에서만 열리는 기프티콘은 이 방법으로 못 찾아요.`}
                     <br />+ 버튼으로 직접 올리시면 그때도 정보를 채워드려요.
                   </p>
+
+                  {/* 왜 못 찾았는지 짚어준다.
+                      "사진이 없어서"와 "바코드를 못 읽어서"와 "이미 다 등록해서"는 사용자가
+                      할 일이 서로 다른데, 이게 없으면 셋이 똑같은 화면으로 보인다.
+                      폴더 이름은 기기마다 달라서, 여기 낯선 이름이 뜨면 그게 원인이다. */}
+                  {tally && (
+                    <details className="w-full pt-2 text-left">
+                      <summary className="cursor-pointer list-none text-center text-xs text-muted-foreground underline">
+                        왜 못 찾았는지 보기
+                      </summary>
+                      <dl className="m-0 mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 rounded-xl bg-muted/60 px-4 py-3 text-xs text-muted-foreground">
+                        <dt>읽은 사진</dt>
+                        <dd className="m-0">{tally.read}장</dd>
+                        <dt>바코드 없음</dt>
+                        <dd className="m-0">{tally.noBarcode}장</dd>
+                        <dt>이미 등록됨</dt>
+                        <dd className="m-0">{tally.alreadyHave}장</dd>
+                        {tally.readFailed > 0 && (
+                          <>
+                            <dt>열지 못함</dt>
+                            <dd className="m-0">{tally.readFailed}장</dd>
+                          </>
+                        )}
+                        <dt className="col-span-2 pt-1 font-semibold text-foreground">기기에서 찾은 폴더</dt>
+                        <dd className="col-span-2 m-0 break-all">
+                          {Object.keys(folders).length === 0
+                            ? '없음'
+                            : Object.entries(folders)
+                                .map(([name, count]) => `${name} ${count}장`)
+                                .join(' · ')}
+                        </dd>
+                      </dl>
+                    </details>
+                  )}
                 </div>
               ) : (
                 <>

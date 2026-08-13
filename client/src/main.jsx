@@ -6,6 +6,14 @@ import AuthGate from './components/AuthGate.jsx'
 import { watchForUpdates } from './utils/appUpdate.js'
 import { registerServiceWorker } from './utils/serviceWorker.js'
 import { watchLoginRedirects } from './utils/deepLink.js'
+import { isNativeApp } from './utils/browser.js'
+
+// 안드로이드 웹뷰는 내비게이션 바 높이를 env(safe-area-inset-bottom)으로 알려주지 않는다.
+// 그래서 화면 맨 아래 버튼이 제스처 바에 물려 눌리지 않았다. CSS가 그 사실을 알 수 있게
+// 표시를 달아준다(index.css의 --safe-bottom). 웹에서는 붙지 않아 아무 영향이 없다.
+if (isNativeApp() && window.Capacitor?.getPlatform?.() === 'android') {
+  document.documentElement.classList.add('is-native-android')
+}
 
 watchForUpdates()
 

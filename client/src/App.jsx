@@ -356,7 +356,7 @@ export default function App() {
           onClick={() => setScanOpen(true)}
           aria-label="갤러리에서 기프티콘 찾기"
           style={{ right: 'max(24px, calc((100vw - 480px) / 2 + 24px))' }}
-          className="fixed bottom-[max(88px,calc(env(safe-area-inset-bottom)+88px))] z-20 flex size-11 items-center justify-center rounded-full border border-border bg-card text-foreground shadow-md"
+          className="fixed bottom-[calc(var(--safe-bottom)+64px)] z-20 flex size-11 items-center justify-center rounded-full border border-border bg-card text-foreground shadow-md"
         >
           <ScanSearch className="size-5" />
         </button>
@@ -369,7 +369,7 @@ export default function App() {
         onClick={() => setSheetState({ mode: 'create', initial: null })}
         aria-label="기프티콘 추가"
         style={{ right: 'max(20px, calc((100vw - 480px) / 2 + 20px))' }}
-        className="fixed bottom-[max(24px,env(safe-area-inset-bottom))] z-20 flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/40"
+        className="fixed bottom-[var(--safe-bottom)] z-20 flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/40"
       >
         <Plus className="size-7" />
       </button>

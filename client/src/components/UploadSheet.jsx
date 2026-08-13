@@ -363,7 +363,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
 
   return (
     <Sheet open onOpenChange={(open) => !open && onClose()}>
-      <SheetContent className="max-h-[92dvh] gap-0 overflow-y-auto pb-[max(20px,env(safe-area-inset-bottom))]">
+      <SheetContent className="max-h-[92dvh] gap-0 overflow-y-auto pb-[var(--safe-bottom)]">
         <SheetHeader className="flex-row items-center justify-between gap-2 pr-14 pb-3">
           <SheetTitle>{mode === 'create' ? '기프티콘 추가' : '기프티콘 수정'}</SheetTitle>
           <Button type="button" variant="ghost" size="sm" onClick={handleReset} className="text-muted-foreground">

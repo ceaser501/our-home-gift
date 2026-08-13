@@ -41,7 +41,7 @@ export default function ExtendSheet({ gifticon, onExtend, onClose }) {
 
   return (
     <Sheet open onOpenChange={(open) => !open && onClose()}>
-      <SheetContent className="max-h-[92dvh] gap-0 overflow-y-auto pb-[max(24px,env(safe-area-inset-bottom))]">
+      <SheetContent className="max-h-[92dvh] gap-0 overflow-y-auto pb-[var(--safe-bottom)]">
         <SheetHeader className="pr-14 pb-1">
           <SheetTitle className="truncate">{expired ? '기한이 지났어요' : '기한을 늘릴 수 있어요'}</SheetTitle>
         </SheetHeader>

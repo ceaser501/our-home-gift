@@ -155,6 +155,13 @@ public class GalleryPlugin extends Plugin {
         };
 
         JSArray images = new JSArray();
+        // 기준 시각 이후에 담긴 사진이 어느 폴더에 몇 장씩 있는지. 우리가 고른 폴더만이
+        // 아니라 전부 센다.
+        //
+        // 폴더 이름은 제조사·안드로이드 버전·앱 버전마다 다르다. 이름이 안 맞아서 못 찾는
+        // 경우가 가장 흔한 실패인데, 이게 없으면 화면에서는 "사진이 없다"와 구분되지 않는다.
+        // 실제 이름을 눈으로 보면 BUCKETS에 더해주기만 하면 된다.
+        JSObject folders = new JSObject();
         ContentResolver resolver = getContext().getContentResolver();
         Cursor cursor = null;
         try {
@@ -172,8 +179,15 @@ public class GalleryPlugin extends Plugin {
                 int addedCol = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATE_ADDED);
                 int bucketCol = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.BUCKET_DISPLAY_NAME);
 
-                while (cursor.moveToNext() && images.length() < limit) {
+                while (cursor.moveToNext()) {
                     String bucket = cursor.getString(bucketCol);
+
+                    // 세는 건 끝까지 한다. 골라 담는 것만 상한에서 멈춘다 — 상한에 걸려
+                    // 그만둔 것인지 폴더가 아예 없는 것인지 화면에서 구분해야 한다.
+                    String label = bucket == null || bucket.isEmpty() ? "(이름 없음)" : bucket;
+                    folders.put(label, folders.optInt(label, 0) + 1);
+
+                    if (images.length() >= limit) continue;
                     if (!buckets.isEmpty() && !matchesBucket(bucket, buckets)) continue;
 
                     JSObject item = new JSObject();
@@ -197,6 +211,7 @@ public class GalleryPlugin extends Plugin {
         // 실제로 어느 시각부터 봤는지. 화면에서 "언제 이후를 봤다"고 적어주려면 필요하다 —
         // 0을 넘겨 설치 시각으로 대신한 경우, 그 값을 아는 건 여기뿐이다.
         result.put("since", since);
+        result.put("folders", folders);
         call.resolve(result);
     }
 

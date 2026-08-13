@@ -41,8 +41,18 @@ const BUCKETS = ['download', '다운로드', 'kakaotalk', '카카오톡', 'scree
 
 // 한 번에 살펴볼 최대 장수. 이보다 많으면 오래 걸려서 사용자가 멈춘 줄 안다.
 const MAX_IMAGES = 200;
-// 바코드를 읽기에 충분한 크기. 원본은 훨씬 크지만 그만한 해상도가 필요 없다.
-const READ_EDGE = 1400;
+
+// 바코드를 읽을 크기.
+//
+// 처음에 1400으로 뒀다가 아무것도 못 찾았다. 1400은 imageAnalyze.js의 UPLOAD_EDGE,
+// 즉 "보관할 크기"지 "읽을 크기"가 아니다. 사람이 직접 올릴 때는 MAX_ANALYZE_EDGE(2000)로
+// 읽고, 작은 이미지는 MIN_ANALYZE_EDGE(1600)까지 오히려 키워서 읽는다 — 막대가 뭉개지면
+// 인식이 안 되기 때문이다.
+//
+// 세로 스크린샷 1080x2400을 긴 변 1400으로 줄이면 가로가 630px이 된다. 그 안의 바코드는
+// 500px 남짓이고, CODE128 막대 100여 개가 거기 들어가면 막대당 5px이라 읽히지 않는다.
+// 2000으로 읽으면 가로 900px, 바코드 750px가 되어 직접 올릴 때와 같은 조건이 된다.
+const READ_EDGE = 2000;
 
 // 아니라고 한 사진을 기억해둔다. 안 그러면 훑을 때마다 같은 것을 계속 다시 묻는다.
 const DISMISSED_KEY = 'moacon:gallery-dismissed';
@@ -172,7 +182,7 @@ export async function scanGallery({ isRegistered, onProgress, signal, fromInstal
 
   // 0을 넘기면 네이티브가 설치 시각을 기준으로 삼는다. 설치 전부터 갤러리에 쌓여 있던
   // 사진까지 뒤지지 않기 위한 바닥이라, 어느 경우에도 그보다 앞으로는 가지 않는다.
-  const { images = [], since = 0 } = await MoaconGallery.listImages({
+  const { images = [], since = 0, folders = {} } = await MoaconGallery.listImages({
     buckets: BUCKETS,
     limit: MAX_IMAGES,
     since: fromInstall ? 0 : readScannedUntil(),
@@ -183,6 +193,9 @@ export async function scanGallery({ isRegistered, onProgress, signal, fromInstal
 
   const candidates = [];
   const seenCodes = new Set();
+  // 왜 못 찾았는지 알려주기 위한 집계. 아무것도 안 나왔을 때 "사진이 없어서인지,
+  // 바코드를 못 읽어서인지, 이미 다 등록된 것인지"를 구분할 수 있어야 한다.
+  const tally = { read: 0, readFailed: 0, noBarcode: 0, alreadyHave: 0 };
 
   for (const [index, image] of fresh.entries()) {
     if (signal?.aborted) break;
@@ -193,15 +206,31 @@ export async function scanGallery({ isRegistered, onProgress, signal, fromInstal
       read = await MoaconGallery.readImage({ id: image.id, maxEdge: READ_EDGE });
     } catch {
       // 한 장을 못 읽는다고 전체가 멈추면 안 된다. 너무 큰 사진이거나 지워진 것이다.
+      tally.readFailed += 1;
+      continue;
+    }
+    tally.read += 1;
+
+    // decodeBarcode는 사진을 못 여는 경우 예외를 낸다. 이걸 잡지 않으면 그 한 장 때문에
+    // 훑기 전체가 중단되고, 사용자에게는 이유 없이 "훑지 못했어요"만 뜬다.
+    let found = null;
+    try {
+      found = await decodeBarcode(read.data);
+    } catch {
+      tally.readFailed += 1;
+      continue;
+    }
+    if (!found?.code) {
+      tally.noBarcode += 1;
       continue;
     }
 
-    const found = await decodeBarcode(read.data);
-    if (!found?.code) continue;
-
     // 같은 기프티콘을 여러 장 캡처해둔 경우가 흔하다. 번호가 같으면 한 번만 보여준다.
     if (seenCodes.has(found.code)) continue;
-    if (isRegistered && (await isRegistered(found.code))) continue;
+    if (isRegistered && (await isRegistered(found.code))) {
+      tally.alreadyHave += 1;
+      continue;
+    }
     seenCodes.add(found.code);
 
     candidates.push({
@@ -217,7 +246,10 @@ export async function scanGallery({ isRegistered, onProgress, signal, fromInstal
   }
 
   onProgress?.({ scanned: fresh.length, total: fresh.length, found: candidates.length });
-  return { ...status, candidates, scanned: fresh.length, since };
+  // folders는 기준 시각 이후 기기에 있는 폴더 이름과 장수 전부다(우리가 고른 것 말고).
+  // 폴더 이름이 안 맞아서 못 찾는 경우를 눈으로 확인할 수 있어야 한다 — 이름은 제조사와
+  // 앱 버전마다 달라서, 목록에 없는 이름이 나오면 BUCKETS에 더해주면 된다.
+  return { ...status, candidates, scanned: fresh.length, since, folders, tally };
 }
 
 // 후보를 등록 창에 넘길 수 있는 파일로 바꾼다.
