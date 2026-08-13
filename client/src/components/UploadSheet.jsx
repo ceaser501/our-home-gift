@@ -121,6 +121,8 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
   const [searchingPrice, setSearchingPrice] = useState(false);
   const [priceSearchNote, setPriceSearchNote] = useState('');
   const [duplicateName, setDuplicateName] = useState(null);
+  // 방금 고른 사진이 지금 편집 중인 것과 다른 기프티콘일 때, 어떻게 할지 물어보려고 들고 있는다.
+  const [mismatch, setMismatch] = useState(null);
   const [progress, setProgress] = useState(null);
   const fileInputRef = useRef(null);
 
@@ -190,6 +192,32 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
       return;
     }
 
+    // 이미 사진이 있는데 바코드 번호가 다르면 다른 기프티콘이다.
+    //
+    // 여러 장을 올리는 건 한 기프티콘을 여러 화면으로 나눠 찍은 경우를 위한 것인데,
+    // 실수로 다른 상품 사진을 더하면 사진은 쌓이고 정보만 덮어써진다. 스타벅스 사진에
+    // 투썸 바코드가 붙은 기프티콘이 저장되고, 서로 다른 상품을 함께 본 모델은 상품명도
+    // 헷갈린다. 저장하고 나면 어디가 틀렸는지 알아보기도 어렵다.
+    //
+    // 그렇다고 사진을 더할 때마다 화면을 비우면, 같은 기프티콘의 두 번째 화면을 올리는
+    // 정상적인 경우가 망가진다. 둘을 가르는 기준은 바코드다 — 번호가 다르면 다른 물건이다.
+    const currentCode = String(form.code || '').trim();
+    const hasImages = existingImages.length + newFiles.length > 0;
+    if (hasImages && currentCode && prepared.code && prepared.code !== currentCode) {
+      setMismatch(prepared);
+      setAnalyzing(false);
+      setProgress(null);
+      return;
+    }
+
+    await applyPrepared(prepared);
+  }
+
+  // 읽어둔 사진을 화면에 반영한다. 사진을 더하는 길과, 다른 기프티콘이라 새로 시작하는
+  // 길이 같은 처리를 쓴다.
+  async function applyPrepared(prepared) {
+    setAnalyzing(true);
+
     // 보관하는 건 사용자가 고른 원본이 아니라 줄인 사본이다(긴 변 1400px JPEG).
     // 미리보기도 같은 파일로 만들어서, 화면에 보이는 것과 실제로 올라가는 것이 같게 한다.
     setNewFiles((prev) => [...prev, ...prepared.storageFiles]);
@@ -240,6 +268,21 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
       setAnalyzing(false);
       setProgress(null);
     }
+  }
+
+  // 다른 기프티콘 사진으로 새로 시작한다. 지금까지 채운 것과 붙여둔 사진을 비우고,
+  // 방금 고른 사진만 남긴다.
+  function startOver(prepared) {
+    newPreviews.forEach((url) => URL.revokeObjectURL(url));
+    setRemovedPaths((prev) => [...prev, ...existingImages.map((image) => image.path)]);
+    setExistingImages([]);
+    setNewFiles([]);
+    setNewPreviews([]);
+    setBarcodeCropFile(null);
+    setThumbCropFile(null);
+    setForm(buildEmptyForm(myName));
+    setError('');
+    applyPrepared(prepared);
   }
 
   async function handleSearchPrice() {
@@ -567,6 +610,24 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
             {submitting ? '저장 중…' : '저장하기'}
           </Button>
         </form>
+
+        {/* 다른 기프티콘 사진을 더했을 때. 그냥 더하면 사진과 정보가 뒤섞이고, 그냥
+            막으면 "잘못 골랐으니 이걸로 새로 하겠다"는 뜻이었을 때 길이 없다. 물어본다. */}
+        {mismatch && (
+          <AlertDialog
+            tone="warning"
+            title="다른 기프티콘 같아요"
+            description={'방금 고른 사진의 바코드 번호가 지금 것과 달라요.\n이 사진으로 새로 등록할까요?'}
+            details={['새로 등록하면 지금까지 채운 내용과 사진이 지워져요', '취소하면 방금 고른 사진만 빼고 그대로 둬요']}
+            confirmLabel="새로 등록"
+            onConfirm={() => {
+              const prepared = mismatch;
+              setMismatch(null);
+              startOver(prepared);
+            }}
+            onClose={() => setMismatch(null)}
+          />
+        )}
 
         {duplicateName && (
           <AlertDialog
