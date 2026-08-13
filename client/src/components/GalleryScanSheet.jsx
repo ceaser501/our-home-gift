@@ -183,6 +183,55 @@ export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
   // 지금까지 건너뛰기로 감춰둔 사진 수. 훑기가 끝난 뒤에만 쓰므로 그때 세면 된다.
   const skipped = complete ? countSkipped() : 0;
 
+  // 왜 이 사진이 안 나왔는지는 후보를 찾았을 때도 궁금하다. 예전에는 하나도 못 찾았을
+  // 때만 열 수 있어서, "하나는 나왔는데 나머지는 왜 안 나오지"를 확인할 방법이 없었다.
+  const panelBody = tally ? (
+
+                    <details className="w-full pt-2 text-left">
+                      <summary className="cursor-pointer list-none text-center text-xs text-muted-foreground underline">
+                        왜 못 찾았는지 보기
+                      </summary>
+                      <dl className="m-0 mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 rounded-xl bg-muted/60 px-4 py-3 text-xs text-muted-foreground">
+                        <dt>읽은 사진</dt>
+                        <dd className="m-0">{tally.read}장</dd>
+                        <dt>바코드 없음</dt>
+                        <dd className="m-0">{tally.noBarcode}장</dd>
+                        <dt>이미 등록됨</dt>
+                        <dd className="m-0">{tally.alreadyHave}장</dd>
+                        {tally.readFailed > 0 && (
+                          <>
+                            <dt>열지 못함</dt>
+                            <dd className="m-0">{tally.readFailed}장</dd>
+                          </>
+                        )}
+                        {/* 우리가 보는 폴더는 이 셋뿐이라는 걸 그대로 보여준다.
+                            사진이 없어도 0장으로 남긴다 — 목록에서 빠지면 "걸러진 건가"
+                            하고 의심하게 되는데, 실제로는 볼 게 없었던 것이다.
+                            기기에 있는 다른 폴더는 여기 적지 않는다. 우리가 안 보는 것을
+                            늘어놓으면 그걸 뒤진다는 뜻으로 읽힌다. */}
+                        <dt className="col-span-2 pt-1 font-semibold text-foreground">보는 폴더 (이 3개만)</dt>
+                        {summary.watched.map((folder) => (
+                          <Fragment key={folder.label}>
+                            <dt>{folder.label}</dt>
+                            <dd className="m-0">{folder.count}장</dd>
+                          </Fragment>
+                        ))}
+                        {/* 셋 다 0장이면 폴더 이름이 우리 목록과 다를 수 있다.
+                            그때만 기기에 있는 이름을 보여준다 — 그게 유일한 단서다. */}
+                        {summary.watched.every((folder) => folder.count === 0) && summary.others.length > 0 && (
+                          <>
+                            <dt className="col-span-2 pt-1 font-semibold text-foreground">
+                              폴더 이름이 다를 수 있어요
+                            </dt>
+                            <dd className="col-span-2 m-0 break-all">
+                              기기에 있는 폴더: {summary.others.map((f) => `${f.name} ${f.count}장`).join(' · ')}
+                            </dd>
+                          </>
+                        )}
+                      </dl>
+                    </details>
+  ) : null;
+
   function handleRegister(candidate) {
     onRegister(candidateToFiles(candidate));
   }
@@ -300,51 +349,6 @@ export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
                       "사진이 없어서"와 "바코드를 못 읽어서"와 "이미 다 등록해서"는 사용자가
                       할 일이 서로 다른데, 이게 없으면 셋이 똑같은 화면으로 보인다.
                       폴더 이름은 기기마다 달라서, 여기 낯선 이름이 뜨면 그게 원인이다. */}
-                  {tally && (
-                    <details className="w-full pt-2 text-left">
-                      <summary className="cursor-pointer list-none text-center text-xs text-muted-foreground underline">
-                        왜 못 찾았는지 보기
-                      </summary>
-                      <dl className="m-0 mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 rounded-xl bg-muted/60 px-4 py-3 text-xs text-muted-foreground">
-                        <dt>읽은 사진</dt>
-                        <dd className="m-0">{tally.read}장</dd>
-                        <dt>바코드 없음</dt>
-                        <dd className="m-0">{tally.noBarcode}장</dd>
-                        <dt>이미 등록됨</dt>
-                        <dd className="m-0">{tally.alreadyHave}장</dd>
-                        {tally.readFailed > 0 && (
-                          <>
-                            <dt>열지 못함</dt>
-                            <dd className="m-0">{tally.readFailed}장</dd>
-                          </>
-                        )}
-                        {/* 우리가 보는 폴더는 이 셋뿐이라는 걸 그대로 보여준다.
-                            사진이 없어도 0장으로 남긴다 — 목록에서 빠지면 "걸러진 건가"
-                            하고 의심하게 되는데, 실제로는 볼 게 없었던 것이다.
-                            기기에 있는 다른 폴더는 여기 적지 않는다. 우리가 안 보는 것을
-                            늘어놓으면 그걸 뒤진다는 뜻으로 읽힌다. */}
-                        <dt className="col-span-2 pt-1 font-semibold text-foreground">보는 폴더 (이 3개만)</dt>
-                        {summary.watched.map((folder) => (
-                          <Fragment key={folder.label}>
-                            <dt>{folder.label}</dt>
-                            <dd className="m-0">{folder.count}장</dd>
-                          </Fragment>
-                        ))}
-                        {/* 셋 다 0장이면 폴더 이름이 우리 목록과 다를 수 있다.
-                            그때만 기기에 있는 이름을 보여준다 — 그게 유일한 단서다. */}
-                        {summary.watched.every((folder) => folder.count === 0) && summary.others.length > 0 && (
-                          <>
-                            <dt className="col-span-2 pt-1 font-semibold text-foreground">
-                              폴더 이름이 다를 수 있어요
-                            </dt>
-                            <dd className="col-span-2 m-0 break-all">
-                              기기에 있는 폴더: {summary.others.map((f) => `${f.name} ${f.count}장`).join(' · ')}
-                            </dd>
-                          </>
-                        )}
-                      </dl>
-                    </details>
-                  )}
                 </div>
               ) : (
                 <>
@@ -411,6 +415,8 @@ export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
                   사진을 봐요. 그 전에 받아둔 기프티콘은 + 버튼으로 올려주세요.
                 </p>
               )}
+
+              {panelBody}
 
               <div className="flex flex-col gap-2">
                 <Button type="button" variant="outline" size="lg" className="w-full rounded-xl" onClick={() => start()}>

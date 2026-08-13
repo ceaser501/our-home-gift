@@ -124,6 +124,18 @@ function isOriginal(bucket) {
 // 2000으로 읽으면 가로 900px, 바코드 750px가 되어 직접 올릴 때와 같은 조건이 된다.
 const READ_EDGE = 2000;
 
+// 바코드를 읽을 때 가로가 최소 이만큼은 되게 키운다.
+//
+// analyzeScale은 긴 변만 본다. 그런데 카카오톡이 저장해주는 쿠폰 이미지는 800x1670처럼
+// 세로로 길다 — 긴 변은 넉넉해서 확대되지 않는데, 정작 바코드는 가로 800px 안에 들어 있다.
+// 그 안에서 바코드는 360px 남짓이고 CODE128 모듈이 110여 개면 모듈당 3px이라 읽히지 않는다.
+//
+// 바코드는 가로로 늘어선 막대라 가로 해상도가 전부다. 세로는 아무리 길어도 도움이 안 된다.
+// 그래서 짧은 변을 따로 보고, 모자라면 그 기준으로 키운다.
+const MIN_DECODE_WIDTH = 1600;
+// 원본보다 두 배 넘게 키우면 없던 정보가 생기지 않고 메모리만 쓴다.
+const MAX_DECODE_SCALE = 2;
+
 // 아니라고 한 사진을 기억해둔다. 안 그러면 훑을 때마다 같은 것을 계속 다시 묻는다.
 const DISMISSED_KEY = 'moacon:gallery-dismissed';
 
@@ -141,7 +153,7 @@ const NO_BARCODE_KEY = 'moacon:gallery-no-barcode';
 // 예전에는 못 읽던 사진을 지금은 읽을 수 있게 되는 일이 실제로 있었다(작은 이미지를
 // 키워서 읽도록 고친 뒤). 그런데 "없음"으로 적힌 사진은 다시 읽지 않으니, 고쳐놓고도
 // 그 사진들만 영영 안 나온다. 버전이 다르면 기록을 통째로 버리고 다시 읽는다.
-const DECODER_VERSION = 2;
+const DECODER_VERSION = 3;
 
 function readIdSet(key) {
   try {
@@ -260,13 +272,17 @@ async function decodeBarcode(base64) {
     el.src = `data:image/jpeg;base64,${base64}`;
   });
 
-  // 직접 올릴 때와 똑같은 배율로 맞춘다(imageAnalyze.js의 analyzeScale).
-  // 큰 것은 줄이고 작은 것은 키운다 — 기프티쇼 이미지처럼 가로 660px밖에 안 되는 것은
-  // 그대로 읽으면 막대 하나가 3px이라 인식이 안 된다.
-  const scale = analyzeScale(Math.max(image.naturalWidth, image.naturalHeight));
+  // 직접 올릴 때와 똑같은 배율로 맞추되(imageAnalyze.js의 analyzeScale), 세로로 긴 사진은
+  // 가로를 따로 본다. 긴 변만 보면 800x1670 같은 쿠폰 이미지가 확대 없이 지나가는데,
+  // 바코드가 사는 곳은 그 800px 쪽이다.
+  const width = image.naturalWidth;
+  const height = image.naturalHeight;
+  const byLongEdge = analyzeScale(Math.max(width, height));
+  const byWidth = MIN_DECODE_WIDTH / Math.min(width, height);
+  const scale = Math.min(MAX_DECODE_SCALE, Math.max(byLongEdge, byWidth));
   const canvas = document.createElement('canvas');
-  canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
-  canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+  canvas.width = Math.max(1, Math.round(width * scale));
+  canvas.height = Math.max(1, Math.round(height * scale));
   const ctx = canvas.getContext('2d');
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
