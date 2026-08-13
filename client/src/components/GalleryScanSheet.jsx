@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import {
   candidateToFiles,
   dismissImages,
+  undismissImages,
   FOLDERS,
   summarizeFolders,
   getGalleryStatus,
@@ -14,6 +15,7 @@ import {
 import { findGifticonByCode } from '../api';
 import { useFamily } from '../FamilyContext';
 import useBackClose from '../utils/useBackClose';
+import { cn } from '@/lib/utils';
 
 // 갤러리에 받아둔 기프티콘을 찾아 등록까지 이어주는 창.
 //
@@ -55,6 +57,8 @@ export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
   const [partial, setPartial] = useState(false);
   const [progress, setProgress] = useState(null);
   const [candidates, setCandidates] = useState([]);
+  // 이번 창에서 치운 후보. 목록에 흐리게 남겨두고 되돌릴 수 있게 한다.
+  const [dismissedIds, setDismissedIds] = useState([]);
   const [scanned, setScanned] = useState(0);
   // 실제로 어느 시각 이후를 봤는지(초). 화면에 적어주기 위한 값이다.
   const [since, setSince] = useState(0);
@@ -119,6 +123,7 @@ export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
     setStage('scanning');
     setComplete(false);
     setCandidates([]);
+    setDismissedIds([]);
     setProgress({ scanned: 0, total: 0, found: 0 });
 
     const controller = new AbortController();
@@ -157,9 +162,17 @@ export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
     }
   }
 
+  // 치운 것을 목록에서 곧바로 빼지 않는다. 자리에 흐리게 남겨두고 되돌릴 수 있게 한다.
+  // 치우기는 영구적이라, 손이 미끄러졌을 때 그 자리에서 되돌릴 수 없으면 방법이 없다.
+  // 창을 닫으면 사라진다 — 그때는 사용자가 이미 결정을 내린 것이다.
   function handleDismiss(candidate) {
     dismissImages([candidate.id]);
-    setCandidates((prev) => prev.filter((item) => item.id !== candidate.id));
+    setDismissedIds((prev) => [...prev, candidate.id]);
+  }
+
+  function handleUndismiss(candidate) {
+    undismissImages([candidate.id]);
+    setDismissedIds((prev) => prev.filter((id) => id !== candidate.id));
   }
 
   // 못 찾았을 때 "우리가 보는 3개 폴더에 각각 몇 장이 있었나"를 보여주기 위한 값.
@@ -338,7 +351,10 @@ export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
                     {candidates.map((candidate) => (
                       <li
                         key={candidate.id}
-                        className="flex items-center gap-3 rounded-xl border border-border bg-background p-2.5"
+                        className={cn(
+                          'flex items-center gap-3 rounded-xl border border-border bg-background p-2.5',
+                          dismissedIds.includes(candidate.id) && 'opacity-50'
+                        )}
                       >
                         <img
                           src={`data:image/jpeg;base64,${candidate.images[0]}`}
@@ -350,6 +366,16 @@ export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
                           <span className="truncate font-mono text-sm text-foreground">{candidate.code}</span>
                         </div>
                         <div className="flex shrink-0 items-center gap-1">
+                          {dismissedIds.includes(candidate.id) ? (
+                            <button
+                              type="button"
+                              onClick={() => handleUndismiss(candidate)}
+                              className="px-2 py-1 text-xs font-semibold text-primary underline"
+                            >
+                              되돌리기
+                            </button>
+                          ) : (
+                            <>
                           <Button type="button" size="sm" onClick={() => handleRegister(candidate)}>
                             등록
                           </Button>
@@ -363,6 +389,8 @@ export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
                           >
                             <X className="size-4" />
                           </button>
+                            </>
+                          )}
                         </div>
                       </li>
                     ))}

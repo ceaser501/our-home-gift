@@ -131,6 +131,22 @@ export function dismissImages(ids) {
   addIds(DISMISSED_KEY, readIdSet(DISMISSED_KEY), ids);
 }
 
+// 잘못 치웠을 때 되돌린다.
+//
+// 치우기는 영구적이다 — 택배 송장이나 영수증처럼 기프티콘이 아닌 바코드는 갤러리에
+// 남아 있는 한 훑을 때마다 계속 올라오기 때문이다. 그런데 그 영구적이라는 성질 때문에,
+// 진짜 기프티콘에 X를 잘못 누르면 갤러리 훑기에 다시는 나오지 않는다.
+// 손이 미끄러진 것을 되돌릴 방법은 있어야 한다.
+export function undismissImages(ids) {
+  try {
+    const kept = readIdSet(DISMISSED_KEY);
+    ids.forEach((id) => kept.delete(String(id)));
+    localStorage.setItem(DISMISSED_KEY, JSON.stringify([...kept]));
+  } catch {
+    // 지우지 못했으면 그 사진은 다음 훑기에서 빠질 뿐, 직접 올리면 등록된다.
+  }
+}
+
 // 안드로이드 앱에서만 된다.
 //
 // 브라우저에는 기기의 사진 폴더를 훑는 API가 없다. 아이폰은 앱이어도 안 된다 — iOS의
