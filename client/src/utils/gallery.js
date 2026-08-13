@@ -2,7 +2,6 @@ import { registerPlugin } from '@capacitor/core';
 import { BrowserMultiFormatReader } from '@zxing/browser';
 import { BarcodeFormat, DecodeHintType } from '@zxing/library';
 import { isNativeApp } from './browser';
-import { analyzeScale } from './imageAnalyze';
 
 // 갤러리를 훑어 아직 등록하지 않은 기프티콘을 찾아온다.
 //
@@ -112,29 +111,29 @@ function isOriginal(bucket) {
   );
 }
 
-// 바코드를 읽을 크기.
+// 바코드를 읽을 때의 크기.
 //
-// 처음에 1400으로 뒀다가 아무것도 못 찾았다. 1400은 imageAnalyze.js의 UPLOAD_EDGE,
-// 즉 "보관할 크기"지 "읽을 크기"가 아니다. 사람이 직접 올릴 때는 MAX_ANALYZE_EDGE(2000)로
-// 읽고, 작은 이미지는 MIN_ANALYZE_EDGE(1600)까지 오히려 키워서 읽는다 — 막대가 뭉개지면
-// 인식이 안 되기 때문이다.
+// 처음에는 "작은 이미지면 키운다"를 크기 기준으로 판단했다. 기프티쇼 이미지(가로 660px)를
+// 보고 기준을 하나 잡고, 카카오톡 쿠폰(800x1670)을 보고 또 하나 잡았다. 그런데 기프티콘을
+// 내주는 곳은 카카오톡과 기프티쇼만이 아니다. 롯데·통신사 앱마다 크기가 제각각이라,
+// 사례를 볼 때마다 숫자를 고치는 방식은 끝이 없다.
 //
-// 세로 스크린샷 1080x2400을 긴 변 1400으로 줄이면 가로가 630px이 된다. 그 안의 바코드는
-// 500px 남짓이고, CODE128 막대 100여 개가 거기 들어가면 막대당 5px이라 읽히지 않는다.
-// 2000으로 읽으면 가로 900px, 바코드 750px가 되어 직접 올릴 때와 같은 조건이 된다.
+// 그래서 재지 않는다. 한 번 읽어보고, 안 되면 키워서 다시 읽는다. 바코드가 몇 픽셀인지는
+// 읽어봐야 아는 것이라 미리 가늠할 수가 없다 — 가늠하지 않는 쪽이 맞다.
+//
+// 실패한 사진은 "바코드 없음"으로 기억해두므로(NO_BARCODE_KEY) 이 비용은 사진 한 장당
+// 한 번만 든다.
+// 네이티브에서 받아올 크기. 원본은 몇 MB라 그대로 넘기면 웹뷰가 버겁다.
+// 아래 시도들이 이 안에서 줄이고 키우므로, 여기서는 넉넉히 받아만 둔다.
 const READ_EDGE = 2000;
 
-// 바코드를 읽을 때 가로가 최소 이만큼은 되게 키운다.
-//
-// analyzeScale은 긴 변만 본다. 그런데 카카오톡이 저장해주는 쿠폰 이미지는 800x1670처럼
-// 세로로 길다 — 긴 변은 넉넉해서 확대되지 않는데, 정작 바코드는 가로 800px 안에 들어 있다.
-// 그 안에서 바코드는 360px 남짓이고 CODE128 모듈이 110여 개면 모듈당 3px이라 읽히지 않는다.
-//
-// 바코드는 가로로 늘어선 막대라 가로 해상도가 전부다. 세로는 아무리 길어도 도움이 안 된다.
-// 그래서 짧은 변을 따로 보고, 모자라면 그 기준으로 키운다.
-const MIN_DECODE_WIDTH = 1600;
-// 원본보다 두 배 넘게 키우면 없던 정보가 생기지 않고 메모리만 쓴다.
-const MAX_DECODE_SCALE = 2;
+const DECODE_ATTEMPTS = [
+  // 1) 있는 그대로. 너무 크면 메모리만 쓰므로 이 선까지만 줄인다.
+  { maxLongEdge: 2400, upscale: 1 },
+  // 2) 두 배로 키워서. 막대가 뭉개져 안 읽히던 것이 여기서 읽힌다.
+  //    더 키워도 없던 정보가 생기지는 않아서 두 번이면 충분하다.
+  { maxLongEdge: 2400, upscale: 2 },
+];
 
 // 아니라고 한 사진을 기억해둔다. 안 그러면 훑을 때마다 같은 것을 계속 다시 묻는다.
 const DISMISSED_KEY = 'moacon:gallery-dismissed';
@@ -153,7 +152,7 @@ const NO_BARCODE_KEY = 'moacon:gallery-no-barcode';
 // 예전에는 못 읽던 사진을 지금은 읽을 수 있게 되는 일이 실제로 있었다(작은 이미지를
 // 키워서 읽도록 고친 뒤). 그런데 "없음"으로 적힌 사진은 다시 읽지 않으니, 고쳐놓고도
 // 그 사진들만 영영 안 나온다. 버전이 다르면 기록을 통째로 버리고 다시 읽는다.
-const DECODER_VERSION = 3;
+const DECODER_VERSION = 4;
 
 function readIdSet(key) {
   try {
@@ -272,14 +271,21 @@ async function decodeBarcode(base64) {
     el.src = `data:image/jpeg;base64,${base64}`;
   });
 
-  // 직접 올릴 때와 똑같은 배율로 맞추되(imageAnalyze.js의 analyzeScale), 세로로 긴 사진은
-  // 가로를 따로 본다. 긴 변만 보면 800x1670 같은 쿠폰 이미지가 확대 없이 지나가는데,
-  // 바코드가 사는 곳은 그 800px 쪽이다.
   const width = image.naturalWidth;
   const height = image.naturalHeight;
-  const byLongEdge = analyzeScale(Math.max(width, height));
-  const byWidth = MIN_DECODE_WIDTH / Math.min(width, height);
-  const scale = Math.min(MAX_DECODE_SCALE, Math.max(byLongEdge, byWidth));
+  const longEdge = Math.max(width, height);
+
+  for (const attempt of DECODE_ATTEMPTS) {
+    const scale = Math.min(1, attempt.maxLongEdge / longEdge) * attempt.upscale;
+    const found = await decodeAt(image, width, height, scale);
+    if (found) return found;
+  }
+
+  // 어느 크기로도 못 읽었다. 바코드가 없는 사진이다 — 대부분 여기로 온다.
+  return null;
+}
+
+async function decodeAt(image, width, height, scale) {
   const canvas = document.createElement('canvas');
   canvas.width = Math.max(1, Math.round(width * scale));
   canvas.height = Math.max(1, Math.round(height * scale));
@@ -293,12 +299,11 @@ async function decodeBarcode(base64) {
     return {
       code: result.getText(),
       codeType: result.getBarcodeFormat ? BarcodeFormat[result.getBarcodeFormat()] || null : null,
-      // 바코드가 이 사진에서 차지하는 가로 비율. 바코드를 보여주려고 찍은 사진인지,
-      // 어쩌다 화면 한구석에 들어간 것인지를 가른다.
+      // 바코드가 이 사진에서 차지하는 가로 비율. 크기와 달리 비율은 발행사가 달라도
+      // 뜻이 같다 — 바코드를 보여주려고 찍었는지, 어쩌다 한구석에 들어갔는지를 가른다.
       coverage: barcodeCoverage(result.getResultPoints?.(), canvas.width),
     };
   } catch {
-    // 바코드가 없는 사진이다. 대부분 여기로 온다 — 오류가 아니라 정상적인 결과다.
     return null;
   } finally {
     canvas.width = 0;
