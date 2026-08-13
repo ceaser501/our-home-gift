@@ -138,6 +138,16 @@ export default function TestDataMenu({ familyId, ownerName, userId, children }) 
     if (shouldReload) window.location.reload();
   }
 
+  // 이 창을 닫고, 완전히 닫힌 다음에 다음 창을 연다.
+  //
+  // 같은 순간에 둘을 하면 새 창이 먼저 뜨고 이 창이 나중에 정리되면서, 정리하는 쪽이
+  // 화면 전체의 클릭을 막아둔 상태를 그대로 남긴다. 그러면 버튼이 눌리지 않는다 —
+  // 카드의 수정·삭제에서도 같은 일이 있었다(client/src/components/GifticonCard.jsx).
+  function openAfterClose(next) {
+    setMenuOpen(false);
+    setTimeout(next, 0);
+  }
+
   const items = [
     {
       key: 'reset',
@@ -146,10 +156,7 @@ export default function TestDataMenu({ familyId, ownerName, userId, children }) 
       hint: '가족·구성원·기프티콘·가입계정까지 모두 지워요.',
       danger: true,
       show: true,
-      onClick: () => {
-        setMenuOpen(false);
-        setAsking('reset-first');
-      },
+      onClick: () => openAfterClose(() => setAsking('reset-first')),
     },
     {
       key: 'remove',
@@ -157,17 +164,14 @@ export default function TestDataMenu({ familyId, ownerName, userId, children }) 
       label: '목데이터 삭제',
       hint: `번호가 ${SAMPLE_PREFIX}로 시작하는 샘플만 지워요. 직접 올린 건 그대로 둡니다.`,
       danger: true,
-      onClick: () => {
-        setMenuOpen(false);
-        setAsking('remove');
-      },
+      onClick: () => openAfterClose(() => setAsking('remove')),
     },
     {
       key: 'add',
       icon: PackagePlus,
       label: '목데이터 추가',
       hint: '케이스마다 하나씩 넣어요. 이미 있는 건 건너뜁니다.',
-      onClick: handleAddSamples,
+      onClick: () => openAfterClose(handleAddSamples),
     },
   ];
 

@@ -112,7 +112,7 @@ export default function PullToRefresh({ onRefresh }) {
       ref={puckRef}
       aria-hidden="true"
       style={{ transform: `translate(-50%, ${-PUCK_SIZE}px)`, opacity: 0 }}
-      className="pointer-events-none fixed top-[max(8px,env(safe-area-inset-top))] left-1/2 z-30 flex size-9 items-center justify-center rounded-full border border-border bg-card shadow-md"
+      className="pointer-events-none fixed top-[var(--safe-top)] left-1/2 z-30 flex size-9 items-center justify-center rounded-full border border-border bg-card shadow-md"
     >
       <RefreshCw className={`size-4 text-primary ${spinning ? 'animate-spin' : ''}`} />
     </div>

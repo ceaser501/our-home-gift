@@ -112,7 +112,7 @@ export default function LoginScreen() {
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col bg-background">
-      <div className="pt-[env(safe-area-inset-top)]">
+      <div className="pt-[var(--safe-top)]">
         <InstallPrompt />
       </div>
 

@@ -19,7 +19,7 @@ export default function Header() {
   const [profileOpen, setProfileOpen] = useState(false);
 
   return (
-    <header className="px-5 pt-[max(16px,env(safe-area-inset-top))] pb-2">
+    <header className="px-5 pt-[var(--safe-top)] pb-2">
       <div className="flex items-center gap-2.5">
         {/* ⚠️ 테스트 전용. 로고를 0.8초 길게 누르면 테스트 도구가 열린다.
             출시 전에 이 감싸개를 풀고 Logo만 남긴다. */}

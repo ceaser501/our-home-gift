@@ -32,8 +32,9 @@
   --ring: #5b4fe8;
   --radius: 1rem;
 
-  /* 화면 맨 아래에서 비워둬야 하는 높이.
-     아이폰의 홈 인디케이터는 env(safe-area-inset-bottom)으로 정확히 알 수 있다. */
+  /* 화면 위아래에서 비워둬야 하는 높이.
+     아이폰의 노치와 홈 인디케이터는 env(safe-area-inset-*)로 정확히 알 수 있다. */
+  --safe-top: max(16px, env(safe-area-inset-top));
   --safe-bottom: max(24px, env(safe-area-inset-bottom));
 }
 
@@ -48,6 +49,7 @@
    그 값이 도착하기 전에도 화면은 그려지므로 기본값 48px을 둔다. 도착한 뒤에는 실제
    높이에 여유 12px을 더해 쓴다 — 바 높이에 딱 맞추면 버튼 가장자리가 바에 닿는다. */
 html.is-native-android {
+  --safe-top: calc(8px + var(--android-inset-top, 32px));
   --safe-bottom: calc(12px + var(--android-inset-bottom, 48px));
 }
 
