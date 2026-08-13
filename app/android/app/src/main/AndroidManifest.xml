@@ -58,6 +58,17 @@
 
          셋 다 사용자가 거부할 수 있고, 거부해도 앱은 그대로 동작한다 — 사진을 직접 올리는
          길이 그대로 있다. 이 기능은 처음부터 선택이다. -->
+    <!-- '매장 찾기'에서 가까운 순으로 보여주기 위한 위치.
+         웹에서는 브라우저가 알아서 물어봤지만, 앱에서는 여기 적어두지 않으면 안드로이드가
+         물어보지도 않는다. 그래서 팝업 없이 곧바로 실패하고, 사용자는 허용할 기회조차 없다.
+         (요청 자체는 Capacitor가 대신 해준다 — BridgeWebChromeClient의 위치 권한 처리)
+
+         정확한 위치까지 받는 이유는 '가까운 순 정렬'이 이 기능의 전부이기 때문이다.
+         대략적 위치만으로는 도보 거리의 매장 순서가 뒤집힌다. 거부해도 앱은 그대로 돌고,
+         매장 목록만 순서 없이 보여준다. 받은 좌표는 서버에 저장하지 않는다. -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED" />
     <uses-permission
