@@ -379,25 +379,45 @@ sdkmanager "platforms;android-36" "build-tools;36.0.0"
 이제 자바를 고칠 때마다:
 
 ```bash
+# 처음 한 번만
 cd app
-npm install                 # 한 번만. capacitor-android 모듈이 여기 있다
-npx cap update android      # 한 번만 (플러그인을 더하거나 뺐으면 다시)
+npm install
+mkdir -p android/app/src/main/assets    # Capacitor가 여기에 쓸 파일이 있는데 폴더가 없다
+npx cap update android
+
+# 이제부터 자바를 고칠 때마다
 cd android
 ./gradlew compileReleaseJavaWithJavac
 ```
 
-`npx cap update android`를 건너뛰면 이렇게 멈춘다:
+**왜 이 준비가 필요한가.** 안드로이드 프로젝트의 일부는 Capacitor가 만들어내는 파일이라
+저장소에 없다(`app/android/.gitignore`). 갓 클론한 상태에서 gradle을 돌리면 이렇게 멈춘다:
 
 ```
 Could not read script '.../capacitor-cordova-android-plugins/cordova.variables.gradle'
 ```
 
-`capacitor-cordova-android-plugins/`와 `app/capacitor.build.gradle`은 **Capacitor가 만들어내는
-파일**이라 저장소에 없다(`app/android/.gitignore`). 워크플로도 gradle 전에 `npx cap sync`를
-돌리는 이유가 이것이다.
+`npx cap update android`가 그걸 만든다. 그런데 그것만으로도 한 번 더 멈춘다:
 
-여기서 `sync`가 아니라 `update`를 쓰는 이유: `sync`는 웹 화면까지 복사해서 `client/dist`가
-있어야 하는데, 자바만 확인할 거라면 그게 필요 없다. `update`는 네이티브 쪽만 손본다.
+```
+ENOENT: no such file or directory, open '.../app/src/main/assets/capacitor.plugins.json'
+```
+
+`assets/` 폴더도 통째로 무시 대상이라 없기 때문이다. 그래서 `mkdir -p`가 먼저다.
+워크플로가 gradle 전에 `npx cap sync`를 돌리는 이유가 이 전부다.
+
+`sync`가 아니라 `update`를 쓰는 이유: `sync`는 웹 화면까지 복사해서 `client/dist`가
+있어야 하는데, 자바만 확인할 거라면 필요 없다. `update`는 네이티브 쪽만 손본다.
+
+**폰에 넣어보려면**(`./gradlew installDebug`) 화면이 있어야 하므로 이쪽을 쓴다:
+
+```bash
+cd client && npm install && npm run build
+cd ../app && npx cap sync android
+```
+
+이때 `client/.env`에 `VITE_SUPABASE_URL` 같은 값이 없으면 화면은 뜨지만 서버에 못 붙는다.
+자바 컴파일 확인만 할 거라면 상관없다.
 
 **워크플로가 실패하는 바로 그 작업이다.** 여기서 통과하면 Actions에서도 통과한다.
 화면(JSX·CSS)은 컴파일이 없으니 이 단계가 필요 없다 — 그건 6-2의 라이브 리로드로 본다.
