@@ -99,7 +99,9 @@ export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
     if (!savedCode) return;
     setCandidates((prev) => {
       const left = prev.filter((item) => item.code !== savedCode);
-      if (prev.length > 0 && left.length === 0) onClose();
+      // 갱신 함수 안에서 창을 닫으면 안 된다. React가 이 함수를 두 번 부를 수 있어서
+      // 닫기가 두 번 불릴 수 있다. 판단만 여기서 하고 닫는 건 밖에서 한다.
+      if (prev.length > 0 && left.length === 0) queueMicrotask(onClose);
       return left;
     });
     // onClose는 부모가 매번 새로 만드는 함수라 의존성에 넣으면 효과가 계속 다시 돈다.

@@ -406,9 +406,14 @@ export default function App() {
           }}
           // 금액권은 완료로 넘기지 않고 얼마 썼는지 묻는다. 바코드 창을 닫고 그 창을 여는
           // 이유는 둘 다 아래에서 올라오는 창이라, 겹쳐 띄우면 뒤엣것이 앞엣것에 가린다.
+          //
+          // 닫는 것과 여는 것을 같은 순간에 하면 안 된다. 새 창이 먼저 뜨고 바코드 창이
+          // 나중에 정리되면서, 정리하는 쪽이 화면 전체의 클릭을 막아둔 상태를 남긴다.
+          // 카드의 수정·삭제와 테스트 도구에서 같은 일이 있었다.
           onSpend={() => {
-            setSpendTarget(codeTarget);
+            const target = codeTarget;
             setCodeTarget(null);
+            setTimeout(() => setSpendTarget(target), 0);
           }}
         />
       )}

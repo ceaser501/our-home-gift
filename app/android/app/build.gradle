@@ -60,6 +60,10 @@ repositories {
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
     implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    // MainActivity가 WindowInsetsCompat으로 시스템 바 높이를 잰다.
+    // appcompat이 전이로 딸려오게 해주지만, 그 사실에 기대면 appcompat 버전이
+    // 바뀔 때 조용히 깨진다. 직접 쓰는 것은 직접 선언한다.
+    implementation "androidx.core:core:$androidxCoreVersion"
     implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
     implementation project(':capacitor-android')
