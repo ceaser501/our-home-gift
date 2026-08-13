@@ -7,9 +7,7 @@ import {
   dismissImages,
   FOLDERS,
   summarizeFolders,
-  forgetScanHistory,
   getGalleryStatus,
-  rememberScannedUntil,
   requestGalleryAccess,
   scanGallery,
 } from '../utils/gallery';
@@ -69,7 +67,6 @@ export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
   const [complete, setComplete] = useState(false);
   const [error, setError] = useState('');
   const abortRef = useRef(null);
-  const startedAtRef = useRef(0);
 
   // 창을 닫는 순간 훑기를 멈춘다. 안 그러면 닫은 뒤에도 수십 장을 계속 읽어서
   // 폰이 더워지고 배터리만 쓴다.
@@ -110,18 +107,7 @@ export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [savedCode]);
 
-  // 훑기가 끝난 뒤, 어디까지 봤는지 적어둔다. 다음 번엔 그 이후에 담긴 사진만 본다.
-  //
-  // 남아 있는 후보(등록도 치우기도 하지 않은 것)가 있으면 그중 가장 오래된 것 직전까지만
-  // 적는다. 그러지 않으면 앱이 찾아준 것을 사용자가 결정하기도 전에 잃어버린다.
-  // 등록하거나 치우면 이 효과가 다시 돌면서 표시가 저절로 앞으로 나아간다.
-  useEffect(() => {
-    if (!complete) return;
-    const oldest = candidates.reduce((min, item) => Math.min(min, item.addedAt || Infinity), Infinity);
-    rememberScannedUntil(Number.isFinite(oldest) ? oldest : startedAtRef.current);
-  }, [complete, candidates]);
-
-  async function start({ fromInstall = false } = {}) {
+  async function start() {
     setError('');
     const status = await requestGalleryAccess();
     if (!status.granted && !status.partial) {
@@ -129,14 +115,11 @@ export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
       return;
     }
 
-    if (fromInstall) forgetScanHistory();
-
     setPartial(Boolean(status.partial));
     setStage('scanning');
     setComplete(false);
     setCandidates([]);
     setProgress({ scanned: 0, total: 0, found: 0 });
-    startedAtRef.current = Math.floor(Date.now() / 1000);
 
     const controller = new AbortController();
     abortRef.current?.abort();
@@ -146,7 +129,6 @@ export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
       const result = await scanGallery({
         signal: controller.signal,
         onProgress: setProgress,
-        fromInstall,
         // 이미 목록에 있는 번호는 후보에서 뺀다. 기프티콘 사진은 지우지 않고 그대로
         // 두는 사람이 많아서, 이게 없으면 훑을 때마다 등록한 것들이 계속 다시 나온다.
         isRegistered: async (code) => {
@@ -392,26 +374,15 @@ export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
                   알 길이 없다. 두 번째부터는 지난번 이후만 보기 때문에 더 그렇다. */}
               {complete && formatDay(since) && (
                 <p className="m-0 text-xs leading-relaxed break-keep text-muted-foreground">
-                  {formatDay(since)} 이후에 갤러리에 담긴 사진만 봤어요. 다음에 찾을 땐 그 뒤에 새로 담긴 것만 봐서 더
-                  빨라요.
+                  앱을 설치한 <b className="font-semibold text-foreground">{formatDay(since)}</b> 0시부터 갤러리에 담긴
+                  사진을 봐요. 그 전에 받아둔 기프티콘은 + 버튼으로 올려주세요.
                 </p>
               )}
 
-              <div className="flex flex-col gap-2">
-                <Button type="button" variant="outline" size="lg" className="w-full rounded-xl" onClick={() => start()}>
-                  <ScanSearch className="size-4.5" />
-                  다시 찾기
-                </Button>
-                {/* 폴더 이름이 안 맞아 못 찾았거나, 실수로 치운 것을 되찾고 싶을 때.
-                    시간이 오래 걸려서 눈에 띄지 않게 아래에 작게 둔다. */}
-                <button
-                  type="button"
-                  onClick={() => start({ fromInstall: true })}
-                  className="w-full py-1 text-xs text-muted-foreground underline"
-                >
-                  설치한 날부터 처음처럼 다시 훑기
-                </button>
-              </div>
+              <Button type="button" variant="outline" size="lg" className="w-full rounded-xl" onClick={() => start()}>
+                <ScanSearch className="size-4.5" />
+                다시 찾기
+              </Button>
             </>
           )}
         </div>

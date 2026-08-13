@@ -99,63 +99,36 @@ const READ_EDGE = 2000;
 // 아니라고 한 사진을 기억해둔다. 안 그러면 훑을 때마다 같은 것을 계속 다시 묻는다.
 const DISMISSED_KEY = 'moacon:gallery-dismissed';
 
-// 여기까지는 이미 훑었다는 표시(초 단위 시각). 다음 번엔 이 이후에 담긴 사진만 본다.
+// 바코드가 없다고 확인된 사진. 다음 훑기 때 다시 읽지 않는다.
 //
-// 이게 없으면 훑을 때마다 설치일 이후 전부를 다시 읽는다. 쓰는 날이 길어질수록 그 수가
-// 계속 불어나서, 반년쯤 지나면 한 번 누를 때마다 수백 장을 다시 디코딩하게 된다.
-// 바뀐 것만 보면 대개 몇 장이라 순식간에 끝난다.
-const SCANNED_KEY = 'moacon:gallery-scanned-until';
+// 기준선이 늘 설치일 0시라, 훑을 때마다 그 뒤의 사진을 처음부터 다시 본다. 그중
+// 대부분은 기프티콘이 아닌데(밥 사진, 앱 캡처) 한 번 확인한 것을 매번 다시 디코딩하면
+// 쓰는 날이 길어질수록 훑기가 계속 느려진다. 한 번 아니라고 확인된 것은 기억해둔다.
+//
+// 사진은 지워도 id가 재사용되지 않아서, 남은 기록이 다른 사진을 가릴 일은 없다.
+const NO_BARCODE_KEY = 'moacon:gallery-no-barcode';
 
-function readScannedUntil() {
-  const raw = Number(localStorage.getItem(SCANNED_KEY));
-  return Number.isFinite(raw) && raw > 0 ? raw : 0;
-}
-
-/**
- * 어디까지 봤는지 적어둔다.
- *
- * 훑기가 끝났다고 무조건 "지금까지 다 봤다"로 적으면 안 된다. 후보로 올려놨는데 사용자가
- * 등록도, 치우기도 하지 않은 것들이 있으면 그것들이 다음 번에 통째로 사라진다 — 앱이
- * 찾아준 걸 잃어버리는 셈이다. 그래서 남아 있는 후보 중 가장 오래된 것 직전까지만 적는다.
- * 사용자가 그것들을 처리하고 나면 표시가 저절로 앞으로 나아간다.
- */
-export function rememberScannedUntil(seconds) {
+function readIdSet(key) {
   try {
-    if (seconds > 0) localStorage.setItem(SCANNED_KEY, String(Math.floor(seconds)));
-  } catch {
-    // 저장이 막혀 있으면 다음에도 처음부터 훑을 뿐, 결과는 같다.
-  }
-}
-
-// "설치 시점부터 다시 훑기". 치워둔 사진까지 되살려서 완전히 처음 상태로 되돌린다.
-// 폴더 이름이 안 맞아 못 찾았거나, 실수로 치운 것을 되찾고 싶을 때 쓴다.
-export function forgetScanHistory() {
-  try {
-    localStorage.removeItem(SCANNED_KEY);
-    localStorage.removeItem(DISMISSED_KEY);
-  } catch {
-    // 지우지 못했으면 예전 기록이 그대로 쓰인다. 훑기는 그대로 된다.
-  }
-}
-
-function readDismissed() {
-  try {
-    const raw = localStorage.getItem(DISMISSED_KEY);
+    const raw = localStorage.getItem(key);
     return new Set(raw ? JSON.parse(raw) : []);
   } catch {
     return new Set();
   }
 }
 
-export function dismissImages(ids) {
+function addIds(key, kept, ids) {
   try {
-    const kept = readDismissed();
     ids.forEach((id) => kept.add(String(id)));
-    // 무한정 쌓이지 않게 최근 것만 남긴다. 오래된 사진은 어차피 기준 시각 밖으로 밀려난다.
-    localStorage.setItem(DISMISSED_KEY, JSON.stringify([...kept].slice(-2000)));
+    // 무한정 쌓이지 않게 최근 것만 남긴다.
+    localStorage.setItem(key, JSON.stringify([...kept].slice(-4000)));
   } catch {
-    // 저장이 막혀 있으면 다음 번에 다시 묻게 될 뿐이다.
+    // 저장이 막혀 있으면 다음 번에 다시 읽게 될 뿐이다.
   }
+}
+
+export function dismissImages(ids) {
+  addIds(DISMISSED_KEY, readIdSet(DISMISSED_KEY), ids);
 }
 
 // 안드로이드 앱에서만 된다.
@@ -226,26 +199,32 @@ async function decodeBarcode(base64) {
  * isRegistered(code) — 이미 등록된 번호인지 묻는 함수. 화면 쪽에서 넘긴다.
  * onProgress({ scanned, total, found }) — 몇 장을 봤는지. 수십 초 걸릴 수 있어서,
  *   진행이 보이지 않으면 멈춘 것처럼 느껴진다.
- * fromInstall — true면 저장해둔 표시를 무시하고 설치 시점부터 다시 훑는다.
  */
-export async function scanGallery({ isRegistered, onProgress, signal, fromInstall = false } = {}) {
+export async function scanGallery({ isRegistered, onProgress, signal } = {}) {
   const status = await getGalleryStatus();
   if (!status.supported) return { supported: false, candidates: [] };
   if (!status.granted && !status.partial) return { ...status, candidates: [], needsPermission: true };
 
   // 0을 넘기면 네이티브가 설치 시각을 기준으로 삼는다. 설치 전부터 갤러리에 쌓여 있던
   // 사진까지 뒤지지 않기 위한 바닥이라, 어느 경우에도 그보다 앞으로는 가지 않는다.
-  // since와 id는 문자열로 주고받는다. 숫자로 보내면 Capacitor가 32비트에 들어가는 값을
-  // Integer로 파싱하는데, 네이티브의 call.getLong()은 정확히 Long일 때만 값을 돌려주고
-  // 아니면 기본값을 준다. 그래서 사진을 한 장도 못 열고 있었다.
+  // 기준은 늘 설치한 날 0시다(네이티브가 0을 그렇게 해석한다). 훑을 때마다 같은 자리에서
+  // 시작하므로 "언제부터 보는지"가 늘 같고, 사용자가 기준을 신경 쓸 일이 없다.
+  //
+  // id는 문자열로 주고받는다. 숫자로 보내면 Capacitor가 32비트에 들어가는 값을 Integer로
+  // 파싱하는데, 네이티브의 call.getLong()은 정확히 Long일 때만 값을 돌려준다.
   const { images = [], since = 0, folders = [] } = await MoaconGallery.listImages({
     buckets: BUCKETS,
     limit: MAX_IMAGES,
-    since: String(fromInstall ? 0 : readScannedUntil()),
+    since: '0',
   });
 
-  const dismissed = readDismissed();
-  const fresh = images.filter((image) => !dismissed.has(String(image.id)));
+  // 아니라고 치운 것과, 바코드가 없다고 이미 확인된 것은 읽지 않는다.
+  const dismissed = readIdSet(DISMISSED_KEY);
+  const noBarcode = readIdSet(NO_BARCODE_KEY);
+  const fresh = images.filter(
+    (image) => !dismissed.has(String(image.id)) && !noBarcode.has(String(image.id))
+  );
+  const foundNoBarcode = [];
 
   const candidates = [];
   // 바코드 값 → 그 값을 가진 후보. 같은 기프티콘의 사진 여러 장을 한 후보로 모은다.
@@ -279,6 +258,7 @@ export async function scanGallery({ isRegistered, onProgress, signal, fromInstal
     }
     if (!found?.code) {
       tally.noBarcode += 1;
+      foundNoBarcode.push(image.id);
       continue;
     }
 
@@ -313,6 +293,8 @@ export async function scanGallery({ isRegistered, onProgress, signal, fromInstal
     seenCodes.set(found.code, candidate);
     candidates.push(candidate);
   }
+
+  addIds(NO_BARCODE_KEY, noBarcode, foundNoBarcode);
 
   onProgress?.({ scanned: fresh.length, total: fresh.length, found: candidates.length });
   // folders는 기준 시각 이후 기기에 있는 폴더 이름과 장수 전부다(우리가 고른 것 말고).
