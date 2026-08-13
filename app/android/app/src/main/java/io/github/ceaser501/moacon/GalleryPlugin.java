@@ -24,6 +24,7 @@ import com.getcapacitor.annotation.PermissionCallback;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -104,8 +105,15 @@ public class GalleryPlugin extends Plugin {
     }
 
     /**
-     * 이 앱을 처음 깐 시각. "설치한 뒤에 받은 기프티콘만" 훑기 위한 기준선이다.
-     * 설치 전부터 갤러리에 쌓여 있던 수천 장까지 뒤지면 느리고, 대개 이미 쓴 것들이다.
+     * 훑기 기준선. 이 시각 이후에 담긴 사진만 본다.
+     *
+     * 설치 전부터 갤러리에 쌓여 있던 수천 장까지 뒤지면 느리고 대개 이미 쓴 것들이라,
+     * 앱을 처음 깐 시점을 기준으로 삼는다. 다만 그 "시점"을 설치한 순간으로 잡으면
+     * 안 된다 — 아침에 카카오톡으로 받아둔 기프티콘을 저녁에 앱을 깔고 찾으면
+     * 하나도 안 나온다. 앱을 까는 이유가 바로 그것들을 넣으려는 것인데.
+     *
+     * 그래서 설치한 "날"의 0시로 내린다. 하루치가 더 들어올 뿐이라 느려지지 않고,
+     * 화면에 적는 "8월 13일 이후에 담긴 사진만 봤어요"가 그제야 사실이 된다.
      */
     private long installedAtSeconds() {
         try {
@@ -113,7 +121,14 @@ public class GalleryPlugin extends Plugin {
                 .getPackageManager()
                 .getPackageInfo(getContext().getPackageName(), 0)
                 .firstInstallTime;
-            return millis / 1000L;
+
+            Calendar day = Calendar.getInstance();
+            day.setTimeInMillis(millis);
+            day.set(Calendar.HOUR_OF_DAY, 0);
+            day.set(Calendar.MINUTE, 0);
+            day.set(Calendar.SECOND, 0);
+            day.set(Calendar.MILLISECOND, 0);
+            return day.getTimeInMillis() / 1000L;
         } catch (Exception e) {
             return 0L;
         }

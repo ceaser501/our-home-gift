@@ -38,11 +38,13 @@ const KOREAN_BUCKETS = FOLDERS.map((folder) => folder.label).join(' · ');
 // 밀리초라 천 배를 곱해야 한다.
 function formatDay(seconds) {
   if (!seconds) return null;
-  return new Date(seconds * 1000).toLocaleDateString('ko-KR', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
+  const at = new Date(seconds * 1000);
+  const day = at.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
+  // 그날 0시가 기준이면 날짜만 적는다(설치한 날 전체를 봤다는 뜻이라 그게 정확하다).
+  // 한나절 중간이 기준이면 시각까지 적어야 한다 — 날짜만 적으면 그날 아침에 받아둔
+  // 사진이 왜 빠졌는지 알 길이 없다.
+  if (at.getHours() === 0 && at.getMinutes() === 0) return day;
+  return `${day} ${at.toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit' })}`;
 }
 
 
