@@ -59,6 +59,16 @@ function buildForm(initial, defaultOwner) {
 // 받은 사람으로 누구 것인지 가른다. 하나라도 비면 목록이 금세 알아볼 수 없게 된다.
 //
 // 화면에 뜨는 순서와 같게 둔다. 빠진 것을 알려줬을 때 눈이 위에서 아래로 따라가야 한다.
+// 가격 검색을 가려둔다. 지우지 않고 스위치만 내려둔 이유는 되살릴 수 있게 하기 위해서다.
+//
+// 이 버튼은 금액이 비었을 때만 떴는데, 정작 필요한 금액권은 카드에 액면이 크게 박혀 있어
+// 이미 자동으로 채워진다. 그래서 뜰 일이 거의 없고, 뜨는 쪽(교환권)은 앱이 그 값을 쓰지
+// 않는다. 게다가 검색이 찾는 건 시세인데 금액권에 필요한 건 액면이라 값의 종류부터 다르다.
+//
+// 그러면서 앱에서 가장 비싼 호출이다(모델 + 웹 검색, 검색은 토큰과 별도로 과금된다).
+// 값어치보다 비용이 커서 내려둔다.
+const SHOW_PRICE_SEARCH = false;
+
 const REQUIRED_FIELDS = [
   { key: 'name', message: '상품명을 입력해주세요.' },
   { key: 'brand', message: '상호를 입력해주세요. (예: 스타벅스, BBQ)' },
@@ -210,12 +220,12 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
       return;
     }
 
-    await applyPrepared(prepared);
+    await applyPrepared(prepared, { merge: hasImages });
   }
 
   // 읽어둔 사진을 화면에 반영한다. 사진을 더하는 길과, 다른 기프티콘이라 새로 시작하는
   // 길이 같은 처리를 쓴다.
-  async function applyPrepared(prepared) {
+  async function applyPrepared(prepared, { merge = false } = {}) {
     setAnalyzing(true);
 
     // 보관하는 건 사용자가 고른 원본이 아니라 줄인 사본이다(긴 변 1400px JPEG).
@@ -237,20 +247,24 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
     try {
       const result = await readGifticonInfo(prepared, { onProgress: setProgress });
 
-      // 이미지를 새로 올리는 건 "이 기프티콘으로 바꾸겠다"는 뜻이라, 기프티콘을 설명하는
-      // 칸들은 직접 고쳐둔 값까지 포함해서 새 이미지 결과로 통째로 바꾼다.
-      // 못 읽은 항목은 비워서 예전 기프티콘 값이 남지 않게 한다.
-      // 받은 사람과 메모는 이미지에서 읽는 값이 아니라 사람이 정하는 값이라 그대로 둔다.
+      // 첫 사진을 올리는 건 "이 기프티콘으로 하겠다"는 뜻이라, 설명하는 칸들을 통째로
+      // 새 결과로 바꾼다. 못 읽은 항목은 비워서 예전 기프티콘 값이 남지 않게 한다.
+      //
+      // 사진을 더하는 건 다르다. 여기까지 왔다는 건 바코드가 같거나 없다는 뜻이고, 곧
+      // 같은 기프티콘의 다른 화면이라는 뜻이다(금액만 적힌 상세 화면 같은 것). 그때는
+      // 빈칸만 채우고 이미 있는 값은 건드리지 않는다. 덮어쓰면 앞 사진에서 읽어둔
+      // 유효기간이 뒷 사진에 없다는 이유로 지워진다 — 합치자고 더했는데 잃는 셈이다.
+      const fill = (next, before) => (merge ? next ?? before ?? '' : next ?? '');
       setForm((prev) => ({
         ...prev,
-        name: result.name || '',
-        brand: result.brand || '',
-        amount: result.amount ?? '',
-        category: result.category || '기타',
-        code: result.code || '',
-        code_type: result.codeType || '',
-        expires_at: result.expiresAt || '',
-        is_voucher: result.isVoucher,
+        name: fill(result.name || null, prev.name),
+        brand: fill(result.brand || null, prev.brand),
+        amount: fill(result.amount ?? null, prev.amount),
+        category: result.category || (merge ? prev.category : '기타'),
+        code: fill(result.code || null, prev.code),
+        code_type: fill(result.codeType || null, prev.code_type),
+        expires_at: fill(result.expiresAt || null, prev.expires_at),
+        is_voucher: merge ? prev.is_voucher || result.isVoucher : result.isVoucher,
       }));
 
       // 목록 썸네일로 쓸, 상품 사진만 잘라낸 그림. 못 잘랐으면 null로 두어 예전처럼
@@ -537,7 +551,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
                   className="w-1/2 min-w-20 shrink-0"
                 />
 
-                {!form.amount && form.name.trim() && (
+                {SHOW_PRICE_SEARCH && !form.amount && form.name.trim() && (
                   <Button type="button" variant="outline" size="sm" onClick={handleSearchPrice} disabled={searchingPrice} className="shrink-0">
                     <Search className="size-3.5" />
                     {searchingPrice ? '검색 중…' : '가격 검색'}
