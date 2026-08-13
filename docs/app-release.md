@@ -354,6 +354,42 @@ cd app/android
 Android Studio(또는 command line tools)가 맥에 있어야 한다. 태그를 밀고 Actions를 기다려
 APK를 내려받는 10분이 **1~2분**이 된다. 나눠줄 것만 워크플로로 만들면 된다.
 
+### 자바를 고쳤으면 밀기 전에 컴파일부터 — Android Studio는 필요 없다
+
+자바나 gradle을 건드리면 Actions에 올려봐야 알 수 있는 오류가 있다. 태그를 밀고 1분 반을
+기다렸다가 "형이 안 맞는다" 한 줄을 보는 왕복은 낭비다. 맥에서 30초면 같은 걸 잡는다.
+
+**Android Studio는 안 깔아도 된다.** 필요한 건 JDK와 안드로이드 SDK뿐이고, 그건 명령줄
+도구만으로 충분하다. IntelliJ든 VS Code든 쓰던 편집기를 그대로 쓰면 된다.
+
+```bash
+# 한 번만 — 설치 (Homebrew 기준)
+brew install --cask temurin@21              # 워크플로와 같은 JDK 21
+brew install --cask android-commandlinetools
+
+# ~/.zshrc 에 추가하고 터미널을 새로 연다
+export ANDROID_HOME="$(brew --prefix)/share/android-commandlinetools"
+export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
+
+# 컴파일에 필요한 플랫폼 (변수는 app/android/variables.gradle 에 있다)
+sdkmanager --licenses
+sdkmanager "platforms;android-36" "build-tools;36.0.0"
+```
+
+이제 자바를 고칠 때마다:
+
+```bash
+cd app && npm install          # 한 번만. capacitor-android 모듈이 여기 있다
+cd android
+./gradlew compileReleaseJavaWithJavac
+```
+
+**워크플로가 실패하는 바로 그 작업이다.** 여기서 통과하면 Actions에서도 통과한다.
+화면(JSX·CSS)은 컴파일이 없으니 이 단계가 필요 없다 — 그건 6-2의 라이브 리로드로 본다.
+
+처음 한 번은 gradle과 빌드 도구를 받느라 몇 분 걸리고, 그다음부터는 30초 안쪽이다.
+설치 파일까지 만들어 폰에 넣으려면 `./gradlew installDebug`를 쓴다(USB 연결 상태).
+
 ### 무슨 일이 나는지 눈으로 본다
 
 `chrome://inspect` 를 붙이면 콘솔·네트워크가 그대로 보인다(7장 아래). **한 번 설치할 때
