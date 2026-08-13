@@ -379,10 +379,25 @@ sdkmanager "platforms;android-36" "build-tools;36.0.0"
 이제 자바를 고칠 때마다:
 
 ```bash
-cd app && npm install          # 한 번만. capacitor-android 모듈이 여기 있다
+cd app
+npm install                 # 한 번만. capacitor-android 모듈이 여기 있다
+npx cap update android      # 한 번만 (플러그인을 더하거나 뺐으면 다시)
 cd android
 ./gradlew compileReleaseJavaWithJavac
 ```
+
+`npx cap update android`를 건너뛰면 이렇게 멈춘다:
+
+```
+Could not read script '.../capacitor-cordova-android-plugins/cordova.variables.gradle'
+```
+
+`capacitor-cordova-android-plugins/`와 `app/capacitor.build.gradle`은 **Capacitor가 만들어내는
+파일**이라 저장소에 없다(`app/android/.gitignore`). 워크플로도 gradle 전에 `npx cap sync`를
+돌리는 이유가 이것이다.
+
+여기서 `sync`가 아니라 `update`를 쓰는 이유: `sync`는 웹 화면까지 복사해서 `client/dist`가
+있어야 하는데, 자바만 확인할 거라면 그게 필요 없다. `update`는 네이티브 쪽만 손본다.
 
 **워크플로가 실패하는 바로 그 작업이다.** 여기서 통과하면 Actions에서도 통과한다.
 화면(JSX·CSS)은 컴파일이 없으니 이 단계가 필요 없다 — 그건 6-2의 라이브 리로드로 본다.
