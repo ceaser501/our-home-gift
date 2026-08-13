@@ -80,9 +80,22 @@ export function summarizeFolders(folders) {
 
 // 한 번에 살펴볼 최대 장수. 이보다 많으면 오래 걸려서 사용자가 멈춘 줄 안다.
 const MAX_IMAGES = 200;
-// 한 기프티콘에 대해 들고 있을 사진 수. 원본 한 장과 바코드 캡처 한 장이면 충분하고,
-// 더 들고 있어봐야 같은 정보라 메모리만 쓴다.
-const MAX_IMAGES_PER_CODE = 2;
+// 한 기프티콘에 대해 등록에 넘길 사진 수. 원본 한 장과 바코드 캡처 한 장이면 충분하고,
+// 더 넘겨봐야 같은 정보라 저장 공간과 분석 비용만 쓴다.
+const IMAGES_PER_CODE = 2;
+// 다만 고르기 전까지는 넉넉히 모아둔다. 같은 기프티콘 사진이 셋 넘게 있는 일은 흔하다 —
+// 받은 원본, 계산대용 캡처, 남에게 보여주려 찍은 캡처.
+const COLLECT_PER_CODE = 4;
+
+// 원본이 담기는 폴더. 다운로드와 카카오톡에 담긴 것은 발행사가 만든 그림이라 상품명·금액·
+// 유효기간이 다 적혀 있다. 스크린샷은 대개 바코드만 크게 띄워 찍은 것이라 그게 없다.
+const ORIGINAL_KEYS = ['download', 'kakaotalk'];
+
+function isOriginal(bucket) {
+  return FOLDERS.filter((folder) => ORIGINAL_KEYS.includes(folder.key)).some((folder) =>
+    folder.names.some((name) => matchesName(bucket, name))
+  );
+}
 
 // 바코드를 읽을 크기.
 //
@@ -287,7 +300,9 @@ export async function scanGallery({ isRegistered, onProgress, signal } = {}) {
     // 각 장에서 찾은 정보를 합쳐주는 것과 같은 길이다(client/src/utils/imageAnalyze.js).
     const already = seenCodes.get(found.code);
     if (already) {
-      if (already.images.length < MAX_IMAGES_PER_CODE) already.images.push(read.data);
+      if (already.images.length < COLLECT_PER_CODE) {
+        already.images.push({ data: read.data, bucket: image.bucket });
+      }
       continue;
     }
     if (isRegistered && (await isRegistered(found.code))) {
@@ -303,12 +318,25 @@ export async function scanGallery({ isRegistered, onProgress, signal } = {}) {
       code: found.code,
       codeType: found.codeType,
       // 미리보기와 등록에 그대로 쓴다. 다시 읽지 않기 위해 들고 있는다.
-      // 같은 번호의 사진이 더 나오면 여기에 붙는다.
-      images: [read.data],
+      // 같은 번호의 사진이 더 나오면 여기에 붙고, 마지막에 골라낸다.
+      images: [{ data: read.data, bucket: image.bucket }],
     };
     seenCodes.set(found.code, candidate);
     candidates.push(candidate);
   }
+
+  // 모아둔 사진 중 등록에 넘길 것을 고른다.
+  //
+  // 목록은 최근 것부터 오는데, 그대로 앞에서 자르면 나중에 찍은 캡처만 남는다. 원본은
+  // 받은 그날 담기고 캡처는 쓸 때 찍으니 원본이 늘 더 오래됐기 때문이다. 실제로 카카오톡
+  // 원본이 이렇게 밀려나서, 거기 적힌 유효기간을 못 읽는 일이 있었다.
+  // 그래서 자르기 전에 원본 폴더에 있던 것을 앞으로 당긴다.
+  candidates.forEach((candidate) => {
+    const sorted = [...candidate.images].sort(
+      (a, b) => Number(isOriginal(b.bucket)) - Number(isOriginal(a.bucket))
+    );
+    candidate.images = sorted.slice(0, IMAGES_PER_CODE).map((image) => image.data);
+  });
 
   addIds(NO_BARCODE_KEY, noBarcode, foundNoBarcode);
 

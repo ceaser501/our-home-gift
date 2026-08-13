@@ -402,7 +402,7 @@ export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
                   알 길이 없다. 두 번째부터는 지난번 이후만 보기 때문에 더 그렇다. */}
               {complete && formatDay(since) && (
                 <p className="m-0 text-xs leading-relaxed break-keep text-muted-foreground">
-                  앱을 설치한 <b className="font-semibold text-foreground">{formatDay(since)}</b> 0시부터 갤러리에 담긴
+                  앱을 설치한 <b className="font-semibold text-foreground">{formatDay(since)} 0시</b>부터 갤러리에 담긴
                   사진을 봐요. 그 전에 받아둔 기프티콘은 + 버튼으로 올려주세요.
                 </p>
               )}
