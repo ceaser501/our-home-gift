@@ -179,6 +179,25 @@ function addIds(key, kept, ids) {
   }
 }
 
+// 앱을 열 때 자동으로 훑을지. 기본은 꺼둔다 — 사진을 보는 일이라 사용자가 켜는 게 맞다.
+const AUTO_SCAN_KEY = 'moacon:gallery-auto-scan';
+
+export function isAutoScanOn() {
+  try {
+    return localStorage.getItem(AUTO_SCAN_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+export function setAutoScanOn(on) {
+  try {
+    localStorage.setItem(AUTO_SCAN_KEY, on ? '1' : '0');
+  } catch {
+    // 저장이 막혀 있으면 이번 실행에만 적용된다.
+  }
+}
+
 export function dismissImages(ids) {
   addIds(DISMISSED_KEY, readIdSet(DISMISSED_KEY), ids);
 }

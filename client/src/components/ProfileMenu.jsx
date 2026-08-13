@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BellRing, ChevronRight, DoorOpen, FileText, LogOut, Megaphone, Receipt, Scale, ShieldCheck, UserRound, UserRoundX } from 'lucide-react';
+import { BellRing, ChevronRight, DoorOpen, FileText, LogOut, Megaphone, Receipt, Scale, ScanSearch, ShieldCheck, UserRound, UserRoundX } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import ThemeToggle from './ThemeToggle';
 import NotificationToggle from './NotificationToggle';
@@ -13,6 +13,7 @@ import { useFamily } from '../FamilyContext';
 import { leaveFamily, renameMember } from '../family';
 import { OWNER_TAG_PALETTE, memberTagColorClass } from '../utils/tagColor';
 import useBackClose from '../utils/useBackClose';
+import { isGalleryScanSupported, isAutoScanOn, setAutoScanOn } from '../utils/gallery';
 
 export default function ProfileMenu({ onClose }) {
   // 뒤로가기로 이 창을 닫는다. 안 그러면 설치해서 쓸 때 앱이 통째로 꺼진다.
@@ -32,6 +33,9 @@ export default function ProfileMenu({ onClose }) {
   // 탈퇴는 되돌릴 수 없어서 두 번 묻는다. null → 'what'(무엇이 없어지는지) → 'sure'(정말로).
   const [deleteStep, setDeleteStep] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  // 갤러리 자동 스캔은 앱에서만 있다. 브라우저에는 폴더를 볼 방법이 없어서 줄 자체를 감춘다.
+  const [scanSupported] = useState(() => isGalleryScanSupported());
+  const [autoScan, setAutoScan] = useState(() => isAutoScanOn());
 
   async function handleTestNotification() {
     setTesting(true);
@@ -130,6 +134,28 @@ export default function ProfileMenu({ onClose }) {
           <p className="m-0 pt-3 pb-1 text-xs font-semibold text-muted-foreground">설정</p>
           <ThemeToggle asRow />
           <NotificationToggle asRow />
+
+          {/* 켜두면 앱을 열 때 바로 찾아준다. 받아둔 기프티콘을 넣는 게 이 앱에 들어오는
+              이유라, 그걸 매번 눌러서 시작하게 할 이유가 없다. 다만 사진을 보는 일이라
+              기본은 꺼두고 사용자가 켜게 한다. */}
+          {scanSupported && (
+            <label className="flex w-full cursor-pointer items-center gap-3 px-1 py-3 text-left text-sm">
+              <ScanSearch className="size-4.5 shrink-0 text-muted-foreground" />
+              <span className="flex min-w-0 flex-1 flex-col">
+                <span className="text-foreground">기프티콘 자동 찾기</span>
+                <span className="text-xs text-muted-foreground">앱을 열 때 갤러리에서 새 기프티콘을 찾아드려요</span>
+              </span>
+              <input
+                type="checkbox"
+                checked={autoScan}
+                onChange={(e) => {
+                  setAutoScan(e.target.checked);
+                  setAutoScanOn(e.target.checked);
+                }}
+                className="size-5 shrink-0 accent-primary"
+              />
+            </label>
+          )}
 
           {/* 실제 발송과 같은 길로 보내보는 테스트. 알림을 꺼뒀으면 아무것도 오지 않는다. */}
           <button

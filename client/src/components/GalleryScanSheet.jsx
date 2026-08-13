@@ -246,16 +246,16 @@ export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
         <div className="flex flex-col gap-4 px-5 pt-2">
           {stage === 'intro' && (
             <>
-              <p className="m-0 text-sm leading-relaxed break-keep text-muted-foreground">
-                앱을 설치한 뒤 <b className="font-semibold text-foreground">{KOREAN_BUCKETS}</b> 폴더에 담긴 사진 중에서
-                아직 등록하지 않은 기프티콘을 찾아드려요.
+              <p className="m-0 text-base leading-relaxed break-keep text-muted-foreground">
+                <b className="font-semibold text-foreground">{KOREAN_BUCKETS}</b> 폴더에서 아직 등록하지 않은
+                기프티콘을 찾아드려요.
               </p>
               {/* 사진 권한은 사람들이 가장 망설이는 권한이다. 무엇을 보고 무엇을 안 보내는지
                   먼저 적어두면, 눌러도 되는 것인지 판단할 근거가 생긴다. */}
-              <ul className="m-0 flex list-none flex-col gap-1.5 rounded-xl bg-muted/60 px-4 py-3 pl-4 text-xs leading-relaxed break-keep text-muted-foreground">
-                <li>바코드를 읽는 건 폰 안에서만 해요. 사진이 밖으로 나가지 않아요.</li>
-                <li>찾은 것을 바로 저장하지 않아요. 확인하고 고른 것만 등록돼요.</li>
-                <li>허용하지 않아도 지금처럼 사진을 직접 올려서 등록할 수 있어요.</li>
+              <ul className="m-0 flex list-none flex-col gap-2 rounded-xl bg-muted/60 px-4 py-3.5 pl-4 text-sm leading-relaxed break-keep text-muted-foreground">
+                <li>사진은 폰 안에서만 읽어요. 밖으로 나가지 않아요.</li>
+                <li>고른 것만 등록돼요.</li>
+                <li>허용하지 않아도 직접 올려서 등록할 수 있어요.</li>
               </ul>
               <Button type="button" size="lg" className="w-full rounded-xl" onClick={() => start()}>
                 <ScanSearch className="size-4.5" />
@@ -266,12 +266,12 @@ export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
 
           {stage === 'denied' && (
             <>
-              <p className="m-0 text-sm leading-relaxed break-keep text-muted-foreground">
+              <p className="m-0 text-base leading-relaxed break-keep text-muted-foreground">
                 사진을 볼 수 없어서 갤러리를 훑지 못했어요. 그래도 괜찮아요 —{' '}
                 <b className="font-semibold text-foreground">+ 버튼으로 사진을 직접 올리면</b> 지금까지처럼 자동으로
                 정보를 채워드려요.
               </p>
-              <p className="m-0 text-xs leading-relaxed break-keep text-muted-foreground">
+              <p className="m-0 text-sm leading-relaxed break-keep text-muted-foreground">
                 나중에 쓰고 싶으시면 휴대폰 설정 → 애플리케이션 → 모아콘 → 권한 → 사진에서 허용해주세요.
               </p>
               <Button type="button" variant="outline" size="lg" className="w-full rounded-xl" onClick={onClose}>
@@ -285,7 +285,7 @@ export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
               <div className="flex flex-col gap-2 rounded-xl border border-primary/30 bg-primary/5 px-3.5 py-3">
                 <div className="flex items-center gap-2.5">
                   <Loader2 className="size-4 shrink-0 animate-spin text-primary" />
-                  <span className="flex-1 text-sm font-semibold text-foreground">
+                  <span className="flex-1 text-base font-semibold text-foreground">
                     사진을 살펴보고 있어요
                     {progress?.total ? ` (${progress.scanned}/${progress.total})` : ''}
                   </span>
@@ -335,14 +335,14 @@ export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
               {candidates.length === 0 ? (
                 <div className="flex flex-col items-center gap-2 py-8 text-center">
                   <ImageOff className="size-8 text-muted-foreground" />
-                  <p className="m-0 text-sm font-semibold text-foreground">
+                  <p className="m-0 text-base font-semibold text-foreground">
                     {scanned === 0 ? '새로 담긴 사진이 없어요' : '등록할 만한 게 없었어요'}
                   </p>
-                  <p className="m-0 text-xs leading-relaxed break-keep text-muted-foreground">
+                  <p className="m-0 text-sm leading-relaxed break-keep text-muted-foreground">
                     {scanned === 0
                       ? '지난번에 찾은 뒤로 갤러리에 새로 담긴 사진이 없어요.'
-                      : `사진 ${scanned}장을 봤어요. 바코드가 흐리거나 앱에서만 열리는 기프티콘은 이 방법으로 못 찾아요.`}
-                    <br />+ 버튼으로 직접 올리시면 그때도 정보를 채워드려요.
+                      : `사진 ${scanned}장을 봤어요. 흐린 바코드나 앱에서만 열리는 기프티콘은 못 찾아요.`}
+                    <br />+ 버튼으로 직접 올리시면 돼요.
                   </p>
 
                   {/* 왜 못 찾았는지 짚어준다.
@@ -352,7 +352,7 @@ export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
                 </div>
               ) : (
                 <>
-                  <p className="m-0 text-sm break-keep text-foreground">
+                  <p className="m-0 text-base break-keep text-foreground">
                     바코드가 있는 사진 <b className="font-semibold">{candidates.length}장</b>을 찾았어요. 기프티콘이 맞는지
                     보시고 등록해주세요.
                   </p>
@@ -371,15 +371,15 @@ export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
                           className="size-16 shrink-0 rounded-lg bg-black object-cover"
                         />
                         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                          <span className="truncate text-xs text-muted-foreground">{candidate.bucket}</span>
-                          <span className="truncate font-mono text-sm text-foreground">{candidate.code}</span>
+                          <span className="truncate text-sm text-muted-foreground">{candidate.bucket}</span>
+                          <span className="truncate font-mono text-base font-semibold text-foreground">{candidate.code}</span>
                         </div>
                         <div className="flex shrink-0 items-center gap-1">
                           {dismissedIds.includes(candidate.id) ? (
                             <button
                               type="button"
                               onClick={() => handleUndismiss(candidate)}
-                              className="px-2 py-1 text-xs font-semibold text-primary underline"
+                              className="px-2 py-1 text-sm font-semibold text-primary underline"
                             >
                               되돌리기
                             </button>
@@ -410,7 +410,7 @@ export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
               {/* 어디까지 봤는지 적어준다. "왜 예전 사진이 안 나오지?"는 이 줄이 없으면
                   알 길이 없다. 두 번째부터는 지난번 이후만 보기 때문에 더 그렇다. */}
               {complete && formatDay(since) && (
-                <p className="m-0 text-xs leading-relaxed break-keep text-muted-foreground">
+                <p className="m-0 text-sm leading-relaxed break-keep text-muted-foreground">
                   앱을 설치한 <b className="font-semibold text-foreground">{formatDay(since)} 0시</b>부터 갤러리에 담긴
                   사진을 봐요. 그 전에 받아둔 기프티콘은 + 버튼으로 올려주세요.
                 </p>
@@ -432,7 +432,7 @@ export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
                   <button
                     type="button"
                     onClick={() => start({ forgetHistory: true })}
-                    className="w-full py-1 text-xs text-muted-foreground underline"
+                    className="w-full py-2 text-sm text-muted-foreground underline"
                   >
                     건너뛴 사진 {skipped}장까지 처음부터 다시 보기
                   </button>

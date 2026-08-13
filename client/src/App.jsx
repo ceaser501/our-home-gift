@@ -21,7 +21,7 @@ import { ensureSampleGifticon } from './sampleData';
 import { daysUntil, todayStr } from './utils/date';
 import { hasNewVersion } from './utils/version';
 import { hasSharedImages, takeSharedImages, discardSharedImages } from './utils/shareTarget';
-import { isGalleryScanSupported } from './utils/gallery';
+import { isGalleryScanSupported, isAutoScanOn } from './utils/gallery';
 import { useFamily } from './FamilyContext';
 
 // 목록은 "지금 쓸 수 있는 것 → 기한이 지난 것 → 다 쓴 것" 세 덩어리다.
@@ -75,7 +75,9 @@ export default function App() {
   const [sheetState, setSheetState] = useState(null); // { mode, initial }
   // 갤러리 훑기는 앱으로 설치했을 때만 있다. 브라우저에는 폴더를 볼 방법이 없다.
   const [scanSupported] = useState(() => isGalleryScanSupported());
-  const [scanOpen, setScanOpen] = useState(false);
+  // 켜뒀으면 앱을 열 때 바로 훑는다. 받아둔 기프티콘을 넣는 게 이 앱에 들어오는 이유라,
+  // 매번 버튼을 찾아 누르게 할 이유가 없다. 끄면 버튼으로만 연다.
+  const [scanOpen, setScanOpen] = useState(() => isGalleryScanSupported() && isAutoScanOn());
   // 방금 저장한 바코드. 훑기 창이 이걸 보고 그 후보를 목록에서 뺀다. 안 그러면 등록을
   // 마치고 돌아왔을 때 방금 넣은 것이 그대로 남아 있어서 또 넣게 된다.
   const [savedCode, setSavedCode] = useState(null);

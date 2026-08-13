@@ -430,11 +430,12 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
         </SheetHeader>
 
         <form className="flex flex-col gap-4 px-5" onSubmit={handleSubmit}>
-          <p className="text-xs text-muted-foreground">
-            사진을 올리면 상품명·금액·기한을 자동으로 채워드려요. 여러 장 올려도 되고요
-            (예: 상품명 보이는 화면 + 금액·기한 보이는 화면), 각 이미지에서 찾은 정보를 합쳐서 채웁니다.
+          {/* 가족이 함께 쓰는 앱이라 나이 드신 분도 읽을 수 있어야 한다. 길게 설명하는
+              것보다 짧고 큰 글씨가 낫다 — 자세한 규칙은 실제로 해보면 알게 된다. */}
+          <p className="m-0 text-sm leading-relaxed break-keep text-muted-foreground">
+            사진을 올리면 정보를 자동으로 채워드려요.
             <br />
-            사진 없이 손으로 적어 넣어도 괜찮아요.
+            여러 장 올리면 합쳐서 채우고, 사진 없이 직접 적어도 돼요.
           </p>
 
           <div className="grid grid-cols-3 gap-2">
