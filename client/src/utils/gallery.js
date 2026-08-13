@@ -136,10 +136,22 @@ const DISMISSED_KEY = 'moacon:gallery-dismissed';
 // 사진은 지워도 id가 재사용되지 않아서, 남은 기록이 다른 사진을 가릴 일은 없다.
 const NO_BARCODE_KEY = 'moacon:gallery-no-barcode';
 
+// 이 기록을 만든 판독기의 버전. 판독 방식을 고칠 때마다 올린다.
+//
+// 예전에는 못 읽던 사진을 지금은 읽을 수 있게 되는 일이 실제로 있었다(작은 이미지를
+// 키워서 읽도록 고친 뒤). 그런데 "없음"으로 적힌 사진은 다시 읽지 않으니, 고쳐놓고도
+// 그 사진들만 영영 안 나온다. 버전이 다르면 기록을 통째로 버리고 다시 읽는다.
+const DECODER_VERSION = 2;
+
 function readIdSet(key) {
   try {
     const raw = localStorage.getItem(key);
-    return new Set(raw ? JSON.parse(raw) : []);
+    if (!raw) return new Set();
+    const saved = JSON.parse(raw);
+    // 예전 형식(배열)과 판독기 버전이 다른 기록은 버린다.
+    if (Array.isArray(saved)) return key === NO_BARCODE_KEY ? new Set() : new Set(saved);
+    if (saved.version !== DECODER_VERSION) return new Set();
+    return new Set(saved.ids);
   } catch {
     return new Set();
   }
@@ -149,7 +161,8 @@ function addIds(key, kept, ids) {
   try {
     ids.forEach((id) => kept.add(String(id)));
     // 무한정 쌓이지 않게 최근 것만 남긴다.
-    localStorage.setItem(key, JSON.stringify([...kept].slice(-4000)));
+    const value = { version: DECODER_VERSION, ids: [...kept].slice(-4000) };
+    localStorage.setItem(key, JSON.stringify(value));
   } catch {
     // 저장이 막혀 있으면 다음 번에 다시 읽게 될 뿐이다.
   }
@@ -191,7 +204,7 @@ export function undismissImages(ids) {
   try {
     const kept = readIdSet(DISMISSED_KEY);
     ids.forEach((id) => kept.delete(String(id)));
-    localStorage.setItem(DISMISSED_KEY, JSON.stringify([...kept]));
+    localStorage.setItem(DISMISSED_KEY, JSON.stringify({ version: DECODER_VERSION, ids: [...kept] }));
   } catch {
     // 지우지 못했으면 그 사진은 다음 훑기에서 빠질 뿐, 직접 올리면 등록된다.
   }
@@ -390,12 +403,21 @@ export async function scanGallery({ isRegistered, onProgress, signal } = {}) {
     // 바코드가 너무 작게 찍힌 것은 뺀다. 다만 그것밖에 없으면 그거라도 쓴다 —
     // 등록 자체가 막히는 것보다는 낫고, 바코드 번호는 이미 읽어놨다.
     const meaningful = candidate.images.filter((image) => image.coverage >= MIN_BARCODE_COVERAGE);
-    const pool = meaningful.length > 0 ? meaningful : candidate.images;
+    const usable = meaningful.length > 0 ? meaningful : candidate.images;
 
-    const sorted = [...pool].sort(
-      (a, b) =>
-        Number(isOriginal(b.bucket)) - Number(isOriginal(a.bucket)) || b.coverage - a.coverage
-    );
+    // 원본이 하나라도 있으면 캡처는 아예 보내지 않는다.
+    //
+    // 원본에는 상품명·금액·유효기간이 다 적혀 있어서 캡처가 더해줄 게 없다. 반면 해가 될
+    // 수는 있다 — 목록 화면을 찍은 캡처에는 다른 기프티콘의 유효기간이 같이 찍혀 있고,
+    // 실제로 그 날짜가 이 기프티콘의 기한으로 들어간 적이 있다. 바코드 크기로 거르려 했지만
+    // 우리 앱의 바코드 화면을 찍은 캡처는 바코드가 커서 그 그물에 걸리지 않는다.
+    //
+    // 빈칸으로 남는 것보다 틀린 값이 들어가는 쪽이 나쁘다. 기한이 틀리면 알림이 엉뚱한
+    // 날에 오고, 정작 만료되는 날에는 아무 말이 없다.
+    const originals = usable.filter((image) => isOriginal(image.bucket));
+    const pool = originals.length > 0 ? originals : usable;
+
+    const sorted = [...pool].sort((a, b) => b.coverage - a.coverage);
     candidate.images = sorted.slice(0, IMAGES_PER_CODE).map((image) => image.data);
   });
 
