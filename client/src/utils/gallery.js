@@ -165,6 +165,28 @@ export function dismissImages(ids) {
 // 남아 있는 한 훑을 때마다 계속 올라오기 때문이다. 그런데 그 영구적이라는 성질 때문에,
 // 진짜 기프티콘에 X를 잘못 누르면 갤러리 훑기에 다시는 나오지 않는다.
 // 손이 미끄러진 것을 되돌릴 방법은 있어야 한다.
+// 건너뛰기로 쌓인 것이 몇 장인지. 화면에서 "왜 이 사진이 안 나오지"를 설명하려면
+// 감춰둔 것이 있다는 사실 자체가 보여야 한다.
+export function countSkipped() {
+  return readIdSet(DISMISSED_KEY).size + readIdSet(NO_BARCODE_KEY).size;
+}
+
+/**
+ * 건너뛰기 기록을 전부 지운다.
+ *
+ * 두 목록 다 훑기를 빠르고 조용하게 만들려고 둔 것인데, 한 번 들어가면 그 사진은 다시
+ * 나오지 않는다. 바코드 판독이 나아지기 전에 "없음"으로 기록된 사진, 손이 미끄러져 치운
+ * 사진은 그대로 묻힌다. 편의를 위한 장치에는 빠져나올 문이 있어야 한다.
+ */
+export function forgetSkipped() {
+  try {
+    localStorage.removeItem(DISMISSED_KEY);
+    localStorage.removeItem(NO_BARCODE_KEY);
+  } catch {
+    // 지우지 못했으면 예전 기록이 그대로 쓰인다. 훑기 자체는 그대로 된다.
+  }
+}
+
 export function undismissImages(ids) {
   try {
     const kept = readIdSet(DISMISSED_KEY);

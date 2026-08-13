@@ -6,6 +6,8 @@ import {
   candidateToFiles,
   dismissImages,
   undismissImages,
+  countSkipped,
+  forgetSkipped,
   FOLDERS,
   summarizeFolders,
   getGalleryStatus,
@@ -111,8 +113,9 @@ export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [savedCode]);
 
-  async function start() {
+  async function start({ forgetHistory = false } = {}) {
     setError('');
+    if (forgetHistory) forgetSkipped();
     const status = await requestGalleryAccess();
     if (!status.granted && !status.partial) {
       setStage('denied');
@@ -177,6 +180,8 @@ export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
 
   // 못 찾았을 때 "우리가 보는 3개 폴더에 각각 몇 장이 있었나"를 보여주기 위한 값.
   const summary = summarizeFolders(folders);
+  // 지금까지 건너뛰기로 감춰둔 사진 수. 훑기가 끝난 뒤에만 쓰므로 그때 세면 된다.
+  const skipped = complete ? countSkipped() : 0;
 
   function handleRegister(candidate) {
     onRegister(candidateToFiles(candidate));
@@ -407,10 +412,26 @@ export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
                 </p>
               )}
 
-              <Button type="button" variant="outline" size="lg" className="w-full rounded-xl" onClick={() => start()}>
-                <ScanSearch className="size-4.5" />
-                다시 찾기
-              </Button>
+              <div className="flex flex-col gap-2">
+                <Button type="button" variant="outline" size="lg" className="w-full rounded-xl" onClick={() => start()}>
+                  <ScanSearch className="size-4.5" />
+                  다시 찾기
+                </Button>
+
+                {/* 건너뛰기는 훑기를 빠르고 조용하게 만들려고 둔 장치다. 그런데 한 번
+                    들어가면 그 사진은 다시 나오지 않아서, 잘못 치웠거나 예전에 바코드를
+                    못 읽었던 사진이 그대로 묻힌다. 감춘 게 있다는 사실과 되살릴 방법을
+                    함께 보여준다. 감춘 게 없으면 이 줄도 없다. */}
+                {skipped > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => start({ forgetHistory: true })}
+                    className="w-full py-1 text-xs text-muted-foreground underline"
+                  >
+                    건너뛴 사진 {skipped}장까지 처음부터 다시 보기
+                  </button>
+                )}
+              </div>
             </>
           )}
         </div>

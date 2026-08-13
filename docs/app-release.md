@@ -356,74 +356,81 @@ APK를 내려받는 10분이 **1~2분**이 된다. 나눠줄 것만 워크플로
 
 ### 자바를 고쳤으면 밀기 전에 컴파일부터 — Android Studio는 필요 없다
 
-자바나 gradle을 건드리면 Actions에 올려봐야 알 수 있는 오류가 있다. 태그를 밀고 1분 반을
+자바나 gradle을 건드리면 Actions에 올려봐야 알 수 있는 오류가 있다. 태그를 밀고 몇 분을
 기다렸다가 "형이 안 맞는다" 한 줄을 보는 왕복은 낭비다. 맥에서 30초면 같은 걸 잡는다.
 
-**Android Studio는 안 깔아도 된다.** 필요한 건 JDK와 안드로이드 SDK뿐이고, 그건 명령줄
-도구만으로 충분하다. IntelliJ든 VS Code든 쓰던 편집기를 그대로 쓰면 된다.
+**Android Studio는 안 깔아도 된다.** 필요한 건 JDK와 안드로이드 SDK뿐이고 명령줄 도구로
+충분하다. IntelliJ든 VS Code든 쓰던 편집기를 그대로 쓰면 된다.
+
+#### 처음 한 번 — 아래를 순서대로 전부
 
 ```bash
-# 한 번만 — 설치 (Homebrew 기준)
+# 1) JDK와 안드로이드 SDK
 brew install --cask temurin@21              # 워크플로와 같은 JDK 21
 brew install --cask android-commandlinetools
 
-# ~/.zshrc 에 추가하고 터미널을 새로 연다
+# 2) ~/.zshrc 에 추가하고 터미널을 새로 연다
 export ANDROID_HOME="$(brew --prefix)/share/android-commandlinetools"
 export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
 
-# 컴파일에 필요한 플랫폼 (변수는 app/android/variables.gradle 에 있다)
+# 3) 컴파일에 쓸 플랫폼 (버전은 app/android/variables.gradle 의 compileSdkVersion)
 sdkmanager --licenses
 sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+# 4) SDK 위치를 gradle에 알려준다
+#    맥의 GUI 앱은 ~/.zshrc 를 읽지 않아서, IntelliJ에서 돌릴 때 이게 없으면 SDK를 못 찾는다.
+#    이 파일은 .gitignore 에 있어서 커밋되지 않는다.
+cd <저장소>/app/android
+echo "sdk.dir=$(brew --prefix)/share/android-commandlinetools" > local.properties
+
+# 5) 화면을 먼저 만든다 — 이게 있어야 다음 단계가 돈다
+cd ../../client
+npm install
+npm run build                # client/dist 가 생긴다
+
+# 6) 안드로이드 프로젝트를 완성한다
+cd ../app
+npm install
+npx cap sync android
 ```
 
-이제 자바를 고칠 때마다:
+#### 이제부터 자바를 고칠 때마다
 
 ```bash
-# 처음 한 번만
-cd app
-npm install
-mkdir -p android/app/src/main/assets    # Capacitor가 여기에 쓸 파일이 있는데 폴더가 없다
-npx cap update android
-
-# 이제부터 자바를 고칠 때마다
-cd android
+cd app/android
 ./gradlew compileReleaseJavaWithJavac
 ```
 
-**왜 이 준비가 필요한가.** 안드로이드 프로젝트의 일부는 Capacitor가 만들어내는 파일이라
-저장소에 없다(`app/android/.gitignore`). 갓 클론한 상태에서 gradle을 돌리면 이렇게 멈춘다:
+첫 실행만 몇 분(gradle과 빌드 도구를 받는다), 그다음부터 30초 안쪽이다.
+**워크플로가 실패하는 바로 그 작업이라, 여기서 통과하면 Actions에서도 통과한다.**
 
-```
-Could not read script '.../capacitor-cordova-android-plugins/cordova.variables.gradle'
-```
+화면(JSX·CSS)만 고쳤을 때는 이 단계가 필요 없다. 컴파일이라는 게 없다.
 
-`npx cap update android`가 그걸 만든다. 그런데 그것만으로도 한 번 더 멈춘다:
+#### 5)와 6)을 건너뛰면 이렇게 멈춘다
 
-```
-ENOENT: no such file or directory, open '.../app/src/main/assets/capacitor.plugins.json'
-```
+안드로이드 프로젝트의 절반은 Capacitor가 만들어내는 파일이라 저장소에 없다
+(`app/android/.gitignore`). 그래서 갓 클론한 상태에서는 순서대로 이렇게 걸린다:
 
-`assets/` 폴더도 통째로 무시 대상이라 없기 때문이다. 그래서 `mkdir -p`가 먼저다.
-워크플로가 gradle 전에 `npx cap sync`를 돌리는 이유가 이 전부다.
+| 증상 | 없는 것 |
+| --- | --- |
+| `Could not read script '.../cordova.variables.gradle'` | `capacitor-cordova-android-plugins/` |
+| `ENOENT: ... assets/capacitor.plugins.json` | `app/src/main/assets/` 폴더 |
+| `Could not find the web assets directory: ../client/dist` | 화면 빌드 결과 |
 
-`sync`가 아니라 `update`를 쓰는 이유: `sync`는 웹 화면까지 복사해서 `client/dist`가
-있어야 하는데, 자바만 확인할 거라면 필요 없다. `update`는 네이티브 쪽만 손본다.
+셋 다 `npm run build`(5) + `npx cap sync android`(6)이면 한꺼번에 해결된다.
+`sync`는 `copy`(화면 복사)와 `update`(네이티브 갱신)를 함께 하므로, 둘 중 하나만
+돌리려 하지 말고 **늘 `sync`를 쓴다.**
 
-**폰에 넣어보려면**(`./gradlew installDebug`) 화면이 있어야 하므로 이쪽을 쓴다:
+플러그인을 더하거나 뺐을 때, 그리고 화면을 폰에 넣어볼 때는 6)을 다시 돌린다.
+
+#### 폰에 바로 설치까지
 
 ```bash
-cd client && npm install && npm run build
-cd ../app && npx cap sync android
+cd app/android && ./gradlew installDebug     # USB 연결 상태
 ```
 
-이때 `client/.env`에 `VITE_SUPABASE_URL` 같은 값이 없으면 화면은 뜨지만 서버에 못 붙는다.
-자바 컴파일 확인만 할 거라면 상관없다.
-
-**워크플로가 실패하는 바로 그 작업이다.** 여기서 통과하면 Actions에서도 통과한다.
-화면(JSX·CSS)은 컴파일이 없으니 이 단계가 필요 없다 — 그건 6-2의 라이브 리로드로 본다.
-
-처음 한 번은 gradle과 빌드 도구를 받느라 몇 분 걸리고, 그다음부터는 30초 안쪽이다.
-설치 파일까지 만들어 폰에 넣으려면 `./gradlew installDebug`를 쓴다(USB 연결 상태).
+이때 앱이 서버에 붙으려면 `client/.env`에 `VITE_SUPABASE_URL` 같은 값이 있어야 한다.
+자바 컴파일만 확인할 거라면 없어도 상관없다.
 
 ### 무슨 일이 나는지 눈으로 본다
 
