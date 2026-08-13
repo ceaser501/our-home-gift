@@ -1,10 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { ImageOff, Loader2, ScanSearch, X } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import {
   candidateToFile,
   dismissImages,
+  FOLDERS,
+  summarizeFolders,
   forgetScanHistory,
   getGalleryStatus,
   rememberScannedUntil,
@@ -30,7 +32,7 @@ import useBackClose from '../utils/useBackClose';
 //   denied  — 권한을 주지 않음
 //   scanning— 훑는 중
 //   done    — 다 훑음
-const KOREAN_BUCKETS = '다운로드 · 카카오톡 · 스크린샷';
+const KOREAN_BUCKETS = FOLDERS.map((folder) => folder.label).join(' · ');
 
 // 네이티브가 주는 시각은 초 단위다(MediaStore가 그렇게 쓴다). 자바스크립트의 Date는
 // 밀리초라 천 배를 곱해야 한다.
@@ -43,12 +45,6 @@ function formatDay(seconds) {
   });
 }
 
-// 기준 시각 이후 기기에 있는 폴더 목록에서, 우리가 훑은 것과 아닌 것을 갈라 적는다.
-function folderText(folders, used) {
-  const picked = (folders || []).filter((folder) => Boolean(folder.used) === used);
-  if (picked.length === 0) return '없음';
-  return picked.map((folder) => `${folder.name} ${folder.count}장`).join(' · ');
-}
 
 export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
   // 뒤로가기로 이 창을 닫는다. 안 그러면 설치해서 쓸 때 앱이 통째로 꺼진다.
@@ -169,6 +165,9 @@ export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
     dismissImages([candidate.id]);
     setCandidates((prev) => prev.filter((item) => item.id !== candidate.id));
   }
+
+  // 못 찾았을 때 "우리가 보는 3개 폴더에 각각 몇 장이 있었나"를 보여주기 위한 값.
+  const summary = summarizeFolders(folders);
 
   function handleRegister(candidate) {
     onRegister(candidateToFile(candidate));
@@ -305,13 +304,30 @@ export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
                             <dd className="m-0">{tally.readFailed}장</dd>
                           </>
                         )}
-                        {/* 본 폴더와 안 본 폴더를 갈라서 적는다. 한 줄에 섞어두면
-                            "왜 카메라 폴더까지 뒤지지"로 읽힌다 — 아래는 기기에 무엇이
-                            있는지의 목록이지 우리가 훑은 목록이 아니다. */}
-                        <dt className="col-span-2 pt-1 font-semibold text-foreground">본 폴더</dt>
-                        <dd className="col-span-2 m-0 break-all">{folderText(folders, true)}</dd>
-                        <dt className="col-span-2 pt-1 font-semibold text-foreground">안 본 폴더</dt>
-                        <dd className="col-span-2 m-0 break-all">{folderText(folders, false)}</dd>
+                        {/* 우리가 보는 폴더는 이 셋뿐이라는 걸 그대로 보여준다.
+                            사진이 없어도 0장으로 남긴다 — 목록에서 빠지면 "걸러진 건가"
+                            하고 의심하게 되는데, 실제로는 볼 게 없었던 것이다.
+                            기기에 있는 다른 폴더는 여기 적지 않는다. 우리가 안 보는 것을
+                            늘어놓으면 그걸 뒤진다는 뜻으로 읽힌다. */}
+                        <dt className="col-span-2 pt-1 font-semibold text-foreground">보는 폴더 (이 3개만)</dt>
+                        {summary.watched.map((folder) => (
+                          <Fragment key={folder.label}>
+                            <dt>{folder.label}</dt>
+                            <dd className="m-0">{folder.count}장</dd>
+                          </Fragment>
+                        ))}
+                        {/* 셋 다 0장이면 폴더 이름이 우리 목록과 다를 수 있다.
+                            그때만 기기에 있는 이름을 보여준다 — 그게 유일한 단서다. */}
+                        {summary.watched.every((folder) => folder.count === 0) && summary.others.length > 0 && (
+                          <>
+                            <dt className="col-span-2 pt-1 font-semibold text-foreground">
+                              폴더 이름이 다를 수 있어요
+                            </dt>
+                            <dd className="col-span-2 m-0 break-all">
+                              기기에 있는 폴더: {summary.others.map((f) => `${f.name} ${f.count}장`).join(' · ')}
+                            </dd>
+                          </>
+                        )}
                       </dl>
                     </details>
                   )}

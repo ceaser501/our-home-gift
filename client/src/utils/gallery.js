@@ -37,7 +37,45 @@ const MoaconGallery = registerPlugin('MoaconGallery');
 // 경로의 마지막 조각)으로 찾고, 정확히 같은지가 아니라 품고 있는지를 본다. 위 여섯 갈래가
 // 전부 'Download' / 'KakaoTalk' / 'Screenshots' 하나로 모여서, 경로가 어디로 바뀌든 걸린다.
 // 기기 언어가 한국어면 이름 자체가 한글일 수 있어서 한글도 함께 적어둔다.
-const BUCKETS = ['download', '다운로드', 'kakaotalk', '카카오톡', 'screenshot', '스크린샷'];
+//
+// 이 셋 말고는 보지 않는다. 카메라 폴더(직접 찍은 사진)는 훑지 않는다.
+export const FOLDERS = [
+  { key: 'download', label: '다운로드', names: ['download', '다운로드'] },
+  { key: 'kakaotalk', label: '카카오톡', names: ['kakaotalk', '카카오톡'] },
+  { key: 'screenshot', label: '스크린샷', names: ['screenshot', '스크린샷'] },
+];
+
+const BUCKETS = FOLDERS.flatMap((folder) => folder.names);
+
+// 네이티브의 matchesBucket과 같은 규칙이다(GalleryPlugin.java). 정확히 같은지가 아니라
+// 품고 있는지를 본다. 규칙이 두 곳에 있는 건 좋지 않지만, 어느 폴더로 셀지는 화면에
+// 보여줄 이름을 아는 쪽에서 정하는 게 맞아서 여기 둔다.
+function matchesName(bucket, name) {
+  const lower = String(bucket || '').toLowerCase();
+  return lower.includes(name) || name.includes(lower);
+}
+
+/**
+ * 기기에서 찾은 폴더 목록을, 우리가 보는 3개와 그 밖의 것으로 나눈다.
+ *
+ * 우리가 보는 폴더는 사진이 없어도 0장으로 남긴다. 목록에서 빠지면 "필터에서 걸러졌나"
+ * 하고 의심하게 되는데, 실제로는 그냥 볼 게 없었던 것이다. 둘은 다른 이야기다.
+ */
+export function summarizeFolders(folders) {
+  const counts = Object.fromEntries(FOLDERS.map((folder) => [folder.key, 0]));
+  const others = [];
+
+  (folders || []).forEach((found) => {
+    const matched = FOLDERS.find((folder) => folder.names.some((name) => matchesName(found.name, name)));
+    if (matched) counts[matched.key] += found.count;
+    else others.push(found);
+  });
+
+  return {
+    watched: FOLDERS.map((folder) => ({ label: folder.label, count: counts[folder.key] })),
+    others,
+  };
+}
 
 // 한 번에 살펴볼 최대 장수. 이보다 많으면 오래 걸려서 사용자가 멈춘 줄 안다.
 const MAX_IMAGES = 200;
