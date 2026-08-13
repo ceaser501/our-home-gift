@@ -56,7 +56,9 @@ public class MainActivity extends BridgeActivity {
             if (density <= 0f) density = 1f;
             insetTop = Math.round(bars.top / density);
             insetBottom = Math.round(bars.bottom / density);
-            pushInsets(view);
+            // 리스너가 넘겨주는 건 View다. 같은 웹뷰지만 형이 달라서, 위에서 잡아둔
+            // 참조를 그대로 쓴다.
+            pushInsets(webView);
 
             // 그대로 돌려준다. 우리는 값을 알려주기만 하고 소비하지 않는다 —
             // 삼켜버리면 웹뷰 자체의 배치가 어긋난다.
