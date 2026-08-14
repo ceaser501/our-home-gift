@@ -183,15 +183,19 @@ export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
   // 지금까지 건너뛰기로 감춰둔 사진 수. 훑기가 끝난 뒤에만 쓰므로 그때 세면 된다.
   const skipped = complete ? countSkipped() : 0;
 
-  // 왜 이 사진이 안 나왔는지는 후보를 찾았을 때도 궁금하다. 예전에는 하나도 못 찾았을
-  // 때만 열 수 있어서, "하나는 나왔는데 나머지는 왜 안 나오지"를 확인할 방법이 없었다.
+  // 같은 내용을 상황에 따라 다르게 부른다.
+  //
+  // 하나도 못 찾았을 때는 "왜 못 찾았는지"가 그 사람의 질문이다. 반대로 찾은 게 있는데
+  // 그 이름이 붙어 있으면 "내가 뭘 못 찾은 거지?" 하고 없는 걱정을 만든다. 찾았을 때는
+  // 그냥 무엇을 읽었는지 보여주는 자리다.
+  const panelLabel = candidates.length === 0 ? '왜 못 찾았는지 보기' : '읽은 정보 상세보기';
   const panelBody = tally ? (
 
                     <details className="w-full pt-2 text-left">
-                      <summary className="cursor-pointer list-none text-center text-xs text-muted-foreground underline">
-                        왜 못 찾았는지 보기
+                      <summary className="cursor-pointer list-none py-1 text-center text-sm text-muted-foreground underline">
+                        {panelLabel}
                       </summary>
-                      <dl className="m-0 mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 rounded-xl bg-muted/60 px-4 py-3 text-xs text-muted-foreground">
+                      <dl className="m-0 mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 rounded-xl bg-muted/60 px-4 py-3.5 text-sm text-muted-foreground">
                         <dt>읽은 사진</dt>
                         <dd className="m-0">{tally.read}장</dd>
                         <dt>바코드 없음</dt>
@@ -424,17 +428,21 @@ export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
                   다시 찾기
                 </Button>
 
-                {/* 건너뛰기는 훑기를 빠르고 조용하게 만들려고 둔 장치다. 그런데 한 번
-                    들어가면 그 사진은 다시 나오지 않아서, 잘못 치웠거나 예전에 바코드를
-                    못 읽었던 사진이 그대로 묻힌다. 감춘 게 있다는 사실과 되살릴 방법을
-                    함께 보여준다. 감춘 게 없으면 이 줄도 없다. */}
+                {/* 두 버튼의 차이를 이름에 담는다.
+                    '다시 찾기'는 아직 안 본 사진을, 이쪽은 전에 기프티콘이 아니라고 본
+                    사진까지 다시 본다.
+
+                    예전 이름은 '건너뛴 사진 …'이었는데, 앱이 스스로 무언가를 건너뛰었다고
+                    말하는 셈이라 "뭘 놓친 거지" 하는 의심을 만들었다. 이 앱의 약속은
+                    놓치지 않는 것이고, 실제로 놓친 게 아니라 아니라고 판단한 것이다.
+                    한 일을 그대로 적는다. */}
                 {skipped > 0 && (
                   <button
                     type="button"
                     onClick={() => start({ forgetHistory: true })}
                     className="w-full py-2 text-sm text-muted-foreground underline"
                   >
-                    건너뛴 사진 {skipped}장까지 처음부터 다시 보기
+                    기프티콘이 아니라고 본 사진 {skipped}장도 다시 확인하기
                   </button>
                 )}
               </div>
