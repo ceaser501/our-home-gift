@@ -615,11 +615,21 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
         )}
       >
         <div className="flex items-center gap-2.5">
-          <img
-            src={`data:image/jpeg;base64,${candidate.images[0]}`}
-            alt=""
-            className="size-16 shrink-0 rounded-lg bg-black object-cover"
-          />
+          {/* 아직 읽는 중인 사진에는 스캔 선이 위에서 아래로 지나간다.
+              문서 그림을 따로 그리는 것보다 낫다 — 지금 실제로 읽히고 있는 그 기프티콘
+              위를 지나가니, 무엇을 하는 중인지가 그림이 아니라 사실로 보인다. */}
+          <div
+            className={cn(
+              'relative size-16 shrink-0 overflow-hidden rounded-lg bg-black',
+              pendingRead && 'moacon-scanline'
+            )}
+          >
+            <img
+              src={`data:image/jpeg;base64,${candidate.images[0]}`}
+              alt=""
+              className="size-full object-cover"
+            />
+          </div>
           <div className="flex min-w-0 flex-1 flex-col gap-1">
             {pendingRead ? (
               /* 사진과 번호는 이미 있다. 상품명 자리만 비워두고 곧 채운다 —
@@ -755,7 +765,10 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
                 <Loader2 className="size-4 shrink-0 animate-spin text-primary" />
                 <span className="flex-1 text-base font-semibold text-foreground">찾는 중이에요</span>
               </div>
-              <div className="h-1.5 w-full overflow-hidden rounded-full bg-primary/15">
+              {/* 막대 위로 빛이 한 번씩 지나간다. 막대가 잠시 멈춰 보이는 순간에도
+                  무언가 돌고 있다는 게 보인다. 진행률은 그대로 막대가 말한다 —
+                  움직임만 얹었지 정보를 대신하지 않는다. */}
+              <div className="moacon-sweep relative h-1.5 w-full overflow-hidden rounded-full bg-primary/15">
                 <div
                   className="h-full rounded-full bg-primary transition-[width] ease-out"
                   style={

@@ -254,13 +254,66 @@ html.is-native-android {
   animation: dot-pulse 1.6s ease-in-out infinite;
 }
 
-/* 움직임을 줄여달라고 설정해둔 사람에게는 가만히 있는 점만 보여준다. */
+/* 움직임을 줄여달라고 설정해둔 사람에게는 가만히 있는 점만 보여준다.
+   훑는 중의 빛과 스캔 선도 같다 — 정보를 담고 있지 않고 느낌을 위한 것이라, 빼도
+   잃는 것이 없다. 진행 막대와 숫자는 그대로 남는다. */
 @media (prefers-reduced-motion: reduce) {
   .animate-dot-pulse {
     animation: none;
+  }
+
+  .moacon-sweep::after,
+  .moacon-scanline::after {
+    display: none;
   }
 }
 
 .animate-progress-indeterminate {
   animation: progress-indeterminate 1.1s ease-in-out infinite;
+}
+
+/* 훑는 중임을 보여주는 두 가지 움직임.
+
+   진행 막대만으로는 화면이 죽어 보인다는 말이 나왔다. 그렇다고 막대를 무한 반복
+   애니메이션으로 바꾸면 "얼마나 왔는지"를 잃는다 — 3초든 30초든 같은 그림이 되고,
+   진행이 보이는 편이 실제로 짧게 느껴진다. 그래서 숫자와 막대는 두고 움직임만 얹는다. */
+
+/* 막대 위를 훑고 지나가는 빛. 막대가 멈춰 있는 순간에도 무언가 돌고 있음을 보인다. */
+@keyframes moacon-sweep {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(200%);
+  }
+}
+
+.moacon-sweep::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--color-primary) 35%, transparent), transparent);
+  animation: moacon-sweep 1.6s ease-in-out infinite;
+}
+
+/* 읽는 중인 사진 위를 위에서 아래로 지나가는 선.
+   문서 그림을 따로 그리는 것보다 낫다 — 지금 실제로 읽히고 있는 그 기프티콘이라,
+   무엇을 하는 중인지가 그림이 아니라 사실로 보인다. */
+@keyframes moacon-scanline {
+  0% {
+    transform: translateY(-140%);
+  }
+  100% {
+    transform: translateY(240%);
+  }
+}
+
+.moacon-scanline::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 45%;
+  background: linear-gradient(180deg, transparent, rgb(255 255 255 / 0.55), transparent);
+  animation: moacon-scanline 1.5s ease-in-out infinite;
 }
