@@ -23,6 +23,31 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(GalleryPlugin.class);
         super.onCreate(savedInstanceState);
         watchSystemBarInsets();
+        applySystemFontScale();
+    }
+
+    /**
+     * 폰 설정의 글자 크기를 화면에 반영한다.
+     *
+     * 웹뷰는 시스템 글자 크기를 무시하고 늘 100%로 그린다. 크롬은 반영하기 때문에,
+     * 글자를 키워둔 사람은 같은 화면인데 앱에서만 작게 보인다. 실제로 "웹보다 한 포인트씩
+     * 작아진 것 같다"는 말이 나왔다.
+     *
+     * 이 앱은 가족이 함께 쓴다. 글자를 키워두는 건 대개 그게 필요해서 키워둔 것이라,
+     * 그 설정을 따르는 게 맞다.
+     *
+     * 다만 그대로 따르지는 않는다. 안드로이드는 200%까지 허용하는데 그만큼 키우면 버튼
+     * 글자가 넘쳐 눌러야 할 것이 화면 밖으로 나간다. 130%까지만 따라간다. 줄이는 쪽은
+     * 따르지 않는다 — 읽기 어려워지는 방향이라 굳이 맞출 이유가 없다.
+     */
+    private void applySystemFontScale() {
+        if (getBridge() == null) return;
+        WebView webView = getBridge().getWebView();
+        if (webView == null) return;
+
+        float scale = getResources().getConfiguration().fontScale;
+        int zoom = Math.round(scale * 100);
+        webView.getSettings().setTextZoom(Math.max(100, Math.min(130, zoom)));
     }
 
     /**
