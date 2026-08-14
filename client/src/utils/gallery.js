@@ -373,7 +373,7 @@ async function decodeAt(image, width, height, scale, tryHarder) {
  * isRegistered  — 이미 등록된 번호인지 묻는 함수. 화면 쪽에서 넘긴다.
  * skipCodes     — 이미 후보로 잡아둔 번호. 깊은 판에서 같은 것을 또 만들지 않는다.
  */
-async function collect({ images, pass, isRegistered, skipCodes, onProgress, signal }) {
+async function collect({ images, pass, isRegistered, skipCodes, onProgress, onCandidate, signal }) {
   const candidates = [];
   // 바코드 값 → 그 값을 가진 후보. 같은 기프티콘의 사진 여러 장을 한 후보로 모은다.
   const seenCodes = new Map();
@@ -456,6 +456,11 @@ async function collect({ images, pass, isRegistered, skipCodes, onProgress, sign
     };
     seenCodes.set(found.code, candidate);
     candidates.push(candidate);
+    // 찾자마자 알려준다. 화면은 이걸 받아 카드를 한 장씩 쌓는다 — 다 끝난 뒤에 한꺼번에
+    // 보여주면 그동안 아무 일도 안 일어나는 것처럼 보인다.
+    // 여기서 넘기는 images는 아직 고르기 전이라 원본 조각들이다. 화면은 첫 장만 미리보기로
+    // 쓰고, 등록에 넘길 것은 아래에서 고른 뒤 다시 받는다.
+    onCandidate?.(candidate);
   }
 
   // 모아둔 사진 중 등록에 넘길 것을 고른다.
@@ -497,7 +502,7 @@ async function collect({ images, pass, isRegistered, skipCodes, onProgress, sign
  * 여기서는 '바코드 없음'을 적지 않는다. 아직 다 본 것이 아니라서, 지금 적으면 깊은 판이
  * 그 사진들을 영영 못 본다.
  */
-export async function scanGallery({ isRegistered, onProgress, signal } = {}) {
+export async function scanGallery({ isRegistered, onProgress, onCandidate, signal } = {}) {
   // 얼마나 걸렸는지 잰다. "느리다"는 말을 들었을 때 어디가 느린지 알아야 고칠 데를
   // 고른다 — 사진을 훑는 것(폰이 하는 일)과 정보를 읽는 것(서버를 다녀오는 일)은
   // 고치는 방법이 완전히 다르다.
@@ -531,6 +536,7 @@ export async function scanGallery({ isRegistered, onProgress, signal } = {}) {
     pass: SHALLOW,
     isRegistered,
     onProgress,
+    onCandidate,
     signal,
   });
 
@@ -553,7 +559,7 @@ export async function scanGallery({ isRegistered, onProgress, signal } = {}) {
  * 화면이 이미 결과를 보여준 뒤에 조용히 돈다. 여기서 나오는 것은 목록에 얹힌다.
  * 끝까지 돌았을 때만 '바코드 없음'을 적는다 — 중간에 그만두면 다음에 다시 본다.
  */
-export async function deepScan({ pending, isRegistered, skipCodes, onProgress, signal } = {}) {
+export async function deepScan({ pending, isRegistered, skipCodes, onProgress, onCandidate, signal } = {}) {
   if (!pending?.length) return { candidates: [], elapsedMs: 0 };
   const startedAt = Date.now();
 
@@ -563,6 +569,7 @@ export async function deepScan({ pending, isRegistered, skipCodes, onProgress, s
     isRegistered,
     skipCodes,
     onProgress,
+    onCandidate,
     signal,
   });
 

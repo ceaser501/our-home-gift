@@ -240,6 +240,8 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
       const scan = await scanGallery({
         signal: controller.signal,
         onProgress: setProgress,
+        // 찾자마자 카드로 쌓는다. 훑기는 한 장씩 차례로 도니 실제로 하나씩 늘어난다.
+        onCandidate: (candidate) => setCandidates((prev) => [...prev, candidate]),
         // 이미 목록에 있는 번호는 후보에서 뺀다. 기프티콘 사진은 지우지 않고 그대로
         // 두는 사람이 많아서, 이게 없으면 훑을 때마다 등록한 것들이 계속 다시 나온다.
         isRegistered: async (code) => {
@@ -292,6 +294,7 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
         signal: controller.signal,
         // 얕은 판에서 이미 잡은 번호는 또 만들지 않는다.
         skipCodes: new Set(found0Ref.current.map((c) => c.code)),
+        onCandidate: (candidate) => setCandidates((prev) => [...prev, candidate]),
         isRegistered: async (code) => {
           try {
             return Boolean(await findGifticonByCode(family.id, code));
@@ -303,7 +306,10 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
       if (controller.signal.aborted) return;
       setDeepMs(Date.now() - startedAt);
       if (deep.candidates.length > 0) {
-        setCandidates((prev) => [...prev, ...deep.candidates]);
+        // 이미 쌓여 있으니 고른 결과로 갈아끼우기만 한다.
+        setCandidates((prev) =>
+          prev.map((item) => deep.candidates.find((found) => found.id === item.id) || item)
+        );
         found0Ref.current = [...found0Ref.current, ...deep.candidates];
         await readAll(deep.candidates, controller, { append: true });
       }
@@ -340,6 +346,8 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
     const startedAt = Date.now();
     if (!append) {
       setStage('reading');
+      // 훑는 동안 이미 카드가 쌓였다. 여기서는 등록에 넘길 사진을 고른 결과로 갈아끼운다.
+      // id가 같으니 화면에서는 자리가 그대로다.
       setCandidates(found);
       found0Ref.current = found;
       setProgress({ scanned: 0, total: found.length, found: found.length });
@@ -487,14 +495,20 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
   // 지금까지 건너뛰기로 감춰둔 사진 수. 훑기가 끝난 뒤에만 쓰므로 그때 세면 된다.
   const skipped = complete ? countSkipped() : 0;
 
+  // 훑거나 읽는 중. 위에 막대가 뜨고, 아래로 카드가 쌓인다.
+  const isWorking = stage === 'scanning' || stage === 'reading';
+  // 목록을 보여줄 때. 도는 중에도 보여준다 — 창이 갈아치워지지 않게.
+  const isListing = isWorking || stage === 'done';
+
   const alive = candidates.filter((candidate) => !dismissedIds.includes(candidate.id));
   // 금액권은 따로 묶는다. 확인할 것이 하나 더 있는 무리라, 섞여 있으면 그 하나를
   // 매번 찾아내야 한다. 나눠 두면 위는 그냥 넘기고 아래만 보면 된다.
   const vouchers = alive.filter((c) => isPickable(c) && voucherIds.includes(c.id));
   const plains = alive.filter((c) => isPickable(c) && !voucherIds.includes(c.id));
-  // 못 읽은 것과, 읽기를 중간에 그만둬서 아직 못 읽은 것. 둘 다 지금은 넣을 수 없다.
-  // isPickable로 한 번에 가른다 — 어느 쪽도 목록에서 조용히 사라지면 안 된다.
-  const unreadable = alive.filter((c) => !isPickable(c));
+  // 아직 읽지 않은 것. 훑는 중에 카드만 먼저 올라온 상태다.
+  const waiting = alive.filter((c) => !c.info && !c.readError);
+  // 읽었는데 넣을 수 없는 것. 빠진 칸이 있거나, 읽다가 막혔다.
+  const unreadable = alive.filter((c) => !isPickable(c) && !waiting.includes(c));
   const dismissed = candidates.filter((candidate) => dismissedIds.includes(candidate.id));
   const keptCount = alive.filter(isPickable).length;
   // 못 읽은 것들이 같은 이유로 막혔으면 한 번만 적는다. 하루 한도를 다 썼을 때가
@@ -588,7 +602,9 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
   function renderCandidate(candidate, { voucher = false } = {}) {
     const isDismissed = dismissedIds.includes(candidate.id);
     const info = candidate.info;
-    const broken = !isDismissed && !isPickable(candidate);
+    // 아직 읽지 않았다. 찾자마자 올라온 카드다 — 못 읽은 것과 다르다.
+    const pendingRead = !info && !candidate.readError;
+    const broken = !isDismissed && !pendingRead && !isPickable(candidate);
 
     return (
       <li
@@ -604,8 +620,15 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
             alt=""
             className="size-16 shrink-0 rounded-lg bg-black object-cover"
           />
-          <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-            {broken ? (
+          <div className="flex min-w-0 flex-1 flex-col gap-1">
+            {pendingRead ? (
+              /* 사진과 번호는 이미 있다. 상품명 자리만 비워두고 곧 채운다 —
+                 빈 카드를 여섯 개 깔아두는 것과, 하나씩 들어오는 것은 다르다. */
+              <>
+                <span className="h-4 w-2/3 animate-pulse rounded bg-muted" />
+                <span className="truncate font-mono text-sm text-muted-foreground">{candidate.code}</span>
+              </>
+            ) : broken ? (
               <>
                 <span className="truncate text-base font-semibold text-foreground">
                   {info?.name || info?.brand || '못 읽었어요'}
@@ -625,7 +648,7 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
               </>
             )}
           </div>
-          {isDismissed ? (
+          {pendingRead ? null : isDismissed ? (
             <button
               type="button"
               onClick={() => handleUndismiss(candidate)}
@@ -722,96 +745,41 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
             </>
           )}
 
-          {(stage === 'scanning' || stage === 'reading') && (
-            <>
-              <div className="flex flex-col gap-2 rounded-xl border border-primary/30 bg-primary/5 px-3.5 py-3">
-                <div className="flex items-center gap-2.5">
-                  <Loader2 className="size-4 shrink-0 animate-spin text-primary" />
-                  {/* 한 가지 일이라 이름도 하나다. 안에서 무엇을 하는 중인지는 아래 줄과
-                      곧 깔리는 사진들이 말해준다. */}
-                  <span className="flex-1 text-base font-semibold text-foreground">찾는 중이에요</span>
-                </div>
-                <div className="h-1.5 w-full overflow-hidden rounded-full bg-primary/15">
-                  <div
-                    className="h-full rounded-full bg-primary transition-[width] ease-out"
-                    style={
-                      stage === 'reading'
-                        ? { width: `${readBar}%`, transitionDuration: `${readBarMs}ms` }
-                        : {
-                            // 찾기는 앞의 몫만 채운다. 여기서 100%까지 갔다가 읽기에서
-                            // 다시 0으로 떨어지면, 다 온 줄 알았다가 처음으로 돌아간다.
-                            width: progress?.total
-                              ? `${Math.round((progress.scanned / progress.total) * SCAN_SHARE)}%`
-                              : '6%',
-                            transitionDuration: '300ms',
-                          }
-                    }
-                  />
-                </div>
-                <p className="m-0 text-sm text-muted-foreground">
-                  {stage === 'scanning'
-                    ? progress?.total
-                      ? `사진 ${progress.scanned}/${progress.total}`
-                      : '잠시만요'
-                    : `${candidates.length}개 찾았어요`}
-                </p>
+          {/* 훑는 중에도, 다 훑고 나서도 같은 화면이다.
+              예전에는 진행 막대만 있는 창을 보여주고 끝나면 결과 창으로 갈아치웠다.
+              한 가지 일인데 창이 둘이라 "다 됐나?" 하고 한 번 더 기다리게 됐다.
+              이제 위에서 막대가 흐르는 동안 아래로 카드가 하나씩 쌓인다. */}
+          {isWorking && (
+            <div className="flex flex-col gap-2 rounded-xl border border-primary/30 bg-primary/5 px-3.5 py-3">
+              <div className="flex items-center gap-2.5">
+                <Loader2 className="size-4 shrink-0 animate-spin text-primary" />
+                <span className="flex-1 text-base font-semibold text-foreground">찾는 중이에요</span>
               </div>
-
-              {/* 읽는 동안에도 찾은 것을 보여준다.
-                  사진과 바코드는 이미 손에 있는데 막대만 띄워두면 몇 초 동안 화면이 죽어
-                  있다. 여덟을 함께 보내니 그 몇 초가 통째로 빈 시간이 된다.
-                  사진을 먼저 깔아두면 "찾긴 찾았구나"가 그 자리에서 보이고, 글자는
-                  하나씩 채워진다. 채워지는 것을 보는 것과 아무것도 없는 것을 보는 것은
-                  같은 시간이어도 다르다. */}
-              {stage === 'reading' && candidates.length > 0 && (
-                <ul className="m-0 flex list-none flex-col gap-2 p-0">
-                  {candidates.map((candidate) => (
-                    <li
-                      key={candidate.id}
-                      className="flex items-center gap-2.5 rounded-xl border border-border bg-background p-2.5"
-                    >
-                      <img
-                        src={`data:image/jpeg;base64,${candidate.images[0]}`}
-                        alt=""
-                        className="size-16 shrink-0 rounded-lg bg-black object-cover"
-                      />
-                      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-                        {candidate.info ? (
-                          <>
-                            <span className="truncate text-base font-semibold text-foreground">
-                              {candidate.info.name || candidate.bucket}
-                            </span>
-                            <span className="truncate text-sm text-muted-foreground">
-                              {[candidate.info.brand, formatDate(candidate.info.expiresAt)]
-                                .filter(Boolean)
-                                .join(' · ') || candidate.code}
-                            </span>
-                          </>
-                        ) : (
-                          <>
-                            <span className="h-4 w-2/3 animate-pulse rounded bg-muted" />
-                            <span className="h-3 w-1/3 animate-pulse rounded bg-muted" />
-                          </>
-                        )}
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              <Button
-                type="button"
-                variant="outline"
-                size="lg"
-                className="w-full rounded-xl"
-                onClick={() => {
-                  abortRef.current?.abort();
-                  setStage('done');
-                  setProgress(null);
-                }}
-              >
-                그만하기
-              </Button>
-            </>
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-primary/15">
+                <div
+                  className="h-full rounded-full bg-primary transition-[width] ease-out"
+                  style={
+                    stage === 'reading'
+                      ? { width: `${readBar}%`, transitionDuration: `${readBarMs}ms` }
+                      : {
+                          // 찾기는 앞의 몫만 채운다. 여기서 100%까지 갔다가 읽기에서 다시
+                          // 0으로 떨어지면, 다 온 줄 알았다가 처음으로 돌아간다.
+                          width: progress?.total
+                            ? `${Math.round((progress.scanned / progress.total) * SCAN_SHARE)}%`
+                            : '6%',
+                          transitionDuration: '300ms',
+                        }
+                  }
+                />
+              </div>
+              <p className="m-0 text-sm text-muted-foreground">
+                {stage === 'scanning'
+                  ? progress?.total
+                    ? `사진 ${progress.scanned}/${progress.total}`
+                    : '잠시만요'
+                  : `${candidates.length}개 찾았어요`}
+              </p>
+            </div>
           )}
 
           {stage === 'registering' && (
@@ -889,7 +857,7 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
             </>
           )}
 
-          {stage === 'done' && (
+          {isListing && (
             <>
               {/* 안드로이드 14의 "선택한 사진만 허용"이면 사용자가 고른 몇 장만 보인다.
                   폴더를 훑는다는 전제가 깨지므로, 못 찾았을 때 왜 그런지 알려줘야 한다. */}
@@ -902,7 +870,7 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
 
               {error && <p className="m-0 text-sm text-destructive">{error}</p>}
 
-              {alive.length === 0 ? (
+              {alive.length === 0 && !isWorking ? (
                 <div className="flex flex-col items-center gap-2 py-8 text-center">
                   <ImageOff className="size-8 text-muted-foreground" />
                   <p className="m-0 text-base font-semibold text-foreground">
@@ -916,13 +884,24 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
                 <>
                   {plains.length > 0 && (
                     <>
-                      <p className="m-0 text-base break-keep text-foreground">
-                        <b className="font-semibold">{plains.length}개</b> 찾았어요.
-                      </p>
+                      {!isWorking && (
+                        <p className="m-0 text-base break-keep text-foreground">
+                          <b className="font-semibold">{plains.length}개</b> 찾았어요.
+                        </p>
+                      )}
                       <ul className="m-0 flex list-none flex-col gap-2 p-0">
                         {plains.map((candidate) => renderCandidate(candidate))}
                       </ul>
                     </>
+                  )}
+
+                  {/* 아직 읽지 않은 것. 찾자마자 올라온 카드라 사진과 번호만 있다.
+                      제목을 붙이지 않는다 — 위 목록과 이어지는 같은 줄이고, 곧 글자가
+                      채워지면서 위로 합쳐진다. */}
+                  {waiting.length > 0 && (
+                    <ul className="m-0 flex list-none flex-col gap-2 p-0">
+                      {waiting.map((candidate) => renderCandidate(candidate))}
+                    </ul>
                   )}
 
                   {/* 금액권은 아래에 따로 묶는다. 확인할 것이 하나 더 있는 무리라, 위에
@@ -977,7 +956,7 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
                 </p>
               )}
 
-              {panelBody}
+              {stage === 'done' && panelBody}
 
               {/* 두 버튼의 차이를 이름에 담는다. 둘 다 설치일 0시부터 보되, 위는 아직
                   확인하지 않은 것만, 아래는 아니라고 봤던 것까지 전부 본다.
@@ -987,25 +966,45 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
                   말하는 셈이라 "뭘 놓친 거지" 하는 의심을 만들었다. 이 앱의 약속은
                   놓치지 않는 것이고, 실제로 놓친 게 아니라 아니라고 판단한 것이다. */}
               <div className="flex flex-col gap-2">
-                {keptCount > 0 && (
+                {/* 도는 중에는 멈추는 것 말고 할 일이 없다. 등록 버튼을 미리 띄워두면
+                    아직 다 안 들어온 것을 넣게 된다. */}
+                {isWorking && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="lg"
+                    className="w-full rounded-xl"
+                    onClick={() => {
+                      abortRef.current?.abort();
+                      setStage('done');
+                      setProgress(null);
+                    }}
+                  >
+                    그만 찾기
+                  </Button>
+                )}
+
+                {stage === 'done' && keptCount > 0 && (
                   <Button type="button" size="lg" className="w-full rounded-xl" onClick={registerAll}>
                     <Check className="size-4.5" />
                     {keptCount}개 등록
                   </Button>
                 )}
 
-                <Button
-                  type="button"
-                  variant={keptCount > 0 ? 'outline' : 'default'}
-                  size="lg"
-                  className="w-full rounded-xl"
-                  onClick={() => start()}
-                >
-                  <ScanSearch className="size-4.5" />
-                  새 기프티콘 찾기
-                </Button>
+                {stage === 'done' && (
+                  <Button
+                    type="button"
+                    variant={keptCount > 0 ? 'outline' : 'default'}
+                    size="lg"
+                    className="w-full rounded-xl"
+                    onClick={() => start()}
+                  >
+                    <ScanSearch className="size-4.5" />
+                    새 기프티콘 찾기
+                  </Button>
+                )}
 
-                {skipped > 0 && (
+                {stage === 'done' && skipped > 0 && (
                   <Button
                     type="button"
                     variant="ghost"
