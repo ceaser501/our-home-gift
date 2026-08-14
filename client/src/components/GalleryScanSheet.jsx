@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ImageOff, Loader2, RotateCcw, ScanSearch, X } from 'lucide-react';
+import { ChevronDown, ImageOff, Images, Info, Loader2, RotateCcw, ScanSearch, X } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import {
@@ -205,50 +205,63 @@ export default function GalleryScanSheet({ onRegister, savedMark, onClose }) {
   // 읽는 사람은 아래 숫자를 기프티콘 세 개로 받아들인다. 같은 기프티콘을 원본과 캡처로
   // 두 장 갖고 있으면 실제로는 하나인데도 그렇다.
   //
-  // 사진 수는 앨범 줄에서만 말하고, 그 아래는 기프티콘 수만 말한다.
-  // 사진첩을 훑어 기프티콘을 몇 개 찾았고, 그중 몇 개가 이미 목록에 있는가 — 그게
-  // 사용자가 알고 싶은 것이다.
-  const albums = summary.watched.map((folder) => `${folder.label} ${folder.count}`).join(' · ');
-
+  // 사진 수는 사진첩 줄에서만 말하고, 그 아래는 기프티콘 수만 말한다.
+  //
+  // 접어둔다. 찾은 것이 여러 개면 위쪽 목록만으로도 화면이 꽉 차는데, 그 아래 표까지
+  // 펼쳐져 있으면 정작 눌러야 할 등록 버튼이 밀린다. 이건 궁금할 때 여는 자리다.
   const panelBody = tally ? (
-    <div className="flex flex-col gap-2.5 rounded-xl bg-muted/60 px-4 py-3.5">
-      <p className="m-0 text-sm font-semibold text-foreground">상세내역</p>
+    <details className="group rounded-xl bg-muted/60">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3 text-sm font-semibold text-foreground">
+        상세내역
+        <ChevronDown className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
+      </summary>
 
-      {/* 사진 수는 여기서만 말한다. 아래 두 줄은 기프티콘 수다.
-          두 단위를 위아래로 섞어놓으면 아래 숫자까지 사진으로, 또는 위 숫자까지
-          기프티콘으로 읽힌다. 실제로 "확인한 사진 4장 / 이미 등록됨 3장"을 보고
-          기프티콘 세 개로 읽었다.
+      <div className="flex flex-col gap-2.5 px-4 pb-3.5">
+        {/* 어느 사진첩을 봤는지. 이름과 숫자를 한 덩어리로 묶어 보여준다 — 줄글로
+            늘어놓으면 '다운로드 1 카카오톡 1'에서 1이 어디에 붙는지 한 번 더 읽어야 한다.
+            사진이 없어도 0으로 남긴다. 목록에서 빠지면 "걸러진 건가" 하고 의심하게
+            되는데, 실제로는 볼 게 없었던 것이다. 기기에 있는 다른 사진첩은 적지 않는다 —
+            안 보는 것을 늘어놓으면 그걸 뒤진다는 뜻으로 읽힌다. */}
+        <div className="flex flex-col gap-1.5">
+          <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+            <Images className="size-3.5 shrink-0" />
+            사진첩 별 확인 사진
+          </span>
+          <div className="flex flex-wrap gap-1.5">
+            {summary.watched.map((folder) => (
+              <span
+                key={folder.label}
+                className="rounded-lg bg-card px-2.5 py-1 text-sm text-foreground"
+              >
+                {folder.label} <b className="font-semibold tabular-nums">{folder.count}</b>
+              </span>
+            ))}
+          </div>
+        </div>
 
-          앨범 이름은 사진이 없어도 0으로 남긴다 — 목록에서 빠지면 "걸러진 건가" 하고
-          의심하게 되는데, 실제로는 볼 게 없었던 것이다. 기기에 있는 다른 앨범은 적지
-          않는다. 안 보는 것을 늘어놓으면 그걸 뒤진다는 뜻으로 읽힌다. */}
-      <div className="flex flex-col gap-0.5 text-sm break-keep">
-        <span className="text-muted-foreground">앨범 및 확인 사진</span>
-        <span className="text-foreground">{albums}</span>
-      </div>
+        <dl className="m-0 grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 border-t border-border pt-2.5 text-sm">
+          <dt className="text-muted-foreground">발견한 기프티콘</dt>
+          <dd className="m-0 font-semibold tabular-nums text-foreground">{tally.found}개</dd>
+          <dt className="text-muted-foreground">이미 등록된 기프티콘</dt>
+          <dd className="m-0 tabular-nums text-foreground">{tally.alreadyHave}개</dd>
+          {/* 오류일 때만 나온다. 평소에는 자리를 차지하지 않는다. */}
+          {tally.readFailed > 0 && (
+            <>
+              <dt className="text-muted-foreground">열지 못한 사진</dt>
+              <dd className="m-0 tabular-nums text-foreground">{tally.readFailed}장</dd>
+            </>
+          )}
+        </dl>
 
-      <dl className="m-0 grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 border-t border-border pt-2.5 text-sm">
-        <dt className="text-muted-foreground">발견한 기프티콘</dt>
-        <dd className="m-0 font-semibold tabular-nums text-foreground">{tally.found}개</dd>
-        <dt className="text-muted-foreground">이미 등록됨</dt>
-        <dd className="m-0 tabular-nums text-foreground">{tally.alreadyHave}개</dd>
-        {/* 오류일 때만 나온다. 평소에는 자리를 차지하지 않는다. */}
-        {tally.readFailed > 0 && (
-          <>
-            <dt className="text-muted-foreground">열지 못한 사진</dt>
-            <dd className="m-0 tabular-nums text-foreground">{tally.readFailed}장</dd>
-          </>
+        {/* 셋 다 0장이면 사진첩 이름이 우리 목록과 다를 수 있다. 그때만 기기에 있는
+            이름을 보여준다 — 그게 유일한 단서다. */}
+        {summary.watched.every((folder) => folder.count === 0) && summary.others.length > 0 && (
+          <p className="m-0 border-t border-border pt-2.5 text-sm break-keep text-muted-foreground">
+            폰에 있는 사진첩: {summary.others.map((f) => `${f.name} ${f.count}`).join(' · ')}
+          </p>
         )}
-      </dl>
-
-      {/* 셋 다 0장이면 앨범 이름이 우리 목록과 다를 수 있다. 그때만 기기에 있는 이름을
-          보여준다 — 그게 유일한 단서다. */}
-      {summary.watched.every((folder) => folder.count === 0) && summary.others.length > 0 && (
-        <p className="m-0 border-t border-border pt-2.5 text-sm break-keep text-muted-foreground">
-          폰에 있는 앨범: {summary.others.map((f) => `${f.name} ${f.count}`).join(' · ')}
-        </p>
-      )}
-    </div>
+      </div>
+    </details>
   ) : null;
 
   function handleRegister(candidate) {
@@ -261,6 +274,21 @@ export default function GalleryScanSheet({ onRegister, savedMark, onClose }) {
         <SheetHeader className="pr-14 pb-1">
           <SheetTitle>기프티콘 찾기</SheetTitle>
         </SheetHeader>
+
+        {/* 어디까지 보는지는 결과보다 먼저 알아야 한다. 아래에 뒀을 때는 "왜 예전 사진이
+            안 나오지"를 다 훑고 나서야 알게 됐고, 찾은 것이 많으면 목록에 밀려 화면 밖으로
+            나갔다. 제목 바로 아래가 그 자리다.
+            기준 시각은 훑기가 끝나야 알 수 있어서, 그 전에는 이 줄이 없다. */}
+        {complete && formatDay(since) && (
+          <div className="mx-5 mt-2 flex gap-2 rounded-xl bg-muted/60 px-3.5 py-2.5">
+            <Info className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+            <p className="m-0 flex-1 text-sm leading-relaxed break-keep text-muted-foreground">
+              <b className="font-semibold text-foreground">{formatDay(since)} 0시</b> 이후 사진만 봐요.
+              <br />
+              이전 사진은 + 로 올려주세요.
+            </p>
+          </div>
+        )}
 
         <div className="flex flex-col gap-4 px-5 pt-2">
           {stage === 'intro' && (
@@ -417,16 +445,6 @@ export default function GalleryScanSheet({ onRegister, savedMark, onClose }) {
                     ))}
                   </ul>
                 </>
-              )}
-
-              {/* 어디까지 봤는지 적어준다. "왜 예전 사진이 안 나오지?"는 이 줄이 없으면
-                  알 길이 없다. 두 번째부터는 지난번 이후만 보기 때문에 더 그렇다. */}
-              {complete && formatDay(since) && (
-                <p className="m-0 text-base leading-relaxed break-keep text-muted-foreground">
-<b className="font-semibold text-foreground">{formatDay(since)} 0시</b> 이후 사진만 봐요.
-                  <br />
-                  이전 사진은 + 로 올려주세요.
-                </p>
               )}
 
               {panelBody}
