@@ -137,24 +137,28 @@ export default function ProfileMenu({ onClose }) {
 
           {/* 켜두면 앱을 열 때 바로 찾아준다. 받아둔 기프티콘을 넣는 게 이 앱에 들어오는
               이유라, 그걸 매번 눌러서 시작하게 할 이유가 없다. 다만 사진을 보는 일이라
-              기본은 꺼두고 사용자가 켜게 한다. */}
+              기본은 꺼두고 사용자가 켜게 한다.
+
+              생김새는 위아래 줄에 맞춘다. 여기만 체크박스였는데, 나란히 놓인 설정들이
+              서로 다른 방식으로 켜지고 꺼지면 어느 게 켜진 건지 한눈에 읽히지 않는다. */}
           {scanSupported && (
-            <label className="flex w-full cursor-pointer items-center gap-3 px-1 py-3 text-left text-sm">
+            <button
+              type="button"
+              onClick={() => {
+                setAutoScan(!autoScan);
+                setAutoScanOn(!autoScan);
+              }}
+              className="flex w-full items-center gap-3 px-1 py-3 text-left text-sm"
+            >
               <ScanSearch className="size-4.5 shrink-0 text-muted-foreground" />
               <span className="flex min-w-0 flex-1 flex-col">
                 <span className="text-foreground">기프티콘 자동 찾기</span>
-                <span className="text-xs text-muted-foreground">앱을 열 때 갤러리에서 새 기프티콘을 찾아드려요</span>
+                <span className="text-xs break-keep text-muted-foreground">앱을 열 때 갤러리에서 찾아드려요</span>
               </span>
-              <input
-                type="checkbox"
-                checked={autoScan}
-                onChange={(e) => {
-                  setAutoScan(e.target.checked);
-                  setAutoScanOn(e.target.checked);
-                }}
-                className="size-5 shrink-0 accent-primary"
-              />
-            </label>
+              <span className={autoScan ? 'shrink-0 text-xs font-semibold text-primary' : 'shrink-0 text-xs text-muted-foreground'}>
+                {autoScan ? '켜짐' : '꺼짐'}
+              </span>
+            </button>
           )}
 
           {/* 실제 발송과 같은 길로 보내보는 테스트. 알림을 꺼뒀으면 아무것도 오지 않는다. */}

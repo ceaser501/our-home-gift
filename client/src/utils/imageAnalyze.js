@@ -281,14 +281,37 @@ export async function readGifticonInfo(prepared, { onProgress } = {}) {
   const thumbCropBlob = thumbBox ? await cropThumbnail(prepared.storageFiles[thumbBox.image - 1], thumbBox) : null;
   report('done');
 
-  // 바코드 막대를 못 읽었을 때는 이미지에 인쇄된 번호를 대신 쓴다.
-  // 이 경우 잘라낸 이미지가 없으니 화면에서 바코드를 새로 그려 보여준다.
-  const code = prepared.code || info.code || null;
-  const codeType = prepared.code ? prepared.codeType : info.code ? 'CODE_128' : null;
+  // 바코드 번호는 두 군데서 읽힌다 — zxing이 막대를 읽은 값(prepared.code)과,
+  // 모델이 사진에 인쇄된 숫자를 읽은 값(info.code)이다.
+  //
+  // 예전에는 막대 쪽이 있으면 그걸 쓰고 인쇄된 숫자는 버렸다. 그런데 갤러리에서 찾아
+  // 등록한 스타벅스 교환권이 한 자리 틀린 번호로 저장된 일이 있었다.
+  // (7590922768021420 → 7590922268021420) 같은 기프티콘이 서로 다른 번호로 읽혀
+  // 두 건으로 들어왔다.
+  //
+  // 막대는 줄인 사진에서 읽는 것이라, 압축 자국에 한 칸이 뭉개지면 다른 숫자가 된다.
+  // 형식에 검산 자리가 없으면 그대로 통과한다. 대조할 값이 옆에 있는데 버리고 있었다.
+  //
+  // 두 값이 다 있는데 다르면 어느 쪽이 맞는지 코드는 알 수 없다. 그때는 사람이 봐야
+  // 한다 — 사진에 인쇄된 숫자를 기본값으로 두고(눈으로 대조할 수 있는 건 그쪽뿐이다)
+  // 확인해달라고 알린다. 바코드가 틀리면 매장에서 못 쓴다. 조용히 하나를 고르는 것보다
+  // 한 번 묻는 쪽이 낫다.
+  //
+  // 막대를 아예 못 읽었을 때 인쇄된 번호를 대신 쓰는 건 예전과 같다. 이 경우 잘라낸
+  // 이미지가 없으니 화면에서 바코드를 새로 그려 보여준다.
+  const printed = info.code || null;
+  const scanned = prepared.code || null;
+  const conflict = Boolean(scanned && printed && scanned !== printed);
+  const code = conflict ? printed : scanned || printed;
+  // 형식은 막대에서 읽은 것이 맞다. 숫자 한 자리가 갈렸어도 어떤 규격의 바코드인지는
+  // 막대 모양이 말해준다.
+  const codeType = scanned ? prepared.codeType : printed ? 'CODE_128' : null;
 
   return {
     code,
     codeType,
+    // 두 값이 갈렸다. 화면에서 사람에게 확인받는다.
+    codeConflict: conflict ? { scanned, printed } : null,
     thumbCropBlob,
     category: info.category || '기타',
     brand: info.brand || null,

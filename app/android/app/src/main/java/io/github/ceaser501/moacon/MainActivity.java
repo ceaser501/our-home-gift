@@ -37,8 +37,15 @@ public class MainActivity extends BridgeActivity {
      * 그 설정을 따르는 게 맞다.
      *
      * 다만 그대로 따르지는 않는다. 안드로이드는 200%까지 허용하는데 그만큼 키우면 버튼
-     * 글자가 넘쳐 눌러야 할 것이 화면 밖으로 나간다. 130%까지만 따라간다. 줄이는 쪽은
-     * 따르지 않는다 — 읽기 어려워지는 방향이라 굳이 맞출 이유가 없다.
+     * 글자가 넘쳐 눌러야 할 것이 화면 밖으로 나간다. 줄이는 쪽도 따르지 않는다 —
+     * 읽기 어려워지는 방향이라 굳이 맞출 이유가 없다.
+     *
+     * 처음에는 130%까지 따라갔는데, 폰 설정을 크게 해두고 열어보니 목록 카드의 칸이
+     * 어긋났다. 이 앱의 화면은 상품명·기한·버튼이 한 줄에 나란히 놓이는 곳이 많아서,
+     * 글자만 커지면 그 줄이 먼저 무너진다. 읽기 편하자고 키운 것이 도리어 못 읽는
+     * 화면을 만든다.
+     *
+     * 115%까지만 따라간다. 한 눈금 정도는 커지면서 칸은 유지되는 선이다.
      */
     private void applySystemFontScale() {
         if (getBridge() == null) return;
@@ -47,7 +54,7 @@ public class MainActivity extends BridgeActivity {
 
         float scale = getResources().getConfiguration().fontScale;
         int zoom = Math.round(scale * 100);
-        webView.getSettings().setTextZoom(Math.max(100, Math.min(130, zoom)));
+        webView.getSettings().setTextZoom(Math.max(100, Math.min(115, zoom)));
     }
 
     /**

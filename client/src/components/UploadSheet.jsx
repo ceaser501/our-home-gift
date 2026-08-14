@@ -128,6 +128,8 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
   const [autoFilled, setAutoFilled] = useState(false);
   // 모델이 금액권으로 봤는지. 켜주지는 않고 귀띔만 한다.
   const [voucherHint, setVoucherHint] = useState(false);
+  // 막대에서 읽은 번호와 사진에 인쇄된 번호가 다를 때, 그 둘.
+  const [codeConflict, setCodeConflict] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [searchingPrice, setSearchingPrice] = useState(false);
@@ -191,6 +193,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
     setAnalyzing(true);
     setProgress({ step: 'barcode', current: 1, total: selected.length });
     setAutoFilled(false);
+    setCodeConflict(null);
 
     let prepared;
     try {
@@ -284,6 +287,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
         result.thumbCropBlob ? new File([result.thumbCropBlob], 'thumb.jpg', { type: 'image/jpeg' }) : null
       );
       setVoucherHint(Boolean(result.isVoucher));
+      setCodeConflict(result.codeConflict || null);
       setAutoFilled(true);
     } catch (err) {
       // 서버가 왜 거절했는지 그대로 보여준다. 예전에는 무슨 일이 있었든 "실패했어요"만
@@ -352,6 +356,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
     setError('');
     setAutoFilled(false);
     setVoucherHint(false);
+    setCodeConflict(null);
     setPriceSearchNote('');
     setProgress(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
@@ -497,6 +502,43 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
           {/* 못 읽은 항목은 여기서 짚어준다. 목록에 나간 뒤에 알려주면 다시 찾아 들어와야
               하지만, 지금은 사용자가 이 화면에서 입력 중이라 그 자리에서 채울 수 있다.
               값을 채우면 그 줄만 사라지고, 둘 다 채워지면 평소의 "다 채웠어요"로 돌아간다. */}
+          {/* 막대에서 읽은 번호와 사진에 인쇄된 번호가 갈렸다.
+              어느 쪽이 맞는지는 사람만 안다 — 사진을 보고 있으니까.
+              한 자리가 틀린 채로 저장되면 계산대에서 못 쓰고, 같은 기프티콘이
+              두 건으로 들어온다. 실제로 그런 일이 있었다. */}
+          {codeConflict && (
+            <div className="flex flex-col gap-1.5 rounded-xl border border-warning/40 bg-warning/10 px-3.5 py-3">
+              <p className="m-0 text-base font-semibold text-foreground">바코드 번호를 확인해주세요</p>
+              <p className="m-0 text-sm leading-relaxed break-keep text-muted-foreground">
+                두 가지로 읽혀서 사진에 적힌 쪽을 넣어뒀어요.
+              </p>
+              <div className="flex flex-col gap-1 pt-0.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    updateField('code', codeConflict.printed);
+                    setCodeConflict(null);
+                  }}
+                  className="flex items-center gap-2 text-left"
+                >
+                  <span className="shrink-0 text-sm text-muted-foreground">사진</span>
+                  <span className="font-mono text-base font-semibold break-all text-foreground">{codeConflict.printed}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    updateField('code', codeConflict.scanned);
+                    setCodeConflict(null);
+                  }}
+                  className="flex items-center gap-2 text-left"
+                >
+                  <span className="shrink-0 text-sm text-muted-foreground">막대</span>
+                  <span className="font-mono text-base font-semibold break-all text-foreground">{codeConflict.scanned}</span>
+                </button>
+              </div>
+            </div>
+          )}
+
           {autoFilled && (missingCode || missingExpiry) ? (
             <div className="flex flex-col gap-1.5 rounded-xl border border-warning/40 bg-warning/10 px-3.5 py-3">
               <p className="m-0 text-sm font-semibold text-foreground">못 읽은 게 있어요</p>

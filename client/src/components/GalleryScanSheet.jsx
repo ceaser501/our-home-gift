@@ -1,5 +1,5 @@
-import { Fragment, useEffect, useRef, useState } from 'react';
-import { ImageOff, Loader2, ScanSearch, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { ImageOff, Loader2, RotateCcw, ScanSearch, X } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import {
@@ -183,57 +183,43 @@ export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
   // 지금까지 건너뛰기로 감춰둔 사진 수. 훑기가 끝난 뒤에만 쓰므로 그때 세면 된다.
   const skipped = complete ? countSkipped() : 0;
 
-  // 같은 내용을 상황에 따라 다르게 부른다.
+  // 무엇을 어떻게 봤는지 그대로 적어둔다.
   //
-  // 하나도 못 찾았을 때는 "왜 못 찾았는지"가 그 사람의 질문이다. 반대로 찾은 게 있는데
-  // 그 이름이 붙어 있으면 "내가 뭘 못 찾은 거지?" 하고 없는 걱정을 만든다. 찾았을 때는
-  // 그냥 무엇을 읽었는지 보여주는 자리다.
-  const panelLabel = candidates.length === 0 ? '왜 못 찾았는지 보기' : '읽은 정보 상세보기';
+  // 예전에는 못 찾았을 때만 '왜 못 찾았는지 보기'로 펼치게 해뒀는데, 찾았을 때 뜨는
+  // '읽은 정보 상세보기'와 내용이 같았다. 같은 것을 두 이름으로 부르면 다른 것인 줄 안다.
+  // 이름 하나로 두고 늘 보여준다.
   const panelBody = tally ? (
-
-                    <details className="w-full pt-2 text-left">
-                      <summary className="cursor-pointer list-none py-1 text-center text-sm text-muted-foreground underline">
-                        {panelLabel}
-                      </summary>
-                      <dl className="m-0 mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 rounded-xl bg-muted/60 px-4 py-3.5 text-sm text-muted-foreground">
-                        <dt>읽은 사진</dt>
-                        <dd className="m-0">{tally.read}장</dd>
-                        <dt>바코드 없음</dt>
-                        <dd className="m-0">{tally.noBarcode}장</dd>
-                        <dt>이미 등록됨</dt>
-                        <dd className="m-0">{tally.alreadyHave}장</dd>
-                        {tally.readFailed > 0 && (
-                          <>
-                            <dt>열지 못함</dt>
-                            <dd className="m-0">{tally.readFailed}장</dd>
-                          </>
-                        )}
-                        {/* 우리가 보는 폴더는 이 셋뿐이라는 걸 그대로 보여준다.
-                            사진이 없어도 0장으로 남긴다 — 목록에서 빠지면 "걸러진 건가"
-                            하고 의심하게 되는데, 실제로는 볼 게 없었던 것이다.
-                            기기에 있는 다른 폴더는 여기 적지 않는다. 우리가 안 보는 것을
-                            늘어놓으면 그걸 뒤진다는 뜻으로 읽힌다. */}
-                        <dt className="col-span-2 pt-1 font-semibold text-foreground">보는 폴더 (이 3개만)</dt>
-                        {summary.watched.map((folder) => (
-                          <Fragment key={folder.label}>
-                            <dt>{folder.label}</dt>
-                            <dd className="m-0">{folder.count}장</dd>
-                          </Fragment>
-                        ))}
-                        {/* 셋 다 0장이면 폴더 이름이 우리 목록과 다를 수 있다.
-                            그때만 기기에 있는 이름을 보여준다 — 그게 유일한 단서다. */}
-                        {summary.watched.every((folder) => folder.count === 0) && summary.others.length > 0 && (
-                          <>
-                            <dt className="col-span-2 pt-1 font-semibold text-foreground">
-                              폴더 이름이 다를 수 있어요
-                            </dt>
-                            <dd className="col-span-2 m-0 break-all">
-                              기기에 있는 폴더: {summary.others.map((f) => `${f.name} ${f.count}장`).join(' · ')}
-                            </dd>
-                          </>
-                        )}
-                      </dl>
-                    </details>
+    <div className="flex flex-col gap-2 rounded-xl bg-muted/60 px-4 py-3.5">
+      <p className="m-0 text-sm font-semibold text-foreground">상세내역</p>
+      <dl className="m-0 grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 text-sm text-muted-foreground">
+        <dt>본 사진</dt>
+        <dd className="m-0 tabular-nums">{tally.read}장</dd>
+        <dt>바코드 없음</dt>
+        <dd className="m-0 tabular-nums">{tally.noBarcode}장</dd>
+        <dt>이미 등록됨</dt>
+        <dd className="m-0 tabular-nums">{tally.alreadyHave}장</dd>
+        {tally.readFailed > 0 && (
+          <>
+            <dt>열지 못함</dt>
+            <dd className="m-0 tabular-nums">{tally.readFailed}장</dd>
+          </>
+        )}
+      </dl>
+      {/* 어느 폴더를 봤는지 한 줄로 적는다. 사진이 없어도 0장으로 남긴다 — 목록에서
+          빠지면 "걸러진 건가" 하고 의심하게 되는데, 실제로는 볼 게 없었던 것이다.
+          기기에 있는 다른 폴더는 적지 않는다. 안 보는 것을 늘어놓으면 그걸 뒤진다는
+          뜻으로 읽힌다. */}
+      <p className="m-0 border-t border-border pt-2 text-sm break-keep text-muted-foreground">
+        {summary.watched.map((folder) => `${folder.label} ${folder.count}`).join(' · ')}
+      </p>
+      {/* 셋 다 0장이면 폴더 이름이 우리 목록과 다를 수 있다. 그때만 기기에 있는 이름을
+          보여준다 — 그게 유일한 단서다. */}
+      {summary.watched.every((folder) => folder.count === 0) && summary.others.length > 0 && (
+        <p className="m-0 text-sm break-keep text-muted-foreground">
+          폰에 있는 폴더: {summary.others.map((f) => `${f.name} ${f.count}`).join(' · ')}
+        </p>
+      )}
+    </div>
   ) : null;
 
   function handleRegister(candidate) {
@@ -244,7 +230,7 @@ export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
     <Sheet open onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="max-h-[92dvh] gap-0 overflow-y-auto pb-[var(--safe-bottom)]">
         <SheetHeader className="pr-14 pb-1">
-          <SheetTitle>갤러리에서 찾기</SheetTitle>
+          <SheetTitle>기프티콘 찾기</SheetTitle>
         </SheetHeader>
 
         <div className="flex flex-col gap-4 px-5 pt-2">
@@ -337,13 +323,10 @@ export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
                 <div className="flex flex-col items-center gap-2 py-8 text-center">
                   <ImageOff className="size-8 text-muted-foreground" />
                   <p className="m-0 text-base font-semibold text-foreground">
-                    {scanned === 0 ? '새로 담긴 사진이 없어요' : '등록할 만한 게 없었어요'}
+                    {scanned === 0 ? '새로 담긴 사진이 없어요' : '등록할 기프티콘이 없어요'}
                   </p>
-                  <p className="m-0 text-sm leading-relaxed break-keep text-muted-foreground">
-                    {scanned === 0
-                      ? '새로 담긴 사진이 없어요.'
-: `사진 ${scanned}장을 봤어요. 흐린 바코드는 못 찾아요.`}
-                    <br />+ 로 직접 올려주세요.
+                  <p className="m-0 text-base leading-relaxed break-keep text-muted-foreground">
+                    {scanned === 0 ? '+ 로 직접 올려주세요.' : `사진 ${scanned}장을 봤어요. + 로 직접 올려주세요.`}
                   </p>
 
                   {/* 왜 못 찾았는지 짚어준다.
@@ -354,7 +337,7 @@ export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
               ) : (
                 <>
                   <p className="m-0 text-base break-keep text-foreground">
-<b className="font-semibold">{candidates.length}개</b> 찾았어요. 맞는지 보고 등록해주세요.
+<b className="font-semibold">{candidates.length}개</b> 찾았어요. 확인 후 등록해주세요.
                   </p>
                   <ul className="m-0 flex list-none flex-col gap-2 p-0">
                     {candidates.map((candidate) => (
@@ -411,35 +394,42 @@ export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
                   알 길이 없다. 두 번째부터는 지난번 이후만 보기 때문에 더 그렇다. */}
               {complete && formatDay(since) && (
                 <p className="m-0 text-sm leading-relaxed break-keep text-muted-foreground">
-<b className="font-semibold text-foreground">{formatDay(since)} 0시</b> 이후 사진만 봐요. 그 전 것은 + 로
+<b className="font-semibold text-foreground">{formatDay(since)} 0시</b> 이후 사진만 봐요. 이전 사진은 + 로
                   올려주세요.
                 </p>
               )}
 
               {panelBody}
 
+              {/* 두 버튼의 차이를 이름에 담는다. 둘 다 설치일 0시부터 보되, 위는 아직
+                  확인하지 않은 것만, 아래는 아니라고 봤던 것까지 전부 본다.
+                  '새 기프티콘' ↔ '전부'가 나란히 놓여 설명 없이 갈린다.
+
+                  예전 이름은 '건너뛴 사진 …'이었는데, 앱이 스스로 무언가를 건너뛰었다고
+                  말하는 셈이라 "뭘 놓친 거지" 하는 의심을 만들었다. 이 앱의 약속은
+                  놓치지 않는 것이고, 실제로 놓친 게 아니라 아니라고 판단한 것이다.
+                  한 일을 그대로 적는다.
+
+                  생김새로도 갈라둔다. 늘 누르는 쪽이 색이 있는 버튼이고, 어쩌다 한 번
+                  쓰는 쪽은 같은 모양의 테두리 버튼이다. 아래쪽을 밑줄 글자로 뒀더니
+                  둘이 다른 종류의 것으로 보이지 않고 그냥 안 보였다. */}
               <div className="flex flex-col gap-2">
-                <Button type="button" variant="outline" size="lg" className="w-full rounded-xl" onClick={() => start()}>
+                <Button type="button" size="lg" className="w-full rounded-xl" onClick={() => start()}>
                   <ScanSearch className="size-4.5" />
                   새 기프티콘 찾기
                 </Button>
 
-                {/* 두 버튼의 차이를 이름에 담는다. 둘 다 설치일 0시부터 보되, 위는 아직
-                    확인하지 않은 것만, 이쪽은 아니라고 봤던 것까지 전부 본다.
-                    '새 기프티콘' ↔ '전부'가 나란히 놓여 설명 없이 갈린다.
-
-                    예전 이름은 '건너뛴 사진 …'이었는데, 앱이 스스로 무언가를 건너뛰었다고
-                    말하는 셈이라 "뭘 놓친 거지" 하는 의심을 만들었다. 이 앱의 약속은
-                    놓치지 않는 것이고, 실제로 놓친 게 아니라 아니라고 판단한 것이다.
-                    한 일을 그대로 적는다. */}
                 {skipped > 0 && (
-                  <button
+                  <Button
                     type="button"
+                    variant="outline"
+                    size="lg"
+                    className="w-full rounded-xl"
                     onClick={() => start({ forgetHistory: true })}
-                    className="w-full py-2 text-sm text-muted-foreground underline"
                   >
+                    <RotateCcw className="size-4.5" />
                     전부 다시 찾기
-                  </button>
+                  </Button>
                 )}
               </div>
             </>

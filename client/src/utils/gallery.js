@@ -300,12 +300,36 @@ async function decodeBarcode(base64) {
   const height = image.naturalHeight;
   const longEdge = Math.max(width, height);
 
-  for (const attempt of DECODE_ATTEMPTS) {
-    // 키운 뒤에도 상한 안에 있어야 한다. 상한을 나중에 걸지 않으면 큰 사진이 두 배로
-    // 부풀어 그 한 장에 몇 초씩 걸린다.
-    const target = Math.min(attempt.maxLongEdge, longEdge * attempt.upscale);
-    const found = await decodeAt(image, width, height, target / longEdge, attempt.tryHarder);
-    if (found) return found;
+  // 키운 뒤에도 상한 안에 있어야 한다. 상한을 나중에 걸지 않으면 큰 사진이 두 배로
+  // 부풀어 그 한 장에 몇 초씩 걸린다.
+  const scaleOf = (attempt) => Math.min(attempt.maxLongEdge, longEdge * attempt.upscale) / longEdge;
+
+  for (let i = 0; i < DECODE_ATTEMPTS.length; i += 1) {
+    const attempt = DECODE_ATTEMPTS[i];
+    const found = await decodeAt(image, width, height, scaleOf(attempt), attempt.tryHarder);
+    if (!found) continue;
+
+    // 읽혔다고 바로 믿지 않는다.
+    //
+    // 실제로 한 자리가 틀린 채 등록된 일이 있었다(스타벅스 교환권 7 → 2). 막대를 읽는
+    // 일은 사진을 줄여서 하기 때문에, 압축 자국에 한 칸이 뭉개지면 다른 숫자가 나온다.
+    // 형식에 검산 자리가 없으면 걸러지지도 않는다. 그러면 같은 기프티콘이 두 번호로
+    // 읽혀 후보가 둘로 갈리고, 그대로 두 건이 등록된다.
+    //
+    // 그래서 조건을 바꿔 한 번 더 읽고, 두 번 다 같은 값일 때만 그대로 쓴다. 갈리면
+    // 더 크게·더 정밀하게 읽은 쪽을 택한다.
+    //
+    // 이 확인은 바코드가 있는 사진에서만 돈다. 그런 사진은 한 번 훑을 때 몇 장뿐이고,
+    // 바코드가 없는 대부분의 사진은 어차피 지금도 두 시도를 다 돈다. 훑기 속도에
+    // 영향이 없는 이유다.
+    const stronger = DECODE_ATTEMPTS[i + 1];
+    // 마지막 시도에서 읽혔으면 그게 이미 가장 정밀한 판독이다. 더 확인할 방법이 없다.
+    if (!stronger) return found;
+
+    const again = await decodeAt(image, width, height, scaleOf(stronger), stronger.tryHarder);
+    // 두 번째로는 못 읽었다. 확인은 못 했지만 읽은 것은 읽은 것이다.
+    if (!again) return found;
+    return again.code === found.code ? found : again;
   }
 
   // 어느 크기로도 못 읽었다. 바코드가 없는 사진이다 — 대부분 여기로 온다.
