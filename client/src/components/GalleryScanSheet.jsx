@@ -13,6 +13,7 @@ import {
   getGalleryStatus,
   requestGalleryAccess,
   scanGallery,
+  deepScan,
 } from '../utils/gallery';
 import { createGifticon, findGifticonByCode } from '../api';
 import { prepareImages, readGifticonInfo } from '../utils/imageAnalyze';
@@ -154,6 +155,9 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
   const [tally, setTally] = useState(null);
   // 정보를 읽는 데 걸린 시간(밀리초). 훑기 시간은 tally.elapsedMs에 들어 있다.
   const [readMs, setReadMs] = useState(0);
+  // 결과를 보여준 뒤에도 뒤에서 도는 정밀 탐색. 도는 중인지와, 거기서 걸린 시간.
+  const [digging, setDigging] = useState(false);
+  const [deepMs, setDeepMs] = useState(0);
   // 끝까지 훑었는지. 중간에 그만뒀으면 "여기까지 봤다"고 적으면 안 된다 —
   // 못 본 사진들이 다음 번에 통째로 건너뛰어진다.
   const [complete, setComplete] = useState(false);
@@ -162,6 +166,8 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
   const [saving, setSaving] = useState(null);
   const [result, setResult] = useState(null);
   const abortRef = useRef(null);
+  // 얕은 판에서 잡은 후보. 깊은 판이 같은 번호를 또 만들지 않게 넘겨준다.
+  const found0Ref = useRef([]);
 
   // 창을 닫는 순간 하던 일을 멈춘다. 안 그러면 닫은 뒤에도 계속 읽어서 폰이 더워지고
   // 배터리와 돈만 쓴다.
@@ -200,6 +206,9 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
     setDismissedIds([]);
     setVoucherIds([]);
     setResult(null);
+    setDeepMs(0);
+    setDigging(false);
+    found0Ref.current = [];
     setProgress({ scanned: 0, total: 0, found: 0 });
 
     const controller = new AbortController();
@@ -207,6 +216,7 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
     abortRef.current = controller;
 
     let found = [];
+    let pending = [];
     try {
       const scan = await scanGallery({
         signal: controller.signal,
@@ -224,6 +234,7 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
       });
       if (controller.signal.aborted) return;
       found = scan.candidates;
+      pending = scan.pending ?? [];
       setScanned(scan.scanned ?? 0);
       setSince(scan.since ?? 0);
       setFolders(scan.folders ?? []);
@@ -239,6 +250,47 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
     }
 
     await readAll(found, controller);
+
+    // 여기서부터는 사용자가 이미 목록을 보고 있다. 못 찾은 사진을 정밀 탐색으로 한 번 더
+    // 뒤진다 — 무거운 일이지만 기다리게 하지는 않는다.
+    await digDeeper(pending, controller);
+  }
+
+  /**
+   * 얕은 판에서 못 찾은 사진을 정밀 탐색으로 다시 본다.
+   *
+   * 결과 화면이 뜬 뒤에 돈다. 여기서 나오는 것은 정보까지 읽어서 목록에 얹는다.
+   * 사용자가 그 사이에 등록을 눌러도 상관없다 — 얹히는 건 새로 찾은 것뿐이다.
+   */
+  async function digDeeper(pending, controller) {
+    if (!pending?.length || controller.signal.aborted) return;
+    const startedAt = Date.now();
+    setDigging(true);
+
+    try {
+      const deep = await deepScan({
+        pending,
+        signal: controller.signal,
+        // 얕은 판에서 이미 잡은 번호는 또 만들지 않는다.
+        skipCodes: new Set(found0Ref.current.map((c) => c.code)),
+        isRegistered: async (code) => {
+          try {
+            return Boolean(await findGifticonByCode(family.id, code));
+          } catch {
+            return false;
+          }
+        },
+      });
+      if (controller.signal.aborted) return;
+      setDeepMs(Date.now() - startedAt);
+      if (deep.candidates.length > 0) {
+        setCandidates((prev) => [...prev, ...deep.candidates]);
+        found0Ref.current = [...found0Ref.current, ...deep.candidates];
+        await readAll(deep.candidates, controller, { append: true });
+      }
+    } finally {
+      if (!controller.signal.aborted) setDigging(false);
+    }
   }
 
   /**
@@ -265,11 +317,14 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
    * 여럿을 함께 읽되(READ_CONCURRENCY) 끝나는 대로 목록에 채워 넣는다. 다 읽을 때까지
    * 기다렸다가 한꺼번에 보여주면 그동안 화면이 비어 있는데, 이 단계가 가장 오래 걸린다.
    */
-  async function readAll(found, controller) {
+  async function readAll(found, controller, { append = false } = {}) {
     const startedAt = Date.now();
-    setStage('reading');
-    setCandidates(found);
-    setProgress({ scanned: 0, total: found.length, found: found.length });
+    if (!append) {
+      setStage('reading');
+      setCandidates(found);
+      found0Ref.current = found;
+      setProgress({ scanned: 0, total: found.length, found: found.length });
+    }
 
     const queue = [...found];
     let finished = 0;
@@ -282,6 +337,9 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
         if (controller.signal.aborted) return;
 
         setCandidates((prev) => prev.map((item) => (item.id === candidate.id ? { ...item, ...read } : item)));
+        found0Ref.current = found0Ref.current.map((item) =>
+          item.id === candidate.id ? { ...item, ...read } : item
+        );
         // 읽어낸 것이 금액권으로 보이면 그 자리에서 켜준다. 확실하지 않으니 끌 수 있게
         // 두되, 열 개 중 여덟이 맞는 판단을 매번 손으로 켜게 하는 것도 일이다.
         if (read.info?.isVoucher && read.info?.amount) {
@@ -289,13 +347,15 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
         }
 
         finished += 1;
-        setProgress({ scanned: finished, total: found.length, found: found.length });
+        if (!append) setProgress({ scanned: finished, total: found.length, found: found.length });
       }
     }
 
     await Promise.all(Array.from({ length: Math.min(READ_CONCURRENCY, found.length) }, worker));
 
     if (controller.signal.aborted) return;
+    // 뒤에서 도는 판은 화면 단계를 건드리지 않는다. 사용자가 이미 목록을 보고 있다.
+    if (append) return;
     setReadMs(Date.now() - startedAt);
     setStage('done');
     setProgress(null);
@@ -469,6 +529,12 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
           <dd className="m-0 tabular-nums text-foreground">{formatSeconds(tally.elapsedMs)}</dd>
           <dt className="text-muted-foreground">정보 읽기</dt>
           <dd className="m-0 tabular-nums text-foreground">{formatSeconds(readMs)}</dd>
+          {deepMs > 0 && (
+            <>
+              <dt className="text-muted-foreground">흐린 사진 더 찾기</dt>
+              <dd className="m-0 tabular-nums text-foreground">{formatSeconds(deepMs)}</dd>
+            </>
+          )}
         </dl>
 
         {/* 셋 다 0장이면 사진첩 이름이 우리 목록과 다를 수 있다. 그때만 기기에 있는
@@ -819,6 +885,16 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
                     </ul>
                   )}
                 </>
+              )}
+
+              {/* 결과를 이미 보여준 뒤에도 정밀 탐색이 뒤에서 돈다. 아무 말도 없으면
+                  다 끝난 줄 알고 창을 닫는데, 그러면 거기서 나올 것이 사라진다.
+                  막지는 않는다 — 지금 목록으로도 등록할 수 있다. */}
+              {digging && (
+                <p className="m-0 flex items-center gap-2 text-sm break-keep text-muted-foreground">
+                  <Loader2 className="size-3.5 shrink-0 animate-spin" />
+                  흐린 사진도 더 찾아보는 중이에요
+                </p>
               )}
 
               {panelBody}

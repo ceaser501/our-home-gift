@@ -127,19 +127,40 @@ function isOriginal(bucket) {
 // 아래 시도들이 이 안에서 줄이고 키우므로, 여기서는 넉넉히 받아만 둔다.
 const READ_EDGE = 2000;
 
-// 두 번 시도한다. 크기를 재서 판단하지 않되, 매번 쓰는 힘은 다르게 둔다.
+// 바코드를 읽는 세 가지 조건.
 //
-// 대부분의 기프티콘은 1차에서 잡힌다. 그래서 1차는 가볍게 — 적당히 줄이고, 정밀 탐색도
-// 쓰지 않는다. 여기서 못 잡은 것만 2차에서 키우고 정밀 탐색까지 켠다.
+// 예전에는 두 번 시도했다. 1600으로 줄여 한 번, 못 찾으면 3200으로 키우고 정밀 탐색까지
+// 켜서 또 한 번. 그런데 바코드가 없는 사진도 두 번째를 다 돌았다 — 밥 사진 스무 장이면
+// 없는 것을 찾으려고 가장 무거운 작업을 스무 번 돌린 셈이다. 시간의 대부분이 거기 갔다.
 //
-// 2차에 상한을 두는 것이 중요하다. 처음에는 "원본의 두 배"라고만 해뒀는데, 1080x2400짜리
-// 스크린샷이 2160x4800(1040만 화소)이 됐다. 바코드 없는 사진마다 그걸 그리고 정밀 탐색까지
-// 도니 훑기가 눈에 띄게 느려지고 진행 표시가 뚝뚝 끊겼다. 키우는 건 작은 이미지를 구제하려는
-// 것이지 큰 이미지를 더 키우려는 게 아니다.
-const DECODE_ATTEMPTS = [
-  { maxLongEdge: 1600, upscale: 1, tryHarder: false },
-  { maxLongEdge: 3200, upscale: 2, tryHarder: true },
-];
+// 그렇다고 두 번째를 없앨 수는 없었다. 첫 번째가 '줄이기만' 했기 때문이다. 기프티쇼에서
+// 받은 가로 660px짜리 그림은 줄일 것이 없어 그대로 읽혔고, 막대가 뭉개져 못 읽었다.
+// 그걸 살린 게 두 번째의 2배 확대였다.
+//
+// 그래서 나눈다. 작은 것을 키우는 일은 싸다 — 그건 첫 번째로 옮겼다(작으면 키우고 크면
+// 줄여, 어느 쪽이든 1600에 맞춘다). 남은 정밀 탐색만 뒤로 미룬다.
+const SHALLOW = { longEdge: 1600, tryHarder: false };
+
+// 확인용. 읽어낸 값이 맞는지 다른 배율로 한 번 더 본다.
+//
+// 실제로 한 자리가 틀린 채 등록된 일이 있었다(스타벅스 교환권 7 → 2). 막대를 읽는 일은
+// 사진을 줄여서 하기 때문에, 압축 자국에 한 칸이 뭉개지면 다른 숫자가 나온다. 형식에
+// 검산 자리가 없으면 걸러지지도 않는다.
+//
+// 정밀 탐색은 쓰지 않는다. 여기서 필요한 건 '더 잘 읽는 것'이 아니라 '다른 조건으로도
+// 같은 값이 나오는지'라서, 배율만 달리하면 목적을 이룬다. 예전에는 이 확인에 가장 무거운
+// 조건을 썼는데 그럴 이유가 없었다.
+const VERIFY = { longEdge: 2000, tryHarder: false };
+
+// 정밀 탐색. 느린 대신 흐린 것을 살린다.
+//
+// 결과를 보여준 다음에 조용히 돈다. 찾는 능력은 그대로 두고 기다리는 자리만 옮긴 것이라,
+// 놓치는 것은 없고 사용자는 먼저 목록을 본다.
+//
+// 한때 2400으로 내려볼까 했는데 그만뒀다. 무게를 줄이려던 것인데, 뒤에서 도는 이상
+// 무거워도 사용자를 기다리게 하지 않는다. 놓치지 않는 것이 이 기능의 약속이라, 기다림을
+// 만들지 않는 자리에서까지 찾는 힘을 깎을 이유가 없다.
+const DEEP = { longEdge: 3200, tryHarder: true };
 
 // 아니라고 한 사진을 기억해둔다. 안 그러면 훑을 때마다 같은 것을 계속 다시 묻는다.
 const DISMISSED_KEY = 'moacon:gallery-dismissed';
@@ -288,52 +309,34 @@ function barcodeCoverage(points, width) {
   return (Math.max(...xs) - Math.min(...xs)) / width;
 }
 
-async function decodeBarcode(base64) {
-  const image = await new Promise((resolve, reject) => {
+async function loadImage(base64) {
+  return new Promise((resolve, reject) => {
     const el = new Image();
     el.onload = () => resolve(el);
     el.onerror = reject;
     el.src = `data:image/jpeg;base64,${base64}`;
   });
+}
 
+// 작으면 키우고 크면 줄여, 어느 쪽이든 목표 크기에 맞춘다.
+function scaleTo(width, height, longEdgeTarget) {
+  return longEdgeTarget / Math.max(width, height);
+}
+
+async function decodeBarcode(base64, pass = SHALLOW) {
+  const image = await loadImage(base64);
   const width = image.naturalWidth;
   const height = image.naturalHeight;
-  const longEdge = Math.max(width, height);
 
-  // 키운 뒤에도 상한 안에 있어야 한다. 상한을 나중에 걸지 않으면 큰 사진이 두 배로
-  // 부풀어 그 한 장에 몇 초씩 걸린다.
-  const scaleOf = (attempt) => Math.min(attempt.maxLongEdge, longEdge * attempt.upscale) / longEdge;
+  const found = await decodeAt(image, width, height, scaleTo(width, height, pass.longEdge), pass.tryHarder);
+  if (!found) return null;
 
-  for (let i = 0; i < DECODE_ATTEMPTS.length; i += 1) {
-    const attempt = DECODE_ATTEMPTS[i];
-    const found = await decodeAt(image, width, height, scaleOf(attempt), attempt.tryHarder);
-    if (!found) continue;
-
-    // 읽혔다고 바로 믿지 않는다.
-    //
-    // 실제로 한 자리가 틀린 채 등록된 일이 있었다(스타벅스 교환권 7 → 2). 막대를 읽는
-    // 일은 사진을 줄여서 하기 때문에, 압축 자국에 한 칸이 뭉개지면 다른 숫자가 나온다.
-    // 형식에 검산 자리가 없으면 걸러지지도 않는다. 그러면 같은 기프티콘이 두 번호로
-    // 읽혀 후보가 둘로 갈리고, 그대로 두 건이 등록된다.
-    //
-    // 그래서 조건을 바꿔 한 번 더 읽고, 두 번 다 같은 값일 때만 그대로 쓴다. 갈리면
-    // 더 크게·더 정밀하게 읽은 쪽을 택한다.
-    //
-    // 이 확인은 바코드가 있는 사진에서만 돈다. 그런 사진은 한 번 훑을 때 몇 장뿐이고,
-    // 바코드가 없는 대부분의 사진은 어차피 지금도 두 시도를 다 돈다. 훑기 속도에
-    // 영향이 없는 이유다.
-    const stronger = DECODE_ATTEMPTS[i + 1];
-    // 마지막 시도에서 읽혔으면 그게 이미 가장 정밀한 판독이다. 더 확인할 방법이 없다.
-    if (!stronger) return found;
-
-    const again = await decodeAt(image, width, height, scaleOf(stronger), stronger.tryHarder);
-    // 두 번째로는 못 읽었다. 확인은 못 했지만 읽은 것은 읽은 것이다.
-    if (!again) return found;
-    return again.code === found.code ? found : again;
-  }
-
-  // 어느 크기로도 못 읽었다. 바코드가 없는 사진이다 — 대부분 여기로 온다.
-  return null;
+  // 읽혔다고 바로 믿지 않는다. 조건을 바꿔 한 번 더 읽고, 두 번 다 같은 값일 때만 그대로
+  // 쓴다. 갈리면 확인 쪽을 택한다. 두 번째로는 못 읽었다면 확인은 못 한 것이지만, 읽은
+  // 것은 읽은 것이다.
+  const again = await decodeAt(image, width, height, scaleTo(width, height, VERIFY.longEdge), VERIFY.tryHarder);
+  if (!again) return found;
+  return again.code === found.code ? found : again;
 }
 
 async function decodeAt(image, width, height, scale, tryHarder) {
@@ -364,11 +367,135 @@ async function decodeAt(image, width, height, scale, tryHarder) {
 }
 
 /**
- * 갤러리를 훑어 등록할 만한 후보를 돌려준다.
+ * 사진 목록을 훑어 후보를 모은다. 얕은 판과 깊은 판이 같은 이 함수를 쓴다.
  *
- * isRegistered(code) — 이미 등록된 번호인지 묻는 함수. 화면 쪽에서 넘긴다.
- * onProgress({ scanned, total, found }) — 몇 장을 봤는지. 수십 초 걸릴 수 있어서,
- *   진행이 보이지 않으면 멈춘 것처럼 느껴진다.
+ * pass          — 어떤 조건으로 읽을지(SHALLOW / DEEP).
+ * isRegistered  — 이미 등록된 번호인지 묻는 함수. 화면 쪽에서 넘긴다.
+ * skipCodes     — 이미 후보로 잡아둔 번호. 깊은 판에서 같은 것을 또 만들지 않는다.
+ */
+async function collect({ images, pass, isRegistered, skipCodes, onProgress, signal }) {
+  const candidates = [];
+  // 바코드 값 → 그 값을 가진 후보. 같은 기프티콘의 사진 여러 장을 한 후보로 모은다.
+  const seenCodes = new Map();
+  // 이미 등록되어 있다고 확인된 번호. 사진이 아니라 번호로 모은다.
+  //
+  // 세는 단위가 중요하다. 예전에는 사진을 셌는데, 같은 기프티콘을 원본과 캡처로 두 장
+  // 갖고 있으면 2로 세어졌다. 화면에는 그게 "이미 등록됨 3"으로 나가고, 읽는 사람은
+  // 기프티콘 세 개로 받아들인다. 실제로는 하나일 수 있다.
+  //
+  // 같은 번호를 다시 묻지 않게 되는 것도 덤이다 — 예전에는 같은 기프티콘 사진마다
+  // 서버에 한 번씩 물었다.
+  const knownCodes = new Set();
+  // 이 판에서 바코드를 못 찾은 사진. 얕은 판에서는 깊은 판으로 넘기고, 깊은 판에서는
+  // '바코드 없음'으로 적어 다음부터 건너뛴다.
+  const missed = [];
+  let readFailed = 0;
+
+  for (const [index, image] of images.entries()) {
+    if (signal?.aborted) break;
+    onProgress?.({ scanned: index, total: images.length, found: candidates.length });
+    // 한 박자 쉬어 화면이 그려지게 한다. 바로 다음 사진을 읽어버리면 진행 표시를 바꿔놓고도
+    // 그릴 틈이 없어서, 막대가 뚝뚝 끊겨 멈춘 것처럼 보인다.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    let read;
+    try {
+      read = await MoaconGallery.readImage({ id: String(image.id), maxEdge: READ_EDGE });
+    } catch {
+      // 한 장을 못 읽는다고 전체가 멈추면 안 된다. 너무 큰 사진이거나 지워진 것이다.
+      readFailed += 1;
+      continue;
+    }
+
+    // decodeBarcode는 사진을 못 여는 경우 예외를 낸다. 이걸 잡지 않으면 그 한 장 때문에
+    // 훑기 전체가 중단되고, 사용자에게는 이유 없이 "훑지 못했어요"만 뜬다.
+    let found = null;
+    try {
+      found = await decodeBarcode(read.data, pass);
+    } catch {
+      readFailed += 1;
+      continue;
+    }
+    if (!found?.code) {
+      missed.push(image);
+      continue;
+    }
+
+    // 같은 기프티콘을 여러 장 갖고 있는 경우가 흔하다 — 카카오톡에서 받은 원본을
+    // 저장해두고, 계산대에서 쓰려고 바코드만 크게 띄워 캡처해두는 식이다.
+    //
+    // 예전에는 두 번째 것을 그냥 버렸는데, 그러면 어느 한 장만 남는다. 바코드만 찍힌
+    // 캡처에는 유효기간도 금액도 없어서, 그게 남으면 기한을 알 길이 없어진다.
+    // 이제는 함께 들고 있다가 등록할 때 같이 넘긴다.
+    const already = seenCodes.get(found.code);
+    if (already) {
+      if (already.images.length < COLLECT_PER_CODE) {
+        already.images.push({ data: read.data, bucket: image.bucket, coverage: found.coverage });
+      }
+      continue;
+    }
+    // 얕은 판에서 이미 후보로 잡은 번호는 깊은 판에서 다시 만들지 않는다.
+    if (skipCodes?.has(found.code)) continue;
+    // 같은 번호를 이미 등록된 것으로 판정했으면 다시 묻지 않는다.
+    if (knownCodes.has(found.code)) continue;
+    if (isRegistered && (await isRegistered(found.code))) {
+      knownCodes.add(found.code);
+      continue;
+    }
+
+    const candidate = {
+      id: image.id,
+      name: image.name,
+      bucket: image.bucket,
+      addedAt: image.addedAt,
+      code: found.code,
+      codeType: found.codeType,
+      // 미리보기와 등록에 그대로 쓴다. 다시 읽지 않기 위해 들고 있는다.
+      // 같은 번호의 사진이 더 나오면 여기에 붙고, 마지막에 골라낸다.
+      images: [{ data: read.data, bucket: image.bucket, coverage: found.coverage }],
+    };
+    seenCodes.set(found.code, candidate);
+    candidates.push(candidate);
+  }
+
+  // 모아둔 사진 중 등록에 넘길 것을 고른다.
+  //
+  // 목록은 최근 것부터 오는데, 그대로 앞에서 자르면 나중에 찍은 캡처만 남는다. 원본은
+  // 받은 그날 담기고 캡처는 쓸 때 찍으니 원본이 늘 더 오래됐기 때문이다. 실제로 카카오톡
+  // 원본이 이렇게 밀려나서, 거기 적힌 유효기간을 못 읽는 일이 있었다.
+  candidates.forEach((candidate) => {
+    // 바코드가 너무 작게 찍힌 것은 뺀다. 다만 그것밖에 없으면 그거라도 쓴다 —
+    // 등록 자체가 막히는 것보다는 낫고, 바코드 번호는 이미 읽어놨다.
+    const meaningful = candidate.images.filter((image) => image.coverage >= MIN_BARCODE_COVERAGE);
+    const usable = meaningful.length > 0 ? meaningful : candidate.images;
+
+    // 원본이 하나라도 있으면 캡처는 아예 보내지 않는다.
+    //
+    // 원본에는 상품명·금액·유효기간이 다 적혀 있어서 캡처가 더해줄 게 없다. 반면 해가 될
+    // 수는 있다 — 목록 화면을 찍은 캡처에는 다른 기프티콘의 유효기간이 같이 찍혀 있고,
+    // 실제로 그 날짜가 이 기프티콘의 기한으로 들어간 적이 있다.
+    //
+    // 빈칸으로 남는 것보다 틀린 값이 들어가는 쪽이 나쁘다. 기한이 틀리면 알림이 엉뚱한
+    // 날에 오고, 정작 만료되는 날에는 아무 말이 없다.
+    const originals = usable.filter((image) => isOriginal(image.bucket));
+    const pool = originals.length > 0 ? originals : usable;
+
+    const sorted = [...pool].sort((a, b) => b.coverage - a.coverage);
+    candidate.images = sorted.slice(0, IMAGES_PER_CODE).map((image) => image.data);
+  });
+
+  onProgress?.({ scanned: images.length, total: images.length, found: candidates.length });
+  return { candidates, missed, knownCodes, readFailed };
+}
+
+/**
+ * 갤러리를 훑어 등록할 만한 후보를 돌려준다. 여기서는 가벼운 조건으로만 읽는다.
+ *
+ * 못 찾은 사진은 pending으로 함께 돌려준다. 화면이 결과를 보여준 뒤 deepScan으로
+ * 한 번 더 뒤지라는 뜻이다 — 무거운 정밀 탐색이 사용자를 기다리게 하지 않도록.
+ *
+ * 여기서는 '바코드 없음'을 적지 않는다. 아직 다 본 것이 아니라서, 지금 적으면 깊은 판이
+ * 그 사진들을 영영 못 본다.
  */
 export async function scanGallery({ isRegistered, onProgress, signal } = {}) {
   // 얼마나 걸렸는지 잰다. "느리다"는 말을 들었을 때 어디가 느린지 알아야 고칠 데를
@@ -398,136 +525,52 @@ export async function scanGallery({ isRegistered, onProgress, signal } = {}) {
   const fresh = images.filter(
     (image) => !dismissed.has(String(image.id)) && !noBarcode.has(String(image.id))
   );
-  const foundNoBarcode = [];
 
-  const candidates = [];
-  // 바코드 값 → 그 값을 가진 후보. 같은 기프티콘의 사진 여러 장을 한 후보로 모은다.
-  const seenCodes = new Map();
-  // 이미 등록되어 있다고 확인된 번호. 사진이 아니라 번호로 모은다.
-  //
-  // 세는 단위가 중요하다. 예전에는 사진을 셌는데, 같은 기프티콘을 원본과 캡처로 두 장
-  // 갖고 있으면 2로 세어졌다. 화면에는 그게 "이미 등록됨 3"으로 나가고, 읽는 사람은
-  // 기프티콘 세 개로 받아들인다. 실제로는 하나일 수 있다.
-  //
-  // 같은 번호를 다시 묻지 않게 되는 것도 덤이다 — 예전에는 같은 기프티콘 사진마다
-  // 서버에 한 번씩 물었다.
-  const knownCodes = new Set();
-  // 왜 못 찾았는지 알려주기 위한 집계.
-  const tally = { readFailed: 0 };
-
-  for (const [index, image] of fresh.entries()) {
-    if (signal?.aborted) break;
-    onProgress?.({ scanned: index, total: fresh.length, found: candidates.length });
-    // 한 박자 쉬어 화면이 그려지게 한다. 바로 다음 사진을 읽어버리면 진행 표시를 바꿔놓고도
-    // 그릴 틈이 없어서, 막대가 뚝뚝 끊겨 멈춘 것처럼 보인다.
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    let read;
-    try {
-      read = await MoaconGallery.readImage({ id: String(image.id), maxEdge: READ_EDGE });
-    } catch {
-      // 한 장을 못 읽는다고 전체가 멈추면 안 된다. 너무 큰 사진이거나 지워진 것이다.
-      tally.readFailed += 1;
-      continue;
-    }
-
-
-    // decodeBarcode는 사진을 못 여는 경우 예외를 낸다. 이걸 잡지 않으면 그 한 장 때문에
-    // 훑기 전체가 중단되고, 사용자에게는 이유 없이 "훑지 못했어요"만 뜬다.
-    let found = null;
-    try {
-      found = await decodeBarcode(read.data);
-    } catch {
-      tally.readFailed += 1;
-      continue;
-    }
-    if (!found?.code) {
-      foundNoBarcode.push(image.id);
-      continue;
-    }
-
-    // 같은 기프티콘을 여러 장 갖고 있는 경우가 흔하다 — 카카오톡에서 받은 원본을
-    // 저장해두고, 계산대에서 쓰려고 바코드만 크게 띄워 캡처해두는 식이다.
-    //
-    // 예전에는 두 번째 것을 그냥 버렸는데, 그러면 어느 한 장만 남는다. 바코드만 찍힌
-    // 캡처에는 유효기간도 금액도 없어서, 그게 남으면 기한을 알 길이 없어진다.
-    // 이제는 함께 들고 있다가 등록할 때 같이 넘긴다 — 직접 올릴 때 여러 장을 올리면
-    // 각 장에서 찾은 정보를 합쳐주는 것과 같은 길이다(client/src/utils/imageAnalyze.js).
-    const already = seenCodes.get(found.code);
-    if (already) {
-      if (already.images.length < COLLECT_PER_CODE) {
-        already.images.push({ data: read.data, bucket: image.bucket, coverage: found.coverage });
-      }
-      continue;
-    }
-    // 같은 번호를 이미 등록된 것으로 판정했으면 다시 묻지 않는다.
-    if (knownCodes.has(found.code)) continue;
-    if (isRegistered && (await isRegistered(found.code))) {
-      knownCodes.add(found.code);
-      continue;
-    }
-
-    const candidate = {
-      id: image.id,
-      name: image.name,
-      bucket: image.bucket,
-      addedAt: image.addedAt,
-      code: found.code,
-      codeType: found.codeType,
-      // 미리보기와 등록에 그대로 쓴다. 다시 읽지 않기 위해 들고 있는다.
-      // 같은 번호의 사진이 더 나오면 여기에 붙고, 마지막에 골라낸다.
-      images: [{ data: read.data, bucket: image.bucket, coverage: found.coverage }],
-    };
-    seenCodes.set(found.code, candidate);
-    candidates.push(candidate);
-  }
-
-  // 모아둔 사진 중 등록에 넘길 것을 고른다.
-  //
-  // 목록은 최근 것부터 오는데, 그대로 앞에서 자르면 나중에 찍은 캡처만 남는다. 원본은
-  // 받은 그날 담기고 캡처는 쓸 때 찍으니 원본이 늘 더 오래됐기 때문이다. 실제로 카카오톡
-  // 원본이 이렇게 밀려나서, 거기 적힌 유효기간을 못 읽는 일이 있었다.
-  // 그래서 자르기 전에 원본 폴더에 있던 것을 앞으로 당긴다.
-  candidates.forEach((candidate) => {
-    // 바코드가 너무 작게 찍힌 것은 뺀다. 다만 그것밖에 없으면 그거라도 쓴다 —
-    // 등록 자체가 막히는 것보다는 낫고, 바코드 번호는 이미 읽어놨다.
-    const meaningful = candidate.images.filter((image) => image.coverage >= MIN_BARCODE_COVERAGE);
-    const usable = meaningful.length > 0 ? meaningful : candidate.images;
-
-    // 원본이 하나라도 있으면 캡처는 아예 보내지 않는다.
-    //
-    // 원본에는 상품명·금액·유효기간이 다 적혀 있어서 캡처가 더해줄 게 없다. 반면 해가 될
-    // 수는 있다 — 목록 화면을 찍은 캡처에는 다른 기프티콘의 유효기간이 같이 찍혀 있고,
-    // 실제로 그 날짜가 이 기프티콘의 기한으로 들어간 적이 있다. 바코드 크기로 거르려 했지만
-    // 우리 앱의 바코드 화면을 찍은 캡처는 바코드가 커서 그 그물에 걸리지 않는다.
-    //
-    // 빈칸으로 남는 것보다 틀린 값이 들어가는 쪽이 나쁘다. 기한이 틀리면 알림이 엉뚱한
-    // 날에 오고, 정작 만료되는 날에는 아무 말이 없다.
-    const originals = usable.filter((image) => isOriginal(image.bucket));
-    const pool = originals.length > 0 ? originals : usable;
-
-    const sorted = [...pool].sort((a, b) => b.coverage - a.coverage);
-    candidate.images = sorted.slice(0, IMAGES_PER_CODE).map((image) => image.data);
+  const { candidates, missed, knownCodes, readFailed } = await collect({
+    images: fresh,
+    pass: SHALLOW,
+    isRegistered,
+    onProgress,
+    signal,
   });
 
-  addIds(NO_BARCODE_KEY, noBarcode, foundNoBarcode);
-
-  onProgress?.({ scanned: fresh.length, total: fresh.length, found: candidates.length });
-  // folders는 기준 시각 이후 기기에 있는 폴더 이름과 장수 전부다(우리가 고른 것 말고).
-  // 폴더 이름이 안 맞아서 못 찾는 경우를 눈으로 확인할 수 있어야 한다 — 이름은 제조사와
-  // 앱 버전마다 달라서, 목록에 없는 이름이 나오면 BUCKETS에 더해주면 된다.
-  // listed는 기준 시각 이후 기기에 있던 사진 수, scanned는 그중 이번에 실제로 연 수다.
-  // 둘이 벌어지는 건 전에 확인해서 기억해둔 것을 건너뛰기 때문인데, 화면에서 그 차이를
-  // 설명하지 못하면 "20장이 있다면서 왜 4장만 봤지?"가 된다.
   // 집계는 기프티콘 단위다. 찾아낸 서로 다른 번호가 몇 개고, 그중 몇 개가 이미 목록에
-  // 있는가. 사진 단위 숫자는 위 폴더 줄이 이미 말하고 있어서, 아래에서 또 세면 두 단위가
+  // 있는가. 사진 단위 숫자는 사진첩 줄이 이미 말하고 있어서, 아래에서 또 세면 두 단위가
   // 섞여 "확인한 사진 4장 / 이미 등록됨 3장"이 기프티콘 세 개로 읽힌다.
-  tally.found = candidates.length + knownCodes.size;
-  tally.alreadyHave = knownCodes.size;
+  const tally = {
+    readFailed,
+    found: candidates.length + knownCodes.size,
+    alreadyHave: knownCodes.size,
+    elapsedMs: Date.now() - startedAt,
+  };
 
-  tally.elapsedMs = Date.now() - startedAt;
+  return { ...status, candidates, pending: missed, scanned: fresh.length, since, folders, tally };
+}
 
-  return { ...status, candidates, scanned: fresh.length, since, folders, tally };
+/**
+ * 얕은 판에서 못 찾은 사진을 정밀 탐색으로 한 번 더 뒤진다.
+ *
+ * 화면이 이미 결과를 보여준 뒤에 조용히 돈다. 여기서 나오는 것은 목록에 얹힌다.
+ * 끝까지 돌았을 때만 '바코드 없음'을 적는다 — 중간에 그만두면 다음에 다시 본다.
+ */
+export async function deepScan({ pending, isRegistered, skipCodes, onProgress, signal } = {}) {
+  if (!pending?.length) return { candidates: [], elapsedMs: 0 };
+  const startedAt = Date.now();
+
+  const { candidates, missed } = await collect({
+    images: pending,
+    pass: DEEP,
+    isRegistered,
+    skipCodes,
+    onProgress,
+    signal,
+  });
+
+  if (!signal?.aborted) {
+    addIds(NO_BARCODE_KEY, readIdSet(NO_BARCODE_KEY), missed.map((image) => image.id));
+  }
+
+  return { candidates, elapsedMs: Date.now() - startedAt };
 }
 
 // 후보를 등록 창에 넘길 수 있는 파일들로 바꾼다.
