@@ -16,7 +16,6 @@ import {
 } from '../utils/gallery';
 import { createGifticon, findGifticonByCode } from '../api';
 import { prepareImages, readGifticonInfo } from '../utils/imageAnalyze';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { useFamily } from '../FamilyContext';
 import useBackClose from '../utils/useBackClose';
 import { cn } from '@/lib/utils';
@@ -37,15 +36,6 @@ import { cn } from '@/lib/utils';
 //   scanning— 훑는 중
 //   done    — 다 훑음
 const KOREAN_BUCKETS = FOLDERS.map((folder) => folder.label).join(' · ');
-
-// 내가 받은 기프티콘을 넣는 경우가 가장 많아서 내 이름을 맨 위에 둔다.
-// 다만 가족 것을 대신 넣을 수도 있으니 나머지 구성원도 그대로 아래에 나열한다.
-// (등록 창의 같은 함수와 규칙을 맞춘다 — client/src/components/UploadSheet.jsx)
-function membersWithMeFirst(members, myName) {
-  const me = members.filter((m) => m.display_name === myName);
-  const others = members.filter((m) => m.display_name !== myName);
-  return [...me, ...others];
-}
 
 // 네이티브가 주는 시각은 초 단위다(MediaStore가 그렇게 쓴다). 자바스크립트의 Date는
 // 밀리초라 천 배를 곱해야 한다.
@@ -73,6 +63,8 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
   const [candidates, setCandidates] = useState([]);
   // 이번 창에서 치운 후보. 목록에 흐리게 남겨두고 되돌릴 수 있게 한다.
   const [dismissedIds, setDismissedIds] = useState([]);
+  // 이번에는 빼둘 후보. 치우기와 다르다 — 다음에 찾을 때 다시 올라온다.
+  const [unpickedIds, setUnpickedIds] = useState([]);
   const [scanned, setScanned] = useState(0);
   // 실제로 어느 시각 이후를 봤는지(초). 화면에 적어주기 위한 값이다.
   const [since, setSince] = useState(0);
@@ -87,15 +79,7 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
   // 등록해 넣는 중일 때의 진행 상황과, 다 넣은 뒤의 결과.
   const [saving, setSaving] = useState(null);
   const [result, setResult] = useState(null);
-  // 받은 사람. 사진으로는 알 수 없어서 사람이 고른다. 기본은 나다 — 내가 받은 것을
-  // 넣는 경우가 가장 많다.
-  const [owner, setOwner] = useState('');
   const abortRef = useRef(null);
-
-  // 가족을 다 읽어온 뒤에 기본값이 정해진다.
-  useEffect(() => {
-    if (!owner && myName) setOwner(myName);
-  }, [myName, owner]);
 
   // 창을 닫는 순간 훑기를 멈춘다. 안 그러면 닫은 뒤에도 수십 장을 계속 읽어서
   // 폰이 더워지고 배터리만 쓴다.
@@ -132,6 +116,7 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
     setComplete(false);
     setCandidates([]);
     setDismissedIds([]);
+    setUnpickedIds([]);
     setProgress({ scanned: 0, total: 0, found: 0 });
 
     const controller = new AbortController();
@@ -178,6 +163,12 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
     setDismissedIds((prev) => [...prev, candidate.id]);
   }
 
+  function togglePick(candidate) {
+    setUnpickedIds((prev) =>
+      prev.includes(candidate.id) ? prev.filter((id) => id !== candidate.id) : [...prev, candidate.id]
+    );
+  }
+
   function handleUndismiss(candidate) {
     undismissImages([candidate.id]);
     setDismissedIds((prev) => prev.filter((id) => id !== candidate.id));
@@ -188,7 +179,9 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
   // 지금까지 건너뛰기로 감춰둔 사진 수. 훑기가 끝난 뒤에만 쓰므로 그때 세면 된다.
   const skipped = complete ? countSkipped() : 0;
   // 치우지 않고 남아 있는 후보 수. 등록 버튼에 그대로 적힌다.
-  const keptCount = candidates.filter((candidate) => !dismissedIds.includes(candidate.id)).length;
+  const keptCount = candidates.filter(
+    (candidate) => !dismissedIds.includes(candidate.id) && !unpickedIds.includes(candidate.id)
+  ).length;
 
   // 훑기 결과를 한 상자에 담아 보여준다.
   //
@@ -274,14 +267,15 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
    * 편이 훨씬 번거롭다.
    */
   async function registerAll() {
-    const targets = candidates.filter((candidate) => !dismissedIds.includes(candidate.id));
+    const targets = candidates.filter(
+      (candidate) => !dismissedIds.includes(candidate.id) && !unpickedIds.includes(candidate.id)
+    );
     if (targets.length === 0) return;
 
     setStage('registering');
     setError('');
     const done = [];
     const failed = [];
-    let noName = 0;
     let noExpiry = 0;
 
     for (const [index, candidate] of targets.entries()) {
@@ -290,24 +284,38 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
         const prepared = await prepareImages(candidateToFiles(candidate));
         const info = await readGifticonInfo(prepared);
 
-        // 상품명은 반드시 있어야 저장된다(supabase/schema.sql). 못 읽었으면 상호로
-        // 대신하고, 그것도 없으면 자리만 채워둔다. 여기서 멈추면 사진은 그대로 남고
-        // 등록만 안 되는데, 그건 사용자가 알아채기 어려운 실패다.
-        const name = info.name || info.brand || '이름 없음';
-        if (!info.name) noName += 1;
+        // 없으면 넣지 않는다.
+        //
+        // 처음에는 상품명이 비면 상호로 대신 채워 넣었다. 하지만 그렇게 들어간 것은
+        // 목록에서 무엇인지 알아볼 수 없고, 무엇보다 사용자는 다 들어간 줄 안다.
+        // 조용히 이상한 값을 넣느니 넣지 않고 말하는 쪽이 낫다.
+        //
+        // 이 셋이 없으면 기프티콘 구실을 못 한다 — 번호가 없으면 계산대에서 못 쓰고,
+        // 상품명과 상호가 없으면 목록에서 찾아낼 수가 없다. 유효기한과 금액은 없어도
+        // 쓰는 데 지장이 없어서 여기서 막지 않는다.
+        const code = info.code || candidate.code || null;
+        const missing = [];
+        if (!info.name) missing.push('상품명');
+        if (!info.brand) missing.push('상호');
+        if (!code) missing.push('바코드 번호');
+        if (missing.length > 0) {
+          // 치우지도, 바코드 없음으로 적지도 않는다. 다음에 훑을 때 다시 올라온다.
+          failed.push({ candidate, reason: `${missing.join('·')}을 못 읽었어요` });
+          continue;
+        }
         if (!info.expiresAt) noExpiry += 1;
 
         const saved = await createGifticon(
           family.id,
           {
-            name,
+            name: info.name,
             category: info.category || '기타',
             brand: info.brand || null,
             amount: info.amount ?? '',
-            owner,
-            // 훑을 때 읽은 번호를 뒤에 둔다. 등록 쪽 판독이 실패해도 번호는 남아야 한다 —
-            // 번호가 없으면 계산대에서 쓸 수가 없다.
-            code: info.code || candidate.code || null,
+            // 지금 로그인한 사람 것으로 넣는다. 대신 넣어주는 경우도 그렇게 둔다 —
+            // 누가 받았는지보다 누가 쓰는지가 중요하고, 그건 쓸 때 정해진다.
+            owner: myName || null,
+            code,
             code_type: info.codeType || candidate.codeType || null,
             expires_at: info.expiresAt || null,
             // 금액권은 켜지 않는다. 확실하지 않은 판단을 사람 없이 켜면, 쓸 때마다
@@ -330,12 +338,12 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
       } catch (err) {
         // 하나가 실패해도 나머지는 계속 넣는다. 여기서 멈추면 이미 넣은 것과 못 넣은 것이
         // 섞인 채로 화면만 사라진다.
-        failed.push({ candidate, message: err?.message || '' });
+        failed.push({ candidate, reason: err?.message || '등록하지 못했어요' });
       }
     }
 
     setSaving(null);
-    setResult({ done: done.length, failed: failed.length, noName, noExpiry });
+    setResult({ done: done.length, failed, noExpiry });
     setStage('registered');
     // 목록을 다시 읽게 한다. 방금 넣은 것이 뒤에 보여야 한다.
     if (done.length > 0) onRegistered?.();
@@ -458,27 +466,49 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
 
           {stage === 'registered' && result && (
             <>
-              <div className="flex flex-col items-center gap-2 py-6 text-center">
+              <div className="flex flex-col items-center gap-2 pt-4 pb-2 text-center">
                 <CheckCircle2 className="size-8 text-success" />
-                <p className="m-0 text-lg font-semibold text-foreground">{result.done}개 등록했어요</p>
-                {/* 자동으로 채운 것 중 비어 있는 자리를 짚어준다. 등록은 됐으니 급한 일은
-                    아니지만, 말해주지 않으면 빠진 줄 모르고 지나간다. 특히 유효기한은
-                    비어 있으면 만료 전에 알려줄 수가 없다. */}
-                {(result.noExpiry > 0 || result.noName > 0) && (
+                <p className="m-0 text-lg font-semibold text-foreground">
+                  {result.done > 0 ? `${result.done}개 등록했어요` : '등록한 게 없어요'}
+                </p>
+                {/* 유효기한은 없어도 넣는다. 대신 비었다는 걸 알려준다 — 말해주지 않으면
+                    빠진 줄 모르고 지나가고, 그러면 만료 전에 알려줄 수가 없다. */}
+                {result.noExpiry > 0 && (
                   <p className="m-0 text-base leading-relaxed break-keep text-muted-foreground">
-                    {result.noExpiry > 0 && `유효기한을 못 읽은 게 ${result.noExpiry}개 있어요.`}
-                    {result.noExpiry > 0 && result.noName > 0 && <br />}
-                    {result.noName > 0 && `상품명을 못 읽은 게 ${result.noName}개 있어요.`}
+                    유효기한이 빈 게 {result.noExpiry}개 있어요.
                     <br />
                     목록에서 수정으로 채워주세요.
                   </p>
                 )}
-                {result.failed > 0 && (
-                  <p className="m-0 text-base break-keep text-destructive">
-                    {result.failed}개는 등록하지 못했어요. + 로 직접 올려주세요.
-                  </p>
-                )}
               </div>
+
+              {/* 못 넣은 것을 하나씩 적는다.
+                  개수만 적으면 어느 것이 빠졌는지 알 수 없고, 아예 말하지 않으면 다
+                  들어간 줄 안다. 이 앱은 기프티콘을 놓치지 않겠다는 약속으로 서 있다. */}
+              {result.failed.length > 0 && (
+                <div className="flex flex-col gap-2 rounded-xl border border-warning/40 bg-warning/10 px-3.5 py-3">
+                  <p className="m-0 text-base font-semibold text-foreground">
+                    {result.failed.length}개는 등록하지 못했어요
+                  </p>
+                  <ul className="m-0 flex list-none flex-col gap-2 p-0">
+                    {result.failed.map(({ candidate, reason }) => (
+                      <li key={candidate.id} className="flex items-center gap-2.5">
+                        <img
+                          src={`data:image/jpeg;base64,${candidate.images[0]}`}
+                          alt=""
+                          className="size-10 shrink-0 rounded-lg bg-black object-cover"
+                        />
+                        <span className="flex-1 text-sm break-keep text-foreground">{reason}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  {/* 다음에도 올라온다는 걸 못 박아둔다. 여기서 사라졌다고 생각하면
+                      그 기프티콘은 영영 안 들어간다. */}
+                  <p className="m-0 border-t border-warning/30 pt-2.5 text-sm break-keep text-muted-foreground">
+                    다음에 찾을 때 다시 보여드려요. + 로 직접 올려도 돼요.
+                  </p>
+                </div>
+              )}
 
               <div className="flex flex-col gap-2">
                 <Button type="button" size="lg" className="w-full rounded-xl" onClick={onClose}>
@@ -532,33 +562,29 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
 <b className="font-semibold">{candidates.length}개</b> 찾았어요.
                   </p>
 
-                  {/* 받은 사람만 미리 고른다. 사진에 적혀 있지 않아 모델이 알 수 없고,
-                      가족이 함께 쓰는 앱이라 누구 것인지가 목록의 뼈대다. 나중에
-                      건건이 들어가 고치는 편이 훨씬 번거롭다. */}
-                  <div className="flex items-center gap-3">
-                    <span className="shrink-0 text-base text-muted-foreground">받은 사람</span>
-                    <Select value={owner} onValueChange={setOwner}>
-                      <SelectTrigger className="flex-1">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {membersWithMeFirst(members, myName).map((member) => (
-                          <SelectItem key={member.id ?? member.display_name} value={member.display_name}>
-                            {member.display_name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
                   <ul className="m-0 flex list-none flex-col gap-2 p-0">
                     {candidates.map((candidate) => (
                       <li
                         key={candidate.id}
                         className={cn(
-                          'flex items-center gap-3 rounded-xl border border-border bg-background p-2.5',
+                          'flex items-center gap-2.5 rounded-xl border border-border bg-background p-2.5',
                           dismissedIds.includes(candidate.id) && 'opacity-50'
                         )}
                       >
+                        {/* 이번에 넣을지 고른다. 열 개를 받아도 두어 개는 나중에 넣고
+                            싶을 수 있다. 기본은 전부 켜둔다 — 대개는 다 넣는다.
+                            오른쪽 X와 하는 일이 다르다. 여기서 끄면 이번만 빼는 것이고,
+                            다음에 찾을 때 다시 올라온다. X는 기프티콘이 아니라는 뜻이라
+                            다시 묻지 않는다. 그래서 자리도 왼쪽·오른쪽으로 갈라 뒀다. */}
+                        {!dismissedIds.includes(candidate.id) && (
+                          <input
+                            type="checkbox"
+                            checked={!unpickedIds.includes(candidate.id)}
+                            onChange={() => togglePick(candidate)}
+                            aria-label="이번에 등록"
+                            className="size-5 shrink-0 accent-primary"
+                          />
+                        )}
                         <img
                           src={`data:image/jpeg;base64,${candidate.images[0]}`}
                           alt=""
