@@ -61,6 +61,15 @@ const KOREAN_BUCKETS = FOLDERS.map((folder) => folder.label).join(' · ');
 // 시간뿐이다. 한 번 훑어 나오는 수는 대개 여덟 안쪽이라, 여기까지면 한 물결에 담긴다.
 const READ_CONCURRENCY = 8;
 
+// 찾기가 전체 진행에서 차지하는 몫(%).
+//
+// 사용자에게 이건 한 가지 일이다 — "갤러리에서 기프티콘을 가져와줘". 그걸 두 막대로
+// 나눠 보여줬더니 숫자가 18/20에서 0/6으로 되돌아갔고, 다 온 줄 알았다가 처음부터
+// 다시 시작하는 것처럼 보였다. 실제로는 이어서 하는 일이다.
+//
+// 막대 하나가 끝까지 간다. 재보니 찾기 2.5초 · 읽기 5.5초라 대략 이 비율이다.
+const SCAN_SHARE = 30;
+
 // 등록에 반드시 있어야 하는 것.
 //
 // 번호가 없으면 계산대에서 못 쓰고, 상품명과 상호가 없으면 목록에서 찾아낼 수가 없다.
@@ -340,7 +349,7 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
       // 같은 그림이다. 넉넉하면 아직 움직이는 중에 끝나서 마지막이 자연스럽다.
       // 정확할 필요는 없다. 실제로 끝나는 순간 100%로 채우므로, 이건 그 사이를 메우는 눈금이다.
       const waves = Math.ceil(found.length / READ_CONCURRENCY);
-      setReadBar(4);
+      setReadBar(SCAN_SHARE);
       setReadBarMs(waves * 6500);
       setTimeout(() => setReadBar(92), 60);
     }
@@ -718,10 +727,9 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
               <div className="flex flex-col gap-2 rounded-xl border border-primary/30 bg-primary/5 px-3.5 py-3">
                 <div className="flex items-center gap-2.5">
                   <Loader2 className="size-4 shrink-0 animate-spin text-primary" />
-                  <span className="flex-1 text-base font-semibold text-foreground">
-                    {stage === 'scanning' ? '찾는 중이에요' : '정보를 읽는 중이에요'}
-                    {progress?.total ? ` (${progress.scanned}/${progress.total})` : ''}
-                  </span>
+                  {/* 한 가지 일이라 이름도 하나다. 안에서 무엇을 하는 중인지는 아래 줄과
+                      곧 깔리는 사진들이 말해준다. */}
+                  <span className="flex-1 text-base font-semibold text-foreground">찾는 중이에요</span>
                 </div>
                 <div className="h-1.5 w-full overflow-hidden rounded-full bg-primary/15">
                   <div
@@ -730,9 +738,11 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
                       stage === 'reading'
                         ? { width: `${readBar}%`, transitionDuration: `${readBarMs}ms` }
                         : {
+                            // 찾기는 앞의 몫만 채운다. 여기서 100%까지 갔다가 읽기에서
+                            // 다시 0으로 떨어지면, 다 온 줄 알았다가 처음으로 돌아간다.
                             width: progress?.total
-                              ? `${Math.round((progress.scanned / progress.total) * 100)}%`
-                              : '20%',
+                              ? `${Math.round((progress.scanned / progress.total) * SCAN_SHARE)}%`
+                              : '6%',
                             transitionDuration: '300ms',
                           }
                     }
@@ -740,10 +750,10 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
                 </div>
                 <p className="m-0 text-sm text-muted-foreground">
                   {stage === 'scanning'
-                    ? progress?.found
-                      ? `${progress.found}개 찾았어요`
+                    ? progress?.total
+                      ? `사진 ${progress.scanned}/${progress.total}`
                       : '잠시만요'
-                    : '상품명과 유효기한을 읽고 있어요'}
+                    : `${candidates.length}개 찾았어요`}
                 </p>
               </div>
 
