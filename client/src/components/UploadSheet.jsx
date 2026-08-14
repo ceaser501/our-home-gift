@@ -541,7 +541,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
               번호 칸도 아래에 있으니, 볼 곳만 알려주면 된다. */}
           {codeConflict && (
             <p className="m-0 rounded-xl border border-warning/40 bg-warning/10 px-3.5 py-3 text-sm break-keep text-foreground">
-              <b className="font-semibold">바코드 번호</b>가 사진과 맞는지 봐주세요.
+              <b className="font-semibold">바코드 번호</b>를 확인해주세요.
             </p>
           )}
 
