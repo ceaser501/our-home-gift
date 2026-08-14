@@ -421,12 +421,12 @@ export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
               <div className="flex flex-col gap-2">
                 <Button type="button" variant="outline" size="lg" className="w-full rounded-xl" onClick={() => start()}>
                   <ScanSearch className="size-4.5" />
-                  다시 찾기
+                  새 기프티콘 찾기
                 </Button>
 
-                {/* 두 버튼의 차이를 이름에 담는다.
-                    '다시 찾기'는 아직 안 본 사진을, 이쪽은 전에 기프티콘이 아니라고 본
-                    사진까지 다시 본다.
+                {/* 두 버튼의 차이를 이름에 담는다. 둘 다 설치일 0시부터 보되, 위는 아직
+                    확인하지 않은 것만, 이쪽은 아니라고 봤던 것까지 전부 본다.
+                    '새 기프티콘' ↔ '전부'가 나란히 놓여 설명 없이 갈린다.
 
                     예전 이름은 '건너뛴 사진 …'이었는데, 앱이 스스로 무언가를 건너뛰었다고
                     말하는 셈이라 "뭘 놓친 거지" 하는 의심을 만들었다. 이 앱의 약속은
