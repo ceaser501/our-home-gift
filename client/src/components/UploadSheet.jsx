@@ -137,6 +137,8 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
   const [duplicateName, setDuplicateName] = useState(null);
   // 번호는 다른데 같은 물건으로 보이는 것. 막지 않고 한 번 되묻는다.
   const [lookalike, setLookalike] = useState(null);
+  // 유효기한 없이 저장하려 할 때. 막지 않고 한 번 짚는다.
+  const [noExpiry, setNoExpiry] = useState(false);
   // 방금 고른 사진이 지금 편집 중인 것과 다른 기프티콘일 때, 어떻게 할지 물어보려고 들고 있는다.
   const [mismatch, setMismatch] = useState(null);
   const [progress, setProgress] = useState(null);
@@ -261,13 +263,20 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
       // 같은 기프티콘의 다른 화면이라는 뜻이다(금액만 적힌 상세 화면 같은 것). 그때는
       // 빈칸만 채우고 이미 있는 값은 건드리지 않는다. 덮어쓰면 앞 사진에서 읽어둔
       // 유효기간이 뒷 사진에 없다는 이유로 지워진다 — 합치자고 더했는데 잃는 셈이다.
-      const fill = (next, before) => (merge ? next ?? before ?? '' : next ?? '');
+      //
+      // 채우는 쪽은 이미 적힌 값이 이긴다. 처음에는 새로 읽은 값을 앞에 뒀는데, 그러면
+      // 채우는 게 아니라 덮어쓰는 것이 된다. 실제로 그랬다 — 투썸 원본을 올려 상품명이
+      // 제대로 들어간 상태에서 금액만 적힌 주문 정보 화면을 더했더니, 그 화면에서 읽은
+      // '16,600원'이 상품명 자리에 들어가 앉았다. 빈칸이던 금액은 채워야 하고 이미 있던
+      // 상품명은 그대로 둬야 하는데, 규칙 하나가 둘 다를 결정하고 있었다.
+      const fill = (next, before) => (merge ? before || next || '' : next ?? '');
       setForm((prev) => ({
         ...prev,
         name: fill(result.name || null, prev.name),
         brand: fill(result.brand || null, prev.brand),
         amount: fill(result.amount ?? null, prev.amount),
-        category: result.category || (merge ? prev.category : '기타'),
+        // 분류도 같다. 앞 사진으로 정해진 것이 있으면 그대로 둔다.
+        category: merge ? prev.category || result.category || '기타' : result.category || '기타',
         code: fill(result.code || null, prev.code),
         code_type: fill(result.codeType || null, prev.code_type),
         expires_at: fill(result.expiresAt || null, prev.expires_at),
@@ -366,6 +375,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
 
   // 되묻기를 지나온 뒤 이어서 저장하기 위한 표시. 한 번 확인했으면 다시 묻지 않는다.
   const lookalikeOkRef = useRef(false);
+  const expiryOkRef = useRef(false);
 
   // 되묻는 창의 '그래도 등록'에서도 부른다. 그때는 폼 제출이 아니라 넘어오는 것이 없다.
   async function handleSubmit(e) {
@@ -392,6 +402,20 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
           setSubmitting(false);
           return;
         }
+      }
+
+      // 유효기한이 비어 있으면 한 번 짚는다.
+      //
+      // 필수로 만들지는 않는다. 기한을 모르는 채로 일단 넣어두고 나중에 채우는 길이
+      // 막히면 안 된다 — 종이 쿠폰이나 문자로 번호만 받은 것도 있다.
+      //
+      // 다만 비어 있으면 이 앱이 해주는 일의 절반이 없어진다. 만료 전에 알려주는 것도,
+      // 목록에서 급한 것부터 보여주는 것도 기한이 있어야 한다. 저장하고 나면 그게 빠진
+      // 줄 모르고 지나가므로, 넘어가기 전에 한 번만 말한다.
+      if (!form.expires_at && !expiryOkRef.current) {
+        setNoExpiry(true);
+        setSubmitting(false);
+        return;
       }
 
       // 번호가 같지 않아도 같은 물건일 수 있다.
@@ -700,8 +724,8 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
           <AlertDialog
             tone="warning"
             title="다른 기프티콘 같아요"
-            description={'바코드 번호가 지금 것과 달라요.\n이 사진으로 새로 등록할까요?'}
-            details={['새로 등록하면 지금 내용이 지워져요', '취소하면 이 사진만 빼요']}
+            description={'바코드 번호가 앞에 올린 것과 달라요.\n이 사진으로 새로 등록할까요?'}
+            details={['새로 등록하면 앞에 올린 것은 지워져요', '취소하면 지금 올린 것은 뺄게요']}
             confirmLabel="새로 등록"
             onConfirm={() => {
               const prepared = mismatch;
@@ -709,6 +733,23 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
               startOver(prepared);
             }}
             onClose={() => setMismatch(null)}
+          />
+        )}
+
+        {noExpiry && (
+          <AlertDialog
+            tone="warning"
+            title="유효기한이 비어 있어요"
+            description={'기한이 없으면 만료 전에 알려드릴 수 없어요.'}
+            details={['목록에서도 급한 순서로 올라오지 않아요', '나중에 수정에서 채워도 돼요']}
+            confirmLabel="이대로 저장"
+            cancelLabel="채우고 올게요"
+            onConfirm={() => {
+              setNoExpiry(false);
+              expiryOkRef.current = true;
+              handleSubmit();
+            }}
+            onClose={() => setNoExpiry(false)}
           />
         )}
 

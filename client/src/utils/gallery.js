@@ -503,7 +503,10 @@ export async function scanGallery({ isRegistered, onProgress, signal } = {}) {
   // folders는 기준 시각 이후 기기에 있는 폴더 이름과 장수 전부다(우리가 고른 것 말고).
   // 폴더 이름이 안 맞아서 못 찾는 경우를 눈으로 확인할 수 있어야 한다 — 이름은 제조사와
   // 앱 버전마다 달라서, 목록에 없는 이름이 나오면 BUCKETS에 더해주면 된다.
-  return { ...status, candidates, scanned: fresh.length, since, folders, tally };
+  // listed는 기준 시각 이후 기기에 있던 사진 수, scanned는 그중 이번에 실제로 연 수다.
+  // 둘이 벌어지는 건 전에 확인해서 기억해둔 것을 건너뛰기 때문인데, 화면에서 그 차이를
+  // 설명하지 못하면 "20장이 있다면서 왜 4장만 봤지?"가 된다.
+  return { ...status, candidates, listed: images.length, scanned: fresh.length, since, folders, tally };
 }
 
 // 후보를 등록 창에 넘길 수 있는 파일들로 바꾼다.
