@@ -62,8 +62,6 @@ export default function GalleryScanSheet({ onRegister, savedMark, onClose }) {
   // 이번 창에서 치운 후보. 목록에 흐리게 남겨두고 되돌릴 수 있게 한다.
   const [dismissedIds, setDismissedIds] = useState([]);
   const [scanned, setScanned] = useState(0);
-  // 기준 시각 이후 기기에 있던 사진 수. scanned와의 차이가 '전에 확인해서 건너뛴' 수다.
-  const [listed, setListed] = useState(0);
   // 실제로 어느 시각 이후를 봤는지(초). 화면에 적어주기 위한 값이다.
   const [since, setSince] = useState(0);
   // 기기에 실제로 있는 폴더 이름과 장수, 그리고 몇 장이 어떤 이유로 걸러졌는지.
@@ -165,7 +163,6 @@ export default function GalleryScanSheet({ onRegister, savedMark, onClose }) {
       if (controller.signal.aborted) return;
       setCandidates(result.candidates);
       setScanned(result.scanned ?? 0);
-      setListed(result.listed ?? 0);
       setSince(result.since ?? 0);
       setFolders(result.folders ?? []);
       setTally(result.tally ?? null);
@@ -204,61 +201,50 @@ export default function GalleryScanSheet({ onRegister, savedMark, onClose }) {
   // '읽은 정보 상세보기'와 내용이 같았다. 같은 것을 두 이름으로 부르면 다른 것인 줄 안다.
   // 이름 하나로 두고 늘 보여준다.
   //
-  // 숫자가 서로 안 맞아 보이는 게 문제였다. 앨범에는 20장이 있는데 확인한 사진은 4장으로
-  // 적혀 있으니, 나머지 16장을 왜 안 봤는지 알 길이 없었다. 실제로는 전에 확인해서
-  // 기억해둔 것들이라 다시 읽지 않은 것인데, 그 사실이 화면에 없었다.
+  // 세는 단위가 문제였다. '확인한 사진 4장 / 이미 등록됨 3장'은 둘 다 사진 수인데,
+  // 읽는 사람은 아래 숫자를 기프티콘 세 개로 받아들인다. 같은 기프티콘을 원본과 캡처로
+  // 두 장 갖고 있으면 실제로는 하나인데도 그렇다.
   //
-  // 그래서 세 덩어리로 나눈다. 어느 앨범을 봤는지, 그중 몇 장을 실제로 열었는지,
-  // 연 것이 어떻게 갈렸는지. 위에서 아래로 읽으면 숫자가 이어진다.
+  // 사진 수는 앨범 줄에서만 말하고, 그 아래는 기프티콘 수만 말한다.
+  // 사진첩을 훑어 기프티콘을 몇 개 찾았고, 그중 몇 개가 이미 목록에 있는가 — 그게
+  // 사용자가 알고 싶은 것이다.
   const albums = summary.watched.map((folder) => `${folder.label} ${folder.count}`).join(' · ');
-  const skippedBefore = Math.max(0, listed - scanned);
 
   const panelBody = tally ? (
-    <div className="flex flex-col gap-3 rounded-xl bg-muted/60 px-4 py-3.5">
+    <div className="flex flex-col gap-2.5 rounded-xl bg-muted/60 px-4 py-3.5">
       <p className="m-0 text-sm font-semibold text-foreground">상세내역</p>
 
-      {/* 어느 앨범을 봤는지. 사진이 없어도 0장으로 남긴다 — 목록에서 빠지면 "걸러진 건가"
-          하고 의심하게 되는데, 실제로는 볼 게 없었던 것이다. 기기에 있는 다른 앨범은
-          적지 않는다. 안 보는 것을 늘어놓으면 그걸 뒤진다는 뜻으로 읽힌다. */}
-      <div className="flex gap-2 text-sm break-keep text-muted-foreground">
-        <span className="shrink-0">앨범</span>
-        <span className="flex-1 text-foreground">{albums}</span>
+      {/* 사진 수는 여기서만 말한다. 아래 두 줄은 기프티콘 수다.
+          두 단위를 위아래로 섞어놓으면 아래 숫자까지 사진으로, 또는 위 숫자까지
+          기프티콘으로 읽힌다. 실제로 "확인한 사진 4장 / 이미 등록됨 3장"을 보고
+          기프티콘 세 개로 읽었다.
+
+          앨범 이름은 사진이 없어도 0으로 남긴다 — 목록에서 빠지면 "걸러진 건가" 하고
+          의심하게 되는데, 실제로는 볼 게 없었던 것이다. 기기에 있는 다른 앨범은 적지
+          않는다. 안 보는 것을 늘어놓으면 그걸 뒤진다는 뜻으로 읽힌다. */}
+      <div className="flex flex-col gap-0.5 text-sm break-keep">
+        <span className="text-muted-foreground">앨범 및 확인 사진</span>
+        <span className="text-foreground">{albums}</span>
       </div>
 
-      <div className="flex flex-col gap-1 border-t border-border pt-2.5 text-sm">
-        <div className="flex justify-between gap-2">
-          <span className="font-semibold text-foreground">확인한 사진</span>
-          <span className="tabular-nums text-foreground">{tally.read}장</span>
-        </div>
-        {/* 연 사진이 어떻게 갈렸는지. 한 칸 들여써서 위 숫자를 나눈 것임을 보인다. */}
-        <div className="flex justify-between gap-2 pl-3 text-muted-foreground">
-          <span>이미 등록됨</span>
-          <span className="tabular-nums">{tally.alreadyHave}장</span>
-        </div>
-        <div className="flex justify-between gap-2 pl-3 text-muted-foreground">
-          <span>바코드 없음</span>
-          <span className="tabular-nums">{tally.noBarcode}장</span>
-        </div>
+      <dl className="m-0 grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 border-t border-border pt-2.5 text-sm">
+        <dt className="text-muted-foreground">발견한 기프티콘</dt>
+        <dd className="m-0 font-semibold tabular-nums text-foreground">{tally.found}개</dd>
+        <dt className="text-muted-foreground">이미 등록됨</dt>
+        <dd className="m-0 tabular-nums text-foreground">{tally.alreadyHave}개</dd>
+        {/* 오류일 때만 나온다. 평소에는 자리를 차지하지 않는다. */}
         {tally.readFailed > 0 && (
-          <div className="flex justify-between gap-2 pl-3 text-muted-foreground">
-            <span>열지 못함</span>
-            <span className="tabular-nums">{tally.readFailed}장</span>
-          </div>
+          <>
+            <dt className="text-muted-foreground">열지 못한 사진</dt>
+            <dd className="m-0 tabular-nums text-foreground">{tally.readFailed}장</dd>
+          </>
         )}
-      </div>
-
-      {/* 앨범 장수와 확인한 장수가 벌어지는 이유. 이 줄이 없으면 앱이 뭘 빼먹은 것처럼
-          보인다. 실제로는 전에 확인한 것이라 다시 읽지 않은 것뿐이다. */}
-      {skippedBefore > 0 && (
-        <p className="m-0 border-t border-border pt-2.5 text-sm break-keep text-muted-foreground">
-          전에 확인한 {skippedBefore}장은 다시 읽지 않았어요.
-        </p>
-      )}
+      </dl>
 
       {/* 셋 다 0장이면 앨범 이름이 우리 목록과 다를 수 있다. 그때만 기기에 있는 이름을
           보여준다 — 그게 유일한 단서다. */}
       {summary.watched.every((folder) => folder.count === 0) && summary.others.length > 0 && (
-        <p className="m-0 text-sm break-keep text-muted-foreground">
+        <p className="m-0 border-t border-border pt-2.5 text-sm break-keep text-muted-foreground">
           폰에 있는 앨범: {summary.others.map((f) => `${f.name} ${f.count}`).join(' · ')}
         </p>
       )}

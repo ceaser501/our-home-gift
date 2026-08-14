@@ -399,9 +399,17 @@ export async function scanGallery({ isRegistered, onProgress, signal } = {}) {
   const candidates = [];
   // 바코드 값 → 그 값을 가진 후보. 같은 기프티콘의 사진 여러 장을 한 후보로 모은다.
   const seenCodes = new Map();
-  // 왜 못 찾았는지 알려주기 위한 집계. 아무것도 안 나왔을 때 "사진이 없어서인지,
-  // 바코드를 못 읽어서인지, 이미 다 등록된 것인지"를 구분할 수 있어야 한다.
-  const tally = { read: 0, readFailed: 0, noBarcode: 0, alreadyHave: 0 };
+  // 이미 등록되어 있다고 확인된 번호. 사진이 아니라 번호로 모은다.
+  //
+  // 세는 단위가 중요하다. 예전에는 사진을 셌는데, 같은 기프티콘을 원본과 캡처로 두 장
+  // 갖고 있으면 2로 세어졌다. 화면에는 그게 "이미 등록됨 3"으로 나가고, 읽는 사람은
+  // 기프티콘 세 개로 받아들인다. 실제로는 하나일 수 있다.
+  //
+  // 같은 번호를 다시 묻지 않게 되는 것도 덤이다 — 예전에는 같은 기프티콘 사진마다
+  // 서버에 한 번씩 물었다.
+  const knownCodes = new Set();
+  // 왜 못 찾았는지 알려주기 위한 집계.
+  const tally = { readFailed: 0 };
 
   for (const [index, image] of fresh.entries()) {
     if (signal?.aborted) break;
@@ -418,7 +426,7 @@ export async function scanGallery({ isRegistered, onProgress, signal } = {}) {
       tally.readFailed += 1;
       continue;
     }
-    tally.read += 1;
+
 
     // decodeBarcode는 사진을 못 여는 경우 예외를 낸다. 이걸 잡지 않으면 그 한 장 때문에
     // 훑기 전체가 중단되고, 사용자에게는 이유 없이 "훑지 못했어요"만 뜬다.
@@ -430,7 +438,6 @@ export async function scanGallery({ isRegistered, onProgress, signal } = {}) {
       continue;
     }
     if (!found?.code) {
-      tally.noBarcode += 1;
       foundNoBarcode.push(image.id);
       continue;
     }
@@ -449,8 +456,10 @@ export async function scanGallery({ isRegistered, onProgress, signal } = {}) {
       }
       continue;
     }
+    // 같은 번호를 이미 등록된 것으로 판정했으면 다시 묻지 않는다.
+    if (knownCodes.has(found.code)) continue;
     if (isRegistered && (await isRegistered(found.code))) {
-      tally.alreadyHave += 1;
+      knownCodes.add(found.code);
       continue;
     }
 
@@ -506,7 +515,13 @@ export async function scanGallery({ isRegistered, onProgress, signal } = {}) {
   // listed는 기준 시각 이후 기기에 있던 사진 수, scanned는 그중 이번에 실제로 연 수다.
   // 둘이 벌어지는 건 전에 확인해서 기억해둔 것을 건너뛰기 때문인데, 화면에서 그 차이를
   // 설명하지 못하면 "20장이 있다면서 왜 4장만 봤지?"가 된다.
-  return { ...status, candidates, listed: images.length, scanned: fresh.length, since, folders, tally };
+  // 집계는 기프티콘 단위다. 찾아낸 서로 다른 번호가 몇 개고, 그중 몇 개가 이미 목록에
+  // 있는가. 사진 단위 숫자는 위 폴더 줄이 이미 말하고 있어서, 아래에서 또 세면 두 단위가
+  // 섞여 "확인한 사진 4장 / 이미 등록됨 3장"이 기프티콘 세 개로 읽힌다.
+  tally.found = candidates.length + knownCodes.size;
+  tally.alreadyHave = knownCodes.size;
+
+  return { ...status, candidates, scanned: fresh.length, since, folders, tally };
 }
 
 // 후보를 등록 창에 넘길 수 있는 파일들로 바꾼다.

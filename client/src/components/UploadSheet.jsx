@@ -741,7 +741,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
             tone="warning"
             title="유효기한이 비어 있어요"
             description={'기한이 없으면 만료 전에 알려드릴 수 없어요.'}
-            details={['목록에서도 급한 순서로 올라오지 않아요', '나중에 수정에서 채워도 돼요']}
+            details={['나중에 수정에서 채워도 돼요']}
             confirmLabel="이대로 저장"
             cancelLabel="채우고 올게요"
             onConfirm={() => {
