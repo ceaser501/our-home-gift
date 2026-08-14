@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Loader2, Plus, RotateCcw, Search, X } from 'lucide-react';
+import { Check, Loader2, Plus, RotateCcw, Search, X } from 'lucide-react';
 import { CATEGORIES } from '../constants';
 import { prepareImages, readGifticonInfo } from '../utils/imageAnalyze';
 import { createGifticon, updateGifticon, searchPrice, findGifticonByCode } from '../api';
@@ -105,6 +105,20 @@ function progressLabel(progress) {
   if (progress.step === 'reading') return '상품명·금액·유효기한을 읽고 있어요';
   if (progress.step === 'thumbnail') return '상품 사진을 잘라내고 있어요';
   return '거의 다 됐어요';
+}
+
+// 두 번호는 대개 한 자리만 다르다. 열여섯 자리를 두 줄로 나란히 놓고 "다른 데를
+// 찾아서 고르세요"라고 하면 사람은 못 찾는다. 다른 자리를 짚어준다.
+function markDiff(value, other) {
+  return [...String(value)].map((letter, index) =>
+    letter === String(other)[index] ? (
+      letter
+    ) : (
+      <b key={index} className="rounded-sm bg-primary/15 px-0.5 font-bold text-primary">
+        {letter}
+      </b>
+    )
+  );
 }
 
 function buildExistingImages(initial) {
@@ -507,35 +521,28 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
               한 자리가 틀린 채로 저장되면 계산대에서 못 쓰고, 같은 기프티콘이
               두 건으로 들어온다. 실제로 그런 일이 있었다. */}
           {codeConflict && (
-            <div className="flex flex-col gap-1.5 rounded-xl border border-warning/40 bg-warning/10 px-3.5 py-3">
-              <p className="m-0 text-base font-semibold text-foreground">바코드 번호를 확인해주세요</p>
-              <p className="m-0 text-sm leading-relaxed break-keep text-muted-foreground">
-                두 가지로 읽혀서 사진에 적힌 쪽을 넣어뒀어요.
-              </p>
-              <div className="flex flex-col gap-1 pt-0.5">
+            <div className="flex flex-col gap-2 rounded-xl border border-warning/40 bg-warning/10 px-3.5 py-3">
+              <p className="m-0 text-base font-semibold text-foreground">번호가 두 가지로 읽혔어요</p>
+              <p className="m-0 text-sm break-keep text-muted-foreground">위 사진과 같은 것을 골라주세요.</p>
+              {[codeConflict.printed, codeConflict.scanned].map((value, index) => (
                 <button
+                  key={value}
                   type="button"
                   onClick={() => {
-                    updateField('code', codeConflict.printed);
+                    updateField('code', value);
                     setCodeConflict(null);
                   }}
-                  className="flex items-center gap-2 text-left"
+                  className={cn(
+                    'flex items-center gap-2 rounded-lg border-2 bg-card px-3 py-2.5 text-left',
+                    form.code === value ? 'border-primary' : 'border-transparent'
+                  )}
                 >
-                  <span className="shrink-0 text-sm text-muted-foreground">사진</span>
-                  <span className="font-mono text-base font-semibold break-all text-foreground">{codeConflict.printed}</span>
+                  <Check className={cn('size-4 shrink-0', form.code === value ? 'text-primary' : 'opacity-0')} />
+                  <span className="font-mono text-base break-all text-foreground">
+                    {markDiff(value, [codeConflict.printed, codeConflict.scanned][1 - index])}
+                  </span>
                 </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    updateField('code', codeConflict.scanned);
-                    setCodeConflict(null);
-                  }}
-                  className="flex items-center gap-2 text-left"
-                >
-                  <span className="shrink-0 text-sm text-muted-foreground">막대</span>
-                  <span className="font-mono text-base font-semibold break-all text-foreground">{codeConflict.scanned}</span>
-                </button>
-              </div>
+              ))}
             </div>
           )}
 
