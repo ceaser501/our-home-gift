@@ -127,12 +127,18 @@ function isOriginal(bucket) {
 // 아래 시도들이 이 안에서 줄이고 키우므로, 여기서는 넉넉히 받아만 둔다.
 const READ_EDGE = 2000;
 
+// 두 번 시도한다. 크기를 재서 판단하지 않되, 매번 쓰는 힘은 다르게 둔다.
+//
+// 대부분의 기프티콘은 1차에서 잡힌다. 그래서 1차는 가볍게 — 적당히 줄이고, 정밀 탐색도
+// 쓰지 않는다. 여기서 못 잡은 것만 2차에서 키우고 정밀 탐색까지 켠다.
+//
+// 2차에 상한을 두는 것이 중요하다. 처음에는 "원본의 두 배"라고만 해뒀는데, 1080x2400짜리
+// 스크린샷이 2160x4800(1040만 화소)이 됐다. 바코드 없는 사진마다 그걸 그리고 정밀 탐색까지
+// 도니 훑기가 눈에 띄게 느려지고 진행 표시가 뚝뚝 끊겼다. 키우는 건 작은 이미지를 구제하려는
+// 것이지 큰 이미지를 더 키우려는 게 아니다.
 const DECODE_ATTEMPTS = [
-  // 1) 있는 그대로. 너무 크면 메모리만 쓰므로 이 선까지만 줄인다.
-  { maxLongEdge: 2400, upscale: 1 },
-  // 2) 두 배로 키워서. 막대가 뭉개져 안 읽히던 것이 여기서 읽힌다.
-  //    더 키워도 없던 정보가 생기지는 않아서 두 번이면 충분하다.
-  { maxLongEdge: 2400, upscale: 2 },
+  { maxLongEdge: 1600, upscale: 1, tryHarder: false },
+  { maxLongEdge: 3200, upscale: 2, tryHarder: true },
 ];
 
 // 아니라고 한 사진을 기억해둔다. 안 그러면 훑을 때마다 같은 것을 계속 다시 묻는다.
@@ -263,9 +269,9 @@ export async function requestGalleryAccess() {
   return { supported: true, ...status };
 }
 
-// 한 번 더 애써서 찾게 한다. 직접 올릴 때는 사용자가 그 사진을 고른 것이라 못 읽으면
-// 다시 찍으면 되지만, 갤러리 훑기는 놓치면 그냥 없는 것이 된다. 조금 느려도 찾는 쪽이 낫다.
-const DECODE_HINTS = new Map([[DecodeHintType.TRY_HARDER, true]]);
+// 정밀 탐색. 느린 대신 잘 찾는다. 2차 시도에서만 쓴다 — 갤러리 훑기는 놓치면 그냥 없는
+// 것이 되므로 한 번은 애써볼 값어치가 있지만, 모든 사진에 처음부터 걸 이유는 없다.
+const HARD_HINTS = new Map([[DecodeHintType.TRY_HARDER, true]]);
 
 /**
  * 바코드가 사진 가로폭의 얼마를 차지하는지(0~1).
@@ -295,8 +301,10 @@ async function decodeBarcode(base64) {
   const longEdge = Math.max(width, height);
 
   for (const attempt of DECODE_ATTEMPTS) {
-    const scale = Math.min(1, attempt.maxLongEdge / longEdge) * attempt.upscale;
-    const found = await decodeAt(image, width, height, scale);
+    // 키운 뒤에도 상한 안에 있어야 한다. 상한을 나중에 걸지 않으면 큰 사진이 두 배로
+    // 부풀어 그 한 장에 몇 초씩 걸린다.
+    const target = Math.min(attempt.maxLongEdge, longEdge * attempt.upscale);
+    const found = await decodeAt(image, width, height, target / longEdge, attempt.tryHarder);
     if (found) return found;
   }
 
@@ -304,7 +312,7 @@ async function decodeBarcode(base64) {
   return null;
 }
 
-async function decodeAt(image, width, height, scale) {
+async function decodeAt(image, width, height, scale, tryHarder) {
   const canvas = document.createElement('canvas');
   canvas.width = Math.max(1, Math.round(width * scale));
   canvas.height = Math.max(1, Math.round(height * scale));
@@ -314,7 +322,8 @@ async function decodeAt(image, width, height, scale) {
   ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
 
   try {
-    const result = await new BrowserMultiFormatReader(DECODE_HINTS).decodeFromCanvas(canvas);
+    const reader = new BrowserMultiFormatReader(tryHarder ? HARD_HINTS : undefined);
+    const result = await reader.decodeFromCanvas(canvas);
     return {
       code: result.getText(),
       codeType: result.getBarcodeFormat ? BarcodeFormat[result.getBarcodeFormat()] || null : null,
@@ -373,6 +382,9 @@ export async function scanGallery({ isRegistered, onProgress, signal } = {}) {
   for (const [index, image] of fresh.entries()) {
     if (signal?.aborted) break;
     onProgress?.({ scanned: index, total: fresh.length, found: candidates.length });
+    // 한 박자 쉬어 화면이 그려지게 한다. 바로 다음 사진을 읽어버리면 진행 표시를 바꿔놓고도
+    // 그릴 틈이 없어서, 막대가 뚝뚝 끊겨 멈춘 것처럼 보인다.
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
     let read;
     try {

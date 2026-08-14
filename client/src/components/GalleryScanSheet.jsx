@@ -292,7 +292,7 @@ export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
                 </div>
                 <div className="h-1.5 w-full overflow-hidden rounded-full bg-primary/15">
                   <div
-                    className="h-full rounded-full bg-primary transition-[width]"
+                    className="h-full rounded-full bg-primary transition-[width] duration-300 ease-out"
                     style={{
                       width: progress?.total ? `${Math.round((progress.scanned / progress.total) * 100)}%` : '20%',
                     }}
