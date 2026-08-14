@@ -46,6 +46,19 @@ import { cn } from '@/lib/utils';
 
 const KOREAN_BUCKETS = FOLDERS.map((folder) => folder.label).join(' · ');
 
+// 한 번에 몇 건씩 읽을지.
+//
+// 처음에는 한 건씩 차례로 읽었다. 그런데 이 단계에서 걸리는 시간은 거의 다 서버를
+// 다녀오는 시간이라(모델이 그림을 보는 데 몇 초), 줄을 세우면 개수만큼 그대로 곱해진다.
+// 세 개를 찾으면 세 배를 기다린다. 실제로 "너무 느리다"가 여기서 나왔다.
+//
+// 기다리는 동안 폰은 놀고 있다. 함께 보내면 세 개가 하나 읽는 시간에 끝난다.
+//
+// 무한정 늘리지 않는 이유는 두 가지다. 사진을 줄이고 다시 압축하는 일은 폰이 직접
+// 하는 것이라 동시에 여러 개를 돌리면 서로 CPU를 뺏고, 서버 쪽도 한꺼번에 몰리면
+// 오히려 각각이 느려진다. 셋이면 대개 한 번에 다 담긴다.
+const READ_CONCURRENCY = 3;
+
 // 등록에 반드시 있어야 하는 것.
 //
 // 번호가 없으면 계산대에서 못 쓰고, 상품명과 상호가 없으면 목록에서 찾아낼 수가 없다.
@@ -201,40 +214,55 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
   }
 
   /**
+   * 후보 하나를 읽는다. 폰에서 사진을 줄이고(prepareImages), 서버에 글자를 읽힌다.
+   */
+  async function readOne(candidate) {
+    try {
+      const prepared = await prepareImages(candidateToFiles(candidate));
+      const info = await readGifticonInfo(prepared);
+      // 모델에게 보낸 base64는 여기서 할 일이 끝났다. 후보마다 들고 있으면 열 개만
+      // 되어도 메가바이트 단위로 쌓인다.
+      prepared.uploads = null;
+      return { prepared, info, missing: missingFields(info, candidate.code) };
+    } catch (err) {
+      return { prepared: null, info: null, missing: ['정보'], readError: err?.message || '' };
+    }
+  }
+
+  /**
    * 찾아낸 것들의 상품명·금액·유효기한을 읽는다.
    *
-   * 한 건씩 순서대로 읽고, 읽는 대로 목록에 채워 넣는다. 다 읽을 때까지 기다렸다가
-   * 한꺼번에 보여주면 그동안 화면이 비어 있는데, 이 단계가 가장 오래 걸린다.
+   * 여럿을 함께 읽되(READ_CONCURRENCY) 끝나는 대로 목록에 채워 넣는다. 다 읽을 때까지
+   * 기다렸다가 한꺼번에 보여주면 그동안 화면이 비어 있는데, 이 단계가 가장 오래 걸린다.
    */
   async function readAll(found, controller) {
     setStage('reading');
     setCandidates(found);
     setProgress({ scanned: 0, total: found.length, found: found.length });
 
-    for (const [index, candidate] of found.entries()) {
-      if (controller.signal.aborted) return;
-      setProgress({ scanned: index, total: found.length, found: found.length });
+    const queue = [...found];
+    let finished = 0;
 
-      let read = null;
-      try {
-        const prepared = await prepareImages(candidateToFiles(candidate));
-        const info = await readGifticonInfo(prepared);
-        // 모델에게 보낸 base64는 여기서 할 일이 끝났다. 후보마다 들고 있으면 열 개만
-        // 되어도 메가바이트 단위로 쌓인다.
-        prepared.uploads = null;
-        read = { prepared, info, missing: missingFields(info, candidate.code) };
-      } catch (err) {
-        read = { prepared: null, info: null, missing: ['정보'], readError: err?.message || '' };
-      }
+    async function worker() {
+      while (queue.length > 0) {
+        if (controller.signal.aborted) return;
+        const candidate = queue.shift();
+        const read = await readOne(candidate);
+        if (controller.signal.aborted) return;
 
-      if (controller.signal.aborted) return;
-      setCandidates((prev) => prev.map((item) => (item.id === candidate.id ? { ...item, ...read } : item)));
-      // 읽어낸 것이 금액권으로 보이면 그 자리에서 켜준다. 확실하지 않으니 끌 수 있게
-      // 두되, 열 개 중 여덟이 맞는 판단을 매번 손으로 켜게 하는 것도 일이다.
-      if (read.info?.isVoucher && read.info?.amount) {
-        setVoucherIds((prev) => (prev.includes(candidate.id) ? prev : [...prev, candidate.id]));
+        setCandidates((prev) => prev.map((item) => (item.id === candidate.id ? { ...item, ...read } : item)));
+        // 읽어낸 것이 금액권으로 보이면 그 자리에서 켜준다. 확실하지 않으니 끌 수 있게
+        // 두되, 열 개 중 여덟이 맞는 판단을 매번 손으로 켜게 하는 것도 일이다.
+        if (read.info?.isVoucher && read.info?.amount) {
+          setVoucherIds((prev) => (prev.includes(candidate.id) ? prev : [...prev, candidate.id]));
+        }
+
+        finished += 1;
+        setProgress({ scanned: finished, total: found.length, found: found.length });
       }
     }
+
+    await Promise.all(Array.from({ length: Math.min(READ_CONCURRENCY, found.length) }, worker));
 
     if (controller.signal.aborted) return;
     setStage('done');
