@@ -54,10 +54,10 @@ const KOREAN_BUCKETS = FOLDERS.map((folder) => folder.label).join(' · ');
 //
 // 기다리는 동안 폰은 놀고 있다. 함께 보내면 세 개가 하나 읽는 시간에 끝난다.
 //
-// 무한정 늘리지 않는 이유는 두 가지다. 사진을 줄이고 다시 압축하는 일은 폰이 직접
-// 하는 것이라 동시에 여러 개를 돌리면 서로 CPU를 뺏고, 서버 쪽도 한꺼번에 몰리면
-// 오히려 각각이 느려진다. 셋이면 대개 한 번에 다 담긴다.
-const READ_CONCURRENCY = 3;
+// 무한정 늘리지는 않는다. 사진을 줄이고 다시 압축하는 일은 폰이 직접 하는 것이라
+// 동시에 너무 많이 돌리면 서로 CPU를 뺏고, 서버 쪽도 한꺼번에 몰리면 오히려 각각이
+// 느려진다. 다섯이면 한 번 훑어 나오는 수가 대개 한 물결에 담긴다.
+const READ_CONCURRENCY = 5;
 
 // 등록에 반드시 있어야 하는 것.
 //
@@ -114,6 +114,11 @@ function formatDate(iso) {
   return iso.replaceAll('-', '.');
 }
 
+function formatSeconds(ms) {
+  if (!ms) return '-';
+  return `${(ms / 1000).toFixed(1)}초`;
+}
+
 function formatWon(amount) {
   if (amount === null || amount === undefined || amount === '') return null;
   return `${Number(amount).toLocaleString('ko-KR')}원`;
@@ -147,6 +152,8 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
   // 기기에 실제로 있는 폴더 이름과 장수. 못 찾았을 때 이유를 짚어주기 위한 값이다.
   const [folders, setFolders] = useState([]);
   const [tally, setTally] = useState(null);
+  // 정보를 읽는 데 걸린 시간(밀리초). 훑기 시간은 tally.elapsedMs에 들어 있다.
+  const [readMs, setReadMs] = useState(0);
   // 끝까지 훑었는지. 중간에 그만뒀으면 "여기까지 봤다"고 적으면 안 된다 —
   // 못 본 사진들이 다음 번에 통째로 건너뛰어진다.
   const [complete, setComplete] = useState(false);
@@ -259,6 +266,7 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
    * 기다렸다가 한꺼번에 보여주면 그동안 화면이 비어 있는데, 이 단계가 가장 오래 걸린다.
    */
   async function readAll(found, controller) {
+    const startedAt = Date.now();
     setStage('reading');
     setCandidates(found);
     setProgress({ scanned: 0, total: found.length, found: found.length });
@@ -288,6 +296,7 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
     await Promise.all(Array.from({ length: Math.min(READ_CONCURRENCY, found.length) }, worker));
 
     if (controller.signal.aborted) return;
+    setReadMs(Date.now() - startedAt);
     setStage('done');
     setProgress(null);
   }
@@ -450,6 +459,16 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
               <dd className="m-0 tabular-nums text-foreground">{tally.readFailed}장</dd>
             </>
           )}
+        </dl>
+
+        {/* 어디에 시간이 갔는지 나눠 적는다. "느리다"는 말만으로는 고칠 데를 고를 수 없다 —
+            사진에서 바코드를 찾는 것은 폰이 하는 일이고, 정보를 읽는 것은 서버를 다녀오는
+            일이라 빠르게 만드는 방법이 서로 다르다. */}
+        <dl className="m-0 grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 border-t border-border pt-2.5 text-sm">
+          <dt className="text-muted-foreground">사진에서 찾기</dt>
+          <dd className="m-0 tabular-nums text-foreground">{formatSeconds(tally.elapsedMs)}</dd>
+          <dt className="text-muted-foreground">정보 읽기</dt>
+          <dd className="m-0 tabular-nums text-foreground">{formatSeconds(readMs)}</dd>
         </dl>
 
         {/* 셋 다 0장이면 사진첩 이름이 우리 목록과 다를 수 있다. 그때만 기기에 있는

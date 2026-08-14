@@ -371,6 +371,10 @@ async function decodeAt(image, width, height, scale, tryHarder) {
  *   진행이 보이지 않으면 멈춘 것처럼 느껴진다.
  */
 export async function scanGallery({ isRegistered, onProgress, signal } = {}) {
+  // 얼마나 걸렸는지 잰다. "느리다"는 말을 들었을 때 어디가 느린지 알아야 고칠 데를
+  // 고른다 — 사진을 훑는 것(폰이 하는 일)과 정보를 읽는 것(서버를 다녀오는 일)은
+  // 고치는 방법이 완전히 다르다.
+  const startedAt = Date.now();
   const status = await getGalleryStatus();
   if (!status.supported) return { supported: false, candidates: [] };
   if (!status.granted && !status.partial) return { ...status, candidates: [], needsPermission: true };
@@ -520,6 +524,8 @@ export async function scanGallery({ isRegistered, onProgress, signal } = {}) {
   // 섞여 "확인한 사진 4장 / 이미 등록됨 3장"이 기프티콘 세 개로 읽힌다.
   tally.found = candidates.length + knownCodes.size;
   tally.alreadyHave = knownCodes.size;
+
+  tally.elapsedMs = Date.now() - startedAt;
 
   return { ...status, candidates, scanned: fresh.length, since, folders, tally };
 }
