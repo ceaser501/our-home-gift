@@ -255,15 +255,14 @@ html.is-native-android {
 }
 
 /* 움직임을 줄여달라고 설정해둔 사람에게는 가만히 있는 점만 보여준다.
-   훑는 중의 빛과 스캔 선도 같다 — 정보를 담고 있지 않고 느낌을 위한 것이라, 빼도
-   잃는 것이 없다. 진행 막대와 숫자는 그대로 남는다. */
+   막대 위를 지나가는 빛도 같다 — 정보를 담고 있지 않고 느낌을 위한 것이라, 빼도 잃는
+   것이 없다. 사진 위의 스캔 선은 빼지 않는다. 그건 진행률 자체라서, 없애면 정보가 준다. */
 @media (prefers-reduced-motion: reduce) {
   .animate-dot-pulse {
     animation: none;
   }
 
-  .moacon-sweep::after,
-  .moacon-scanline::after {
+  .moacon-sweep::after {
     display: none;
   }
 }
@@ -297,8 +296,11 @@ html.is-native-android {
 }
 
 /* 읽는 중인 사진 위를 위에서 아래로 지나가는 선.
-   문서 그림을 따로 그리는 것보다 낫다 — 지금 실제로 읽히고 있는 그 기프티콘이라,
-   무엇을 하는 중인지가 그림이 아니라 사실로 보인다. */
+   자리를 진행률에 묶어봤더니 오히려 죽어 보였다 — 읽는 동안 진행률은 아주 천천히
+   움직여서, 선이 거의 멈춰 있는 것처럼 보인다. 진행을 말해주려다 진행 중이라는 느낌을
+   잃은 셈이다.
+   그래서 선은 제 속도로 계속 돌고, 몇 %인지는 숫자로 사진 위에 적는다. 움직임은 움직임이
+   맡고 정보는 숫자가 맡는다. */
 @keyframes moacon-scanline {
   0% {
     transform: translateY(-140%);
@@ -308,12 +310,14 @@ html.is-native-android {
   }
 }
 
-.moacon-scanline::after {
+.moacon-scanline::before {
   content: '';
   position: absolute;
   inset-inline: 0;
   top: 0;
   height: 45%;
-  background: linear-gradient(180deg, transparent, rgb(255 255 255 / 0.55), transparent);
+  background: linear-gradient(180deg, transparent, rgb(255 255 255 / 0.5), transparent);
   animation: moacon-scanline 1.5s ease-in-out infinite;
 }
+
+

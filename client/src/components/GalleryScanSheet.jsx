@@ -497,6 +497,22 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
 
   // 훑거나 읽는 중. 위에 막대가 뜨고, 아래로 카드가 쌓인다.
   const isWorking = stage === 'scanning' || stage === 'reading';
+
+  // 진행률 하나를 막대와 사진이 함께 쓴다.
+  //
+  // 사진 위의 스캔 선을 무한 반복으로 돌려봤더니 보기에는 살아 있는데 아무것도 말해주지
+  // 않았다. 선의 자리를 진행률로 두면 그 자체가 눈금이 된다 — 위쪽 밝은 부분이 본 만큼,
+  // 아래 어두운 부분이 남은 만큼이다. 숫자를 따로 읽지 않아도 어디까지 왔는지 보인다.
+  //
+  // 찾기 단계는 실제로 센 값이고, 읽기 단계는 걸릴 만한 시간에 맞춘 눈금이다.
+  // 어느 쪽이든 막대와 사진이 같은 값을 쓰므로 둘이 따로 놀지 않는다.
+  const barPercent =
+    stage === 'reading'
+      ? readBar
+      : progress?.total
+        ? Math.round((progress.scanned / progress.total) * SCAN_SHARE)
+        : 6;
+  const barMs = stage === 'reading' ? readBarMs : 300;
   // 목록을 보여줄 때. 도는 중에도 보여준다 — 창이 갈아치워지지 않게.
   const isListing = isWorking || stage === 'done';
 
@@ -615,9 +631,12 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
         )}
       >
         <div className="flex items-center gap-2.5">
-          {/* 아직 읽는 중인 사진에는 스캔 선이 위에서 아래로 지나간다.
-              문서 그림을 따로 그리는 것보다 낫다 — 지금 실제로 읽히고 있는 그 기프티콘
-              위를 지나가니, 무엇을 하는 중인지가 그림이 아니라 사실로 보인다. */}
+          {/* 아직 읽는 중인 사진에는 스캔 선이 지나간다. 그 자리가 곧 진행률이다 —
+              위쪽 밝은 부분이 본 만큼, 아래 어두운 부분이 남은 만큼이다.
+              문서 그림을 따로 그리는 것보다 낫다. 지금 실제로 읽히고 있는 그 기프티콘
+              위를 지나가니, 무엇을 하는 중인지가 그림이 아니라 사실로 보인다.
+              다 읽으면 선이 걷히고 사진이 온전히 드러난다. 그래서 어느 것이 끝났고 어느
+              것이 남았는지가 목록에서 그대로 읽힌다. */}
           <div
             className={cn(
               'relative size-16 shrink-0 overflow-hidden rounded-lg bg-black',
@@ -627,8 +646,16 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
             <img
               src={`data:image/jpeg;base64,${candidate.images[0]}`}
               alt=""
-              className="size-full object-cover"
+              className={cn('size-full object-cover', pendingRead && 'opacity-70')}
             />
+            {/* 몇 %인지는 숫자로 적는다. 선은 계속 돌아 '진행 중'을 말하고, 숫자가
+                '어디까지 왔는지'를 말한다. 둘을 한 자리에 묶어봤더니(선의 위치 = 진행률)
+                읽는 동안 선이 거의 멈춰 있어 오히려 죽어 보였다. */}
+            {pendingRead && (
+              <span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-white tabular-nums drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]">
+                {barPercent}%
+              </span>
+            )}
           </div>
           <div className="flex min-w-0 flex-1 flex-col gap-1">
             {pendingRead ? (
@@ -769,20 +796,11 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
                   무언가 돌고 있다는 게 보인다. 진행률은 그대로 막대가 말한다 —
                   움직임만 얹었지 정보를 대신하지 않는다. */}
               <div className="moacon-sweep relative h-1.5 w-full overflow-hidden rounded-full bg-primary/15">
+                {/* 찾기는 앞의 몫(SCAN_SHARE)만 채운다. 여기서 100%까지 갔다가 읽기에서
+                    다시 0으로 떨어지면, 다 온 줄 알았다가 처음으로 돌아간다. */}
                 <div
                   className="h-full rounded-full bg-primary transition-[width] ease-out"
-                  style={
-                    stage === 'reading'
-                      ? { width: `${readBar}%`, transitionDuration: `${readBarMs}ms` }
-                      : {
-                          // 찾기는 앞의 몫만 채운다. 여기서 100%까지 갔다가 읽기에서 다시
-                          // 0으로 떨어지면, 다 온 줄 알았다가 처음으로 돌아간다.
-                          width: progress?.total
-                            ? `${Math.round((progress.scanned / progress.total) * SCAN_SHARE)}%`
-                            : '6%',
-                          transitionDuration: '300ms',
-                        }
-                  }
+                  style={{ width: `${barPercent}%`, transitionDuration: `${barMs}ms` }}
                 />
               </div>
               <p className="m-0 text-sm text-muted-foreground">
