@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ChevronDown, ImageOff, Images, Info, Loader2, RotateCcw, ScanSearch, X } from 'lucide-react';
+import { Check, CheckCircle2, ChevronDown, ImageOff, Images, Info, Loader2, RotateCcw, ScanSearch, X } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import {
@@ -14,7 +14,9 @@ import {
   requestGalleryAccess,
   scanGallery,
 } from '../utils/gallery';
-import { findGifticonByCode } from '../api';
+import { createGifticon, findGifticonByCode } from '../api';
+import { prepareImages, readGifticonInfo } from '../utils/imageAnalyze';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { useFamily } from '../FamilyContext';
 import useBackClose from '../utils/useBackClose';
 import { cn } from '@/lib/utils';
@@ -36,6 +38,15 @@ import { cn } from '@/lib/utils';
 //   done    — 다 훑음
 const KOREAN_BUCKETS = FOLDERS.map((folder) => folder.label).join(' · ');
 
+// 내가 받은 기프티콘을 넣는 경우가 가장 많아서 내 이름을 맨 위에 둔다.
+// 다만 가족 것을 대신 넣을 수도 있으니 나머지 구성원도 그대로 아래에 나열한다.
+// (등록 창의 같은 함수와 규칙을 맞춘다 — client/src/components/UploadSheet.jsx)
+function membersWithMeFirst(members, myName) {
+  const me = members.filter((m) => m.display_name === myName);
+  const others = members.filter((m) => m.display_name !== myName);
+  return [...me, ...others];
+}
+
 // 네이티브가 주는 시각은 초 단위다(MediaStore가 그렇게 쓴다). 자바스크립트의 Date는
 // 밀리초라 천 배를 곱해야 한다.
 function formatDay(seconds) {
@@ -50,10 +61,11 @@ function formatDay(seconds) {
 }
 
 
-export default function GalleryScanSheet({ onRegister, savedMark, onClose }) {
+export default function GalleryScanSheet({ onRegistered, onClose }) {
   // 뒤로가기로 이 창을 닫는다. 안 그러면 설치해서 쓸 때 앱이 통째로 꺼진다.
   useBackClose(onClose);
-  const { family } = useFamily();
+  const { family, members, user } = useFamily();
+  const myName = members.find((m) => m.user_id === user.id)?.display_name || members[0]?.display_name || '';
 
   const [stage, setStage] = useState('intro');
   const [partial, setPartial] = useState(false);
@@ -72,7 +84,18 @@ export default function GalleryScanSheet({ onRegister, savedMark, onClose }) {
   // 못 본 사진들이 다음 번에 통째로 건너뛰어진다.
   const [complete, setComplete] = useState(false);
   const [error, setError] = useState('');
+  // 등록해 넣는 중일 때의 진행 상황과, 다 넣은 뒤의 결과.
+  const [saving, setSaving] = useState(null);
+  const [result, setResult] = useState(null);
+  // 받은 사람. 사진으로는 알 수 없어서 사람이 고른다. 기본은 나다 — 내가 받은 것을
+  // 넣는 경우가 가장 많다.
+  const [owner, setOwner] = useState('');
   const abortRef = useRef(null);
+
+  // 가족을 다 읽어온 뒤에 기본값이 정해진다.
+  useEffect(() => {
+    if (!owner && myName) setOwner(myName);
+  }, [myName, owner]);
 
   // 창을 닫는 순간 훑기를 멈춘다. 안 그러면 닫은 뒤에도 수십 장을 계속 읽어서
   // 폰이 더워지고 배터리만 쓴다.
@@ -94,36 +117,6 @@ export default function GalleryScanSheet({ onRegister, savedMark, onClose }) {
     // start는 매번 새로 만들어지는 함수라 의존성에 넣으면 효과가 계속 다시 돈다.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // 등록이 끝난 것은 목록에서 뺀다. 남겨두면 방금 넣은 것을 또 넣게 된다.
-  //
-  // 어느 후보였는지(id)로 뺀다. 예전에는 저장된 번호로 짝지었는데, 훑을 때 읽은 번호와
-  // 등록 창이 저장한 번호가 다를 수 있다 — 같은 사진을 두 곳에서 각자 판독하기 때문이다.
-  // 한 자리라도 갈리면 등록을 마치고 돌아와도 그 후보가 그대로 남았고, 한 번 더 누르면
-  // 같은 기프티콘이 두 건으로 들어갔다. 실제로 그렇게 됐다.
-  //
-  // 번호로도 함께 뺀다. 훑기를 거치지 않고 + 로 직접 올린 것이 마침 후보에 있던 것과
-  // 같을 수 있어서다. 그때는 id가 없으니 번호가 유일한 단서다.
-  //
-  // 마지막 하나까지 등록했으면 이 창을 닫는다. 열어둔 채로 두면 방금 등록을 마쳤는데
-  // "등록할 기프티콘이 없어요"가 뜬다 — 없어서가 아니라 다 했기 때문인데, 화면만 보면
-  // 실패한 것처럼 읽힌다. 남은 게 있을 때만 계속 열어둔다.
-  useEffect(() => {
-    if (!savedMark) return;
-    setCandidates((prev) => {
-      const left = prev.filter(
-        (item) => item.id !== savedMark.candidateId && item.code !== savedMark.code
-      );
-      if (left.length === prev.length) return prev;
-      // 갱신 함수 안에서 창을 닫으면 안 된다. React가 이 함수를 두 번 부를 수 있어서
-      // 닫기가 두 번 불릴 수 있다. 판단만 여기서 하고 닫는 건 밖에서 한다.
-      if (left.length === 0) queueMicrotask(onClose);
-      return left;
-    });
-    // seq만 본다. 같은 후보를 다시 등록하는 일은 없고, 저장할 때마다 하나씩 오른다.
-    // onClose는 부모가 매번 새로 만드는 함수라 의존성에 넣으면 효과가 계속 다시 돈다.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [savedMark?.seq]);
 
   async function start({ forgetHistory = false } = {}) {
     setError('');
@@ -194,6 +187,8 @@ export default function GalleryScanSheet({ onRegister, savedMark, onClose }) {
   const summary = summarizeFolders(folders);
   // 지금까지 건너뛰기로 감춰둔 사진 수. 훑기가 끝난 뒤에만 쓰므로 그때 세면 된다.
   const skipped = complete ? countSkipped() : 0;
+  // 치우지 않고 남아 있는 후보 수. 등록 버튼에 그대로 적힌다.
+  const keptCount = candidates.filter((candidate) => !dismissedIds.includes(candidate.id)).length;
 
   // 훑기 결과를 한 상자에 담아 보여준다.
   //
@@ -264,8 +259,86 @@ export default function GalleryScanSheet({ onRegister, savedMark, onClose }) {
     </details>
   ) : null;
 
-  function handleRegister(candidate) {
-    onRegister(candidateToFiles(candidate), candidate.id);
+  /**
+   * 남아 있는 후보를 전부 등록한다.
+   *
+   * 예전에는 하나를 누르면 등록 창이 열렸다. 정보를 확인하라는 뜻이었는데, 자동으로
+   * 찾아주는 기능을 쓴 사람에게는 그게 일이 늘어난 것으로 느껴진다 — 알아서 해달라고
+   * 눌렀는데 글자를 또 읽고 있고, 입력창이 하나 더 뜬다. 세 개를 찾으면 세 번 그런다.
+   *
+   * 확인은 나중에도 할 수 있다. 목록에 들어온 뒤 수정에서 고치면 되고, 메모도 거기서
+   * 남긴다. 반면 여기서 막아두면 등록 자체가 늦어진다.
+   *
+   * 다만 받은 사람만은 미리 고르게 한다. 사진에 적혀 있지 않아서 모델이 알 수 없고,
+   * 이 앱은 가족이 함께 쓰는 것이라 누구 것인지가 목록의 뼈대다. 나중에 건건이 고치는
+   * 편이 훨씬 번거롭다.
+   */
+  async function registerAll() {
+    const targets = candidates.filter((candidate) => !dismissedIds.includes(candidate.id));
+    if (targets.length === 0) return;
+
+    setStage('registering');
+    setError('');
+    const done = [];
+    const failed = [];
+    let noName = 0;
+    let noExpiry = 0;
+
+    for (const [index, candidate] of targets.entries()) {
+      setSaving({ current: index + 1, total: targets.length });
+      try {
+        const prepared = await prepareImages(candidateToFiles(candidate));
+        const info = await readGifticonInfo(prepared);
+
+        // 상품명은 반드시 있어야 저장된다(supabase/schema.sql). 못 읽었으면 상호로
+        // 대신하고, 그것도 없으면 자리만 채워둔다. 여기서 멈추면 사진은 그대로 남고
+        // 등록만 안 되는데, 그건 사용자가 알아채기 어려운 실패다.
+        const name = info.name || info.brand || '이름 없음';
+        if (!info.name) noName += 1;
+        if (!info.expiresAt) noExpiry += 1;
+
+        const saved = await createGifticon(
+          family.id,
+          {
+            name,
+            category: info.category || '기타',
+            brand: info.brand || null,
+            amount: info.amount ?? '',
+            owner,
+            // 훑을 때 읽은 번호를 뒤에 둔다. 등록 쪽 판독이 실패해도 번호는 남아야 한다 —
+            // 번호가 없으면 계산대에서 쓸 수가 없다.
+            code: info.code || candidate.code || null,
+            code_type: info.codeType || candidate.codeType || null,
+            expires_at: info.expiresAt || null,
+            // 금액권은 켜지 않는다. 확실하지 않은 판단을 사람 없이 켜면, 쓸 때마다
+            // 얼마를 썼는지 묻고 잔액이 남아 목록에서 사라지지 않는다.
+            is_voucher: false,
+            created_by: user.id,
+          },
+          prepared.storageFiles,
+          {
+            barcodeCropFile:
+              prepared.code && prepared.barcodeCropBlob
+                ? new File([prepared.barcodeCropBlob], 'barcode.png', { type: 'image/png' })
+                : null,
+            thumbCropFile: info.thumbCropBlob
+              ? new File([info.thumbCropBlob], 'thumb.jpg', { type: 'image/jpeg' })
+              : null,
+          }
+        );
+        done.push(saved);
+      } catch (err) {
+        // 하나가 실패해도 나머지는 계속 넣는다. 여기서 멈추면 이미 넣은 것과 못 넣은 것이
+        // 섞인 채로 화면만 사라진다.
+        failed.push({ candidate, message: err?.message || '' });
+      }
+    }
+
+    setSaving(null);
+    setResult({ done: done.length, failed: failed.length, noName, noExpiry });
+    setStage('registered');
+    // 목록을 다시 읽게 한다. 방금 넣은 것이 뒤에 보여야 한다.
+    if (done.length > 0) onRegistered?.();
   }
 
   return (
@@ -363,6 +436,68 @@ export default function GalleryScanSheet({ onRegister, savedMark, onClose }) {
             </>
           )}
 
+          {stage === 'registering' && (
+            <div className="flex flex-col gap-2 rounded-xl border border-primary/30 bg-primary/5 px-3.5 py-3">
+              <div className="flex items-center gap-2.5">
+                <Loader2 className="size-4 shrink-0 animate-spin text-primary" />
+                <span className="flex-1 text-base font-semibold text-foreground">
+                  등록하는 중이에요{saving ? ` (${saving.current}/${saving.total})` : ''}
+                </span>
+              </div>
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-primary/15">
+                <div
+                  className="h-full rounded-full bg-primary transition-[width] duration-300 ease-out"
+                  style={{ width: saving ? `${Math.round((saving.current / saving.total) * 100)}%` : '10%' }}
+                />
+              </div>
+              {/* 여기서는 멈출 수 없다. 중간에 끊으면 넣은 것과 안 넣은 것이 섞여서,
+                  무엇이 들어갔는지 확인할 방법이 사라진다. 대신 무엇을 하는 중인지 적는다. */}
+              <p className="m-0 text-sm text-muted-foreground">사진에서 정보를 읽고 있어요</p>
+            </div>
+          )}
+
+          {stage === 'registered' && result && (
+            <>
+              <div className="flex flex-col items-center gap-2 py-6 text-center">
+                <CheckCircle2 className="size-8 text-success" />
+                <p className="m-0 text-lg font-semibold text-foreground">{result.done}개 등록했어요</p>
+                {/* 자동으로 채운 것 중 비어 있는 자리를 짚어준다. 등록은 됐으니 급한 일은
+                    아니지만, 말해주지 않으면 빠진 줄 모르고 지나간다. 특히 유효기한은
+                    비어 있으면 만료 전에 알려줄 수가 없다. */}
+                {(result.noExpiry > 0 || result.noName > 0) && (
+                  <p className="m-0 text-base leading-relaxed break-keep text-muted-foreground">
+                    {result.noExpiry > 0 && `유효기한을 못 읽은 게 ${result.noExpiry}개 있어요.`}
+                    {result.noExpiry > 0 && result.noName > 0 && <br />}
+                    {result.noName > 0 && `상품명을 못 읽은 게 ${result.noName}개 있어요.`}
+                    <br />
+                    목록에서 수정으로 채워주세요.
+                  </p>
+                )}
+                {result.failed > 0 && (
+                  <p className="m-0 text-base break-keep text-destructive">
+                    {result.failed}개는 등록하지 못했어요. + 로 직접 올려주세요.
+                  </p>
+                )}
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <Button type="button" size="lg" className="w-full rounded-xl" onClick={onClose}>
+                  목록으로
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="lg"
+                  className="w-full rounded-xl"
+                  onClick={() => start()}
+                >
+                  <ScanSearch className="size-4.5" />
+                  새 기프티콘 찾기
+                </Button>
+              </div>
+            </>
+          )}
+
           {stage === 'done' && (
             <>
               {/* 안드로이드 14의 "선택한 사진만 허용"이면 사용자가 고른 몇 장만 보인다.
@@ -394,8 +529,27 @@ export default function GalleryScanSheet({ onRegister, savedMark, onClose }) {
               ) : (
                 <>
                   <p className="m-0 text-base break-keep text-foreground">
-<b className="font-semibold">{candidates.length}개</b> 찾았어요. 확인 후 등록해주세요.
+<b className="font-semibold">{candidates.length}개</b> 찾았어요.
                   </p>
+
+                  {/* 받은 사람만 미리 고른다. 사진에 적혀 있지 않아 모델이 알 수 없고,
+                      가족이 함께 쓰는 앱이라 누구 것인지가 목록의 뼈대다. 나중에
+                      건건이 들어가 고치는 편이 훨씬 번거롭다. */}
+                  <div className="flex items-center gap-3">
+                    <span className="shrink-0 text-base text-muted-foreground">받은 사람</span>
+                    <Select value={owner} onValueChange={setOwner}>
+                      <SelectTrigger className="flex-1">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {membersWithMeFirst(members, myName).map((member) => (
+                          <SelectItem key={member.id ?? member.display_name} value={member.display_name}>
+                            {member.display_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                   <ul className="m-0 flex list-none flex-col gap-2 p-0">
                     {candidates.map((candidate) => (
                       <li
@@ -424,21 +578,17 @@ export default function GalleryScanSheet({ onRegister, savedMark, onClose }) {
                               되돌리기
                             </button>
                           ) : (
-                            <>
-                          <Button type="button" size="sm" onClick={() => handleRegister(candidate)}>
-                            등록
-                          </Button>
-                          {/* 아닌 것을 치우면 다음부터 다시 묻지 않는다. 안 그러면 갤러리에
-                              남아 있는 한 훑을 때마다 같은 사진이 계속 올라온다. */}
-                          <button
-                            type="button"
-                            onClick={() => handleDismiss(candidate)}
-                            aria-label="기프티콘 아님"
-                            className="flex size-8 items-center justify-center rounded-lg text-muted-foreground"
-                          >
-                            <X className="size-4" />
-                          </button>
-                            </>
+                            /* 아닌 것을 치우면 다음부터 다시 묻지 않는다. 안 그러면 갤러리에
+                               남아 있는 한 훑을 때마다 같은 사진이 계속 올라온다.
+                               건별 등록 버튼은 뺐다. 남은 것을 아래에서 한 번에 넣는다. */
+                            <button
+                              type="button"
+                              onClick={() => handleDismiss(candidate)}
+                              aria-label="기프티콘 아님"
+                              className="flex size-9 items-center justify-center rounded-lg text-muted-foreground"
+                            >
+                              <X className="size-4.5" />
+                            </button>
                           )}
                         </div>
                       </li>
@@ -462,7 +612,20 @@ export default function GalleryScanSheet({ onRegister, savedMark, onClose }) {
                   쓰는 쪽은 같은 모양의 테두리 버튼이다. 아래쪽을 밑줄 글자로 뒀더니
                   둘이 다른 종류의 것으로 보이지 않고 그냥 안 보였다. */}
               <div className="flex flex-col gap-2">
-                <Button type="button" size="lg" className="w-full rounded-xl" onClick={() => start()}>
+                {keptCount > 0 && (
+                  <Button type="button" size="lg" className="w-full rounded-xl" onClick={registerAll}>
+                    <Check className="size-4.5" />
+                    {keptCount}개 등록
+                  </Button>
+                )}
+
+                <Button
+                  type="button"
+                  variant={keptCount > 0 ? 'outline' : 'default'}
+                  size="lg"
+                  className="w-full rounded-xl"
+                  onClick={() => start()}
+                >
                   <ScanSearch className="size-4.5" />
                   새 기프티콘 찾기
                 </Button>
@@ -470,9 +633,9 @@ export default function GalleryScanSheet({ onRegister, savedMark, onClose }) {
                 {skipped > 0 && (
                   <Button
                     type="button"
-                    variant="outline"
+                    variant="ghost"
                     size="lg"
-                    className="w-full rounded-xl"
+                    className="w-full rounded-xl text-muted-foreground"
                     onClick={() => start({ forgetHistory: true })}
                   >
                     <RotateCcw className="size-4.5" />
