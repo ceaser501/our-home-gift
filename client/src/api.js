@@ -186,6 +186,39 @@ export async function findGifticonByCode(familyId, code, excludeId) {
   return data?.[0] || null;
 }
 
+/**
+ * 번호는 다른데 같은 물건으로 보이는 것을 찾는다.
+ *
+ * 위의 findGifticonByCode는 번호가 똑같을 때만 걸린다. 그런데 한 자리가 다르게 읽히는
+ * 일이 실제로 있었다 — 같은 스타벅스 교환권이 두 번호로 읽혀 두 건으로 들어갔고,
+ * 번호가 달라서 중복 검사에 걸리지 않았다.
+ *
+ * 상호·상품명·유효기한이 셋 다 같으면 같은 물건일 가능성이 높다. 다만 확실하지는
+ * 않다 — 같은 쿠폰을 두 장 선물받는 일도 있다. 그래서 막지 않고 묻는다.
+ *
+ * 번호가 비슷한지로 찾지 않는 이유: 기프티콘은 연번으로 발행되기도 해서, 한 자리
+ * 차이가 곧 같은 물건이라는 뜻이 아니다. 그걸로 묶으면 멀쩡한 두 장을 하나로 본다.
+ */
+export async function findLookalikeGifticon(familyId, { brand, name, expiresAt }, excludeId) {
+  if (!brand || !name || !expiresAt) return null;
+
+  let query = supabase
+    .from(GIFTICON_TABLE)
+    .select('id, name, code')
+    .eq('family_id', familyId)
+    .eq('brand', brand)
+    .eq('name', name)
+    .eq('expires_at', expiresAt)
+    .limit(1);
+  if (excludeId) query = query.neq('id', excludeId);
+
+  const { data, error } = await query;
+  // 이건 어디까지나 한 번 더 물어보기 위한 것이다. 물어보지 못했다고 저장까지
+  // 막으면, 인터넷이 잠깐 끊겼다는 이유로 등록이 안 된다.
+  if (error) return null;
+  return data?.[0] || null;
+}
+
 export async function createGifticon(familyId, fields, files = [], crops = {}) {
   const image_paths = files.length ? await uploadImages(familyId, files) : [];
 

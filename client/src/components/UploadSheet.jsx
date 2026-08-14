@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { Check, Loader2, Plus, RotateCcw, Search, X } from 'lucide-react';
+import { Loader2, Plus, RotateCcw, Search, X } from 'lucide-react';
 import { CATEGORIES } from '../constants';
 import { prepareImages, readGifticonInfo } from '../utils/imageAnalyze';
-import { createGifticon, updateGifticon, searchPrice, findGifticonByCode } from '../api';
+import { createGifticon, updateGifticon, searchPrice, findGifticonByCode, findLookalikeGifticon } from '../api';
 import { useFamily } from '../FamilyContext';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
@@ -107,20 +107,6 @@ function progressLabel(progress) {
   return '거의 다 됐어요';
 }
 
-// 두 번호는 대개 한 자리만 다르다. 열여섯 자리를 두 줄로 나란히 놓고 "다른 데를
-// 찾아서 고르세요"라고 하면 사람은 못 찾는다. 다른 자리를 짚어준다.
-function markDiff(value, other) {
-  return [...String(value)].map((letter, index) =>
-    letter === String(other)[index] ? (
-      letter
-    ) : (
-      <b key={index} className="rounded-sm bg-primary/15 px-0.5 font-bold text-primary">
-        {letter}
-      </b>
-    )
-  );
-}
-
 function buildExistingImages(initial) {
   return (initial?.image_paths || []).map((path, i) => ({ path, url: initial.image_urls[i] }));
 }
@@ -149,6 +135,8 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
   const [searchingPrice, setSearchingPrice] = useState(false);
   const [priceSearchNote, setPriceSearchNote] = useState('');
   const [duplicateName, setDuplicateName] = useState(null);
+  // 번호는 다른데 같은 물건으로 보이는 것. 막지 않고 한 번 되묻는다.
+  const [lookalike, setLookalike] = useState(null);
   // 방금 고른 사진이 지금 편집 중인 것과 다른 기프티콘일 때, 어떻게 할지 물어보려고 들고 있는다.
   const [mismatch, setMismatch] = useState(null);
   const [progress, setProgress] = useState(null);
@@ -376,8 +364,12 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
     if (fileInputRef.current) fileInputRef.current.value = '';
   }
 
+  // 되묻기를 지나온 뒤 이어서 저장하기 위한 표시. 한 번 확인했으면 다시 묻지 않는다.
+  const lookalikeOkRef = useRef(false);
+
+  // 되묻는 창의 '그래도 등록'에서도 부른다. 그때는 폼 제출이 아니라 넘어오는 것이 없다.
   async function handleSubmit(e) {
-    e.preventDefault();
+    e?.preventDefault();
 
     // 사진은 없어도 저장된다. 종이 쿠폰이나 문자로 번호만 받은 것도 넣을 수 있어야 하고,
     // 자동 인식이 실패한 것도 손으로 적어 남길 수 있어야 한다. 바코드 번호만 있으면
@@ -392,10 +384,32 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
     setSubmitting(true);
     setError('');
     try {
+      const excludeId = mode === 'edit' ? initial.id : undefined;
       if (form.code) {
-        const existing = await findGifticonByCode(family.id, form.code, mode === 'edit' ? initial.id : undefined);
+        const existing = await findGifticonByCode(family.id, form.code, excludeId);
         if (existing) {
           setDuplicateName(existing.name);
+          setSubmitting(false);
+          return;
+        }
+      }
+
+      // 번호가 같지 않아도 같은 물건일 수 있다.
+      //
+      // 위 검사는 번호가 똑같을 때만 걸린다. 그런데 같은 사진에서 번호가 한 자리 다르게
+      // 읽히는 일이 실제로 있었고, 그래서 같은 스타벅스 교환권이 두 건으로 들어갔다.
+      // 번호가 달라서 아무것도 걸리지 않았다.
+      //
+      // 상호·상품명·유효기한이 셋 다 같으면 되묻는다. 막지는 않는다 — 같은 쿠폰을
+      // 두 장 받는 일도 있고, 그건 사용자만 안다.
+      if (!lookalikeOkRef.current) {
+        const lookalike = await findLookalikeGifticon(
+          family.id,
+          { brand: form.brand?.trim(), name: form.name.trim(), expiresAt: form.expires_at },
+          excludeId
+        );
+        if (lookalike) {
+          setLookalike(lookalike);
           setSubmitting(false);
           return;
         }
@@ -520,30 +534,15 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
               어느 쪽이 맞는지는 사람만 안다 — 사진을 보고 있으니까.
               한 자리가 틀린 채로 저장되면 계산대에서 못 쓰고, 같은 기프티콘이
               두 건으로 들어온다. 실제로 그런 일이 있었다. */}
+          {/* 막대에서 읽은 번호와 사진에 인쇄된 번호가 갈렸다. 사진에 적힌 쪽을 넣어뒀다 —
+              크게 찍혀 있어 그쪽이 맞을 때가 많다.
+              고르라고 하지는 않는다. 열여섯 자리 숫자 두 줄을 놓고 다른 자리를 찾아
+              고르라는 건, 실제로는 고르지 못하라는 말이다. 사진은 바로 위에 붙어 있고
+              번호 칸도 아래에 있으니, 볼 곳만 알려주면 된다. */}
           {codeConflict && (
-            <div className="flex flex-col gap-2 rounded-xl border border-warning/40 bg-warning/10 px-3.5 py-3">
-              <p className="m-0 text-base font-semibold text-foreground">번호가 두 가지로 읽혔어요</p>
-              <p className="m-0 text-sm break-keep text-muted-foreground">위 사진과 같은 것을 골라주세요.</p>
-              {[codeConflict.printed, codeConflict.scanned].map((value, index) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => {
-                    updateField('code', value);
-                    setCodeConflict(null);
-                  }}
-                  className={cn(
-                    'flex items-center gap-2 rounded-lg border-2 bg-card px-3 py-2.5 text-left',
-                    form.code === value ? 'border-primary' : 'border-transparent'
-                  )}
-                >
-                  <Check className={cn('size-4 shrink-0', form.code === value ? 'text-primary' : 'opacity-0')} />
-                  <span className="font-mono text-base break-all text-foreground">
-                    {markDiff(value, [codeConflict.printed, codeConflict.scanned][1 - index])}
-                  </span>
-                </button>
-              ))}
-            </div>
+            <p className="m-0 rounded-xl border border-warning/40 bg-warning/10 px-3.5 py-3 text-sm break-keep text-foreground">
+              <b className="font-semibold">바코드 번호</b>가 사진과 맞는지 봐주세요.
+            </p>
           )}
 
           {autoFilled && (missingCode || missingExpiry) ? (
@@ -710,6 +709,21 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
               startOver(prepared);
             }}
             onClose={() => setMismatch(null)}
+          />
+        )}
+
+        {lookalike && (
+          <AlertDialog
+            tone="warning"
+            title="이미 등록한 것 같아요"
+            description={`'${lookalike.name}'이(가) 같은 상호·같은 기한으로 목록에 있어요.`}
+            confirmLabel="그래도 등록"
+            onConfirm={() => {
+              setLookalike(null);
+              lookalikeOkRef.current = true;
+              handleSubmit();
+            }}
+            onClose={() => setLookalike(null)}
           />
         )}
 

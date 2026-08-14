@@ -80,7 +80,8 @@ export default function App() {
   const [scanOpen, setScanOpen] = useState(() => isGalleryScanSupported() && isAutoScanOn());
   // 방금 저장한 바코드. 훑기 창이 이걸 보고 그 후보를 목록에서 뺀다. 안 그러면 등록을
   // 마치고 돌아왔을 때 방금 넣은 것이 그대로 남아 있어서 또 넣게 된다.
-  const [savedCode, setSavedCode] = useState(null);
+  // 방금 저장한 것. 훑기 창이 끝난 후보를 목록에서 빼는 데 쓴다.
+  const [savedMark, setSavedMark] = useState(null);
   const [codeTarget, setCodeTarget] = useState(null);
   const [imageTarget, setImageTarget] = useState(null);
   const [storesTarget, setStoresTarget] = useState(null);
@@ -294,8 +295,17 @@ export default function App() {
   }
 
   function handleSaved(saved) {
+    // 훑기 창에서 넘어온 등록이면 어느 후보였는지 함께 알려준다.
+    //
+    // 예전에는 저장된 번호만 넘겼는데, 훑을 때 읽은 번호와 등록 창이 저장한 번호가
+    // 다를 수 있다 — 같은 사진을 두 곳에서 각자 판독하기 때문이다. 번호로 짝지으니
+    // 등록을 마치고 돌아와도 그 후보가 목록에 그대로 남았고, 한 번 더 누르면 같은
+    // 기프티콘이 두 건으로 들어갔다. 실제로 그렇게 됐다.
+    //
+    // 어느 후보를 눌러 시작했는지는 처음부터 알고 있다. 그걸 그대로 쓴다.
+    const candidateId = sheetState?.candidateId ?? null;
     setSheetState(null);
-    if (saved?.code) setSavedCode(saved.code);
+    setSavedMark((prev) => ({ code: saved?.code || null, candidateId, seq: (prev?.seq || 0) + 1 }));
     fetchList();
   }
 
@@ -380,8 +390,8 @@ export default function App() {
           돌아오면 나머지가 남아 있어야, 매번 처음부터 다시 훑지 않는다. */}
       {scanOpen && (
         <GalleryScanSheet
-          savedCode={savedCode}
-          onRegister={(files) => setSheetState({ mode: 'create', initial: null, files })}
+          savedMark={savedMark}
+          onRegister={(files, candidateId) => setSheetState({ mode: 'create', initial: null, files, candidateId })}
           onClose={() => setScanOpen(false)}
         />
       )}

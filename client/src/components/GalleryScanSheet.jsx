@@ -50,7 +50,7 @@ function formatDay(seconds) {
 }
 
 
-export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
+export default function GalleryScanSheet({ onRegister, savedMark, onClose }) {
   // 뒤로가기로 이 창을 닫는다. 안 그러면 설치해서 쓸 때 앱이 통째로 꺼진다.
   useBackClose(onClose);
   const { family } = useFamily();
@@ -97,21 +97,33 @@ export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
 
   // 등록이 끝난 것은 목록에서 뺀다. 남겨두면 방금 넣은 것을 또 넣게 된다.
   //
+  // 어느 후보였는지(id)로 뺀다. 예전에는 저장된 번호로 짝지었는데, 훑을 때 읽은 번호와
+  // 등록 창이 저장한 번호가 다를 수 있다 — 같은 사진을 두 곳에서 각자 판독하기 때문이다.
+  // 한 자리라도 갈리면 등록을 마치고 돌아와도 그 후보가 그대로 남았고, 한 번 더 누르면
+  // 같은 기프티콘이 두 건으로 들어갔다. 실제로 그렇게 됐다.
+  //
+  // 번호로도 함께 뺀다. 훑기를 거치지 않고 + 로 직접 올린 것이 마침 후보에 있던 것과
+  // 같을 수 있어서다. 그때는 id가 없으니 번호가 유일한 단서다.
+  //
   // 마지막 하나까지 등록했으면 이 창을 닫는다. 열어둔 채로 두면 방금 등록을 마쳤는데
-  // "등록할 만한 게 없었어요"가 뜬다 — 없어서가 아니라 다 했기 때문인데, 화면만 보면
+  // "등록할 기프티콘이 없어요"가 뜬다 — 없어서가 아니라 다 했기 때문인데, 화면만 보면
   // 실패한 것처럼 읽힌다. 남은 게 있을 때만 계속 열어둔다.
   useEffect(() => {
-    if (!savedCode) return;
+    if (!savedMark) return;
     setCandidates((prev) => {
-      const left = prev.filter((item) => item.code !== savedCode);
+      const left = prev.filter(
+        (item) => item.id !== savedMark.candidateId && item.code !== savedMark.code
+      );
+      if (left.length === prev.length) return prev;
       // 갱신 함수 안에서 창을 닫으면 안 된다. React가 이 함수를 두 번 부를 수 있어서
       // 닫기가 두 번 불릴 수 있다. 판단만 여기서 하고 닫는 건 밖에서 한다.
-      if (prev.length > 0 && left.length === 0) queueMicrotask(onClose);
+      if (left.length === 0) queueMicrotask(onClose);
       return left;
     });
+    // seq만 본다. 같은 후보를 다시 등록하는 일은 없고, 저장할 때마다 하나씩 오른다.
     // onClose는 부모가 매번 새로 만드는 함수라 의존성에 넣으면 효과가 계속 다시 돈다.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [savedCode]);
+  }, [savedMark?.seq]);
 
   async function start({ forgetHistory = false } = {}) {
     setError('');
@@ -223,7 +235,7 @@ export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
   ) : null;
 
   function handleRegister(candidate) {
-    onRegister(candidateToFiles(candidate));
+    onRegister(candidateToFiles(candidate), candidate.id);
   }
 
   return (
