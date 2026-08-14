@@ -64,6 +64,30 @@ const READ_CONCURRENCY = 3;
 // 번호가 없으면 계산대에서 못 쓰고, 상품명과 상호가 없으면 목록에서 찾아낼 수가 없다.
 // 유효기한과 금액은 없어도 쓰는 데 지장이 없어서 여기 넣지 않는다 — 대신 비었다고
 // 알려주고, 목록에서 채우게 한다.
+// 받침이 있으면 '을', 없으면 '를'. '상호을 못 읽었어요'가 나오고 있었다.
+function withParticle(word) {
+  const last = word.charCodeAt(word.length - 1);
+  if (last < 0xac00 || last > 0xd7a3) return `${word}을`;
+  return (last - 0xac00) % 28 === 0 ? `${word}를` : `${word}을`;
+}
+
+/**
+ * 이 후보를 왜 넣을 수 없는지.
+ *
+ * 예전에는 무슨 일이 있었든 '정보를 못 읽었어요' 하나로 뭉갰다. 그런데 이 자리에 오는
+ * 이유는 둘이고, 사람이 할 일이 서로 다르다.
+ *
+ *   빠진 칸이 있다  — 사진에 안 적혀 있거나 흐린 것이다. 직접 올려서 채우면 된다.
+ *   읽다가 막혔다   — 하루 한도를 다 썼거나 인터넷이 끊긴 것이다. 나중에 다시 하면 된다.
+ *
+ * 둘을 같은 말로 덮으면 뒤쪽은 영영 안 보인다. 실제로 하루 한도 메시지가 그렇게 묻혔다.
+ */
+function reasonOf(candidate) {
+  if (candidate.readError) return candidate.readError;
+  if (candidate.missing?.length > 0) return `${withParticle(candidate.missing.join('·'))} 못 읽었어요`;
+  return '아직 읽지 않았어요';
+}
+
 function missingFields(info, fallbackCode) {
   const missing = [];
   if (!info?.name) missing.push('상품명');
@@ -115,8 +139,6 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
   const [candidates, setCandidates] = useState([]);
   // 이번 창에서 치운 후보. 목록에 흐리게 남겨두고 되돌릴 수 있게 한다.
   const [dismissedIds, setDismissedIds] = useState([]);
-  // 이번에는 빼둘 후보. 치우기와 다르다 — 다음에 찾을 때 다시 올라온다.
-  const [unpickedIds, setUnpickedIds] = useState([]);
   // 금액권으로 넣을 후보. 판정이 확실하지 않아서 켜는 건 사람이 한다.
   const [voucherIds, setVoucherIds] = useState([]);
   const [scanned, setScanned] = useState(0);
@@ -169,7 +191,6 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
     setComplete(false);
     setCandidates([]);
     setDismissedIds([]);
-    setUnpickedIds([]);
     setVoucherIds([]);
     setResult(null);
     setProgress({ scanned: 0, total: 0, found: 0 });
@@ -225,7 +246,9 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
       prepared.uploads = null;
       return { prepared, info, missing: missingFields(info, candidate.code) };
     } catch (err) {
-      return { prepared: null, info: null, missing: ['정보'], readError: err?.message || '' };
+      // 빠진 칸이 아니라 읽다가 막힌 것이다. 서버가 보낸 말을 그대로 들고 있는다 —
+      // 하루 한도를 다 썼는지, 인터넷이 끊겼는지는 그 말에만 적혀 있다.
+      return { prepared: null, info: null, missing: [], readError: err?.message || '읽지 못했어요' };
     }
   }
 
@@ -275,7 +298,7 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
    * 정보는 이미 읽어뒀다. 여기서는 저장만 하므로 금방 끝난다.
    */
   async function registerAll() {
-    const targets = candidates.filter(isPickable).filter((c) => !unpickedIds.includes(c.id));
+    const targets = candidates.filter(isPickable);
     if (targets.length === 0) return;
 
     setStage('registering');
@@ -330,10 +353,7 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
     // 결과 화면만 보고 닫는 사람에게는 여기가 마지막 기회다.
     const unreadable = candidates
       .filter((c) => !dismissedIds.includes(c.id) && !isPickable(c))
-      .map((c) => ({
-        candidate: c,
-        reason: c.missing?.length > 0 ? `${c.missing.join('·')}을 못 읽었어요` : '정보를 읽지 못했어요',
-      }));
+      .map((c) => ({ candidate: c, reason: reasonOf(c) }));
     setResult({ done: done.length, failed: [...unreadable, ...failed], noExpiry });
     setStage('registered');
     // 목록을 다시 읽게 한다. 방금 넣은 것이 뒤에 보여야 한다.
@@ -358,12 +378,6 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
     setDismissedIds((prev) => prev.filter((id) => id !== candidate.id));
   }
 
-  function togglePick(candidate) {
-    setUnpickedIds((prev) =>
-      prev.includes(candidate.id) ? prev.filter((id) => id !== candidate.id) : [...prev, candidate.id]
-    );
-  }
-
   function toggleVoucher(candidate) {
     setVoucherIds((prev) =>
       prev.includes(candidate.id) ? prev.filter((id) => id !== candidate.id) : [...prev, candidate.id]
@@ -383,7 +397,13 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
   // isPickable로 한 번에 가른다 — 어느 쪽도 목록에서 조용히 사라지면 안 된다.
   const unreadable = alive.filter((c) => !isPickable(c));
   const dismissed = candidates.filter((candidate) => dismissedIds.includes(candidate.id));
-  const keptCount = alive.filter((c) => isPickable(c) && !unpickedIds.includes(c.id)).length;
+  const keptCount = alive.filter(isPickable).length;
+  // 못 읽은 것들이 같은 이유로 막혔으면 한 번만 적는다. 하루 한도를 다 썼을 때가
+  // 그런데, 그 긴 문장을 카드마다 되풀이하면 읽지 않게 된다.
+  const blockedReasons = [...new Set(unreadable.map((c) => c.readError).filter(Boolean))];
+  const commonBlock = unreadable.length > 0 && blockedReasons.length === 1 && unreadable.every((c) => c.readError)
+    ? blockedReasons[0]
+    : null;
 
   // 훑기 결과. 접어둔다 — 찾은 것이 여러 개면 위쪽 목록만으로 화면이 꽉 차는데, 그 아래
   // 표까지 펼쳐져 있으면 정작 눌러야 할 등록 버튼이 밀린다. 궁금할 때 여는 자리다.
@@ -452,7 +472,6 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
    */
   function renderCandidate(candidate, { voucher = false } = {}) {
     const isDismissed = dismissedIds.includes(candidate.id);
-    const picked = !unpickedIds.includes(candidate.id);
     const info = candidate.info;
     const broken = !isDismissed && !isPickable(candidate);
 
@@ -465,15 +484,6 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
         )}
       >
         <div className="flex items-center gap-2.5">
-          {!isDismissed && !broken && (
-            <input
-              type="checkbox"
-              checked={picked}
-              onChange={() => togglePick(candidate)}
-              aria-label="이번에 등록"
-              className="size-5 shrink-0 accent-primary"
-            />
-          )}
           <img
             src={`data:image/jpeg;base64,${candidate.images[0]}`}
             alt=""
@@ -485,11 +495,7 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
                 <span className="truncate text-base font-semibold text-foreground">
                   {info?.name || info?.brand || '못 읽었어요'}
                 </span>
-                <span className="text-sm break-keep text-muted-foreground">
-                  {candidate.missing?.length > 0
-                    ? `${candidate.missing.join('·')}을 못 읽었어요`
-                    : '정보를 읽지 못했어요'}
-                </span>
+                <span className="text-sm break-keep text-muted-foreground">{reasonOf(candidate)}</span>
               </>
             ) : (
               <>
@@ -772,10 +778,16 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
                       등록을 눌러봐야 아는 것보다 낫기 때문이다. */}
                   {unreadable.length > 0 && (
                     <div className="flex flex-col gap-2 border-t border-border pt-4">
-                      <p className="m-0 text-base break-keep text-foreground">
-                        <b className="font-semibold">{unreadable.length}개</b>는 정보를 못 읽었어요. + 로 직접
-                        올려주세요.
-                      </p>
+                      {commonBlock ? (
+                        <p className="m-0 rounded-xl bg-warning/10 px-3.5 py-3 text-base leading-relaxed break-keep text-foreground">
+                          {commonBlock}
+                        </p>
+                      ) : (
+                        <p className="m-0 text-base break-keep text-foreground">
+                          <b className="font-semibold">{unreadable.length}개</b>는 정보를 못 읽었어요. + 로 직접
+                          올려주세요.
+                        </p>
+                      )}
                       <ul className="m-0 flex list-none flex-col gap-2 p-0">
                         {unreadable.map((candidate) => renderCandidate(candidate))}
                       </ul>
