@@ -156,6 +156,13 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
   const [tally, setTally] = useState(null);
   // 정보를 읽는 데 걸린 시간(밀리초). 훑기 시간은 tally.elapsedMs에 들어 있다.
   const [readMs, setReadMs] = useState(0);
+  // 읽는 동안의 막대 길이(%).
+  //
+  // 끝난 개수로 그리면 0에 붙어 있다가 한꺼번에 뛴다 — 여덟을 함께 보내니 아무것도 안
+  // 끝나다가 거의 같이 끝나기 때문이다. 거짓말은 아니지만 보는 사람에게는 멈춘 것으로
+  // 읽힌다. 그래서 걸릴 만한 시간에 맞춰 천천히 밀어놓고, 실제로 끝나면 끝까지 채운다.
+  const [readBar, setReadBar] = useState(0);
+  const [readBarMs, setReadBarMs] = useState(0);
   // 결과를 보여준 뒤에도 뒤에서 도는 정밀 탐색. 도는 중인지와, 거기서 걸린 시간.
   const [digging, setDigging] = useState(false);
   const [deepMs, setDeepMs] = useState(0);
@@ -209,6 +216,8 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
     setResult(null);
     setDeepMs(0);
     setDigging(false);
+    setReadBar(0);
+    setReadBarMs(0);
     found0Ref.current = [];
     setProgress({ scanned: 0, total: 0, found: 0 });
 
@@ -325,6 +334,15 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
       setCandidates(found);
       found0Ref.current = found;
       setProgress({ scanned: 0, total: found.length, found: found.length });
+
+      // 실제로 재보니 한 물결에 5.5초 안팎이었다. 눈금은 그보다 조금 넉넉하게 잡는다 —
+      // 짧게 잡으면 막대가 끝에 닿아 멈춰 선 채로 기다리게 되는데, 그건 고치려던 것과
+      // 같은 그림이다. 넉넉하면 아직 움직이는 중에 끝나서 마지막이 자연스럽다.
+      // 정확할 필요는 없다. 실제로 끝나는 순간 100%로 채우므로, 이건 그 사이를 메우는 눈금이다.
+      const waves = Math.ceil(found.length / READ_CONCURRENCY);
+      setReadBar(4);
+      setReadBarMs(waves * 6500);
+      setTimeout(() => setReadBar(92), 60);
     }
 
     const queue = [...found];
@@ -357,6 +375,8 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
     if (controller.signal.aborted) return;
     // 뒤에서 도는 판은 화면 단계를 건드리지 않는다. 사용자가 이미 목록을 보고 있다.
     if (append) return;
+    setReadBarMs(200);
+    setReadBar(100);
     setReadMs(Date.now() - startedAt);
     setStage('done');
     setProgress(null);
@@ -705,10 +725,17 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
                 </div>
                 <div className="h-1.5 w-full overflow-hidden rounded-full bg-primary/15">
                   <div
-                    className="h-full rounded-full bg-primary transition-[width] duration-300 ease-out"
-                    style={{
-                      width: progress?.total ? `${Math.round((progress.scanned / progress.total) * 100)}%` : '20%',
-                    }}
+                    className="h-full rounded-full bg-primary transition-[width] ease-out"
+                    style={
+                      stage === 'reading'
+                        ? { width: `${readBar}%`, transitionDuration: `${readBarMs}ms` }
+                        : {
+                            width: progress?.total
+                              ? `${Math.round((progress.scanned / progress.total) * 100)}%`
+                              : '20%',
+                            transitionDuration: '300ms',
+                          }
+                    }
                   />
                 </div>
                 <p className="m-0 text-sm text-muted-foreground">
@@ -719,6 +746,48 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
                     : '상품명과 유효기한을 읽고 있어요'}
                 </p>
               </div>
+
+              {/* 읽는 동안에도 찾은 것을 보여준다.
+                  사진과 바코드는 이미 손에 있는데 막대만 띄워두면 몇 초 동안 화면이 죽어
+                  있다. 여덟을 함께 보내니 그 몇 초가 통째로 빈 시간이 된다.
+                  사진을 먼저 깔아두면 "찾긴 찾았구나"가 그 자리에서 보이고, 글자는
+                  하나씩 채워진다. 채워지는 것을 보는 것과 아무것도 없는 것을 보는 것은
+                  같은 시간이어도 다르다. */}
+              {stage === 'reading' && candidates.length > 0 && (
+                <ul className="m-0 flex list-none flex-col gap-2 p-0">
+                  {candidates.map((candidate) => (
+                    <li
+                      key={candidate.id}
+                      className="flex items-center gap-2.5 rounded-xl border border-border bg-background p-2.5"
+                    >
+                      <img
+                        src={`data:image/jpeg;base64,${candidate.images[0]}`}
+                        alt=""
+                        className="size-16 shrink-0 rounded-lg bg-black object-cover"
+                      />
+                      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                        {candidate.info ? (
+                          <>
+                            <span className="truncate text-base font-semibold text-foreground">
+                              {candidate.info.name || candidate.bucket}
+                            </span>
+                            <span className="truncate text-sm text-muted-foreground">
+                              {[candidate.info.brand, formatDate(candidate.info.expiresAt)]
+                                .filter(Boolean)
+                                .join(' · ') || candidate.code}
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="h-4 w-2/3 animate-pulse rounded bg-muted" />
+                            <span className="h-3 w-1/3 animate-pulse rounded bg-muted" />
+                          </>
+                        )}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
               <Button
                 type="button"
                 variant="outline"
