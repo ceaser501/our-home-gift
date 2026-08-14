@@ -251,15 +251,14 @@ export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
           {stage === 'intro' && (
             <>
               <p className="m-0 text-base leading-relaxed break-keep text-muted-foreground">
-                <b className="font-semibold text-foreground">{KOREAN_BUCKETS}</b> 폴더에서 아직 등록하지 않은
-                기프티콘을 찾아드려요.
+<b className="font-semibold text-foreground">{KOREAN_BUCKETS}</b> 폴더에서 새 기프티콘을 찾아드려요.
               </p>
               {/* 사진 권한은 사람들이 가장 망설이는 권한이다. 무엇을 보고 무엇을 안 보내는지
                   먼저 적어두면, 눌러도 되는 것인지 판단할 근거가 생긴다. */}
               <ul className="m-0 flex list-none flex-col gap-2 rounded-xl bg-muted/60 px-4 py-3.5 pl-4 text-sm leading-relaxed break-keep text-muted-foreground">
-                <li>사진은 폰 안에서만 읽어요. 밖으로 나가지 않아요.</li>
-                <li>고른 것만 등록돼요.</li>
-                <li>허용하지 않아도 직접 올려서 등록할 수 있어요.</li>
+                <li>사진은 폰 안에서만 읽어요</li>
+                <li>고른 것만 등록돼요</li>
+                <li>허용 안 해도 직접 올릴 수 있어요</li>
               </ul>
               <Button type="button" size="lg" className="w-full rounded-xl" onClick={() => start()}>
                 <ScanSearch className="size-4.5" />
@@ -271,12 +270,11 @@ export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
           {stage === 'denied' && (
             <>
               <p className="m-0 text-base leading-relaxed break-keep text-muted-foreground">
-                사진을 볼 수 없어서 갤러리를 훑지 못했어요. 그래도 괜찮아요 —{' '}
-                <b className="font-semibold text-foreground">+ 버튼으로 사진을 직접 올리면</b> 지금까지처럼 자동으로
-                정보를 채워드려요.
+사진을 볼 수 없어요. 그래도 <b className="font-semibold text-foreground">+ 로 직접 올리면</b> 정보는 자동으로
+                채워드려요.
               </p>
               <p className="m-0 text-sm leading-relaxed break-keep text-muted-foreground">
-                나중에 쓰고 싶으시면 휴대폰 설정 → 애플리케이션 → 모아콘 → 권한 → 사진에서 허용해주세요.
+                설정 → 애플리케이션 → 모아콘 → 권한 → 사진에서 허용할 수 있어요.
               </p>
               <Button type="button" variant="outline" size="lg" className="w-full rounded-xl" onClick={onClose}>
                 닫기
@@ -290,7 +288,7 @@ export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
                 <div className="flex items-center gap-2.5">
                   <Loader2 className="size-4 shrink-0 animate-spin text-primary" />
                   <span className="flex-1 text-base font-semibold text-foreground">
-                    사진을 살펴보고 있어요
+                    찾는 중이에요
                     {progress?.total ? ` (${progress.scanned}/${progress.total})` : ''}
                   </span>
                 </div>
@@ -303,8 +301,7 @@ export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
                   />
                 </div>
                 <p className="m-0 text-xs text-muted-foreground">
-                  {progress?.found ? `${progress.found}개 찾았어요. ` : ''}
-                  사진이 많으면 조금 걸려요.
+{progress?.found ? `${progress.found}개 찾았어요` : '잠시만요'}
                 </p>
               </div>
               <Button
@@ -329,8 +326,8 @@ export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
                   폴더를 훑는다는 전제가 깨지므로, 못 찾았을 때 왜 그런지 알려줘야 한다. */}
               {partial && (
                 <p className="m-0 rounded-xl bg-warning/10 px-3.5 py-3 text-xs leading-relaxed break-keep text-muted-foreground">
-                  <b className="font-semibold text-foreground">선택한 사진만 허용</b>으로 되어 있어서, 고르신 사진 안에서만
-                  찾았어요. 폴더를 통째로 훑으려면 설정에서 &lsquo;모두 허용&rsquo;으로 바꿔주세요.
+<b className="font-semibold text-foreground">선택한 사진만 허용</b>이라 고르신 사진에서만 찾았어요.
+                  설정에서 &lsquo;모두 허용&rsquo;으로 바꿀 수 있어요.
                 </p>
               )}
 
@@ -344,9 +341,9 @@ export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
                   </p>
                   <p className="m-0 text-sm leading-relaxed break-keep text-muted-foreground">
                     {scanned === 0
-                      ? '지난번에 찾은 뒤로 갤러리에 새로 담긴 사진이 없어요.'
-                      : `사진 ${scanned}장을 봤어요. 흐린 바코드나 앱에서만 열리는 기프티콘은 못 찾아요.`}
-                    <br />+ 버튼으로 직접 올리시면 돼요.
+                      ? '새로 담긴 사진이 없어요.'
+: `사진 ${scanned}장을 봤어요. 흐린 바코드는 못 찾아요.`}
+                    <br />+ 로 직접 올려주세요.
                   </p>
 
                   {/* 왜 못 찾았는지 짚어준다.
@@ -357,8 +354,7 @@ export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
               ) : (
                 <>
                   <p className="m-0 text-base break-keep text-foreground">
-                    바코드가 있는 사진 <b className="font-semibold">{candidates.length}장</b>을 찾았어요. 기프티콘이 맞는지
-                    보시고 등록해주세요.
+<b className="font-semibold">{candidates.length}개</b> 찾았어요. 맞는지 보고 등록해주세요.
                   </p>
                   <ul className="m-0 flex list-none flex-col gap-2 p-0">
                     {candidates.map((candidate) => (
@@ -415,8 +411,8 @@ export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
                   알 길이 없다. 두 번째부터는 지난번 이후만 보기 때문에 더 그렇다. */}
               {complete && formatDay(since) && (
                 <p className="m-0 text-sm leading-relaxed break-keep text-muted-foreground">
-                  앱을 설치한 <b className="font-semibold text-foreground">{formatDay(since)} 0시</b>부터 갤러리에 담긴
-                  사진을 봐요. 그 전에 받아둔 기프티콘은 + 버튼으로 올려주세요.
+<b className="font-semibold text-foreground">{formatDay(since)} 0시</b> 이후 사진만 봐요. 그 전 것은 + 로
+                  올려주세요.
                 </p>
               )}
 
@@ -442,7 +438,7 @@ export default function GalleryScanSheet({ onRegister, savedCode, onClose }) {
                     onClick={() => start({ forgetHistory: true })}
                     className="w-full py-2 text-sm text-muted-foreground underline"
                   >
-                    기프티콘이 아니라고 본 사진 {skipped}장도 다시 확인하기
+                    전부 다시 찾기
                   </button>
                 )}
               </div>

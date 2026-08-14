@@ -446,9 +446,9 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
           {/* 가족이 함께 쓰는 앱이라 나이 드신 분도 읽을 수 있어야 한다. 길게 설명하는
               것보다 짧고 큰 글씨가 낫다 — 자세한 규칙은 실제로 해보면 알게 된다. */}
           <p className="m-0 text-sm leading-relaxed break-keep text-muted-foreground">
-            사진을 올리면 정보를 자동으로 채워드려요.
+사진을 올리면 정보를 자동으로 채워드려요.
             <br />
-            여러 장 올리면 합쳐서 채우고, 사진 없이 직접 적어도 돼요.
+            사진 없이 직접 적어도 돼요.
           </p>
 
           <div className="grid grid-cols-3 gap-2">
@@ -499,26 +499,25 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
               값을 채우면 그 줄만 사라지고, 둘 다 채워지면 평소의 "다 채웠어요"로 돌아간다. */}
           {autoFilled && (missingCode || missingExpiry) ? (
             <div className="flex flex-col gap-1.5 rounded-xl border border-warning/40 bg-warning/10 px-3.5 py-3">
-              <p className="m-0 text-xs font-semibold text-foreground">채웠지만, 못 읽은 게 있어요</p>
+              <p className="m-0 text-sm font-semibold text-foreground">못 읽은 게 있어요</p>
               {/* 바코드를 먼저 적는다. 기한이 없으면 알림을 못 받을 뿐이지만, 바코드가
                   없으면 계산대에서 이 기프티콘을 아예 쓸 수 없다. */}
               {missingCode && (
                 <p className="m-0 text-xs leading-relaxed break-keep text-muted-foreground">
-                  <b className="font-semibold text-foreground">바코드/QR 값</b>을 못 읽었어요. 계산대에서 이 번호로 결제하니, 사진에
-                  인쇄된 번호를 직접 입력해주세요.
+<b className="font-semibold text-foreground">바코드 번호</b>를 못 읽었어요. 계산대에서 쓰는 번호라 꼭 필요해요.
                 </p>
               )}
               {missingExpiry && (
-                <p className="m-0 text-xs leading-relaxed break-keep text-muted-foreground">
+                <p className="m-0 text-sm leading-relaxed break-keep text-muted-foreground">
                   <b className="font-semibold text-foreground">유효기한</b>을 못 읽었어요. 넣어두시면 만료 전에 알려드려요. (안 넣어도
                   저장돼요)
                 </p>
               )}
             </div>
           ) : (
-            autoFilled && <p className="text-xs text-success">자동으로 정보를 채웠어요. 확인 후 저장해주세요.</p>
+            autoFilled && <p className="text-sm text-success">정보를 채웠어요. 확인하고 저장해주세요.</p>
           )}
-          {error && <p className="text-xs text-destructive">{error}</p>}
+          {error && <p className="text-sm text-destructive">{error}</p>}
 
           <div className="grid grid-cols-2 gap-3">
             <div className="col-span-2 flex flex-col gap-1.5">
@@ -593,15 +592,14 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
               {/* 무엇을 켠 건지는 켠 다음에 알려준다. 늘 띄워두면 안 쓸 사람에게도 한 줄을
                   차지하는데, 금액권은 열 건 중 한둘이다. */}
               {Boolean(form.is_voucher) && onlyDigits(form.amount) && (
-                <p className="m-0 text-sm break-keep text-muted-foreground">쓴 만큼 깎이고 남은 금액이 표시돼요.</p>
+                <p className="m-0 text-sm break-keep text-muted-foreground">쓴 만큼 깎여요.</p>
               )}
 
               {/* 켜주지 않고 물어만 본다. 잘못 켜두면 쓸 때마다 금액을 묻고 잔액이 남아
                   목록에서 사라지지 않아서, 사람이 확인하고 켜는 쪽이 안전하다. */}
               {voucherHint && !form.is_voucher && onlyDigits(form.amount) && (
                 <p className="m-0 text-sm break-keep text-muted-foreground">
-                  금액을 나눠 쓰는 금액권 같아 보여요. 맞으면 <b className="font-semibold text-foreground">금액권이에요</b>를
-                  켜주세요.
+금액권 같아 보여요. 맞으면 켜주세요.
                 </p>
               )}
             </div>
@@ -654,8 +652,8 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
           <AlertDialog
             tone="warning"
             title="다른 기프티콘 같아요"
-            description={'방금 고른 사진의 바코드 번호가 지금 것과 달라요.\n이 사진으로 새로 등록할까요?'}
-            details={['새로 등록하면 지금까지 채운 내용과 사진이 지워져요', '취소하면 방금 고른 사진만 빼고 그대로 둬요']}
+            description={'바코드 번호가 지금 것과 달라요.\n이 사진으로 새로 등록할까요?'}
+            details={['새로 등록하면 지금 내용이 지워져요', '취소하면 이 사진만 빼요']}
             confirmLabel="새로 등록"
             onConfirm={() => {
               const prepared = mismatch;
