@@ -126,6 +126,8 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
 
   const [analyzing, setAnalyzing] = useState(false);
   const [autoFilled, setAutoFilled] = useState(false);
+  // 모델이 금액권으로 봤는지. 켜주지는 않고 귀띔만 한다.
+  const [voucherHint, setVoucherHint] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [searchingPrice, setSearchingPrice] = useState(false);
@@ -264,7 +266,16 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
         code: fill(result.code || null, prev.code),
         code_type: fill(result.codeType || null, prev.code_type),
         expires_at: fill(result.expiresAt || null, prev.expires_at),
-        is_voucher: merge ? prev.is_voucher || result.isVoucher : result.isVoucher,
+        // 금액권 여부는 자동으로 켜지 않는다.
+        //
+        // 카드에 적힌 글자로 짐작하는 것이라 확실할 수가 없다. 그런데 틀렸을 때의 결과가
+        // 한쪽으로 치우친다 — 교환권을 금액권으로 켜두면 쓸 때마다 얼마를 썼는지 묻고
+        // 잔액이 남아 목록에서 사라지지 않는다. 반대로 금액권을 꺼둔 채로 두면 잔액을
+        // 못 따라갈 뿐 쓰는 데는 지장이 없다.
+        //
+        // 확실하지 않은 판단은 켜는 쪽이 아니라 끄는 쪽으로 기울여야 한다.
+        // 대신 모델이 금액권으로 봤다면 아래에 한 줄로 귀띔해서, 사람이 켜게 한다.
+        is_voucher: merge ? prev.is_voucher : false,
       }));
 
       // 목록 썸네일로 쓸, 상품 사진만 잘라낸 그림. 못 잘랐으면 null로 두어 예전처럼
@@ -272,6 +283,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
       setThumbCropFile(
         result.thumbCropBlob ? new File([result.thumbCropBlob], 'thumb.jpg', { type: 'image/jpeg' }) : null
       );
+      setVoucherHint(Boolean(result.isVoucher));
       setAutoFilled(true);
     } catch (err) {
       // 서버가 왜 거절했는지 그대로 보여준다. 예전에는 무슨 일이 있었든 "실패했어요"만
@@ -339,6 +351,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
     setThumbCropFile(null);
     setError('');
     setAutoFilled(false);
+    setVoucherHint(false);
     setPriceSearchNote('');
     setProgress(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
@@ -580,7 +593,16 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
               {/* 무엇을 켠 건지는 켠 다음에 알려준다. 늘 띄워두면 안 쓸 사람에게도 한 줄을
                   차지하는데, 금액권은 열 건 중 한둘이다. */}
               {Boolean(form.is_voucher) && onlyDigits(form.amount) && (
-                <p className="m-0 text-xs break-keep text-muted-foreground">쓴 만큼 깎이고 남은 금액이 표시돼요.</p>
+                <p className="m-0 text-sm break-keep text-muted-foreground">쓴 만큼 깎이고 남은 금액이 표시돼요.</p>
+              )}
+
+              {/* 켜주지 않고 물어만 본다. 잘못 켜두면 쓸 때마다 금액을 묻고 잔액이 남아
+                  목록에서 사라지지 않아서, 사람이 확인하고 켜는 쪽이 안전하다. */}
+              {voucherHint && !form.is_voucher && onlyDigits(form.amount) && (
+                <p className="m-0 text-sm break-keep text-muted-foreground">
+                  금액을 나눠 쓰는 금액권 같아 보여요. 맞으면 <b className="font-semibold text-foreground">금액권이에요</b>를
+                  켜주세요.
+                </p>
               )}
             </div>
 
