@@ -650,8 +650,12 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
             />
             {/* 몇 %인지는 숫자로 적는다. 선은 계속 돌아 '진행 중'을 말하고, 숫자가
                 '어디까지 왔는지'를 말한다. 둘을 한 자리에 묶어봤더니(선의 위치 = 진행률)
-                읽는 동안 선이 거의 멈춰 있어 오히려 죽어 보였다. */}
-            {pendingRead && (
+                읽는 동안 선이 거의 멈춰 있어 오히려 죽어 보였다.
+
+                숫자는 훑는 중일 때만 적는다. 결과를 보여준 뒤 뒤에서 도는 정밀 탐색에서
+                뒤늦게 올라온 카드에는 셀 진행률이 없다 — 그때 적으면 끝난 값이 얼어붙은
+                채로 사진에 박힌다. 그 카드는 선만 돌면 된다. */}
+            {pendingRead && isWorking && (
               <span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-white tabular-nums drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]">
                 {barPercent}%
               </span>
