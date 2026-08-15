@@ -269,43 +269,51 @@ function ScannerArt() {
 }
 
 /**
- * 첫 결과가 나오기 전에 도는 안내 한 줄.
- *
- * at이 바뀌면 요소가 새로 붙어서 등장 애니메이션이 다시 돈다 — 그래서 key를 준다.
- * 높이를 고정해두는 이유는, 줄 길이에 따라 한 줄과 두 줄을 오가면 아래 카드가
- * 들썩이고 화면이 그걸 따라 내려가기 때문이다.
- */
-function ScanHint({ at }) {
-  const item = HINTS[at % HINTS.length];
-  const Icon = item.icon;
-  return (
-    <div className="flex min-h-11 items-center gap-2.5 rounded-xl bg-muted px-3.5 py-2.5">
-      <Icon key={`i${at}`} className="moacon-hint-in size-4 shrink-0 text-primary" />
-      <p key={`t${at}`} className="moacon-hint-in m-0 text-sm leading-snug break-keep text-muted-foreground">
-        {item.text}
-      </p>
-    </div>
-  );
-}
-
-/**
  * 아직 아무것도 못 읽었을 때 자리만 잡아두는 카드.
  *
  * 첫 결과까지 4초 안팎이 걸린다. 그동안 목록이 비어 있으면 아무 일도 안 일어나는
  * 것처럼 보인다. 들어올 줄과 같은 높이·같은 자리라, 값이 채워질 때 자리가 흔들리지
- * 않는다. 여기에 스캔 선이나 바코드를 또 그리지는 않는다 — 무엇을 하는 중인지는
- * 위 스캐너가 이미 말하고 있고, 아래는 그냥 기프티콘이 들어오는 자리다.
+ * 않는다.
+ *
+ * 안내는 이 안에 겹쳐 띄운다. 따로 한 칸을 두면 화면에 회색 상자가 둘이 되는데,
+ * 둘 다 "아직 아무것도 없다"는 같은 말을 하고 있어서 자리만 두 배로 먹는다.
+ * 비어 있는 칸이 곧 할 말이 있는 자리다.
+ *
+ * 넘기는 방식은 겹쳐 띄우고 투명도만 바꾸는 것이다. 지우고 새로 붙이면 한 줄이
+ * 사라진 뒤에 다음 줄이 들어와서 중간이 비고, 그게 툭툭 끊겨 보인다. 세 줄을 모두
+ * 같은 자리에 포개두면 하나가 옅어지는 동안 다른 하나가 짙어져 끊기는 데가 없다.
  */
-function CandidateSlot() {
+function CandidateSlot({ at }) {
   return (
-    <li className="flex items-start gap-3 rounded-xl border border-border bg-card p-3">
-      <span className="size-14 shrink-0 animate-pulse rounded-lg bg-secondary" />
-      <div className="flex min-w-0 flex-1 flex-col gap-2">
+    <li className="relative flex items-start gap-3 overflow-hidden rounded-xl border border-border bg-card p-3">
+      {/* 들어올 카드의 뼈대. 안내에 자리를 내주느라 옅게 깔아둔다 — 무엇이 들어올
+          자리인지는 보이되, 읽어야 할 글자와 다투지는 않아야 한다. */}
+      <span className="size-14 shrink-0 animate-pulse rounded-lg bg-secondary opacity-40" />
+      <div className="flex min-w-0 flex-1 flex-col gap-2 opacity-40">
         <span className="h-2.5 w-16 animate-pulse rounded bg-secondary" />
         <span className="h-4 w-3/4 animate-pulse rounded bg-secondary" />
         <span className="h-3 w-2/5 animate-pulse rounded bg-secondary" />
       </div>
-      <span className="h-4 w-14 shrink-0 animate-pulse rounded bg-secondary" />
+
+      <div className="absolute inset-0 flex items-center px-3.5">
+        {HINTS.map((item, i) => {
+          const Icon = item.icon;
+          const on = i === at % HINTS.length;
+          return (
+            <span
+              key={item.text}
+              aria-hidden={!on}
+              className={cn(
+                'absolute inset-x-3.5 flex items-center gap-2.5 transition-all duration-500 ease-out',
+                on ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-1 opacity-0'
+              )}
+            >
+              <Icon className="size-4 shrink-0 text-primary" />
+              <span className="text-sm leading-snug break-keep text-muted-foreground">{item.text}</span>
+            </span>
+          );
+        })}
+      </div>
     </li>
   );
 }
@@ -523,7 +531,6 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
     // 이번에는 카드가 화면 밖에 쌓인다.
     stickyRef.current = true;
     settleUntilRef.current = 0;
-    setTotalMs(0);
     setProgress({ scanned: 0, total: 0, found: 0 });
 
     const controller = new AbortController();
@@ -1267,13 +1274,16 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
         <div ref={contentRef} className="flex flex-col gap-4 px-5 pt-2">
           {stage === 'intro' && (
             <>
+              {/* 폴더 이름을 한 줄로 몰아둔다. 그냥 흘려 쓰면 "…스크린샷 폴더에서 새 /
+                  기프티콘을 찾아드려요"로 끊겨서, 굵게 해둔 세 이름이 뒷말과 엉킨다. */}
               <p className="m-0 text-base leading-relaxed break-keep text-muted-foreground">
-                <b className="font-semibold text-foreground">{KOREAN_BUCKETS}</b> 폴더에서 새 기프티콘을
-                찾아드려요.
+                <b className="font-semibold text-foreground">{KOREAN_BUCKETS}</b>
+                <br />
+                폴더에서 새 기프티콘을 찾아드려요.
               </p>
               {/* 사진 권한은 사람들이 가장 망설이는 권한이다. 무엇을 보고 무엇을 안 보내는지
                   먼저 적어두면, 눌러도 되는 것인지 판단할 근거가 생긴다. */}
-              <ul className="m-0 flex list-none flex-col gap-2 rounded-xl bg-muted/60 px-4 py-3.5 pl-4 text-sm leading-relaxed break-keep text-muted-foreground">
+              <ul className="m-0 flex list-none flex-col gap-2 rounded-xl bg-secondary px-4 py-3.5 pl-4 text-sm leading-relaxed break-keep text-muted-foreground">
                 <li>사진은 폰 안에서만 읽어요</li>
                 <li>고른 것만 등록돼요</li>
                 <li>허용 안 해도 직접 올릴 수 있어요</li>
@@ -1431,15 +1441,10 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
                    성격별로 나누는 건 다 끝난 뒤의 일이다 — 도는 중에 나눠두면 방금
                    읽힌 카드가 무리를 옮겨 다니면서 자리가 튀고, 옮길 때마다 등장
                    애니메이션이 다시 돈다. */
-                <div className="flex flex-col gap-2">
-                  {/* 아직 보여줄 것이 없는 동안만 뜬다. 자리를 고정해두지 않으면 줄이
-                      바뀔 때마다 아래 카드가 들썩이고, 화면이 그걸 따라 내려간다. */}
-                  {arrived.length === 0 && <ScanHint at={hint} />}
-                  <ul className="m-0 flex list-none flex-col gap-2 p-0">
-                    {arrived.map((candidate) => renderCandidate(candidate, { entering: true }))}
-                    {arrived.length === 0 && <CandidateSlot />}
-                  </ul>
-                </div>
+                <ul className="m-0 flex list-none flex-col gap-2 p-0">
+                  {arrived.map((candidate) => renderCandidate(candidate, { entering: true }))}
+                  {arrived.length === 0 && <CandidateSlot at={hint} />}
+                </ul>
               ) : (
                 <>
                   {plains.length > 0 && (
