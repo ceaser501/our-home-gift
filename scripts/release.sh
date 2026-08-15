@@ -7,6 +7,7 @@
 #   npm run release -- --major 0.0.34 다음이면 1.0.0
 #   npm run release -- 0.2.7   직접 정한다
 #   npm run release -- --dry   무엇을 할지만 보여주고 아무것도 하지 않는다
+#   npm run release -- --allow-dirty  고쳐둔 것을 빼고 나간다
 #
 # ── 왜 이 파일이 있나 ────────────────────────────────────────────────────────
 # 다음 번호를 사람이 세다가 여러 번 틀렸다. 원인은 늘 같았다 — 손에 있는 태그
@@ -26,6 +27,7 @@ PREFIX='app-v'
 bump='patch'
 explicit=''
 dry=''
+allow_dirty=''
 
 for arg in "$@"; do
   case "$arg" in
@@ -33,8 +35,9 @@ for arg in "$@"; do
     --minor) bump='minor' ;;
     --patch) bump='patch' ;;
     --dry|--dry-run) dry='1' ;;
+    --allow-dirty) allow_dirty='1' ;;
     -h|--help)
-      sed -n '3,10p' "$0" | sed 's/^# \{0,1\}//'
+      sed -n '3,11p' "$0" | sed 's/^# \{0,1\}//'
       exit 0
       ;;
     [0-9]*) explicit="$arg" ;;
@@ -53,11 +56,36 @@ head="$(git rev-parse HEAD)"
 
 # ── 밀 수 있는 상태인지 ─────────────────────────────────────────────────────
 
-# 커밋하지 않은 것이 있으면 태그가 가리키는 것과 손에 있는 것이 달라진다.
-# 빌드는 태그를 받아서 도므로, 방금 고친 것이 안 들어간 APK가 나온다.
-if [ -n "$(git status --porcelain)" ]; then
-  git status --short
-  die "커밋하지 않은 변경이 있습니다. 빌드는 태그만 보므로 이대로 밀면 위 내용이 빠집니다."
+# 커밋하지 않은 것이 있으면 태그가 가리키는 것과 손에 있는 것이 달라진다. 빌드는
+# 태그를 받아서 도므로, 방금 고친 것이 안 들어간 APK가 나온다.
+#
+# 다만 막을 것과 알려주기만 할 것을 나눈다. 처음에는 둘을 같이 막았더니, supabase의
+# 임시 폴더와 맥이 만든 중복 파일 때문에 배포가 멈췄다. 그건 애초에 빌드에 들어갈
+# 것이 아니라서, 막아봐야 사람을 세워두기만 한다.
+#
+#   저장소가 아는 파일이 고쳐졌다 — 막는다. 진짜 작업일 수 있다.
+#   저장소가 모르는 파일이 생겼다 — 알려만 준다.
+tracked_dirty="$(git status --porcelain --untracked-files=no)"
+untracked="$(git ls-files --others --exclude-standard)"
+
+if [ -n "$untracked" ]; then
+  say "저장소가 모르는 파일이 있습니다. 빌드에는 안 들어갑니다:"
+  printf '%s\n' "$untracked" | sed 's/^/    /' | head -8
+  count="$(printf '%s\n' "$untracked" | wc -l | tr -d ' ')"
+  [ "$count" -gt 8 ] && say "    … 그리고 $((count - 8))개 더"
+  say ""
+fi
+
+if [ -n "$tracked_dirty" ] && [ -z "$allow_dirty" ]; then
+  printf '%s\n' "$tracked_dirty" | sed 's/^/  /'
+  die "위 파일이 고쳐진 채로 커밋되지 않았습니다. 빌드는 태그만 보므로 이대로 밀면 빠집니다.
+   커밋하고 다시 하시거나, 정말 빼고 나가려면 --allow-dirty 를 주세요:
+     npm run release -- --allow-dirty"
+fi
+
+if [ -n "$tracked_dirty" ]; then
+  say "⚠ 고쳐진 채로 커밋되지 않은 파일이 있지만 --allow-dirty 라서 그냥 갑니다."
+  say ""
 fi
 
 say "원격에서 태그를 받아옵니다…"
