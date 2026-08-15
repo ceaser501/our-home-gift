@@ -537,10 +537,6 @@ async function collect({ images, pass, isRegistered, skipCodes, onProgress, onCa
  * 그 사진들을 영영 못 본다.
  */
 export async function scanGallery({ isRegistered, onProgress, onCandidate, signal } = {}) {
-  // 얼마나 걸렸는지 잰다. "느리다"는 말을 들었을 때 어디가 느린지 알아야 고칠 데를
-  // 고른다 — 사진을 훑는 것(폰이 하는 일)과 정보를 읽는 것(서버를 다녀오는 일)은
-  // 고치는 방법이 완전히 다르다.
-  const startedAt = Date.now();
   const status = await getGalleryStatus();
   if (!status.supported) return { supported: false, candidates: [] };
   if (!status.granted && !status.partial) return { ...status, candidates: [], needsPermission: true };
@@ -581,7 +577,6 @@ export async function scanGallery({ isRegistered, onProgress, onCandidate, signa
     readFailed,
     found: candidates.length + knownCodes.size,
     alreadyHave: knownCodes.size,
-    elapsedMs: Date.now() - startedAt,
   };
 
   return { ...status, candidates, pending: missed, scanned: fresh.length, since, folders, tally };
@@ -594,8 +589,7 @@ export async function scanGallery({ isRegistered, onProgress, onCandidate, signa
  * 끝까지 돌았을 때만 '바코드 없음'을 적는다 — 중간에 그만두면 다음에 다시 본다.
  */
 export async function deepScan({ pending, isRegistered, skipCodes, onProgress, onCandidate, signal } = {}) {
-  if (!pending?.length) return { candidates: [], elapsedMs: 0 };
-  const startedAt = Date.now();
+  if (!pending?.length) return { candidates: [] };
 
   const { candidates, missed } = await collect({
     images: pending,
@@ -611,7 +605,7 @@ export async function deepScan({ pending, isRegistered, skipCodes, onProgress, o
     addIds(NO_BARCODE_KEY, readIdSet(NO_BARCODE_KEY), missed.map((image) => image.id));
   }
 
-  return { candidates, elapsedMs: Date.now() - startedAt };
+  return { candidates };
 }
 
 // 후보를 등록 창에 넘길 수 있는 파일들로 바꾼다.

@@ -324,11 +324,6 @@ function formatDate(iso) {
   return iso.replaceAll('-', '.');
 }
 
-function formatSeconds(ms) {
-  if (!ms) return '-';
-  return `${(ms / 1000).toFixed(1)}초`;
-}
-
 function formatWon(amount) {
   if (amount === null || amount === undefined || amount === '') return null;
   return `${Number(amount).toLocaleString('ko-KR')}원`;
@@ -362,12 +357,6 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
   // 기기에 실제로 있는 폴더 이름과 장수. 못 찾았을 때 이유를 짚어주기 위한 값이다.
   const [folders, setFolders] = useState([]);
   const [tally, setTally] = useState(null);
-  // 정보를 읽는 데 걸린 시간(밀리초). 훑기 시간은 tally.elapsedMs에 들어 있다.
-  //
-  // 이제 이 둘은 겹친다 — 원본은 다 훑기 전에 먼저 보내기 때문이다. 그래서 둘을 더하면
-  // 실제로 기다린 시간보다 길게 나온다. 진짜로 걸린 시간은 totalMs에 따로 잰다.
-  const [readMs, setReadMs] = useState(0);
-  const [totalMs, setTotalMs] = useState(0);
   // 읽는 동안의 막대 길이(%).
   //
   // 끝난 개수로 그리면 0에 붙어 있다가 한꺼번에 뛴다 — 여덟을 함께 보내니 아무것도 안
@@ -377,7 +366,6 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
   const [readBarMs, setReadBarMs] = useState(0);
   // 결과를 보여준 뒤에도 뒤에서 도는 정밀 탐색. 도는 중인지와, 거기서 걸린 시간.
   const [digging, setDigging] = useState(false);
-  const [deepMs, setDeepMs] = useState(0);
   // 끝까지 훑었는지. 중간에 그만뒀으면 "여기까지 봤다"고 적으면 안 된다 —
   // 못 본 사진들이 다음 번에 통째로 건너뛰어진다.
   const [complete, setComplete] = useState(false);
@@ -396,9 +384,6 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
   const spentRef = useRef(new Set());
   // 읽기 진행률. 훑는 중에 이미 끝난 건이 있어서 0에서 시작하지 않는다.
   const readTallyRef = useRef({ done: 0, total: 0 });
-  // 이번 훑기가 시작된 시각과, 첫 건을 서버로 보낸 시각.
-  const runStartRef = useRef(0);
-  const readStartRef = useRef(0);
   // 읽기가 끝난 순번. 목록에 쌓이는 차례가 된다.
   const readSeqRef = useRef(0);
   // 목록이 들어 있는 칸. 여기 높이가 바뀌는 것을 듣고 화면을 따라 내린다.
@@ -456,14 +441,11 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
     setDismissedIds([]);
     setVoucherIds([]);
     setResult(null);
-    setDeepMs(0);
     setDigging(false);
     setReadBar(0);
     setReadBarMs(0);
     found0Ref.current = [];
     readTallyRef.current = { done: 0, total: 0 };
-    runStartRef.current = Date.now();
-    readStartRef.current = 0;
     readSeqRef.current = 0;
     // 새로 훑을 때는 다시 따라간다. 지난번에 위를 보러 올라가 꺼둔 채로 남아 있으면
     // 이번에는 카드가 화면 밖에 쌓인다.
@@ -499,7 +481,6 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
           // 보낼 사진을 지금 떠둔다. 훑기가 끝나면 candidate.images가 고른 결과로
           // 갈아끼워지는데, 그때 뜨면 방금 보기로 한 그 사진이 아닐 수 있다.
           const files = candidateToFiles(candidate);
-          if (!readStartRef.current) readStartRef.current = Date.now();
           pool.add(candidate.id, () => runRead(candidate, files, controller));
         },
         // 이미 목록에 있는 번호는 후보에서 뺀다. 기프티콘 사진은 지우지 않고 그대로
@@ -545,7 +526,6 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
    */
   async function digDeeper(pending, controller) {
     if (!pending?.length || controller.signal.aborted) return;
-    const startedAt = Date.now();
     setDigging(true);
 
     try {
@@ -564,7 +544,6 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
         },
       });
       if (controller.signal.aborted) return;
-      setDeepMs(Date.now() - startedAt);
       if (deep.candidates.length > 0) {
         // 이미 쌓여 있으니 고른 결과로 갈아끼우기만 한다.
         setCandidates((prev) =>
@@ -641,8 +620,6 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
    */
   async function readAll(found, controller, { append = false } = {}) {
     const pool = poolRef.current;
-    if (!append && !readStartRef.current) readStartRef.current = Date.now();
-
     if (!append) {
       setStage('reading');
       // 훑는 동안 이미 카드가 쌓였고 그중 일부는 읽기까지 끝났다. 여기서는 등록에
@@ -684,8 +661,6 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
     readTallyRef.current = { done: 0, total: 0 };
     setReadBarMs(200);
     setReadBar(100);
-    setReadMs(Date.now() - readStartRef.current);
-    setTotalMs(Date.now() - runStartRef.current);
     // 여기서부터 잠깐은 바닥에 붙이지 않는다. 마지막 한 번은 흘려서 내리기 때문이다.
     //
     // 이 줄이 화면 갱신 쪽(useEffect)에 있으면 늦다. 높이 변화를 듣는 쪽이 먼저
@@ -1057,34 +1032,6 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
             <>
               <dt className="text-muted-foreground">열지 못한 사진</dt>
               <dd className="m-0 tabular-nums text-foreground">{tally.readFailed}장</dd>
-            </>
-          )}
-        </dl>
-
-        {/* 어디에 시간이 갔는지 나눠 적는다. "느리다"는 말만으로는 고칠 데를 고를 수 없다 —
-            사진에서 바코드를 찾는 것은 폰이 하는 일이고, 정보를 읽는 것은 서버를 다녀오는
-            일이라 빠르게 만드는 방법이 서로 다르다.
-
-            둘은 이제 겹쳐서 돈다. 원본은 다 훑기 전에 먼저 보내기 때문이다. 그래서 더하면
-            실제로 기다린 시간보다 길게 나오고, 그걸 모르면 느려진 것으로 읽힌다.
-            진짜로 걸린 시간을 맨 아래 따로 적는 이유다. */}
-        <dl className="m-0 grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 border-t border-border pt-2.5 text-sm">
-          <dt className="text-muted-foreground">사진에서 찾기</dt>
-          <dd className="m-0 tabular-nums text-foreground">{formatSeconds(tally.elapsedMs)}</dd>
-          <dt className="text-muted-foreground">정보 읽기</dt>
-          <dd className="m-0 tabular-nums text-foreground">{formatSeconds(readMs)}</dd>
-          {deepMs > 0 && (
-            <>
-              <dt className="text-muted-foreground">흐린 사진 더 찾기</dt>
-              <dd className="m-0 tabular-nums text-foreground">{formatSeconds(deepMs)}</dd>
-            </>
-          )}
-          {totalMs > 0 && (
-            <>
-              <dt className="border-t border-border pt-1 text-muted-foreground">기다린 시간 (겹침)</dt>
-              <dd className="m-0 border-t border-border pt-1 font-semibold tabular-nums text-foreground">
-                {formatSeconds(totalMs)}
-              </dd>
             </>
           )}
         </dl>
