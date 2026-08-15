@@ -10,6 +10,7 @@ const deepScan = vi.fn();
 const readGifticonInfo = vi.fn();
 const createGifticon = vi.fn();
 const findGifticonByCode = vi.fn();
+const groupImages = vi.fn();
 
 vi.mock('../utils/gallery', async () => {
   const actual = await vi.importActual('../utils/gallery');
@@ -21,6 +22,7 @@ vi.mock('../utils/gallery', async () => {
     requestGalleryAccess: vi.fn(async () => ({ supported: true, granted: true, partial: false })),
     scanGallery: (...args) => scanGallery(...args),
     deepScan: (...args) => deepScan(...args),
+    groupImages: (...args) => groupImages(...args),
     candidateToFiles: vi.fn(() => [new File(['x'], 'a.jpg', { type: 'image/jpeg' })]),
     dismissImages: vi.fn(),
     undismissImages: vi.fn(),
@@ -203,6 +205,31 @@ describe('GalleryScanSheet', () => {
     (await screen.findByRole('button', { name: /다시 읽기/ })).click();
     expect(await screen.findByText('상품 111', {}, { timeout: 3000 })).toBeTruthy();
     expect(await screen.findByRole('button', { name: /2개 등록/ })).toBeTruthy();
+  });
+
+  // 사진을 받아 온 판. 훑기와 같은 화면을 쓰지만 사진첩을 훑지는 않아야 하고,
+  // 여기가 등록하는 자리라는 것이 화면에 보여야 한다.
+  it('사진을 받아 오면 훑지 않고 그 사진만 묶는다', async () => {
+    groupImages.mockResolvedValue({
+      candidates: [candidate('a', '111'), candidate('b', '222')],
+      missed: [],
+      scanned: 3,
+      tally: { readFailed: 0, found: 2, alreadyHave: 0 },
+    });
+
+    const files = [new File(['x'], '1.jpg'), new File(['x'], '2.jpg'), new File(['x'], '3.jpg')];
+    render(<GalleryScanSheet files={files} onRegistered={() => {}} onClose={() => {}} />);
+
+    // 사진첩은 건드리지 않는다.
+    await waitFor(() => expect(groupImages).toHaveBeenCalled(), { timeout: 3000 });
+    expect(scanGallery).not.toHaveBeenCalled();
+
+    // 목록이 아니라 등록하는 자리임이 화면에 적힌다.
+    expect(await screen.findByText('기프티콘 등록')).toBeTruthy();
+    expect((await screen.findAllByText(/고른 사진/)).length).toBeGreaterThan(0);
+
+    (await screen.findByRole('button', { name: /2개 등록/ }, { timeout: 3000 })).click();
+    await waitFor(() => expect(createGifticon).toHaveBeenCalledTimes(2), { timeout: 3000 });
   });
 
   // 이미 있는 번호는 넣지 않는다.

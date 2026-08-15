@@ -4,6 +4,7 @@ import Header from './components/Header';
 import FilterBar from './components/FilterBar';
 import GifticonList from './components/GifticonList';
 import UploadSheet from './components/UploadSheet';
+import { openAfterClose } from './utils/sheetSwap';
 import BarcodeModal from './components/BarcodeModal';
 import ExtendSheet from './components/ExtendSheet';
 import SpendSheet from './components/SpendSheet';
@@ -404,7 +405,9 @@ export default function App() {
           // 화면으로 넘기고 이 창은 닫는다.
           onBulk={(files) => {
             setSheetState(null);
-            setBulkFiles(files);
+            // 곧바로 열면 새 창이 스스로 닫힌다. 닫는 쪽이 히스토리 표시를 걷어내느라
+            // 부른 뒤로가기가 뒤늦게 돌아오는데, 새 창이 그걸 자기 것으로 받는다.
+            openAfterClose(() => setBulkFiles(files));
           }}
         />
       )}

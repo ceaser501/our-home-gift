@@ -6,6 +6,7 @@ import {
   ChevronDown,
   EyeOff,
   ImageOff,
+  ImagePlus,
   Images,
   Info,
   Loader2,
@@ -1449,6 +1450,19 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
           </div>
         )}
 
+        {/* 카드 생김새는 훑기와 같게 두되, 여기가 등록하는 자리라는 것은 알아야 한다.
+            둘이 똑같이 생기면 "지금 보고 있는 게 내 목록인가 넣으려는 것인가"가 헷갈린다.
+            통일성은 카드가 지키고, 구별은 이 띠가 맡는다. 색은 아래 '등록하는 중'과 같은
+            것을 쓴다 — 같은 일의 앞뒤라 같은 색으로 묶인다. */}
+        {picked && (
+          <div className="mx-5 mt-2 flex items-center gap-2.5 rounded-xl border border-primary/30 bg-primary/5 px-3.5 py-2.5">
+            <ImagePlus className="size-4 shrink-0 text-primary" />
+            <p className="m-0 flex-1 text-sm break-keep text-foreground">
+              고른 사진 <b className="font-semibold tabular-nums">{files.length}장</b>을 기프티콘으로 넣어요.
+            </p>
+          </div>
+        )}
+
         <div ref={contentRef} className="flex flex-col gap-4 px-5 pt-2">
           {stage === 'intro' && (
             <>
@@ -1630,7 +1644,8 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
                   {plains.length > 0 && (
                     <>
                       <p className="m-0 text-base break-keep text-foreground">
-                        <b className="font-semibold">{plains.length}개</b> 찾았어요.
+                        <b className="font-semibold">{plains.length}개</b>
+                        {picked ? '를 넣을 수 있어요.' : ' 찾았어요.'}
                       </p>
                       <ul className="m-0 flex list-none flex-col gap-2 p-0">
                         {plains.map((candidate) => renderCandidate(candidate))}
