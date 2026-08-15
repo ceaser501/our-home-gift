@@ -4,15 +4,13 @@ import {
   Check,
   CheckCircle2,
   ChevronDown,
+  EyeOff,
   ImageOff,
   Images,
   Info,
   Loader2,
-  MousePointerClick,
   RotateCcw,
   ScanSearch,
-  SkipForward,
-  Smartphone,
   X,
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -152,15 +150,16 @@ const KOREAN_BUCKETS = FOLDERS.map((folder) => folder.label).join(' · ');
 //
 // 다 사실이어야 한다. 여기 적힌 것과 실제로 하는 일이 다르면, 안심시키려던 말이
 // 거짓말이 된다. 각 줄이 어느 코드에 기대고 있는지 옆에 적어둔다.
+//
+// 처음에는 다섯 줄이었다. 줄여서 셋이다 — 어차피 두 줄쯤 읽고 지나가는 자리라,
+// 다섯을 두면 무엇이 중요한지가 흐려진다. 남긴 셋은 '어디를 보는가 / 나머지는
+// 어떻게 되는가 / 언제부터인가'로, 사진 권한을 망설이게 하는 물음 그 자체다.
 const HINTS = [
   // FOLDERS — 이 셋 말고는 listImages에 넘기지도 않는다.
-  { icon: Images, text: `${KOREAN_BUCKETS}, 이 세 사진첩만 봐요` },
+  { icon: Images, text: `사진첩은 ${KOREAN_BUCKETS}, 이 세 곳만 봐요` },
   // collect() — 바코드가 읽힌 것만 후보가 되고, 서버로는 그 후보만 간다.
-  { icon: Smartphone, text: '바코드는 폰 안에서 찾아요. 기프티콘이 아닌 사진은 폰을 떠나지 않아요' },
-  // registerAll — candidates.filter(isPickable), 치운 것은 빠진다.
-  { icon: MousePointerClick, text: '찾은 것 중에서 고르신 것만 등록돼요' },
-  // isRegistered — 이미 있는 번호는 후보에서 뺀다.
-  { icon: SkipForward, text: '이미 등록한 기프티콘은 알아서 건너뛰어요' },
+  // 나머지는 폰 안에서 걸러져 NO_BARCODE로만 남는다(사진이 아니라 id만).
+  { icon: EyeOff, text: '기프티콘이 아닌 사진은 찾지도 저장하지도 않아요' },
   // listImages({ since: '0' }) — 네이티브가 설치일 0시를 바닥으로 삼는다.
   { icon: CalendarClock, text: '앱을 설치한 날 이후에 담긴 사진만 봐요' },
 ];
