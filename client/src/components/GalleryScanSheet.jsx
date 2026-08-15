@@ -223,6 +223,44 @@ function CandidateSlot() {
   );
 }
 
+/**
+ * 목록 끝까지 사람이 손으로 내린 것처럼 흘려보낸다.
+ *
+ * 브라우저의 scrollIntoView({ behavior: 'smooth' })를 쓰다가 그만뒀다. 카드가 들어올
+ * 때마다 다시 부르면 앞서 흐르던 것을 끊고 처음부터 새로 시작한다. 0.4초마다 한 장씩
+ * 들어오는 화면에서는 그게 툭툭 끊기는 움직임이 된다.
+ *
+ * 여기서는 늘 지금 있는 자리에서 새 목적지로 이어 간다. 중간에 몇 번을 다시 불러도
+ * 자리가 끊기지 않아서 한 번의 흐름으로 보인다.
+ *
+ * 시간은 거리에 맞춘다. 짧은 거리를 오래 끌면 늘어져 보이고, 먼 거리를 짧게 지나가면
+ * 튕긴 것처럼 보인다.
+ */
+function glideToEnd(box, state) {
+  const target = Math.max(0, box.scrollHeight - box.clientHeight);
+  const from = box.scrollTop;
+  const distance = target - from;
+  cancelAnimationFrame(state.raf);
+  if (Math.abs(distance) < 2) return;
+
+  // 움직임을 줄여달라고 설정해둔 사람에게는 흐르지 않고 바로 옮긴다.
+  if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+    box.scrollTop = target;
+    return;
+  }
+
+  const ms = Math.min(700, Math.max(280, Math.abs(distance) * 1.6));
+  const startedAt = performance.now();
+  const step = (now) => {
+    const t = Math.min(1, (now - startedAt) / ms);
+    // 시작과 끝이 다 느린 곡선. 한쪽만 느리면 출발이나 도착 중 하나가 툭 끊긴다.
+    const eased = t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2;
+    box.scrollTop = from + distance * eased;
+    if (t < 1) state.raf = requestAnimationFrame(step);
+  };
+  state.raf = requestAnimationFrame(step);
+}
+
 function missingFields(info, fallbackCode) {
   const missing = [];
   if (!info?.name) missing.push('상품명');
@@ -324,6 +362,8 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
   const readSeqRef = useRef(0);
   // 목록의 맨 끝. 카드가 붙을 때마다 화면이 여기까지 따라 내려간다.
   const listEndRef = useRef(null);
+  // 흐르고 있는 스크롤. 다시 부를 때 앞의 것을 멈추고 이어 가기 위해 들고 있는다.
+  const glideRef = useRef({ raf: 0 });
 
   // 창을 닫는 순간 하던 일을 멈춘다. 안 그러면 닫은 뒤에도 계속 읽어서 폰이 더워지고
   // 배터리와 돈만 쓴다.
@@ -715,9 +755,19 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
   // 걷히고 목록이 성격별로 나뉘면서 높이가 통째로 바뀐다.
   useEffect(() => {
     if (!isListing) return;
-    const still = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    listEndRef.current?.scrollIntoView({ behavior: still ? 'auto' : 'smooth', block: 'end' });
+    const box = listEndRef.current?.closest('[data-slot="sheet-content"]');
+    if (!box) return;
+    // 카드가 자리를 잡은 다음에 잰다. 같은 프레임에 재면 방금 붙은 카드의 높이가
+    // 아직 0이라 조금 덜 내려간다.
+    const id = requestAnimationFrame(() => glideToEnd(box, glideRef.current));
+    return () => cancelAnimationFrame(id);
   }, [arrived.length, stage, isListing]);
+
+  // 창을 닫을 때 흐르던 것을 멈춘다.
+  useEffect(() => {
+    const state = glideRef.current;
+    return () => cancelAnimationFrame(state.raf);
+  }, []);
 
   // 지금 무슨 일을 하는 중인지와, 어디까지 왔는지. 시안의 상태 줄이다 —
   // 왼쪽이 하는 일, 오른쪽이 숫자다.
@@ -848,94 +898,97 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
     const broken = !isDismissed && !isPickable(candidate);
 
     return (
-      <li
-        key={candidate.id}
-        className={cn(
-          'relative flex flex-col gap-2 overflow-hidden rounded-xl border border-border bg-card p-3',
-          (isDismissed || broken) && 'opacity-60',
-          entering && 'moacon-card-in'
-        )}
-      >
-        <div className="flex items-start gap-3">
-          {/* 어느 사진을 집었는지. 시안에는 없었지만 글자만으로는 "이게 그거 맞나"를
-              확인할 방법이 없다. 같은 상호의 기프티콘이 여러 장 나오면 상품명이
-              비슷비슷해서, 그림이 있어야 눈으로 가른다.
-              여기에 스캔 선은 그리지 않는다 — 훑는 일은 맨 위 스캐너 한 자리에서만
-              말한다. 이건 그냥 무엇을 집었는지 보여주는 그림이다. */}
-          <img
-            src={`data:image/jpeg;base64,${candidate.images[0]}`}
-            alt=""
-            className="size-14 shrink-0 rounded-lg bg-secondary object-cover"
-          />
-          <div className="flex min-w-0 flex-1 flex-col">
-            {/* 맨 윗줄은 상호와 어느 사진첩에서 나왔는지. 상호를 작게 위에 올려두면
-                아래 상품명이 한 덩어리로 읽힌다. 어디서 나왔는지를 함께 적는 건,
-                같은 기프티콘이 여러 사진첩에 있을 때 무엇을 집었는지 알기 위해서다. */}
-            <div className="flex items-baseline gap-2">
-              <span className="truncate text-xs font-bold tracking-wider text-primary uppercase">
-                {info?.brand || candidate.bucket}
+      /* 두 겹이다. 바깥은 차지하는 높이가 자라고, 안쪽이 밀려 들어온다.
+         한 겹으로 두면 카드가 제자리에 통째로 나타나면서 목록 높이가 한 번에 뛰고,
+         따라 내려가던 화면이 그 순간 흔들린다. */
+      <li key={candidate.id} className={cn('list-none', entering && 'moacon-card-enter')}>
+        <div
+          className={cn(
+            'moacon-card-body relative flex flex-col gap-2 overflow-hidden rounded-xl border border-border bg-card p-3',
+            (isDismissed || broken) && 'opacity-60'
+          )}
+        >
+            <div className="flex items-start gap-3">
+            {/* 어느 사진을 집었는지. 시안에는 없었지만 글자만으로는 "이게 그거 맞나"를
+                확인할 방법이 없다. 같은 상호의 기프티콘이 여러 장 나오면 상품명이
+                비슷비슷해서, 그림이 있어야 눈으로 가른다.
+                여기에 스캔 선은 그리지 않는다 — 훑는 일은 맨 위 스캐너 한 자리에서만
+                말한다. 이건 그냥 무엇을 집었는지 보여주는 그림이다. */}
+            <img
+              src={`data:image/jpeg;base64,${candidate.images[0]}`}
+              alt=""
+              className="size-14 shrink-0 rounded-lg bg-secondary object-cover"
+            />
+            <div className="flex min-w-0 flex-1 flex-col">
+              {/* 맨 윗줄은 상호와 어느 사진첩에서 나왔는지. 상호를 작게 위에 올려두면
+                  아래 상품명이 한 덩어리로 읽힌다. 어디서 나왔는지를 함께 적는 건,
+                  같은 기프티콘이 여러 사진첩에 있을 때 무엇을 집었는지 알기 위해서다. */}
+              <div className="flex items-baseline gap-2">
+                <span className="truncate text-xs font-bold tracking-wider text-primary uppercase">
+                  {info?.brand || candidate.bucket}
+                </span>
+                {info?.brand && (
+                  <span className="shrink-0 text-xs text-muted-foreground">{candidate.bucket}</span>
+                )}
+              </div>
+              <span className="mt-1 text-base leading-snug font-semibold break-keep text-foreground">
+                {info?.name || (broken ? '못 읽었어요' : candidate.code)}
               </span>
-              {info?.brand && (
-                <span className="shrink-0 text-xs text-muted-foreground">{candidate.bucket}</span>
+              <span className="mt-1.5 truncate text-sm tabular-nums text-muted-foreground">
+                {broken
+                  ? reasonOf(candidate)
+                  : formatDate(info?.expiresAt)
+                    ? `${formatDate(info.expiresAt)} 까지`
+                    : '유효기한 없음'}
+              </span>
+            </div>
+
+            {/* 오른쪽은 금액과, 이 후보를 치우는 자리. 시안에는 '확인됨' 같은 상태 글자가
+                있었는데 빼뒀다 — 아래에서 성격별로 나눠 보여주므로 카드마다 또 적으면
+                같은 말이 두 번 된다. */}
+            <div className="flex shrink-0 flex-col items-end gap-1">
+              {formatWon(info?.amount) && (
+                <span className="text-base font-bold tabular-nums text-foreground">
+                  {formatWon(info.amount)}
+                </span>
+              )}
+              {isDismissed ? (
+                <button
+                  type="button"
+                  onClick={() => handleUndismiss(candidate)}
+                  className="px-1 py-0.5 text-sm font-semibold text-primary underline"
+                >
+                  되돌리기
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => handleDismiss(candidate)}
+                  aria-label="기프티콘 아님"
+                  className="-mr-1 flex size-8 items-center justify-center rounded-lg text-muted-foreground"
+                >
+                  <X className="size-4.5" />
+                </button>
               )}
             </div>
-            <span className="mt-1 text-base leading-snug font-semibold break-keep text-foreground">
-              {info?.name || (broken ? '못 읽었어요' : candidate.code)}
-            </span>
-            <span className="mt-1.5 truncate text-sm tabular-nums text-muted-foreground">
-              {broken
-                ? reasonOf(candidate)
-                : formatDate(info?.expiresAt)
-                  ? `${formatDate(info.expiresAt)} 까지`
-                  : '유효기한 없음'}
-            </span>
           </div>
 
-          {/* 오른쪽은 금액과, 이 후보를 치우는 자리. 시안에는 '확인됨' 같은 상태 글자가
-              있었는데 빼뒀다 — 아래에서 성격별로 나눠 보여주므로 카드마다 또 적으면
-              같은 말이 두 번 된다. */}
-          <div className="flex shrink-0 flex-col items-end gap-1">
-            {formatWon(info?.amount) && (
-              <span className="text-base font-bold tabular-nums text-foreground">
-                {formatWon(info.amount)}
-              </span>
-            )}
-            {isDismissed ? (
-              <button
-                type="button"
-                onClick={() => handleUndismiss(candidate)}
-                className="px-1 py-0.5 text-sm font-semibold text-primary underline"
-              >
-                되돌리기
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => handleDismiss(candidate)}
-                aria-label="기프티콘 아님"
-                className="-mr-1 flex size-8 items-center justify-center rounded-lg text-muted-foreground"
-              >
-                <X className="size-4.5" />
-              </button>
-            )}
-          </div>
+          {/* 금액권 여부는 사람이 정한다. 사진의 글자로 짐작하는 것이라 확실할 수가 없는데,
+              틀렸을 때의 결과가 한쪽으로 치우친다 — 교환권을 금액권으로 켜두면 쓸 때마다
+              얼마를 썼는지 묻고 잔액이 남아 목록에서 사라지지 않는다. 반대로 꺼두면 잔액을
+              못 따라갈 뿐 쓰는 데는 지장이 없다. */}
+          {voucher && !isDismissed && (
+            <label className="flex cursor-pointer items-center gap-2 rounded-lg bg-muted px-2.5 py-2">
+              <input
+                type="checkbox"
+                checked={voucherIds.includes(candidate.id)}
+                onChange={() => toggleVoucher(candidate)}
+                className="size-4.5 shrink-0 accent-primary"
+              />
+              <span className="text-sm break-keep text-foreground">금액권 — 쓴 만큼 깎여요</span>
+            </label>
+          )}
         </div>
-
-        {/* 금액권 여부는 사람이 정한다. 사진의 글자로 짐작하는 것이라 확실할 수가 없는데,
-            틀렸을 때의 결과가 한쪽으로 치우친다 — 교환권을 금액권으로 켜두면 쓸 때마다
-            얼마를 썼는지 묻고 잔액이 남아 목록에서 사라지지 않는다. 반대로 꺼두면 잔액을
-            못 따라갈 뿐 쓰는 데는 지장이 없다. */}
-        {voucher && !isDismissed && (
-          <label className="flex cursor-pointer items-center gap-2 rounded-lg bg-muted px-2.5 py-2">
-            <input
-              type="checkbox"
-              checked={voucherIds.includes(candidate.id)}
-              onChange={() => toggleVoucher(candidate)}
-              className="size-4.5 shrink-0 accent-primary"
-            />
-            <span className="text-sm break-keep text-foreground">금액권 — 쓴 만큼 깎여요</span>
-          </label>
-        )}
       </li>
     );
   }

@@ -485,16 +485,35 @@ html.is-native-android {
   border-right: 2px solid var(--color-primary);
 }
 
-/* 카드가 들어오는 모양 — 시안에서 여러 안을 놓고 고른 '슬라이드 페이드'.
-   오른쪽에서 짧게 밀려 들어와 즉시 멈춘다. 오버슈트도 흔들림도 없다. 한 장씩
-   들어오는 것이라 되튀는 움직임을 쓰면 여러 장이 겹칠 때 화면이 소란스러워진다.
+/* 카드가 들어오는 모양 — 시안에서 고른 '슬라이드 페이드'를 부드럽게 다듬은 것.
+
+   처음에는 카드에 미끄러지는 움직임만 줬는데 툭툭 끊겨 보였다. 움직임 자체보다
+   자리가 문제였다 — 카드가 제자리에 통째로 나타나면서 목록 높이가 한 번에 뛰고,
+   따라 내려가던 화면이 그 순간 흔들렸다. 그래서 두 겹으로 나눈다.
+
+     바깥(.moacon-card-enter) — 차지하는 높이가 0에서 제 높이까지 자란다.
+       grid-template-rows를 0fr에서 1fr로 움직이면 카드가 몇 픽셀이든 알아서 된다.
+       높이를 미리 재둘 필요가 없다.
+     안쪽(.moacon-card-body) — 오른쪽에서 짧게 밀려 들어오며 진해진다.
+
+   미는 거리를 50px에서 24px로 줄이고 시간을 늘렸다. 멀리서 빨리 들어오면 던진
+   것처럼 보인다. 곡선도 앞이 덜 급한 것으로 바꿨다.
 
    왼쪽 세로줄과 한 번 스치는 빛은 "이게 방금 들어온 것"을 짚는다. 목록이 길어지면
    어디에 새로 붙었는지 눈으로 찾아야 하는데, 그걸 대신해준다. */
+@keyframes moacon-card-open {
+  from {
+    grid-template-rows: 0fr;
+  }
+  to {
+    grid-template-rows: 1fr;
+  }
+}
+
 @keyframes moacon-card-in {
   from {
     opacity: 0;
-    transform: translateX(50px);
+    transform: translateX(24px);
   }
   to {
     opacity: 1;
@@ -504,7 +523,7 @@ html.is-native-android {
 
 @keyframes moacon-card-flash {
   from {
-    opacity: 0.1;
+    opacity: 0.08;
   }
   to {
     opacity: 0;
@@ -513,32 +532,40 @@ html.is-native-android {
 
 @keyframes moacon-card-edge {
   0%,
-  45% {
-    opacity: 0.8;
+  40% {
+    opacity: 0.7;
   }
   100% {
     opacity: 0;
   }
 }
 
-.moacon-card-in {
-  animation: moacon-card-in 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
+.moacon-card-enter {
+  display: grid;
+  grid-template-rows: 1fr;
+  animation: moacon-card-open 420ms cubic-bezier(0.33, 1, 0.68, 1) both;
 }
 
-.moacon-card-in::before,
-.moacon-card-in::after {
+/* 자라는 동안 넘치는 부분을 잘라내야 높이가 실제로 0에서 시작한다. */
+.moacon-card-enter > .moacon-card-body {
+  min-height: 0;
+  animation: moacon-card-in 560ms cubic-bezier(0.33, 1, 0.68, 1) both;
+}
+
+.moacon-card-enter > .moacon-card-body::before,
+.moacon-card-enter > .moacon-card-body::after {
   content: '';
   position: absolute;
   pointer-events: none;
   background: var(--color-primary);
 }
 
-.moacon-card-in::before {
+.moacon-card-enter > .moacon-card-body::before {
   inset: 0;
-  animation: moacon-card-flash 640ms ease-out both;
+  animation: moacon-card-flash 700ms ease-out both;
 }
 
-.moacon-card-in::after {
+.moacon-card-enter > .moacon-card-body::after {
   left: 0;
   top: 0;
   bottom: 0;
@@ -553,9 +580,10 @@ html.is-native-android {
   .moacon-paper-back,
   .moacon-paper-mid,
   .moacon-p-sweep,
-  .moacon-card-in,
-  .moacon-card-in::before,
-  .moacon-card-in::after {
+  .moacon-card-enter,
+  .moacon-card-enter > .moacon-card-body,
+  .moacon-card-enter > .moacon-card-body::before,
+  .moacon-card-enter > .moacon-card-body::after {
     animation: none;
   }
 }
