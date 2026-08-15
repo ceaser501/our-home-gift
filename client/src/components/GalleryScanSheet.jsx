@@ -224,6 +224,25 @@ function CandidateSlot() {
 }
 
 /**
+ * 이 요소를 실제로 스크롤하는 조상을 찾는다.
+ *
+ * 시트(client/src/components/ui/sheet.jsx)를 짚어서 찾다가 그만뒀다. 어느 요소가
+ * 스크롤을 맡는지는 화면 구조가 바뀌면 같이 바뀌는데, 이름으로 짚어두면 바뀐 줄도
+ * 모르고 조용히 안 움직인다. 실제로 넘치고 있는 것을 찾는 편이 안 틀린다.
+ *
+ * 아무것도 못 찾으면 내용이 화면에 다 들어간다는 뜻이라, 내릴 것이 없다.
+ */
+function scrollerOf(node) {
+  let el = node?.parentElement;
+  while (el) {
+    const overflow = getComputedStyle(el).overflowY;
+    if (/(auto|scroll|overlay)/.test(overflow) && el.scrollHeight - el.clientHeight > 1) return el;
+    el = el.parentElement;
+  }
+  return null;
+}
+
+/**
  * 목록 끝까지 사람이 손으로 내린 것처럼 흘려보낸다.
  *
  * 브라우저의 scrollIntoView({ behavior: 'smooth' })를 쓰다가 그만뒀다. 카드가 들어올
@@ -360,10 +379,15 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
   const readStartRef = useRef(0);
   // 읽기가 끝난 순번. 목록에 쌓이는 차례가 된다.
   const readSeqRef = useRef(0);
-  // 목록의 맨 끝. 카드가 붙을 때마다 화면이 여기까지 따라 내려간다.
-  const listEndRef = useRef(null);
+  // 목록이 들어 있는 칸. 여기 높이가 바뀌는 것을 듣고 화면을 따라 내린다.
+  const contentRef = useRef(null);
   // 흐르고 있는 스크롤. 다시 부를 때 앞의 것을 멈추고 이어 가기 위해 들고 있는다.
   const glideRef = useRef({ raf: 0 });
+  // 화면을 바닥에 붙여 따라갈지. 손으로 위를 보러 올라가면 꺼진다.
+  const stickyRef = useRef(true);
+  // 이 시각까지는 바닥에 붙이지 않는다. 마지막에 흘려 내리는 동안 그것을 앞질러
+  // 순간이동시켜 버리는 것을 막는다.
+  const settleUntilRef = useRef(0);
 
   // 창을 닫는 순간 하던 일을 멈춘다. 안 그러면 닫은 뒤에도 계속 읽어서 폰이 더워지고
   // 배터리와 돈만 쓴다.
@@ -411,6 +435,10 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
     runStartRef.current = Date.now();
     readStartRef.current = 0;
     readSeqRef.current = 0;
+    // 새로 훑을 때는 다시 따라간다. 지난번에 위를 보러 올라가 꺼둔 채로 남아 있으면
+    // 이번에는 카드가 화면 밖에 쌓인다.
+    stickyRef.current = true;
+    settleUntilRef.current = 0;
     setTotalMs(0);
     setProgress({ scanned: 0, total: 0, found: 0 });
 
@@ -623,6 +651,11 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
     setReadBar(100);
     setReadMs(Date.now() - readStartRef.current);
     setTotalMs(Date.now() - runStartRef.current);
+    // 여기서부터 잠깐은 바닥에 붙이지 않는다. 마지막 한 번은 흘려서 내리기 때문이다.
+    //
+    // 이 줄이 화면 갱신 쪽(useEffect)에 있으면 늦다. 높이 변화를 듣는 쪽이 먼저
+    // 깨어나 바닥으로 데려가버려서, 흘러 내려갈 거리가 남지 않는다.
+    settleUntilRef.current = performance.now() + 900;
     setStage('done');
     setProgress(null);
   }
@@ -753,15 +786,71 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
   // 들어오는 것을 눈으로 따라가다 보면 마지막에 버튼 앞에 서 있게 되는 것이 맞다.
   // stage를 함께 보는 건 다 끝나는 순간에도 한 번 맞춰주기 위해서다 — 그때 스캐너가
   // 걷히고 목록이 성격별로 나뉘면서 높이가 통째로 바뀐다.
+  // 카드가 들어오는 동안 화면이 계속 아래에 붙어 있게 한다.
+  //
+  // 처음에는 카드가 하나 붙을 때마다 한 번씩 내렸다. 그런데 카드는 0.42초에 걸쳐
+  // 높이가 자란다 — 붙은 순간에 재면 그 높이가 아직 0이라 목적지가 제자리다.
+  // 그래서 한 번도 내려가지 않았다.
+  //
+  // 몇 밀리초 뒤에 다시 재는 식으로 맞추지 않는다. 애니메이션 시간을 두 곳에 적어두면
+  // 한쪽만 고치는 날이 온다. 대신 내용의 높이가 바뀌는 것을 그대로 듣는다 — 카드가
+  // 자라는 내내 신호가 오고, 그때마다 바닥에 붙인다.
+  //
+  // 흐르게 만들 필요도 없다. 카드가 부드럽게 자라니 그 높이를 따라가는 것만으로
+  // 화면도 부드럽게 내려간다. 둘이 같은 곡선을 탄다.
+  //
+  // 도는 동안만 붙는다. 다 끝난 뒤에도 붙여두면 상세내역을 펼쳤을 때 그 높이까지
+  // 따라가서, 정작 읽으려고 연 내용을 지나쳐 맨 아래로 데려간다.
   useEffect(() => {
-    if (!isListing) return;
-    const box = listEndRef.current?.closest('[data-slot="sheet-content"]');
+    const content = contentRef.current;
+    if (!isWorking || !content || typeof ResizeObserver === 'undefined') return;
+
+    const follow = () => {
+      if (!stickyRef.current || performance.now() < settleUntilRef.current) return;
+      const box = scrollerOf(content);
+      if (!box) return;
+      box.scrollTop = box.scrollHeight - box.clientHeight;
+    };
+
+    const observer = new ResizeObserver(follow);
+    observer.observe(content);
+    return () => observer.disconnect();
+  }, [isWorking]);
+
+  // 사용자가 손으로 위를 보러 올라갔으면 따라가기를 멈춘다. 다시 바닥 가까이
+  // 내려오면 저절로 붙는다. 우리가 내리는 것도 바닥에서 끝나니 켜진 채로 남는다.
+  useEffect(() => {
+    const content = contentRef.current;
+    if (!isListing || !content) return;
+    // 아직 넘치지 않았으면 scrollerOf가 못 찾는다. 그때는 바로 위 칸이 곧 그 자리다.
+    const box = scrollerOf(content) || content.parentElement;
     if (!box) return;
-    // 카드가 자리를 잡은 다음에 잰다. 같은 프레임에 재면 방금 붙은 카드의 높이가
-    // 아직 0이라 조금 덜 내려간다.
-    const id = requestAnimationFrame(() => glideToEnd(box, glideRef.current));
+    const onScroll = () => {
+      stickyRef.current = box.scrollHeight - box.scrollTop - box.clientHeight < 90;
+    };
+    box.addEventListener('scroll', onScroll, { passive: true });
+    return () => box.removeEventListener('scroll', onScroll);
+  }, [isListing]);
+
+  // 다 끝나는 순간에는 한 번 흘려서 내린다.
+  //
+  // 그때 스캐너가 걷히고 목록이 성격별로 나뉘면서 화면이 통째로 다시 짜인다. 바닥에
+  // 붙이기만 하면 순간이동처럼 보이는데, 여기서 할 일은 등록을 누르는 것이라 손이
+  // 따라올 시간이 필요하다.
+  useEffect(() => {
+    if (stage !== 'done' || !stickyRef.current) return;
+    const content = contentRef.current;
+    if (!content) return;
+    const state = glideRef.current;
+    // 붙이기를 잠가두는 것은 stage를 done으로 바꾸는 자리에서 이미 했다(readAll,
+    // 그만 찾기). 여기서 하면 늦는다.
+    // 새 화면이 자리를 잡은 다음에 잰다.
+    const id = requestAnimationFrame(() => {
+      const box = scrollerOf(content);
+      if (box) glideToEnd(box, state);
+    });
     return () => cancelAnimationFrame(id);
-  }, [arrived.length, stage, isListing]);
+  }, [stage]);
 
   // 창을 닫을 때 흐르던 것을 멈춘다.
   useEffect(() => {
@@ -1015,7 +1104,7 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
           </div>
         )}
 
-        <div className="flex flex-col gap-4 px-5 pt-2">
+        <div ref={contentRef} className="flex flex-col gap-4 px-5 pt-2">
           {stage === 'intro' && (
             <>
               <p className="m-0 text-base leading-relaxed break-keep text-muted-foreground">
@@ -1271,6 +1360,7 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
                     className="w-full rounded-xl"
                     onClick={() => {
                       abortRef.current?.abort();
+                      settleUntilRef.current = performance.now() + 900;
                       setStage('done');
                       setProgress(null);
                     }}
@@ -1312,10 +1402,6 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
                   </Button>
                 )}
               </div>
-
-              {/* 화면이 따라 내려가는 자리. 버튼 뒤에 둬야 마지막에 버튼까지 보인다 —
-                  목록 끝에 두면 새 카드는 보이지만 정작 눌러야 할 것이 화면 밖에 남는다. */}
-              <div ref={listEndRef} aria-hidden="true" />
             </>
           )}
         </div>
