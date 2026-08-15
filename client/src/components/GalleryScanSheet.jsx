@@ -212,6 +212,7 @@ function ScannerArt() {
 function CandidateSlot() {
   return (
     <li className="flex items-start gap-3 rounded-xl border border-border bg-card p-3">
+      <span className="size-14 shrink-0 animate-pulse rounded-lg bg-secondary" />
       <div className="flex min-w-0 flex-1 flex-col gap-2">
         <span className="h-2.5 w-16 animate-pulse rounded bg-secondary" />
         <span className="h-4 w-3/4 animate-pulse rounded bg-secondary" />
@@ -839,6 +840,16 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
         )}
       >
         <div className="flex items-start gap-3">
+          {/* 어느 사진을 집었는지. 시안에는 없었지만 글자만으로는 "이게 그거 맞나"를
+              확인할 방법이 없다. 같은 상호의 기프티콘이 여러 장 나오면 상품명이
+              비슷비슷해서, 그림이 있어야 눈으로 가른다.
+              여기에 스캔 선은 그리지 않는다 — 훑는 일은 맨 위 스캐너 한 자리에서만
+              말한다. 이건 그냥 무엇을 집었는지 보여주는 그림이다. */}
+          <img
+            src={`data:image/jpeg;base64,${candidate.images[0]}`}
+            alt=""
+            className="size-14 shrink-0 rounded-lg bg-secondary object-cover"
+          />
           <div className="flex min-w-0 flex-1 flex-col">
             {/* 맨 윗줄은 상호와 어느 사진첩에서 나왔는지. 상호를 작게 위에 올려두면
                 아래 상품명이 한 덩어리로 읽힌다. 어디서 나왔는지를 함께 적는 건,
