@@ -10,7 +10,7 @@ import { useFamily } from '../FamilyContext';
 // 푸시(유효기한 임박, 가족 참여 신청)와는 다른 자리다. 그 둘은 앱을 안 열고 있어도 지금
 // 알아야 하는 일이라 폰을 울리고, 여기 쌓이는 것은 다음에 앱을 열었을 때 알면 되는 일이다.
 export default function NotificationBell() {
-  const { family, user } = useFamily();
+  const { family, members, user } = useFamily();
   const [activities, setActivities] = useState([]);
   const [lastReadAt, setLastReadAt] = useState(null);
   const [open, setOpen] = useState(false);
@@ -33,9 +33,24 @@ export default function NotificationBell() {
     return subscribeToActivities(family.id, () => load());
   }, [family.id, load]);
 
-  const unread = lastReadAt
-    ? activities.filter((a) => new Date(a.created_at).getTime() > new Date(lastReadAt).getTime()).length
-    : activities.length;
+  // 어디서부터 셀지. 마지막으로 종을 연 때가 있으면 그때부터, 한 번도 안 열었으면
+  // 이 가족에 들어온 때부터 센다.
+  //
+  // 예전에는 한 번도 안 열었으면 쌓여 있던 것을 전부 셌다. 새로 들어온 사람이 앱을
+  // 처음 열면 종에 50이 박혔는데, 그 숫자는 아무 일도 알려주지 않는다 — 들어오기 전에
+  // 가족이 무엇을 했는지는 새로 온 사람의 소식이 아니다.
+  const joinedAt = members.find((m) => m.user_id === user.id)?.created_at || null;
+  const since = lastReadAt || joinedAt;
+
+  // 내가 한 일은 세지 않는다. 방금 등록한 사람에게 "새 소식 6개"를 알리는 셈이라,
+  // 숫자가 붙는 순간 이미 아는 일이다. 한 건씩 올리던 때는 1씩 붙어 덜 거슬렸는데,
+  // 일괄 등록이 생기면서 한 번에 여섯도 열도 붙게 됐다.
+  //
+  // 목록에서는 걸러내지 않는다. 그건 "무슨 일이 있었나"를 되짚는 자리라 내가 한 것도
+  // 함께 있어야 한다. 숫자만 남의 소식을 센다.
+  const unread = activities.filter(
+    (a) => a.actor_id !== user.id && (!since || new Date(a.created_at).getTime() > new Date(since).getTime())
+  ).length;
 
   async function handleOpen() {
     openedWith.current = lastReadAt;

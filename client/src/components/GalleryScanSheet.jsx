@@ -1,5 +1,20 @@
 import { useEffect, useRef, useState } from 'react';
-import { Check, CheckCircle2, ChevronDown, ImageOff, Images, Info, Loader2, RotateCcw, ScanSearch, X } from 'lucide-react';
+import {
+  CalendarClock,
+  Check,
+  CheckCircle2,
+  ChevronDown,
+  ImageOff,
+  Images,
+  Info,
+  Loader2,
+  MousePointerClick,
+  RotateCcw,
+  ScanSearch,
+  SkipForward,
+  Smartphone,
+  X,
+} from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import {
@@ -124,6 +139,36 @@ function makePool(limit) {
 
 const KOREAN_BUCKETS = FOLDERS.map((folder) => folder.label).join(' · ');
 
+// 첫 결과가 나오기 전에 한 줄씩 돌려 보여주는 안내.
+//
+// 이 자리에서 사용자가 기다리는 시간은 4초 안팎이다. 그 사이 화면에는 자리만 잡아둔
+// 빈 칸 하나뿐인데, 하필 그때가 "얘가 내 사진첩을 통째로 들여다보는 건가" 하는 생각이
+// 드는 자리다. 사진 권한은 사람들이 가장 망설이는 권한이고, 그 망설임은 허용을 누른
+// 뒤에도 사라지지 않는다.
+//
+// 그래서 비어 있는 그 시간에 무엇을 보고 무엇을 안 보내는지 말한다. 기다림을 메우는
+// 것이 아니라, 기다리는 동안이 이 말을 할 수 있는 유일한 자리라서 여기 둔다.
+// 순서는 안심시키는 힘이 큰 것부터다 — 두어 개밖에 못 보고 지나가기 때문이다.
+//
+// 다 사실이어야 한다. 여기 적힌 것과 실제로 하는 일이 다르면, 안심시키려던 말이
+// 거짓말이 된다. 각 줄이 어느 코드에 기대고 있는지 옆에 적어둔다.
+const HINTS = [
+  // FOLDERS — 이 셋 말고는 listImages에 넘기지도 않는다.
+  { icon: Images, text: `${KOREAN_BUCKETS}, 이 세 사진첩만 봐요` },
+  // collect() — 바코드가 읽힌 것만 후보가 되고, 서버로는 그 후보만 간다.
+  { icon: Smartphone, text: '바코드는 폰 안에서 찾아요. 기프티콘이 아닌 사진은 폰을 떠나지 않아요' },
+  // registerAll — candidates.filter(isPickable), 치운 것은 빠진다.
+  { icon: MousePointerClick, text: '찾은 것 중에서 고르신 것만 등록돼요' },
+  // isRegistered — 이미 있는 번호는 후보에서 뺀다.
+  { icon: SkipForward, text: '이미 등록한 기프티콘은 알아서 건너뛰어요' },
+  // listImages({ since: '0' }) — 네이티브가 설치일 0시를 바닥으로 삼는다.
+  { icon: CalendarClock, text: '앱을 설치한 날 이후에 담긴 사진만 봐요' },
+];
+
+// 한 줄이 머무는 시간. 짧으면 읽기 전에 넘어가고, 길면 두 번째 줄을 못 보고 끝난다.
+// 첫 결과까지 4초 안팎이라 이 정도면 두 줄은 읽고 지나간다.
+const HINT_MS = 2600;
+
 // 한 번에 몇 건씩 읽을지.
 //
 // 처음에는 한 건씩 차례로 읽었다. 그런데 이 단계에서 걸리는 시간은 거의 다 서버를
@@ -215,6 +260,26 @@ function ScannerArt() {
           <div className="moacon-bracket br" />
         </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * 첫 결과가 나오기 전에 도는 안내 한 줄.
+ *
+ * at이 바뀌면 요소가 새로 붙어서 등장 애니메이션이 다시 돈다 — 그래서 key를 준다.
+ * 높이를 고정해두는 이유는, 줄 길이에 따라 한 줄과 두 줄을 오가면 아래 카드가
+ * 들썩이고 화면이 그걸 따라 내려가기 때문이다.
+ */
+function ScanHint({ at }) {
+  const item = HINTS[at % HINTS.length];
+  const Icon = item.icon;
+  return (
+    <div className="flex min-h-11 items-center gap-2.5 rounded-xl bg-muted px-3.5 py-2.5">
+      <Icon key={`i${at}`} className="moacon-hint-in size-4 shrink-0 text-primary" />
+      <p key={`t${at}`} className="moacon-hint-in m-0 text-sm leading-snug break-keep text-muted-foreground">
+        {item.text}
+      </p>
     </div>
   );
 }
@@ -357,6 +422,8 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
   // 기기에 실제로 있는 폴더 이름과 장수. 못 찾았을 때 이유를 짚어주기 위한 값이다.
   const [folders, setFolders] = useState([]);
   const [tally, setTally] = useState(null);
+  // 지금 보여주고 있는 안내 줄. 계속 커지고, 쓸 때 나머지로 돌린다.
+  const [hint, setHint] = useState(0);
   // 읽는 동안의 막대 길이(%).
   //
   // 끝난 개수로 그리면 0에 붙어 있다가 한꺼번에 뛴다 — 여덟을 함께 보내니 아무것도 안
@@ -447,6 +514,7 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
     found0Ref.current = [];
     readTallyRef.current = { done: 0, total: 0 };
     readSeqRef.current = 0;
+    setHint(0);
     // 새로 훑을 때는 다시 따라간다. 지난번에 위를 보러 올라가 꺼둔 채로 남아 있으면
     // 이번에는 카드가 화면 밖에 쌓인다.
     stickyRef.current = true;
@@ -959,9 +1027,17 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
     return () => cancelAnimationFrame(state.raf);
   }, []);
 
+  // 안내를 한 줄씩 넘긴다. 첫 기프티콘이 들어오면 멈춘다 — 그때부터는 보여줄 것이
+  // 생겼고, 읽을 것이 둘이면 둘 다 안 읽힌다.
+  useEffect(() => {
+    if (!isWorking || arrived.length > 0) return;
+    const timer = setInterval(() => setHint((n) => n + 1), HINT_MS);
+    return () => clearInterval(timer);
+  }, [isWorking, arrived.length]);
+
   // 지금 무슨 일을 하는 중인지와, 어디까지 왔는지. 시안의 상태 줄이다 —
   // 왼쪽이 하는 일, 오른쪽이 숫자다.
-  const workingLabel = stage === 'scanning' ? '사진첩을 훑고 있어요' : '정보를 읽고 있어요';
+  const workingLabel = stage === 'scanning' ? '사진첩에서 기프티콘을 찾고 있어요' : '기프티콘 정보를 읽고 있어요';
   const workingCount =
     stage === 'scanning'
       ? progress?.total
@@ -1344,10 +1420,15 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
                    성격별로 나누는 건 다 끝난 뒤의 일이다 — 도는 중에 나눠두면 방금
                    읽힌 카드가 무리를 옮겨 다니면서 자리가 튀고, 옮길 때마다 등장
                    애니메이션이 다시 돈다. */
-                <ul className="m-0 flex list-none flex-col gap-2 p-0">
-                  {arrived.map((candidate) => renderCandidate(candidate, { entering: true }))}
-                  {arrived.length === 0 && <CandidateSlot />}
-                </ul>
+                <div className="flex flex-col gap-2">
+                  {/* 아직 보여줄 것이 없는 동안만 뜬다. 자리를 고정해두지 않으면 줄이
+                      바뀔 때마다 아래 카드가 들썩이고, 화면이 그걸 따라 내려간다. */}
+                  {arrived.length === 0 && <ScanHint at={hint} />}
+                  <ul className="m-0 flex list-none flex-col gap-2 p-0">
+                    {arrived.map((candidate) => renderCandidate(candidate, { entering: true }))}
+                    {arrived.length === 0 && <CandidateSlot />}
+                  </ul>
+                </div>
               ) : (
                 <>
                   {plains.length > 0 && (
