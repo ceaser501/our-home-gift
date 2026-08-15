@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 #
-# 다음 버전 태그를 달고 밀어 앱 빌드를 띄운다.
+# 원격에서 받아오고, 다음 버전 태그를 달아 밀어 앱 빌드를 띄운다.
+#
+# 어느 폴더에서 쳐도 된다 — 이 파일 위치를 보고 저장소로 옮겨간다.
 #
 #   npm run release            0.0.34 다음이면 0.0.35
 #   npm run release -- --minor 0.0.34 다음이면 0.1.0
@@ -88,20 +90,46 @@ if [ -n "$tracked_dirty" ]; then
   say ""
 fi
 
-say "원격에서 태그를 받아옵니다…"
+say "원격에서 받아옵니다…"
 # --force: 원격에서 태그를 옮겼을 때 이쪽 낡은 것을 그대로 두지 않는다.
-git fetch --tags --force --quiet origin
+git fetch --tags --force --quiet origin "$branch"
 
-# 태그를 다는 커밋이 원격에 없으면 빌드가 그것을 받아올 수 없다.
-if [ -z "$(git branch -r --contains "$head" 2>/dev/null)" ]; then
-  die "지금 커밋이 아직 원격에 없습니다. 먼저 밀어주세요:
-    git push -u origin $branch"
+# 원격에 새 커밋이 있으면 여기서 당겨온다.
+#
+# 늘 "받아오고 → 태그를 단다"였는데, 받아오는 것을 잊거나 엉뚱한 폴더에서 치는 바람에
+# 배포가 여러 번 걸렸다. 두 걸음이 늘 붙어 다닌다면 한 걸음이어야 한다.
+#
+# 다만 갈라진 경우에는 손대지 않는다. 이쪽에도 저쪽에도 새 커밋이 있으면 어느 것을
+# 살릴지는 사람이 정할 일이고, 여기서 합쳐버리면 무엇이 나가는지 모른 채 태그가 붙는다.
+if git rev-parse --verify --quiet "origin/$branch" >/dev/null; then
+  behind="$(git rev-list --count "HEAD..origin/$branch")"
+  ahead="$(git rev-list --count "origin/$branch..HEAD")"
+
+  if [ "$behind" -gt 0 ] && [ "$ahead" -gt 0 ]; then
+    die "원격과 갈라져 있습니다 (이쪽 $ahead개, 원격 $behind개).
+   어느 것을 살릴지 정한 뒤에 다시 해주세요:
+     git pull --rebase origin $branch"
+  fi
+
+  if [ "$behind" -gt 0 ]; then
+    say "원격에 ${behind}개가 더 있습니다. 당겨옵니다:"
+    git log --oneline "HEAD..origin/$branch" | sed 's/^/    /'
+    git merge --ff-only "origin/$branch" --quiet
+    head="$(git rev-parse HEAD)"
+    say ""
+  fi
 fi
 
 # 같은 커밋에 이미 태그가 있으면 같은 것을 두 번 빌드하는 셈이다.
 existing="$(git tag --points-at "$head" --list "${PREFIX}*" | head -1)"
 if [ -n "$existing" ]; then
   die "이 커밋에는 이미 $existing 이(가) 달려 있습니다. 새로 고친 것이 있다면 먼저 커밋해주세요."
+fi
+
+# 태그를 다는 커밋이 원격에 없으면 빌드가 그것을 받아올 수 없다.
+if [ -z "$(git branch -r --contains "$head" 2>/dev/null)" ]; then
+  die "지금 커밋이 아직 원격에 없습니다. 먼저 밀어주세요:
+    git push -u origin $branch"
 fi
 
 # ── 다음 번호 ───────────────────────────────────────────────────────────────
