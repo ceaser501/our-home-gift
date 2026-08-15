@@ -1,8 +1,9 @@
 import { useRef, useState } from 'react';
-import { DatabaseBackup, PackagePlus, Trash2 } from 'lucide-react';
+import { DatabaseBackup, PackagePlus, ScanEye, Trash2 } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { deleteSampleGifticons, resetAllData } from '../api';
 import { SAMPLE_PREFIX, ensureSampleGifticon, setSampleOptOut } from '../sampleData';
+import { clearScanCache, countCachedReads } from '../utils/scanCache';
 import AlertDialog from './AlertDialog';
 import useBackClose from '../utils/useBackClose';
 
@@ -132,6 +133,16 @@ export default function TestDataMenu({ familyId, ownerName, userId, children }) 
     }
   }
 
+  function handleClearScanCache() {
+    const had = countCachedReads();
+    clearScanCache();
+    setNotice({
+      tone: 'success',
+      title: had ? `${had}건을 비웠어요` : '비어 있어요',
+      description: '다음 스캔에서는 모델이 사진을 다시 읽어요. 하루 한도를 그만큼 씁니다.',
+    });
+  }
+
   function closeNotice() {
     const shouldReload = notice?.reloadOnClose;
     setNotice(null);
@@ -172,6 +183,14 @@ export default function TestDataMenu({ familyId, ownerName, userId, children }) 
       label: '목데이터 추가',
       hint: '케이스마다 하나씩 넣어요. 이미 있는 건 건너뜁니다.',
       onClick: () => openAfterClose(handleAddSamples),
+    },
+    {
+      key: 'scan-cache',
+      icon: ScanEye,
+      // 모델이 틀리게 읽은 값은 캐시에 그대로 눌러앉는다. 다시 읽히려면 비워야 한다.
+      label: `스캔 캐시 비우기 (${countCachedReads()}건)`,
+      hint: '한 번 읽은 번호는 서버를 다시 안 불러요. 잘못 읽힌 게 있으면 비우고 다시 스캔하세요.',
+      onClick: () => openAfterClose(handleClearScanCache),
     },
   ];
 

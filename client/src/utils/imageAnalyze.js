@@ -2,6 +2,7 @@ import { BrowserMultiFormatReader } from '@zxing/browser';
 import { BarcodeFormat } from '@zxing/library';
 import { CATEGORY_KEYS } from '../constants';
 import { analyzeGifticonImages } from '../api';
+import { readCachedInfo, writeCachedInfo } from './scanCache';
 
 // 기프티콘 이미지에서 정보를 뽑는 과정은 두 갈래다.
 //   1) 바코드/QR: 브라우저에서 zxing이 바로 읽는다. 매장에서 스캔할 크롭 이미지도 여기서 만든다.
@@ -271,14 +272,22 @@ export async function readGifticonInfo(prepared, { onProgress } = {}) {
   const report = (step) => onProgress?.({ step, total });
 
   report('reading');
-  const info = await analyzeGifticonImages(prepared.uploads, CATEGORY_KEYS);
+  // 테스트 중에는 같은 번호를 다시 읽히지 않는다. 실사용 배포에서는 늘 null이라
+  // 아래 호출이 그대로 나간다 (client/src/utils/scanCache.js).
+  const cached = readCachedInfo(prepared.code);
+  const info = cached || (await analyzeGifticonImages(prepared.uploads, CATEGORY_KEYS));
+  if (!cached) writeCachedInfo(prepared.code, info);
 
   // 서버가 상품 사진 위치를 못 짚었으면 잘라내지 않는다. 이 경우 목록은 예전처럼
   // 첫 사진을 그대로 보여준다(잘못 자른 그림보다는 캡처 전체가 낫다).
   // 자를 대상은 축소본이다. 썸네일은 480px이라 원본을 다시 열어 읽을 이유가 없다.
+  //
+  // 캐시에서 꺼낸 값은 그때 보낸 사진 장수를 기준으로 매겨진 번호라, 이번에 들고 온
+  // 사진이 더 적으면 가리키는 자리가 비어 있을 수 있다. 없으면 자르지 않는다.
   report('thumbnail');
   const thumbBox = info.thumbnail;
-  const thumbCropBlob = thumbBox ? await cropThumbnail(prepared.storageFiles[thumbBox.image - 1], thumbBox) : null;
+  const thumbSource = thumbBox ? prepared.storageFiles[thumbBox.image - 1] : null;
+  const thumbCropBlob = thumbSource ? await cropThumbnail(thumbSource, thumbBox) : null;
   report('done');
 
   // 바코드 번호는 두 군데서 읽힌다 — zxing이 막대를 읽은 값(prepared.code)과,

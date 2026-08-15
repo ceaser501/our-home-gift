@@ -228,6 +228,17 @@ if (cronSecret && url.searchParams.get('token') !== cronSecret) { ... 401 }
         (`VITE_RESET_TOKEN`은 더 이상 쓰지 않는다 — 비밀이 될 수 없어서 관리자 로그인 확인으로 바꿨다)
   - [ ] `supabase/config.toml`의 `[functions.reset-all-data]` 블록 제거
 - [ ] **샘플(목) 데이터 비활성 확인** — `client/src/sampleData.js`는 `VITE_TEST_TOOLS`가 있을 때만 동작한다. 위 항목을 지우면 자동으로 꺼지지만 실제로 안 들어가는지 확인할 것
+- [ ] **스캔 캐시 제거** — `client/src/utils/scanCache.js`. 한 번 읽은 바코드 번호의 결과를
+      폰에 두고 서버를 다시 안 부르는 장치다. 테스트로 같은 사진을 반복해서 읽히느라 하루
+      한도가 스물몇 번 만에 바닥나서 넣었다. 출시에는 들어가면 안 된다 — 모델이 틀리게 읽은
+      값이 그대로 굳는데(예: "떠먹는" → "따먹는"), 자동 스캔은 사람이 고치는 단계 없이 바로
+      등록까지 가서 고쳐 쓸 자리가 없다. 자세한 내용은 [scan-cost.md](scan-cost.md).
+  - [ ] `client/src/utils/scanCache.js` 삭제
+  - [ ] `client/src/utils/imageAnalyze.js`의 import와 `readCachedInfo`/`writeCachedInfo` 두 줄 제거
+        (썸네일 자를 자리가 비었는지 보는 `thumbSource` 확인은 남겨둬도 무해하다)
+  - [ ] `client/src/components/ResetAllDataButton.jsx`의 `scan-cache` 항목 제거
+        (이 파일은 어차피 통째로 지운다)
+  - [ ] `ANALYZE_DAILY_LIMIT`을 테스트용으로 올려둔 값(300)에서 실사용 값으로 되돌리기
 - [ ] 위 1~11번 조치 완료 확인
 - [ ] Anthropic·카카오·TMAP·Supabase 각각 **일일 사용량 상한과 알림** 설정
 - [ ] 개인정보처리방침·이용약관 URL이 앱과 스토어 양쪽에 연결돼 있는지 확인
