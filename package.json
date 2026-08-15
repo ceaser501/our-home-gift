@@ -6,6 +6,8 @@
     "install:all": "npm install --prefix client",
     "dev": "npm run dev --prefix client",
     "build": "npm run build --prefix client",
-    "preview": "npm run preview --prefix client"
+    "preview": "npm run preview --prefix client",
+    "release": "bash scripts/release.sh",
+    "release:dry": "bash scripts/release.sh --dry"
   }
 }
