@@ -66,44 +66,37 @@
 
 ---
 
-## 1. 지도와 외부 연동이 앱에서 안 된다
-
-매장을 눌러 들어가면 지도가 뜨지 않는다. 웹(GitHub Pages)에서는 되던 것이라,
-앱으로 감싸면서 생긴 문제다.
-
-### 원인 — 화면을 여는 주소가 다르다
+## 1. ~~지도와 외부 연동이 앱에서 안 된다~~ — 됐다
 
 앱은 화면을 **`https://localhost`** 에서 연다. Capacitor의 기본값이고
 (`hostname = "localhost"`, `androidScheme = https`), `app/capacitor.config.ts`에
-따로 지정한 것이 없어 그대로다.
+따로 지정한 것이 없어 그대로다. 개발자센터에는 `https://ceaser501.github.io`만
+등록돼 있어서 SDK가 401로 떨어졌다.
 
-카카오 JavaScript 키는 **개발자센터에 등록한 사이트 도메인에서만** 동작한다.
-등록돼 있는 것은 `https://ceaser501.github.io`일 테고 `https://localhost`는 없다.
-그래서 SDK 스크립트가 401로 떨어지고, `loadKakaoMap()`이 null을 돌려주고
-(`client/src/utils/kakaoMap.js:26`), 화면은 지도 없이 정보만 보여준다.
+**등록하는 자리를 찾는 데 가장 오래 걸렸다.** 카카오 콘솔에는 도메인을 적는 칸이
+여럿이고 쓰임이 다르다. 다음에 또 헤매지 않도록 적어둔다.
 
-### 할 일
+| 자리 | 무엇에 쓰나 |
+| --- | --- |
+| **앱 → 플랫폼 → Web → 사이트 도메인** | **JavaScript SDK가 보는 유일한 칸** |
+| 앱 → 제품 링크 관리 → 웹 도메인 | 카카오톡 링크 공유 미리보기 |
+| 앱 → 일반 → 앱 대표 도메인 | 같은 계열. SDK와 무관 |
+| 제품 설정 → 카카오 로그인 → Redirect URI | 로그인 후 돌아올 주소 |
 
-- [ ] **카카오 개발자센터 → 내 애플리케이션 → 플랫폼 → Web → 사이트 도메인에
-      `https://localhost` 추가.** 코드 수정 없이 이것만으로 될 가능성이 크다.
-      **이것만 태수님 손이고, 나머지는 아래에서 이미 했다.**
+- [x] 카카오 **플랫폼 → Web → 사이트 도메인**에 `https://localhost` 추가 → 지도가 뜬다
 - [x] 실패 이유를 화면에 남긴다 — `client/src/utils/kakaoMap.js`가 이유를 같이
-      돌려주고, `client/src/components/StoreDetailSheet.jsx`가 그대로 보여준다.
-      등록해야 할 주소(`window.location.origin`)를 문장에 넣었다. 여전히 안 뜨더라도
-      이제 화면이 무엇을 해야 하는지 말한다.
-- [x] **T맵 길안내** — 원인을 찾았다. `intent://` 형태를 풀어주는 것은 크롬이지
-      웹뷰가 아니다. Capacitor는 자기 도메인 밖의 주소를 만나면
-      `new Intent(ACTION_VIEW, url)`로 그대로 넘기는데(`Bridge.launchIntent`),
-      그 url의 scheme이 `intent`라서 받아줄 앱이 없다. 던져진
-      `ActivityNotFoundException`은 아무도 잡지 않아(소스에 `// TODO` 로 남아 있다)
-      눌러도 아무 일도 일어나지 않았다.
-
-      앱 안에서는 `tmap://` 를 그대로 넘기게 바꿨다. 대체 주소를 실을 수 없으니
-      아이폰에서 쓰던 "1.5초 뒤에도 화면이 그대로면 스토어로"를 같이 쓴다.
-      `@capacitor/app-launcher`를 새로 넣지 않아도 되는 길이다.
-- [ ] **주변 매장 검색**(`supabase/functions/search-places`)은 서버가 부르는
-      REST라 도메인 제한과 무관하다. 지도가 살아난 뒤에 따로 확인한다.
-- [ ] 확인 순서: 카카오 도메인 추가 → 지도 뜨는지 → T맵 → 매장 검색
+      돌려주고 `client/src/components/StoreDetailSheet.jsx`가 그대로 보여준다.
+      앱에서는 CapacitorHttp로 한 번 더 불러 상태 코드와 본문까지 적는다.
+      401을 눈으로 본 덕에 "네트워크냐 도메인이냐"를 한 번에 갈랐다.
+- [x] **T맵 길안내** — `intent://` 형태를 풀어주는 것은 크롬이지 웹뷰가 아니다.
+      Capacitor는 자기 도메인 밖의 주소를 만나면 `new Intent(ACTION_VIEW, url)`로
+      그대로 넘기는데(`Bridge.launchIntent`), 그 url의 scheme이 `intent`라서 받아줄
+      앱이 없다. 던져진 `ActivityNotFoundException`은 아무도 잡지 않는다(소스에
+      `// TODO`로 남아 있다). 앱 안에서는 `tmap://`를 그대로 넘기고, 대체 주소를
+      실을 수 없으니 "1.5초 뒤에도 화면이 그대로면 스토어로"를 같이 쓴다.
+- [ ] **아직 안 본 것** — 경로 그리기(자동차·도보)와 주변 매장 검색
+      (`supabase/functions/search-places`). 후자는 서버가 부르는 REST라 도메인
+      제한과 무관하지만, 지도가 죽어 있어서 확인할 기회가 없었다.
 
 ---
 
