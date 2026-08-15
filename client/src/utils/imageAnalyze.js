@@ -82,11 +82,35 @@ function loadImage(src) {
   });
 }
 
-// 서버로 보낼 것과 보관할 것이 같은 그림이라 한 번만 만든다.
-async function toStorageBlob(canvas) {
-  const scale = Math.min(1, UPLOAD_EDGE / Math.max(canvas.width, canvas.height));
+// 보관용과 모델용은 크기가 같고 화질만 다르다. 한 번 줄여서 두 벌을 뽑는다.
+//
+// 예전에는 한 벌로 둘 다 했다. 보관 용량을 줄이려고 0.82로 눌러둔 것을 모델도 같이
+// 봤는데, 그 값은 "목록 썸네일과 사진 보기에 충분한가"를 보고 정한 것이지 "글자를 읽을
+// 수 있는가"를 보고 정한 것이 아니었다.
+//
+// 한글은 획 하나로 갈린다. 떠/따, 반/밤, 올/울. 압축 자국이 그 획 위에 앉으면 모델이
+// 다른 글자로 읽는다. 실제로 "떠먹는 스트로베리"가 "따먹는"과 "뚜렛는"으로, "황금올리브
+// 반반"이 "황올반"과 "황올밤"으로 갈려 나왔다. 같은 사진인데 부를 때마다 다르게 읽혔다.
+//
+// 화질을 올려도 요금은 그대로다. 이미지 토큰은 픽셀 수로만 매겨지고 파일 크기는 세지
+// 않는다. 늘어나는 건 올려 보내는 바이트뿐이라, 여기서 아낄 이유가 없었다.
+const STORAGE_QUALITY = 0.82;
+const ANALYZE_QUALITY = 0.95;
+
+// 모델에게 보낼 사본의 긴 변. 보관용(1400)보다 크게 잡는다.
+//
+// 여기가 천장인 이유가 있다. 이미지 토큰은 픽셀 수로 매겨지는데, 대략 115만 화소 또는
+// 긴 변 1568픽셀을 넘기면 보내봐야 저쪽에서 다시 줄인다. 더 키우면 올리는 시간만 늘고
+// 모델이 보는 그림은 같다. 그래서 줄여서 손해 안 보는 가장 큰 값이 이 값이다.
+//
+// 세로로 긴 캡처는 이래도 폭이 700픽셀 언저리다. 화소 상한이 폭을 묶어버려서 더 넓힐
+// 방법이 없다. 글자를 더 키우려면 결국 필요한 부분만 잘라 보내야 하는데, 그건 다음 일이다.
+const ANALYZE_EDGE = 1568;
+
+async function toBlobAt(canvas, edge, quality) {
+  const scale = Math.min(1, edge / Math.max(canvas.width, canvas.height));
   const scaled = scale < 1 ? drawScaled(canvas, canvas.width, canvas.height, scale) : canvas;
-  const blob = await new Promise((resolve) => scaled.toBlob(resolve, 'image/jpeg', 0.82));
+  const blob = await new Promise((resolve) => scaled.toBlob(resolve, 'image/jpeg', quality));
 
   if (scaled !== canvas) {
     scaled.width = 0;
@@ -94,6 +118,13 @@ async function toStorageBlob(canvas) {
   }
 
   return blob;
+}
+
+async function toOutputBlobs(canvas) {
+  return {
+    storage: await toBlobAt(canvas, UPLOAD_EDGE, STORAGE_QUALITY),
+    analyze: await toBlobAt(canvas, ANALYZE_EDGE, ANALYZE_QUALITY),
+  };
 }
 
 async function toUploadPayload(blob) {
@@ -246,9 +277,9 @@ export async function prepareImages(files, { onProgress } = {}) {
         const found = await decodeBarcode(canvas);
         if (found.code) Object.assign(barcode, found);
       }
-      const blob = await toStorageBlob(canvas);
-      storageFiles.push(new File([blob], storageName(file), { type: 'image/jpeg' }));
-      uploads.push(await toUploadPayload(blob));
+      const { storage, analyze } = await toOutputBlobs(canvas);
+      storageFiles.push(new File([storage], storageName(file), { type: 'image/jpeg' }));
+      uploads.push(await toUploadPayload(analyze));
     } finally {
       // 다 쓴 캔버스가 메모리에 남지 않게 비워둔다.
       canvas.width = 0;
@@ -267,16 +298,22 @@ export async function prepareImages(files, { onProgress } = {}) {
   };
 }
 
-export async function readGifticonInfo(prepared, { onProgress } = {}) {
+export async function readGifticonInfo(prepared, { onProgress, knownCode } = {}) {
   const total = prepared.uploads.length;
   const report = (step) => onProgress?.({ step, total });
 
   report('reading');
   // 테스트 중에는 같은 번호를 다시 읽히지 않는다. 실사용 배포에서는 늘 null이라
   // 아래 호출이 그대로 나간다 (client/src/utils/scanCache.js).
-  const cached = readCachedInfo(prepared.code);
+  //
+  // 열쇠는 부르는 쪽이 아는 번호를 먼저 쓴다. 여기서 다시 읽은 prepared.code만 쓰면
+  // 갤러리 훑기의 정밀 탐색으로 찾은 건이 통째로 빠진다 — 저쪽은 tryHarder를 켜고 읽고
+  // 이쪽 decodeBarcode는 그냥 읽어서, 저쪽만 성공하는 사진이 있다. 그런 건은 열쇠가
+  // 없어 저장되지 않았고, 여덟 건을 읽어도 캐시에는 한 건만 남았다.
+  const cacheKey = knownCode || prepared.code;
+  const cached = readCachedInfo(cacheKey);
   const info = cached || (await analyzeGifticonImages(prepared.uploads, CATEGORY_KEYS));
-  if (!cached) writeCachedInfo(prepared.code, info);
+  if (!cached) writeCachedInfo(cacheKey, info);
 
   // 서버가 상품 사진 위치를 못 짚었으면 잘라내지 않는다. 이 경우 목록은 예전처럼
   // 첫 사진을 그대로 보여준다(잘못 자른 그림보다는 캡처 전체가 낫다).

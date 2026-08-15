@@ -166,7 +166,10 @@ Deno.serve(async (req) => {
     const client = new Anthropic({ apiKey });
     const response = await client.messages.create({
       model: MODEL,
-      max_tokens: 1024,
+      // 답은 짧은 JSON 하나라 200토큰 안팎이면 끝난다. 그런데 모델이 한 번씩 같은 구절을
+      // 되풀이하다 천장에 닿았고, 그때 JSON이 잘려 통째로 실패했다. 천장을 올려도 실제로
+      // 쓴 만큼만 값을 내므로, 여유를 두는 쪽이 싸다.
+      max_tokens: 2048,
       system: SYSTEM_PROMPT,
       output_config: { format: { type: 'json_schema', schema: buildSchema(categories) } },
       messages: [
@@ -195,7 +198,25 @@ Deno.serve(async (req) => {
       });
     }
 
-    const parsed = JSON.parse(textBlock.text);
+    // 답이 max_tokens에서 잘리면 JSON도 문장 한가운데서 끊긴다. 그대로 파싱하면
+    // "Unterminated string in JSON at position …"이 튀어나오고, 그 말이 카드에 그대로
+    // 찍혔다. 사용자에게는 아무 뜻도 없는 말이고, 무엇을 해야 하는지도 알려주지 않는다.
+    // deno-lint-ignore no-explicit-any
+    let parsed: any;
+    try {
+      if (response.stop_reason === 'max_tokens') throw new Error('truncated');
+      parsed = JSON.parse(textBlock.text);
+    } catch (_err) {
+      console.error('analyze-gifticon: 답을 읽지 못했습니다', {
+        stopReason: response.stop_reason,
+        length: textBlock.text.length,
+      });
+      return new Response(JSON.stringify({ error: '정보를 읽다가 끊겼어요. 다시 시도해주세요.' }), {
+        status: 502,
+        headers: jsonHeaders,
+      });
+    }
+
     const digits = (value: unknown) => String(value ?? '').replace(/\D/g, '');
     const amount = digits(parsed.amount);
 
@@ -214,7 +235,13 @@ Deno.serve(async (req) => {
       { headers: jsonHeaders }
     );
   } catch (err) {
-    const message = err instanceof Error ? err.message : '이미지 인식에 실패했어요.';
-    return new Response(JSON.stringify({ error: message }), { status: 500, headers: jsonHeaders });
+    // 여기 오는 것은 우리가 예상하지 못한 오류다. 그 말을 그대로 화면에 올리면
+    // 사용자는 영어 스택 조각을 읽게 된다. 자세한 것은 로그에 남기고, 화면에는
+    // 무엇을 할 수 있는지만 말한다.
+    console.error('analyze-gifticon 실패', err);
+    return new Response(JSON.stringify({ error: '이미지를 읽지 못했어요. 잠시 뒤에 다시 시도해주세요.' }), {
+      status: 500,
+      headers: jsonHeaders,
+    });
   }
 });
