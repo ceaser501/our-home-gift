@@ -111,6 +111,32 @@ function isOriginal(bucket) {
   );
 }
 
+/**
+ * 이 사진을 다 훑기 전에 서버로 보내도 되는가.
+ *
+ * 상품명·금액·유효기간을 읽히는 일은 서버를 다녀오는 일이라 한 건에 3~4초가 든다.
+ * 예전에는 그걸 훑기가 다 끝난 뒤에야 시작했다 — 어느 사진을 보낼지가 다 훑어야
+ * 정해졌기 때문이다. 그래서 첫 결과가 나오기까지 훑는 시간이 통째로 앞에 붙었다.
+ *
+ * 그런데 그 '다 훑어야 정해진다'가 모든 사진에 해당하지는 않는다.
+ *
+ *   카카오톡·다운로드 — 발행사가 만든 그림 자체다. 상품명·금액·유효기간이 다 적혀
+ *     있고, 같은 기프티콘의 더 나은 사진이 뒤에 나올 수가 없다. 뒤에 원본이 하나 더
+ *     나와도 같은 종이라 읽히는 값이 같다. 기다릴 이유가 없다.
+ *
+ *   스크린샷 — 기다려야 한다. 원본은 받은 그날 담기고 캡처는 쓸 때 찍으니, 목록을
+ *     최근 것부터 훑으면 캡처가 먼저 나오고 원본이 뒤에 온다. 캡처만 보고 일찍
+ *     보내면 유효기간이 없는 그림을 읽히게 된다 — 실제로 겪은 사고다.
+ *
+ * 바코드가 너무 작게 찍힌 것도 기다린다. 아래에서 고를 때 탈락할 수 있는 그림이라,
+ * 지금 보내면 고른 결과와 다른 것을 읽게 된다.
+ *
+ * 정리하면, 사고가 나는 경우만 골라서 기다린다. 나머지는 찾는 즉시 보낸다.
+ */
+function canReadEarly(bucket, coverage) {
+  return isOriginal(bucket) && coverage >= MIN_BARCODE_COVERAGE;
+}
+
 // 바코드를 읽을 때의 크기.
 //
 // 처음에는 "작은 이미지면 키운다"를 크기 기준으로 판단했다. 기프티쇼 이미지(가로 660px)를
@@ -429,8 +455,8 @@ async function collect({ images, pass, isRegistered, skipCodes, onProgress, onCa
     // 이제는 함께 들고 있다가 등록할 때 같이 넘긴다.
     const already = seenCodes.get(found.code);
     if (already) {
-      if (already.images.length < COLLECT_PER_CODE) {
-        already.images.push({ data: read.data, bucket: image.bucket, coverage: found.coverage });
+      if (already.shots.length < COLLECT_PER_CODE) {
+        already.shots.push({ data: read.data, bucket: image.bucket, coverage: found.coverage });
       }
       continue;
     }
@@ -450,16 +476,22 @@ async function collect({ images, pass, isRegistered, skipCodes, onProgress, onCa
       addedAt: image.addedAt,
       code: found.code,
       codeType: found.codeType,
-      // 미리보기와 등록에 그대로 쓴다. 다시 읽지 않기 위해 들고 있는다.
-      // 같은 번호의 사진이 더 나오면 여기에 붙고, 마지막에 골라낸다.
-      images: [{ data: read.data, bucket: image.bucket, coverage: found.coverage }],
+      // 고르기 전의 사진 조각들. 같은 번호의 사진이 더 나오면 여기에 붙고,
+      // 훑기가 끝나면 아래에서 골라 images로 옮긴다.
+      shots: [{ data: read.data, bucket: image.bucket, coverage: found.coverage }],
+      // 화면이 곧바로 쓰는 미리보기. 아래에서 고른 결과로 갈아끼워진다.
+      //
+      // 예전에는 여기에도 위의 조각 객체를 그대로 넣었는데, 화면은 이걸 base64 문자열로
+      // 알고 쓴다. 그래서 훑는 동안 올라온 카드의 사진이 전부 깨져 검은 칸으로 보였다.
+      images: [read.data],
+      // 다 훑기를 기다리지 않고 지금 보내도 되는지. 위 canReadEarly가 정한다.
+      readyNow: canReadEarly(image.bucket, found.coverage),
     };
     seenCodes.set(found.code, candidate);
     candidates.push(candidate);
-    // 찾자마자 알려준다. 화면은 이걸 받아 카드를 한 장씩 쌓는다 — 다 끝난 뒤에 한꺼번에
-    // 보여주면 그동안 아무 일도 안 일어나는 것처럼 보인다.
-    // 여기서 넘기는 images는 아직 고르기 전이라 원본 조각들이다. 화면은 첫 장만 미리보기로
-    // 쓰고, 등록에 넘길 것은 아래에서 고른 뒤 다시 받는다.
+    // 찾자마자 알려준다. 화면은 이걸 받아 카드를 한 장씩 쌓고, readyNow인 것은 그
+    // 자리에서 읽기까지 건다 — 다 끝난 뒤에 한꺼번에 보여주면 그동안 아무 일도 안
+    // 일어나는 것처럼 보인다.
     onCandidate?.(candidate);
   }
 
@@ -471,8 +503,8 @@ async function collect({ images, pass, isRegistered, skipCodes, onProgress, onCa
   candidates.forEach((candidate) => {
     // 바코드가 너무 작게 찍힌 것은 뺀다. 다만 그것밖에 없으면 그거라도 쓴다 —
     // 등록 자체가 막히는 것보다는 낫고, 바코드 번호는 이미 읽어놨다.
-    const meaningful = candidate.images.filter((image) => image.coverage >= MIN_BARCODE_COVERAGE);
-    const usable = meaningful.length > 0 ? meaningful : candidate.images;
+    const meaningful = candidate.shots.filter((shot) => shot.coverage >= MIN_BARCODE_COVERAGE);
+    const usable = meaningful.length > 0 ? meaningful : candidate.shots;
 
     // 원본이 하나라도 있으면 캡처는 아예 보내지 않는다.
     //
@@ -482,11 +514,13 @@ async function collect({ images, pass, isRegistered, skipCodes, onProgress, onCa
     //
     // 빈칸으로 남는 것보다 틀린 값이 들어가는 쪽이 나쁘다. 기한이 틀리면 알림이 엉뚱한
     // 날에 오고, 정작 만료되는 날에는 아무 말이 없다.
-    const originals = usable.filter((image) => isOriginal(image.bucket));
+    const originals = usable.filter((shot) => isOriginal(shot.bucket));
     const pool = originals.length > 0 ? originals : usable;
 
     const sorted = [...pool].sort((a, b) => b.coverage - a.coverage);
-    candidate.images = sorted.slice(0, IMAGES_PER_CODE).map((image) => image.data);
+    candidate.images = sorted.slice(0, IMAGES_PER_CODE).map((shot) => shot.data);
+    // 다 골랐으면 나머지 조각은 놓는다. 한 장이 수백 KB라 후보 몇 개만 되어도 쌓인다.
+    candidate.shots = null;
   });
 
   onProgress?.({ scanned: images.length, total: images.length, found: candidates.length });

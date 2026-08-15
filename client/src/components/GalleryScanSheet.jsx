@@ -44,6 +44,74 @@ import { cn } from '@/lib/utils';
 //
 // 전체 시간은 같다. 어차피 등록할 때 읽던 것을 앞으로 옮긴 것뿐이다. 다만 치울 것까지
 // 읽게 되는데, 후보에 오르는 건 바코드가 읽힌 사진이라 대부분 진짜 기프티콘이다.
+//
+// ── 읽기를 다시 앞으로 당겼다 ────────────────────────────────────────────────
+// 그렇게 옮겨놓고도 첫 결과까지 6초가 넘게 걸렸다. 읽기가 훑기를 통째로 기다렸기
+// 때문이다 — 어느 사진을 보낼지가 다 훑어야 정해졌다.
+//
+// 그런데 그게 모든 사진에 해당하지는 않는다. 카카오톡·다운로드에서 나온 것은 발행사가
+// 만든 그림 자체라, 같은 기프티콘의 더 나은 사진이 뒤에 나올 수 없다. 그런 건 찾는
+// 즉시 보낸다. 캡처만 다 훑을 때까지 기다린다 — 원본이 뒤에 오는 일이 실제로 있었고,
+// 일찍 보내면 유효기간 없는 그림을 읽히게 된다.
+//
+// 사고가 나는 경우만 골라서 기다리는 셈이라 읽어내는 값은 예전과 같다. 판단은 훑기
+// 쪽에 있다(client/src/utils/gallery.js의 canReadEarly). 여기서는 readyNow가 붙어
+// 오면 그 자리에서 읽기를 걸 뿐이다.
+
+/**
+ * 읽기를 맡아 도는 일꾼들.
+ *
+ * 한 번에 limit개까지만 돌린다. 폰이 더 바빠져서가 아니라(자바스크립트는 한 줄로 돈다)
+ * 서버에 한꺼번에 몰아붙이지 않기 위해서다.
+ *
+ * 이 물건이 하는 진짜 일은 같은 후보를 두 번 읽지 않는 것이다. 훑는 동안 먼저 보낸
+ * 것은 started에 남고, 훑기가 끝난 뒤의 한 판은 거기 없는 것만 집어 든다. 없으면
+ * 원본 하나가 두 번 읽혀 하루 한도가 그만큼 빨리 닳는다.
+ */
+function makeReadPool(limit) {
+  const started = new Set();
+  const results = new Map();
+  const jobs = [];
+  const waiting = [];
+  let active = 0;
+
+  function pump() {
+    while (active < limit && waiting.length > 0) {
+      active += 1;
+      const job = waiting.shift();
+      const step = () => {
+        active -= 1;
+        pump();
+      };
+      job().then(step, step);
+    }
+  }
+
+  return {
+    results,
+    /** 하나를 줄에 세운다. 이미 세운 것이면 아무 일도 하지 않는다. */
+    add(id, task) {
+      if (started.has(id)) return;
+      started.add(id);
+      let settle;
+      jobs.push(
+        new Promise((resolve) => {
+          settle = resolve;
+        })
+      );
+      waiting.push(async () => {
+        try {
+          results.set(id, await task());
+        } finally {
+          settle();
+        }
+      });
+      pump();
+    },
+    /** 지금까지 세운 것이 다 끝날 때까지 기다린다. */
+    settled: () => Promise.all(jobs),
+  };
+}
 
 const KOREAN_BUCKETS = FOLDERS.map((folder) => folder.label).join(' · ');
 
@@ -164,7 +232,11 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
   const [folders, setFolders] = useState([]);
   const [tally, setTally] = useState(null);
   // 정보를 읽는 데 걸린 시간(밀리초). 훑기 시간은 tally.elapsedMs에 들어 있다.
+  //
+  // 이제 이 둘은 겹친다 — 원본은 다 훑기 전에 먼저 보내기 때문이다. 그래서 둘을 더하면
+  // 실제로 기다린 시간보다 길게 나온다. 진짜로 걸린 시간은 totalMs에 따로 잰다.
   const [readMs, setReadMs] = useState(0);
+  const [totalMs, setTotalMs] = useState(0);
   // 읽는 동안의 막대 길이(%).
   //
   // 끝난 개수로 그리면 0에 붙어 있다가 한꺼번에 뛴다 — 여덟을 함께 보내니 아무것도 안
@@ -185,6 +257,13 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
   const abortRef = useRef(null);
   // 얕은 판에서 잡은 후보. 깊은 판이 같은 번호를 또 만들지 않게 넘겨준다.
   const found0Ref = useRef([]);
+  // 이번 훑기의 읽기 일꾼들. 훑는 중에 먼저 보낸 것과 나중 한 판이 같은 줄을 쓴다.
+  const poolRef = useRef(null);
+  // 읽기 진행률. 훑는 중에 이미 끝난 건이 있어서 0에서 시작하지 않는다.
+  const readTallyRef = useRef({ done: 0, total: 0 });
+  // 이번 훑기가 시작된 시각과, 첫 건을 서버로 보낸 시각.
+  const runStartRef = useRef(0);
+  const readStartRef = useRef(0);
 
   // 창을 닫는 순간 하던 일을 멈춘다. 안 그러면 닫은 뒤에도 계속 읽어서 폰이 더워지고
   // 배터리와 돈만 쓴다.
@@ -228,11 +307,18 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
     setReadBar(0);
     setReadBarMs(0);
     found0Ref.current = [];
+    readTallyRef.current = { done: 0, total: 0 };
+    runStartRef.current = Date.now();
+    readStartRef.current = 0;
+    setTotalMs(0);
     setProgress({ scanned: 0, total: 0, found: 0 });
 
     const controller = new AbortController();
     abortRef.current?.abort();
     abortRef.current = controller;
+
+    const pool = makeReadPool(READ_CONCURRENCY);
+    poolRef.current = pool;
 
     let found = [];
     let pending = [];
@@ -241,7 +327,17 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
         signal: controller.signal,
         onProgress: setProgress,
         // 찾자마자 카드로 쌓는다. 훑기는 한 장씩 차례로 도니 실제로 하나씩 늘어난다.
-        onCandidate: (candidate) => setCandidates((prev) => [...prev, candidate]),
+        onCandidate: (candidate) => {
+          setCandidates((prev) => [...prev, candidate]);
+          // 원본 폴더에서 나온 것은 더 나은 사진이 뒤에 올 수 없다. 다 훑기를
+          // 기다리지 않고 지금 보낸다 — 첫 카드가 여기서 2초 당겨진다.
+          if (!candidate.readyNow) return;
+          // 보낼 사진을 지금 떠둔다. 훑기가 끝나면 candidate.images가 고른 결과로
+          // 갈아끼워지는데, 그때 뜨면 방금 보기로 한 그 사진이 아닐 수 있다.
+          const files = candidateToFiles(candidate);
+          if (!readStartRef.current) readStartRef.current = Date.now();
+          pool.add(candidate.id, () => runRead(candidate, files, controller));
+        },
         // 이미 목록에 있는 번호는 후보에서 뺀다. 기프티콘 사진은 지우지 않고 그대로
         // 두는 사람이 많아서, 이게 없으면 훑을 때마다 등록한 것들이 계속 다시 나온다.
         isRegistered: async (code) => {
@@ -320,10 +416,13 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
 
   /**
    * 후보 하나를 읽는다. 폰에서 사진을 줄이고(prepareImages), 서버에 글자를 읽힌다.
+   *
+   * files를 받으면 그것을 쓴다. 훑는 중에 미리 보내는 건은 그 순간의 사진을 떠둬야
+   * 하기 때문이다 — 훑기가 끝나면 candidate.images가 고른 결과로 바뀐다.
    */
-  async function readOne(candidate) {
+  async function readOne(candidate, files) {
     try {
-      const prepared = await prepareImages(candidateToFiles(candidate));
+      const prepared = await prepareImages(files || candidateToFiles(candidate));
       const info = await readGifticonInfo(prepared);
       // 모델에게 보낸 base64는 여기서 할 일이 끝났다. 후보마다 들고 있으면 열 개만
       // 되어도 메가바이트 단위로 쌓인다.
@@ -337,64 +436,88 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
   }
 
   /**
+   * 한 건을 읽고 그 결과를 목록에 반영한다. 훑는 중에 미리 보내는 것과 나중 한 판이
+   * 이 함수 하나를 같이 쓴다 — 두 길로 갈라두면 한쪽만 고치는 일이 생긴다.
+   */
+  async function runRead(candidate, files, controller) {
+    // 그만 찾기를 눌렀으면 줄에 서 있던 것은 보내지 않는다. 창을 닫은 뒤에도 계속
+    // 읽으면 폰이 더워지고 하루 한도만 닳는다.
+    if (controller.signal.aborted) return null;
+    const read = await readOne(candidate, files);
+    if (controller.signal.aborted) return read;
+
+    setCandidates((prev) => prev.map((item) => (item.id === candidate.id ? { ...item, ...read } : item)));
+    found0Ref.current = found0Ref.current.map((item) =>
+      item.id === candidate.id ? { ...item, ...read } : item
+    );
+    // 읽어낸 것이 금액권으로 보이면 그 자리에서 켜준다. 확실하지 않으니 끌 수 있게
+    // 두되, 열 개 중 여덟이 맞는 판단을 매번 손으로 켜게 하는 것도 일이다.
+    if (read.info?.isVoucher && read.info?.amount) {
+      setVoucherIds((prev) => (prev.includes(candidate.id) ? prev : [...prev, candidate.id]));
+    }
+
+    // 진행률은 총 개수를 알게 된 뒤부터 그린다. 훑는 중에는 아직 몇 개가 될지 모른다.
+    const tally = readTallyRef.current;
+    tally.done += 1;
+    if (tally.total > 0) {
+      setProgress({ scanned: Math.min(tally.done, tally.total), total: tally.total, found: tally.total });
+    }
+    return read;
+  }
+
+  /**
    * 찾아낸 것들의 상품명·금액·유효기한을 읽는다.
    *
-   * 여럿을 함께 읽되(READ_CONCURRENCY) 끝나는 대로 목록에 채워 넣는다. 다 읽을 때까지
-   * 기다렸다가 한꺼번에 보여주면 그동안 화면이 비어 있는데, 이 단계가 가장 오래 걸린다.
+   * 훑는 동안 이미 보낸 것들이 있다(readyNow). 여기서는 남은 것만 집어 들고, 먼저
+   * 보낸 것들이 돌아올 때까지 함께 기다린다.
    */
   async function readAll(found, controller, { append = false } = {}) {
-    const startedAt = Date.now();
+    const pool = poolRef.current;
+    if (!append && !readStartRef.current) readStartRef.current = Date.now();
+
     if (!append) {
       setStage('reading');
-      // 훑는 동안 이미 카드가 쌓였다. 여기서는 등록에 넘길 사진을 고른 결과로 갈아끼운다.
+      // 훑는 동안 이미 카드가 쌓였고 그중 일부는 읽기까지 끝났다. 여기서는 등록에
+      // 넘길 사진을 고른 결과로 갈아끼우되, 먼저 읽어둔 값은 그대로 얹는다.
       // id가 같으니 화면에서는 자리가 그대로다.
-      setCandidates(found);
-      found0Ref.current = found;
-      setProgress({ scanned: 0, total: found.length, found: found.length });
+      const merged = found.map((item) => {
+        const read = pool.results.get(item.id);
+        return read ? { ...item, ...read } : item;
+      });
+      setCandidates(merged);
+      found0Ref.current = merged;
+      readTallyRef.current = { done: pool.results.size, total: merged.length };
+      setProgress({ scanned: pool.results.size, total: merged.length, found: merged.length });
 
       // 실제로 재보니 한 물결에 5.5초 안팎이었다. 눈금은 그보다 조금 넉넉하게 잡는다 —
       // 짧게 잡으면 막대가 끝에 닿아 멈춰 선 채로 기다리게 되는데, 그건 고치려던 것과
       // 같은 그림이다. 넉넉하면 아직 움직이는 중에 끝나서 마지막이 자연스럽다.
       // 정확할 필요는 없다. 실제로 끝나는 순간 100%로 채우므로, 이건 그 사이를 메우는 눈금이다.
-      const waves = Math.ceil(found.length / READ_CONCURRENCY);
+      const left = merged.length - pool.results.size;
+      const waves = Math.max(1, Math.ceil(left / READ_CONCURRENCY));
       setReadBar(SCAN_SHARE);
       setReadBarMs(waves * 6500);
       setTimeout(() => setReadBar(92), 60);
     }
 
-    const queue = [...found];
-    let finished = 0;
+    // 이미 보낸 것은 pool이 알아서 걸러낸다.
+    found.forEach((candidate) => {
+      if (controller.signal.aborted) return;
+      pool.add(candidate.id, () => runRead(candidate, null, controller));
+    });
 
-    async function worker() {
-      while (queue.length > 0) {
-        if (controller.signal.aborted) return;
-        const candidate = queue.shift();
-        const read = await readOne(candidate);
-        if (controller.signal.aborted) return;
-
-        setCandidates((prev) => prev.map((item) => (item.id === candidate.id ? { ...item, ...read } : item)));
-        found0Ref.current = found0Ref.current.map((item) =>
-          item.id === candidate.id ? { ...item, ...read } : item
-        );
-        // 읽어낸 것이 금액권으로 보이면 그 자리에서 켜준다. 확실하지 않으니 끌 수 있게
-        // 두되, 열 개 중 여덟이 맞는 판단을 매번 손으로 켜게 하는 것도 일이다.
-        if (read.info?.isVoucher && read.info?.amount) {
-          setVoucherIds((prev) => (prev.includes(candidate.id) ? prev : [...prev, candidate.id]));
-        }
-
-        finished += 1;
-        if (!append) setProgress({ scanned: finished, total: found.length, found: found.length });
-      }
-    }
-
-    await Promise.all(Array.from({ length: Math.min(READ_CONCURRENCY, found.length) }, worker));
+    await pool.settled();
 
     if (controller.signal.aborted) return;
     // 뒤에서 도는 판은 화면 단계를 건드리지 않는다. 사용자가 이미 목록을 보고 있다.
     if (append) return;
+    // 진행률 그리기를 멈춘다. 여기서부터 늦게 돌아오는 것은 정밀 탐색 몫이라,
+    // 계속 세면 끝난 막대가 다시 움직인다.
+    readTallyRef.current = { done: 0, total: 0 };
     setReadBarMs(200);
     setReadBar(100);
-    setReadMs(Date.now() - startedAt);
+    setReadMs(Date.now() - readStartRef.current);
+    setTotalMs(Date.now() - runStartRef.current);
     setStage('done');
     setProgress(null);
   }
@@ -583,7 +706,11 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
 
         {/* 어디에 시간이 갔는지 나눠 적는다. "느리다"는 말만으로는 고칠 데를 고를 수 없다 —
             사진에서 바코드를 찾는 것은 폰이 하는 일이고, 정보를 읽는 것은 서버를 다녀오는
-            일이라 빠르게 만드는 방법이 서로 다르다. */}
+            일이라 빠르게 만드는 방법이 서로 다르다.
+
+            둘은 이제 겹쳐서 돈다. 원본은 다 훑기 전에 먼저 보내기 때문이다. 그래서 더하면
+            실제로 기다린 시간보다 길게 나오고, 그걸 모르면 느려진 것으로 읽힌다.
+            진짜로 걸린 시간을 맨 아래 따로 적는 이유다. */}
         <dl className="m-0 grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 border-t border-border pt-2.5 text-sm">
           <dt className="text-muted-foreground">사진에서 찾기</dt>
           <dd className="m-0 tabular-nums text-foreground">{formatSeconds(tally.elapsedMs)}</dd>
@@ -593,6 +720,14 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
             <>
               <dt className="text-muted-foreground">흐린 사진 더 찾기</dt>
               <dd className="m-0 tabular-nums text-foreground">{formatSeconds(deepMs)}</dd>
+            </>
+          )}
+          {totalMs > 0 && (
+            <>
+              <dt className="border-t border-border pt-1 text-muted-foreground">기다린 시간 (겹침)</dt>
+              <dd className="m-0 border-t border-border pt-1 font-semibold tabular-nums text-foreground">
+                {formatSeconds(totalMs)}
+              </dd>
             </>
           )}
         </dl>
