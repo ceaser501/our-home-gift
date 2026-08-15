@@ -73,6 +73,8 @@ export default function App() {
   const [statusTab, setStatusTab] = useState('all');
 
   const [sheetState, setSheetState] = useState(null); // { mode, initial }
+  // 등록 창에서 넘어온, 여러 건으로 묶일 사진들.
+  const [bulkFiles, setBulkFiles] = useState(null);
   // 갤러리 훑기는 앱으로 설치했을 때만 있다. 브라우저에는 폴더를 볼 방법이 없다.
   const [scanSupported] = useState(() => isGalleryScanSupported());
   // 켜뒀으면 앱을 열 때 바로 훑는다. 받아둔 기프티콘을 넣는 게 이 앱에 들어오는 이유라,
@@ -380,6 +382,17 @@ export default function App() {
         <GalleryScanSheet onRegistered={fetchList} onClose={() => setScanOpen(false)} />
       )}
 
+      {/* 등록 창에서 여러 건이 나왔을 때 넘어오는 자리. 사진첩 훑기와 같은 화면을 쓴다 —
+          찾아온 길만 다르고 그 뒤로 하는 일이 같다. 아이폰에서는 훑기를 쓸 수 없어서
+          여기가 여러 장을 한 번에 넣는 유일한 길이 된다. */}
+      {bulkFiles && (
+        <GalleryScanSheet
+          files={bulkFiles}
+          onRegistered={fetchList}
+          onClose={() => setBulkFiles(null)}
+        />
+      )}
+
       {sheetState && (
         <UploadSheet
           mode={sheetState.mode}
@@ -387,6 +400,12 @@ export default function App() {
           initialFiles={sheetState.files}
           onClose={() => setSheetState(null)}
           onSaved={handleSaved}
+          // 고른 사진이 여러 건이면 한 건짜리 이 창으로는 담을 수 없다. 묶어서 넣는
+          // 화면으로 넘기고 이 창은 닫는다.
+          onBulk={(files) => {
+            setSheetState(null);
+            setBulkFiles(files);
+          }}
         />
       )}
 

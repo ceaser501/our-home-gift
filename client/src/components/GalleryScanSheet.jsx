@@ -9,12 +9,14 @@ import {
   Images,
   Info,
   Loader2,
+  Pencil,
   RotateCcw,
   ScanSearch,
   X,
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   candidateToFiles,
   dismissImages,
@@ -27,6 +29,7 @@ import {
   requestGalleryAccess,
   scanGallery,
   deepScan,
+  groupImages,
 } from '../utils/gallery';
 import { createGifticon, findGifticonByCode, removeImages, uploadGifticonImages } from '../api';
 import { prepareImages, readGifticonInfo } from '../utils/imageAnalyze';
@@ -228,6 +231,15 @@ function withParticle(word) {
  *
  * 둘을 같은 말로 덮으면 뒤쪽은 영영 안 보인다. 실제로 하루 한도 메시지가 그렇게 묻혔다.
  */
+// 빠진 칸의 이름과, 그 값이 info에서 어느 열쇠에 들어 있는지.
+// missingFields가 만드는 이름과 같아야 한다 — 갈라지면 칸이 안 뜬다.
+const FIELD_KEYS = { 상품명: 'name', 상호: 'brand', '바코드 번호': 'code' };
+const FIELD_HINTS = {
+  상품명: '예: 아이스 아메리카노 T',
+  상호: '예: 스타벅스',
+  '바코드 번호': '사진에 인쇄된 숫자',
+};
+
 function reasonOf(candidate) {
   if (candidate.readError) return candidate.readError;
   if (candidate.missing?.length > 0) return `${withParticle(candidate.missing.join('·'))} 못 읽었어요`;
@@ -283,7 +295,7 @@ function ScannerArt() {
  * 사라진 뒤에 다음 줄이 들어와서 중간이 비고, 그게 툭툭 끊겨 보인다. 세 줄을 모두
  * 같은 자리에 포개두면 하나가 옅어지는 동안 다른 하나가 짙어져 끊기는 데가 없다.
  */
-function CandidateSlot({ at }) {
+function CandidateSlot({ at, hints = true }) {
   return (
     <li className="relative flex items-start gap-3 overflow-hidden rounded-xl border border-border bg-card p-3">
       {/* 들어올 카드의 뼈대. 안내에 자리를 내주느라 옅게 깔아둔다 — 무엇이 들어올
@@ -295,7 +307,9 @@ function CandidateSlot({ at }) {
         <span className="h-3 w-2/5 animate-pulse rounded bg-secondary" />
       </div>
 
-      <div className="absolute inset-0 flex items-center px-3.5">
+      {/* 안내멘트는 사진첩을 훑을 때의 이야기다(어느 폴더를 보는지, 언제 이후를 보는지).
+          받아 온 사진에는 해당이 없어서, 그때는 뼈대만 옅게 둔다. */}
+      <div className={cn('absolute inset-0 flex items-center px-3.5', !hints && 'hidden')}>
         {HINTS.map((item, i) => {
           const Icon = item.icon;
           const on = i === at % HINTS.length;
@@ -406,7 +420,16 @@ function formatWon(amount) {
   return `${Number(amount).toLocaleString('ko-KR')}원`;
 }
 
-export default function GalleryScanSheet({ onRegistered, onClose }) {
+// files를 주면 사진첩을 훑는 대신 그 사진들을 묶는다. 그 뒤는 완전히 같은 길이다 —
+// 후보를 읽히고, 목록을 보여주고, 한꺼번에 넣는다.
+//
+// 화면을 둘로 나누지 않은 이유가 있다. 아이폰에서는 사진첩을 훑을 수 없어서
+// (isGalleryScanSupported) 직접 고르는 이 길이 유일한 다건 경로가 된다. 둘이 다른
+// 화면이면 안드로이드 사용자와 아이폰 사용자가 서로 다른 것을 배워야 하고, 우리도 같은
+// 것을 두 벌 고쳐야 한다.
+export default function GalleryScanSheet({ onRegistered, onClose, files = null }) {
+  // 사진을 받아 온 판인가. 훑기와 갈리는 자리가 여럿이라 이름을 붙여둔다.
+  const picked = Array.isArray(files) && files.length > 0;
   // 뒤로가기로 이 창을 닫는다. 안 그러면 설치해서 쓸 때 앱이 통째로 꺼진다.
   useBackClose(onClose);
   const { family, members, user } = useFamily();
@@ -424,6 +447,11 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
   const [partial, setPartial] = useState(false);
   const [progress, setProgress] = useState(null);
   const [candidates, setCandidates] = useState([]);
+  // 지금 펼쳐서 고치는 중인 후보. 한 번에 하나만 연다 — 여럿을 펼쳐두면 어느 칸이
+  // 어느 기프티콘 것인지 헷갈린다.
+  const [editingId, setEditingId] = useState(null);
+  // 다시 읽는 중인 후보.
+  const [retryingId, setRetryingId] = useState(null);
   // 이번 창에서 치운 후보. 목록에 흐리게 남겨두고 되돌릴 수 있게 한다.
   const [dismissedIds, setDismissedIds] = useState([]);
   // 금액권으로 넣을 후보. 판정이 확실하지 않아서 켜는 건 사람이 한다.
@@ -491,8 +519,17 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
 
   // 이미 권한이 있으면 설명 화면을 건너뛰고 바로 훑는다. 두 번째부터는 사용자가
   // 무엇을 하는 기능인지 이미 알고 있어서, 한 번 더 누르게 할 이유가 없다.
+  //
+  // 사진을 받아 온 판은 물어볼 것이 없다. 사용자가 이미 고르는 화면을 지나왔고,
+  // 사진첩 권한도 필요 없다.
   useEffect(() => {
     let cancelled = false;
+    if (picked) {
+      start();
+      return () => {
+        cancelled = true;
+      };
+    }
     getGalleryStatus().then((status) => {
       if (cancelled) return;
       if (status.granted || status.partial) start();
@@ -507,13 +544,14 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
   async function start({ forgetHistory = false } = {}) {
     setError('');
     if (forgetHistory) forgetSkipped();
-    const status = await requestGalleryAccess();
-    if (!status.granted && !status.partial) {
-      setStage('denied');
-      return;
+    if (!picked) {
+      const status = await requestGalleryAccess();
+      if (!status.granted && !status.partial) {
+        setStage('denied');
+        return;
+      }
+      setPartial(Boolean(status.partial));
     }
-
-    setPartial(Boolean(status.partial));
     setStage('scanning');
     setComplete(false);
     setCandidates([]);
@@ -545,34 +583,45 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
     uploadRef.current = makePool(SAVE_CONCURRENCY);
     spentRef.current = new Set();
 
+    // 이미 목록에 있는 번호는 후보에서 뺀다. 기프티콘 사진은 지우지 않고 그대로
+    // 두는 사람이 많아서, 이게 없으면 훑을 때마다 등록한 것들이 계속 다시 나온다.
+    const isRegistered = async (code) => {
+      try {
+        return Boolean(await findGifticonByCode(family.id, code));
+      } catch {
+        // 물어보지 못했으면 보여주는 쪽을 고른다. 중복은 저장할 때 한 번 더 걸러진다.
+        return false;
+      }
+    };
+
+    // 찾자마자 카드로 쌓는다. 한 장씩 차례로 도니 실제로 하나씩 늘어난다.
+    const onCandidate = (candidate) => {
+      setCandidates((prev) => [...prev, candidate]);
+      // 원본 폴더에서 나온 것은 더 나은 사진이 뒤에 올 수 없다. 다 훑기를 기다리지
+      // 않고 지금 보낸다 — 첫 카드가 여기서 2초 당겨진다.
+      if (!candidate.readyNow) return;
+      // 보낼 사진을 지금 떠둔다. 훑기가 끝나면 candidate.images가 고른 결과로
+      // 갈아끼워지는데, 그때 뜨면 방금 보기로 한 그 사진이 아닐 수 있다.
+      const shots = candidateToFiles(candidate);
+      pool.add(candidate.id, () => runRead(candidate, shots, controller));
+    };
+
     let found = [];
     let pending = [];
     try {
-      const scan = await scanGallery({
-        signal: controller.signal,
-        onProgress: setProgress,
-        // 찾자마자 카드로 쌓는다. 훑기는 한 장씩 차례로 도니 실제로 하나씩 늘어난다.
-        onCandidate: (candidate) => {
-          setCandidates((prev) => [...prev, candidate]);
-          // 원본 폴더에서 나온 것은 더 나은 사진이 뒤에 올 수 없다. 다 훑기를
-          // 기다리지 않고 지금 보낸다 — 첫 카드가 여기서 2초 당겨진다.
-          if (!candidate.readyNow) return;
-          // 보낼 사진을 지금 떠둔다. 훑기가 끝나면 candidate.images가 고른 결과로
-          // 갈아끼워지는데, 그때 뜨면 방금 보기로 한 그 사진이 아닐 수 있다.
-          const files = candidateToFiles(candidate);
-          pool.add(candidate.id, () => runRead(candidate, files, controller));
-        },
-        // 이미 목록에 있는 번호는 후보에서 뺀다. 기프티콘 사진은 지우지 않고 그대로
-        // 두는 사람이 많아서, 이게 없으면 훑을 때마다 등록한 것들이 계속 다시 나온다.
-        isRegistered: async (code) => {
-          try {
-            return Boolean(await findGifticonByCode(family.id, code));
-          } catch {
-            // 물어보지 못했으면 보여주는 쪽을 고른다. 중복은 저장할 때 한 번 더 걸러진다.
-            return false;
-          }
-        },
-      });
+      const scan = picked
+        ? await groupImages(files, {
+            signal: controller.signal,
+            onProgress: setProgress,
+            onCandidate,
+            isRegistered,
+          })
+        : await scanGallery({
+            signal: controller.signal,
+            onProgress: setProgress,
+            onCandidate,
+            isRegistered,
+          });
       if (controller.signal.aborted) return;
       found = scan.candidates;
       pending = scan.pending ?? [];
@@ -582,7 +631,7 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
       setTally(scan.tally ?? null);
       setComplete(true);
     } catch (err) {
-      setError(err?.message || '갤러리를 훑지 못했어요.');
+      setError(err?.message || (picked ? '사진을 읽지 못했어요.' : '갤러리를 훑지 못했어요.'));
       if (!controller.signal.aborted) {
         setStage('done');
         setProgress(null);
@@ -594,7 +643,9 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
 
     // 여기서부터는 사용자가 이미 목록을 보고 있다. 못 찾은 사진을 정밀 탐색으로 한 번 더
     // 뒤진다 — 무거운 일이지만 기다리게 하지는 않는다.
-    await digDeeper(pending, controller);
+    //
+    // 받아 온 사진은 처음부터 정밀 탐색으로 읽었으므로 한 번 더 볼 것이 없다.
+    if (!picked) await digDeeper(pending, controller);
   }
 
   /**
@@ -924,6 +975,46 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
     if (done.length > 0) onRegistered?.();
   }
 
+  /**
+   * 사람이 직접 채운 값을 후보에 얹는다.
+   *
+   * 모델이 못 읽은 칸을 여기서 채우면 그 카드도 등록에 낄 수 있게 된다. 예전에는
+   * "+ 로 직접 올려주세요"뿐이었는데, 그건 여덟 장을 한 번에 넣으러 온 사람에게
+   * 한 건만 따로 처음부터 다시 하라는 말이었다. 빠진 칸 하나 때문에 그럴 이유가 없다.
+   *
+   * 화면과 등록에 넘길 목록 두 곳에 같이 얹는다. 한쪽만 고치면 화면에는 채워졌는데
+   * 저장은 옛 값으로 나가는 일이 생긴다.
+   */
+  function patchInfo(candidate, patch) {
+    const apply = (item) => {
+      if (item.id !== candidate.id) return item;
+      const info = { ...item.info, ...patch };
+      return { ...item, info, missing: missingFields(info, item.code), edited: true };
+    };
+    setCandidates((prev) => prev.map(apply));
+    found0Ref.current = found0Ref.current.map(apply);
+  }
+
+  /**
+   * 읽다가 막힌 후보를 다시 읽는다.
+   *
+   * 하루 한도를 다 썼거나 인터넷이 끊긴 경우다. 둘 다 조금 뒤에는 풀리는 일이라,
+   * 창을 닫고 처음부터 다시 하게 할 이유가 없다.
+   *
+   * pool을 거치지 않고 바로 부른다 — pool은 같은 id를 한 번만 돌리도록 되어 있어서,
+   * 그리로 넣으면 처음의 실패한 결과가 그대로 돌아온다.
+   */
+  async function retryRead(candidate) {
+    const controller = abortRef.current;
+    if (!controller || controller.signal.aborted) return;
+    setRetryingId(candidate.id);
+    try {
+      await runRead(candidate, null, controller);
+    } finally {
+      setRetryingId(null);
+    }
+  }
+
   // 치우지 않았고, 읽기가 끝났고, 빠진 게 없는 것만 넣을 수 있다.
   function isPickable(candidate) {
     return !dismissedIds.includes(candidate.id) && candidate.info && candidate.missing?.length === 0;
@@ -1056,7 +1147,12 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
 
   // 지금 무슨 일을 하는 중인지와, 어디까지 왔는지. 시안의 상태 줄이다 —
   // 왼쪽이 하는 일, 오른쪽이 숫자다.
-  const workingLabel = stage === 'scanning' ? '사진첩에서 기프티콘을 찾고 있어요' : '기프티콘 정보를 읽고 있어요';
+  const workingLabel =
+    stage === 'scanning'
+      ? picked
+        ? '고른 사진에서 기프티콘을 찾고 있어요'
+        : '사진첩에서 기프티콘을 찾고 있어요'
+      : '기프티콘 정보를 읽고 있어요';
   const workingCount =
     stage === 'scanning'
       ? progress?.total
@@ -1118,19 +1214,27 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
             사진이 없어도 0으로 남긴다. 목록에서 빠지면 "걸러진 건가" 하고 의심하게
             되는데, 실제로는 볼 게 없었던 것이다. 기기에 있는 다른 사진첩은 적지 않는다 —
             안 보는 것을 늘어놓으면 그걸 뒤진다는 뜻으로 읽힌다. */}
-        <div className="flex flex-col gap-1.5">
+        {/* 받아 온 사진은 어느 폴더에서 왔는지 모른다. 그 줄 대신 몇 장을 봤는지만 적는다. */}
+        {picked ? (
           <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
             <Images className="size-3.5 shrink-0" />
-            사진첩 별 확인 사진
+            고른 사진 <b className="font-semibold tabular-nums text-foreground">{scanned}장</b>
           </span>
-          <div className="flex flex-wrap gap-1.5">
-            {summary.watched.map((folder) => (
-              <span key={folder.label} className="rounded-lg bg-card px-2.5 py-1 text-sm text-foreground">
-                {folder.label} <b className="font-semibold tabular-nums">{folder.count}</b>
-              </span>
-            ))}
+        ) : (
+          <div className="flex flex-col gap-1.5">
+            <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+              <Images className="size-3.5 shrink-0" />
+              사진첩 별 확인 사진
+            </span>
+            <div className="flex flex-wrap gap-1.5">
+              {summary.watched.map((folder) => (
+                <span key={folder.label} className="rounded-lg bg-card px-2.5 py-1 text-sm text-foreground">
+                  {folder.label} <b className="font-semibold tabular-nums">{folder.count}</b>
+                </span>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         <dl className="m-0 grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 border-t border-border pt-2.5 text-sm">
           <dt className="text-muted-foreground">발견한 기프티콘</dt>
@@ -1148,7 +1252,7 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
 
         {/* 셋 다 0장이면 사진첩 이름이 우리 목록과 다를 수 있다. 그때만 기기에 있는
             이름을 보여준다 — 그게 유일한 단서다. */}
-        {summary.watched.every((folder) => folder.count === 0) && summary.others.length > 0 && (
+        {!picked && summary.watched.every((folder) => folder.count === 0) && summary.others.length > 0 && (
           <p className="m-0 border-t border-border pt-2.5 text-sm break-keep text-muted-foreground">
             폰에 있는 사진첩: {summary.others.map((f) => `${f.name} ${f.count}`).join(' · ')}
           </p>
@@ -1168,6 +1272,7 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
     const isDismissed = dismissedIds.includes(candidate.id);
     const info = candidate.info;
     const broken = !isDismissed && !isPickable(candidate);
+    const editing = editingId === candidate.id;
 
     return (
       /* 두 겹이다. 바깥은 차지하는 높이가 자라고, 안쪽이 밀려 들어온다.
@@ -1260,6 +1365,63 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
               <span className="text-sm break-keep text-foreground">금액권 — 쓴 만큼 깎여요</span>
             </label>
           )}
+
+          {/* 빠진 칸이 있는 카드에만 나온다. 다 읽힌 카드에까지 붙이면, 고칠 것이 없는데도
+              뭔가 확인해야 할 것처럼 보인다 — 대부분의 날은 다 읽힌다. */}
+          {broken && !isDismissed && candidate.prepared && (
+            <button
+              type="button"
+              onClick={() => setEditingId(editing ? null : candidate.id)}
+              className="flex items-center justify-center gap-1.5 rounded-lg bg-muted px-2.5 py-2 text-sm font-semibold text-foreground"
+            >
+              <Pencil className="size-4" />
+              {editing ? '접기' : '직접 채우기'}
+            </button>
+          )}
+
+          {/* 읽다가 막힌 것은 채울 일이 아니라 다시 해볼 일이다. 하루 한도를 다 썼거나
+              인터넷이 끊긴 경우라, 조금 뒤에는 그냥 읽힌다. */}
+          {candidate.readError && !isDismissed && (
+            <button
+              type="button"
+              disabled={retryingId === candidate.id}
+              onClick={() => retryRead(candidate)}
+              className="flex items-center justify-center gap-1.5 rounded-lg bg-muted px-2.5 py-2 text-sm font-semibold text-foreground disabled:opacity-60"
+            >
+              {retryingId === candidate.id ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <RotateCcw className="size-4" />
+              )}
+              {retryingId === candidate.id ? '읽는 중…' : '다시 읽기'}
+            </button>
+          )}
+
+          {/* 빠진 칸만 묻는다. 다 보여주면 이미 제대로 읽힌 값까지 훑어보게 되고, 그러다
+              멀쩡한 값을 건드린다. 모르는 것만 물어보는 쪽이 손도 덜 가고 안전하다. */}
+          {editing && (
+            <div className="flex flex-col gap-2 rounded-lg bg-muted px-2.5 py-2.5">
+              {candidate.missing?.map((field) => {
+                const key = FIELD_KEYS[field];
+                if (!key) return null;
+                return (
+                  <label key={field} className="flex flex-col gap-1">
+                    <span className="text-xs font-semibold text-muted-foreground">{field}</span>
+                    <Input
+                      value={candidate.info?.[key] || ''}
+                      onChange={(e) => patchInfo(candidate, { [key]: e.target.value })}
+                      placeholder={FIELD_HINTS[field]}
+                      inputMode={key === 'code' ? 'numeric' : undefined}
+                      className="bg-card"
+                    />
+                  </label>
+                );
+              })}
+              <p className="m-0 text-xs break-keep text-muted-foreground">
+                채우면 아래 등록에 함께 들어가요. 나머지는 등록한 뒤에 카드에서 고칠 수 있어요.
+              </p>
+            </div>
+          )}
         </div>
       </li>
     );
@@ -1269,14 +1431,14 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
     <Sheet open onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="max-h-[92dvh] gap-0 overflow-y-auto pb-[var(--safe-bottom)]">
         <SheetHeader className="pr-14 pb-1">
-          <SheetTitle>기프티콘 찾기</SheetTitle>
+          <SheetTitle>{picked ? '기프티콘 등록' : '기프티콘 찾기'}</SheetTitle>
         </SheetHeader>
 
         {/* 어디까지 보는지는 결과보다 먼저 알아야 한다. 아래에 뒀을 때는 "왜 예전 사진이
             안 나오지"를 다 훑고 나서야 알게 됐고, 찾은 것이 많으면 목록에 밀려 화면 밖으로
             나갔다. 제목 바로 아래가 그 자리다.
             기준 시각은 훑기가 끝나야 알 수 있어서, 그 전에는 이 줄이 없다. */}
-        {complete && formatDay(since) && stage === 'done' && (
+        {!picked && complete && formatDay(since) && stage === 'done' && (
           <div className="mx-5 mt-2 flex gap-2 rounded-xl bg-muted/60 px-3.5 py-2.5">
             <Info className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
             <p className="m-0 flex-1 text-sm leading-relaxed break-keep text-muted-foreground">
@@ -1420,10 +1582,12 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
                 <Button type="button" size="lg" className="w-full rounded-xl" onClick={onClose}>
                   목록으로
                 </Button>
-                <Button type="button" variant="outline" size="lg" className="w-full rounded-xl" onClick={() => start()}>
-                  <ScanSearch className="size-4.5" />
-                  새 기프티콘 찾기
-                </Button>
+                {!picked && (
+                  <Button type="button" variant="outline" size="lg" className="w-full rounded-xl" onClick={() => start()}>
+                    <ScanSearch className="size-4.5" />
+                    새 기프티콘 찾기
+                  </Button>
+                )}
               </div>
             </>
           )}
@@ -1459,7 +1623,7 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
                    애니메이션이 다시 돈다. */
                 <ul className="m-0 flex list-none flex-col gap-2 p-0">
                   {arrived.map((candidate) => renderCandidate(candidate, { entering: true }))}
-                  {arrived.length === 0 && <CandidateSlot at={hint} />}
+                  {arrived.length === 0 && <CandidateSlot at={hint} hints={!picked} />}
                 </ul>
               ) : (
                 <>
@@ -1562,7 +1726,7 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
                   </Button>
                 )}
 
-                {stage === 'done' && (
+                {stage === 'done' && !picked && (
                   <Button
                     type="button"
                     variant={keptCount > 0 ? 'outline' : 'default'}
@@ -1575,7 +1739,14 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
                   </Button>
                 )}
 
-                {stage === 'done' && skipped > 0 && (
+                {/* 받아 온 사진은 다시 찾을 것이 없다. 닫는 길만 둔다. */}
+                {stage === 'done' && picked && keptCount === 0 && (
+                  <Button type="button" size="lg" className="w-full rounded-xl" onClick={onClose}>
+                    목록으로
+                  </Button>
+                )}
+
+                {stage === 'done' && !picked && skipped > 0 && (
                   <Button
                     type="button"
                     variant="ghost"

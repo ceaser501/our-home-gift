@@ -13,6 +13,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { cn } from '@/lib/utils';
 import AlertDialog from './AlertDialog';
 import useBackClose from '../utils/useBackClose';
+import { groupImages } from '../utils/gallery';
 
 // 스토리지 버킷에 걸어둔 제한과 같은 값이어야 한다(supabase/schema.sql).
 // 달라지면 화면에서는 통과했는데 올릴 때 실패하는, 이유를 알 수 없는 오류가 난다.
@@ -111,7 +112,7 @@ function buildExistingImages(initial) {
   return (initial?.image_paths || []).map((path, i) => ({ path, url: initial.image_urls[i] }));
 }
 
-export default function UploadSheet({ mode, initial, initialFiles, onClose, onSaved }) {
+export default function UploadSheet({ mode, initial, initialFiles, onClose, onSaved, onBulk }) {
   // 뒤로가기로 이 창을 닫는다. 안 그러면 설치해서 쓸 때 앱이 통째로 꺼진다.
   useBackClose(onClose);
   const { family, members, user } = useFamily();
@@ -198,6 +199,32 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
     setProgress({ step: 'barcode', current: 1, total: selected.length });
     setAutoFilled(false);
     setCodeConflict(null);
+
+    // 여러 장을 골랐는데 서로 다른 기프티콘이면, 한 건짜리인 이 화면으로는 담을 수 없다.
+    //
+    // 예전에는 두 번째 사진의 바코드가 다르면 "다른 기프티콘인데 새로 시작할까요?"라고
+    // 물었다. 다섯 장을 골라 온 사람에게는 네 번을 물어보고 네 번을 버리는 셈이었다.
+    // 이제는 묶어서 한꺼번에 넣는 화면으로 넘긴다.
+    //
+    // 여기서는 얕게만 본다(quick). 몇 건인지만 알면 되는 자리라, 사진 두 장 고른 사람을
+    // 무거운 판 앞에 세워둘 이유가 없다. 제대로 읽는 것은 넘겨받은 쪽이 다시 한다.
+    //
+    // 사진을 더하는 중이면 넘기지 않는다. 그건 한 기프티콘을 여러 화면으로 나눠 올리는
+    // 중이라는 뜻이고, 지금까지 채워둔 것을 버릴 수 없다.
+    const adding = existingImages.length + newFiles.length > 0;
+    if (onBulk && selected.length > 1 && !adding) {
+      try {
+        const grouped = await groupImages(selected, { quick: true });
+        if (grouped.candidates.length > 1) {
+          setAnalyzing(false);
+          setProgress(null);
+          onBulk(selected);
+          return;
+        }
+      } catch {
+        // 묶어보지 못했으면 예전 길로 간다. 한 건으로 읽히면 그것대로 맞다.
+      }
+    }
 
     let prepared;
     try {

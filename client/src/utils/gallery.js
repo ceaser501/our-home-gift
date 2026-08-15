@@ -335,14 +335,17 @@ function barcodeCoverage(points, width) {
   return (Math.max(...xs) - Math.min(...xs)) / width;
 }
 
-async function loadImage(base64) {
+async function loadImage(src) {
   return new Promise((resolve, reject) => {
     const el = new Image();
     el.onload = () => resolve(el);
     el.onerror = reject;
-    el.src = `data:image/jpeg;base64,${base64}`;
+    el.src = src;
   });
 }
+
+// 네이티브가 주는 base64에는 접두사가 없다.
+const asDataUrl = (base64) => `data:image/jpeg;base64,${base64}`;
 
 // 작으면 키우고 크면 줄여, 어느 쪽이든 목표 크기에 맞춘다.
 function scaleTo(width, height, longEdgeTarget) {
@@ -350,7 +353,7 @@ function scaleTo(width, height, longEdgeTarget) {
 }
 
 async function decodeBarcode(base64, pass = SHALLOW) {
-  const image = await loadImage(base64);
+  const image = await loadImage(asDataUrl(base64));
   const width = image.naturalWidth;
   const height = image.naturalHeight;
 
@@ -392,14 +395,22 @@ async function decodeAt(image, width, height, scale, tryHarder) {
   }
 }
 
+// 사진첩에서 한 장 가져오기. 네이티브가 줄여서 base64로 준다.
+function readFromGallery(image) {
+  return MoaconGallery.readImage({ id: String(image.id), maxEdge: READ_EDGE });
+}
+
 /**
  * 사진 목록을 훑어 후보를 모은다. 얕은 판과 깊은 판이 같은 이 함수를 쓴다.
  *
  * pass          — 어떤 조건으로 읽을지(SHALLOW / DEEP).
  * isRegistered  — 이미 등록된 번호인지 묻는 함수. 화면 쪽에서 넘긴다.
  * skipCodes     — 이미 후보로 잡아둔 번호. 깊은 판에서 같은 것을 또 만들지 않는다.
+ * read          — 사진 하나를 base64로 가져오는 함수. 어디서 오는지만 다르고
+ *                 묶는 규칙은 같아서, 그 한 걸음만 밖에서 넘겨받는다.
+ *                 사진첩은 네이티브에게 묻고, 직접 고른 사진은 브라우저에서 줄인다.
  */
-async function collect({ images, pass, isRegistered, skipCodes, onProgress, onCandidate, signal }) {
+async function collect({ images, read: readImage, pass, isRegistered, skipCodes, onProgress, onCandidate, signal }) {
   const candidates = [];
   // 바코드 값 → 그 값을 가진 후보. 같은 기프티콘의 사진 여러 장을 한 후보로 모은다.
   const seenCodes = new Map();
@@ -426,7 +437,7 @@ async function collect({ images, pass, isRegistered, skipCodes, onProgress, onCa
 
     let read;
     try {
-      read = await MoaconGallery.readImage({ id: String(image.id), maxEdge: READ_EDGE });
+      read = await readImage(image);
     } catch {
       // 한 장을 못 읽는다고 전체가 멈추면 안 된다. 너무 큰 사진이거나 지워진 것이다.
       readFailed += 1;
@@ -563,6 +574,7 @@ export async function scanGallery({ isRegistered, onProgress, onCandidate, signa
 
   const { candidates, missed, knownCodes, readFailed } = await collect({
     images: fresh,
+    read: readFromGallery,
     pass: SHALLOW,
     isRegistered,
     onProgress,
@@ -593,6 +605,7 @@ export async function deepScan({ pending, isRegistered, skipCodes, onProgress, o
 
   const { candidates, missed } = await collect({
     images: pending,
+    read: readFromGallery,
     pass: DEEP,
     isRegistered,
     skipCodes,
@@ -612,6 +625,82 @@ export async function deepScan({ pending, isRegistered, skipCodes, onProgress, o
 //
 // 같은 번호의 사진이 여러 장이면 전부 넘긴다. 등록 창은 여러 장을 받으면 각 장에서 찾은
 // 정보를 합쳐 채우기 때문에, 바코드만 찍힌 캡처에 없는 유효기간을 원본 쪽에서 읽어온다.
+/**
+ * 직접 고른 사진 여러 장을 같은 규칙으로 묶는다.
+ *
+ * 사진첩 훑기와 다른 점은 사진이 어디서 오는가 하나뿐이라, 묶는 규칙은 collect()를
+ * 그대로 쓴다. 같은 번호끼리 한 건으로, 바코드가 너무 작게 찍힌 건 빼고, 이미 등록된
+ * 번호는 걸러낸다. 규칙을 두 벌로 두면 "훑으면 묶이는데 직접 올리면 안 묶인다" 같은
+ * 일이 생긴다.
+ *
+ * 아이폰에는 이 길밖에 없다. 사진첩을 훑을 수 없기 때문이다(isGalleryScanSupported).
+ *
+ * 기본은 정밀 탐색이다. 훑기가 얕게 시작하는 이유는 대부분이 기프티콘이 아닌 사진
+ * 수백 장이라서인데, 여기 오는 것은 사람이 골라온 몇 장이다. 애써 볼 값어치가 있고
+ * 몇 장뿐이라 오래 걸리지도 않는다.
+ *
+ * quick을 주면 얕게만 본다. "이 사진들이 몇 건인가"만 알면 되는 자리 — 한 건짜리
+ * 등록 화면이 다건으로 넘길지 정할 때 — 를 위한 것이다. 거기서 무거운 판을 돌리면
+ * 사진 두 장을 골랐을 뿐인데 몇 초를 서 있게 된다.
+ */
+export async function groupImages(files, { isRegistered, onProgress, onCandidate, signal, quick = false } = {}) {
+  const images = (files || []).map((file, index) => ({
+    id: `pick-${index}`,
+    name: file.name || `사진 ${index + 1}.jpg`,
+    // 폴더를 모른다. 원본인지 캡처인지 가릴 근거가 없으니 아무 쪽으로도 치우치지 않게
+    // 비워둔다 — 그러면 아래 고르기에서 전부 같은 자격으로 겨루고, 바코드가 크게 찍힌
+    // 순서로 뽑힌다. 사람이 직접 골라온 사진이라 폴더로 짐작할 이유도 적다.
+    bucket: null,
+    addedAt: Math.floor((file.lastModified || Date.now()) / 1000),
+    file,
+  }));
+
+  const { candidates, missed, knownCodes, readFailed } = await collect({
+    images,
+    read: readPickedFile,
+    pass: quick ? SHALLOW : DEEP,
+    isRegistered,
+    onProgress,
+    onCandidate,
+    signal,
+  });
+
+  return {
+    candidates,
+    // 바코드를 못 찾은 사진. 화면이 "이건 직접 올려주세요"로 안내한다.
+    missed,
+    scanned: images.length,
+    tally: { readFailed, found: candidates.length + knownCodes.size, alreadyHave: knownCodes.size },
+  };
+}
+
+// 고른 파일 한 장을 줄여 base64로. 네이티브의 readImage가 하던 일을 브라우저에서 한다.
+async function readPickedFile(image) {
+  const url = URL.createObjectURL(image.file);
+  try {
+    const loaded = await loadImage(url);
+    const width = loaded.naturalWidth;
+    const height = loaded.naturalHeight;
+    const scale = Math.min(1, READ_EDGE / Math.max(width, height));
+
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(width * scale));
+    canvas.height = Math.max(1, Math.round(height * scale));
+    const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(loaded, 0, 0, canvas.width, canvas.height);
+
+    // 훑기가 넘겨주는 것과 같은 모양으로 돌려준다 — 접두사 없는 base64.
+    const data = canvas.toDataURL('image/jpeg', 0.9).split(',')[1];
+    canvas.width = 0;
+    canvas.height = 0;
+    return { data };
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
 export function candidateToFiles(candidate) {
   const base = (candidate.name || 'gifticon').replace(/\.[^.]+$/, '');
   return candidate.images.map((data, index) => {

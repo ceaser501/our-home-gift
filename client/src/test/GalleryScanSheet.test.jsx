@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 // 이 창은 사진첩(네이티브)·모델(서버)·캔버스에 기대고 있다. 셋 다 여기서는 못 돈다.
 // 그래서 그 셋만 가짜로 두고, 창 자신의 코드는 진짜로 돌린다 — 지금까지 터진 곳이
@@ -152,6 +152,57 @@ describe('GalleryScanSheet', () => {
     const asked = findGifticonByCode.mock.calls.map(([, code]) => code);
     expect(asked).toContain('111');
     expect(asked).toContain('222');
+  });
+
+  // 빠진 칸이 하나 있다고 그 건만 따로 처음부터 다시 하게 할 이유가 없다.
+  // 여덟 장을 한 번에 넣으러 온 사람에게는 그게 일이 늘어난 것이다.
+  it('못 읽은 칸을 직접 채우면 그 카드도 등록에 낀다', async () => {
+    readGifticonInfo.mockImplementation(async (_prepared, opts) => {
+      const read = info(opts?.knownCode, `상품 ${opts?.knownCode}`);
+      // 111은 상품명을 못 읽었다.
+      return opts?.knownCode === '111' ? { ...read, name: '' } : read;
+    });
+
+    render(<GalleryScanSheet onRegistered={() => {}} onClose={() => {}} />);
+    (await screen.findByRole('button', { name: /사진 허용하고 찾기/ })).click();
+
+    // 못 읽은 카드는 처음에는 등록에서 빠져 있다.
+    expect(await screen.findByRole('button', { name: /1개 등록/ }, { timeout: 3000 })).toBeTruthy();
+
+    (await screen.findByRole('button', { name: /직접 채우기/ })).click();
+    fireEvent.change(await screen.findByPlaceholderText('예: 아이스 아메리카노 T'), {
+      target: { value: '손으로 적은 상품' },
+    });
+
+    // 채우고 나면 둘 다 들어간다.
+    (await screen.findByRole('button', { name: /2개 등록/ })).click();
+    await waitFor(() => expect(createGifticon).toHaveBeenCalledTimes(2), { timeout: 3000 });
+
+    const saved = createGifticon.mock.calls.map(([, f]) => f.name);
+    expect(saved).toContain('손으로 적은 상품');
+  });
+
+  // 하루 한도나 인터넷이 끊긴 것은 조금 뒤에 풀린다. 창을 닫고 처음부터 다시 하게
+  // 할 이유가 없다.
+  it('읽다가 막힌 건은 그 자리에서 다시 읽을 수 있다', async () => {
+    let first = true;
+    readGifticonInfo.mockImplementation(async (_prepared, opts) => {
+      if (opts?.knownCode === '111' && first) {
+        first = false;
+        throw new Error('오늘은 여기까지예요');
+      }
+      return info(opts?.knownCode, `상품 ${opts?.knownCode}`);
+    });
+
+    render(<GalleryScanSheet onRegistered={() => {}} onClose={() => {}} />);
+    (await screen.findByRole('button', { name: /사진 허용하고 찾기/ })).click();
+
+    // 서버가 보낸 말이 그대로 남는다. 카드와 위쪽 안내 두 곳에 나온다.
+    expect((await screen.findAllByText('오늘은 여기까지예요', {}, { timeout: 3000 })).length).toBeGreaterThan(0);
+
+    (await screen.findByRole('button', { name: /다시 읽기/ })).click();
+    expect(await screen.findByText('상품 111', {}, { timeout: 3000 })).toBeTruthy();
+    expect(await screen.findByRole('button', { name: /2개 등록/ })).toBeTruthy();
   });
 
   // 이미 있는 번호는 넣지 않는다.
