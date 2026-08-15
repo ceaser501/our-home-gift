@@ -647,7 +647,8 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
       const prepared = await prepareImages(files || candidateToFiles(candidate));
       // 훑기가 이미 읽어둔 번호를 캐시 열쇠로 넘긴다. prepareImages가 같은 사진에서 또
       // 읽어보긴 하지만 정밀 탐색으로 겨우 찾은 건은 거기서 다시 안 나온다.
-      const info = await readGifticonInfo(prepared, { knownCode: candidate.code });
+      // preferScanned: 여기는 사람이 확인하는 자리가 없다. 번호가 갈리면 막대 쪽을 쓴다.
+      const info = await readGifticonInfo(prepared, { knownCode: candidate.code, preferScanned: true });
       // 모델에게 보낸 base64는 여기서 할 일이 끝났다. 후보마다 들고 있으면 열 개만
       // 되어도 메가바이트 단위로 쌓인다.
       prepared.uploads = null;

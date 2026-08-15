@@ -298,7 +298,7 @@ export async function prepareImages(files, { onProgress } = {}) {
   };
 }
 
-export async function readGifticonInfo(prepared, { onProgress, knownCode } = {}) {
+export async function readGifticonInfo(prepared, { onProgress, knownCode, preferScanned = false } = {}) {
   const total = prepared.uploads.length;
   const report = (step) => onProgress?.({ step, total });
 
@@ -361,7 +361,24 @@ export async function readGifticonInfo(prepared, { onProgress, knownCode } = {})
   // 틀리면 매장에서 못 쓴다.
   const scanned = prepared.code || knownCode || null;
   const conflict = Boolean(scanned && printed && scanned !== printed);
-  const code = conflict ? printed : scanned || printed;
+  // 갈렸을 때 어느 쪽을 쓰는지는 부르는 쪽이 정한다. 두 자리의 사정이 다르기 때문이다.
+  //
+  // 직접 올리는 화면(UploadSheet)에는 사람이 앉아 있다. 인쇄된 숫자를 기본값으로 두고
+  // 확인해달라고 하면, 사진과 눈으로 대조해서 고를 수 있다. 위에 적은 그대로다.
+  //
+  // 갤러리 훑기에는 그 사람이 없다. 카드가 그대로 등록까지 간다. 그래서 여기서는
+  // 막대에서 읽은 값을 쓴다. 이유가 둘이다.
+  //
+  //   하나. 모델의 숫자 판독을 지금 못 믿는다. 같은 사진의 상품명을 "떠먹는"에서
+  //   "더먹는"으로 읽는 눈이다. 막대 쪽은 CODE_128·EAN-13처럼 검산 자리가 있는 규격이
+  //   많아 틀린 값이 그냥 통과하기 어렵다.
+  //
+  //   둘. 훑기는 막대에서 읽은 번호로 후보를 묶고 "이미 등록됐나"를 묻는다. 등록만
+  //   다른 번호로 들어가면 다음에 훑을 때 그 물음이 헛돈다. 실제로 등록해둔 것이 다시
+  //   잡혀 올라왔다 — 마지막 문에서 막히긴 했지만, 애초에 올라오지 말았어야 했다.
+  //
+  // 이러면 훑기에서는 "등록되는 번호 = 후보를 묶은 번호"가 늘 성립한다.
+  const code = conflict ? (preferScanned ? scanned : printed) : scanned || printed;
   // 형식은 막대에서 읽은 것이 맞다. 숫자 한 자리가 갈렸어도 어떤 규격의 바코드인지는
   // 막대 모양이 말해준다.
   const codeType = scanned ? prepared.codeType : printed ? 'CODE_128' : null;
