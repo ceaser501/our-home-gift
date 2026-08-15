@@ -15,7 +15,7 @@ import {
   scanGallery,
   deepScan,
 } from '../utils/gallery';
-import { createGifticon, findGifticonByCode } from '../api';
+import { createGifticon, findGifticonByCode, removeImages, uploadGifticonImages } from '../api';
 import { prepareImages, readGifticonInfo } from '../utils/imageAnalyze';
 import { useFamily } from '../FamilyContext';
 import useBackClose from '../utils/useBackClose';
@@ -59,19 +59,20 @@ import { cn } from '@/lib/utils';
 // 오면 그 자리에서 읽기를 걸 뿐이다.
 
 /**
- * 읽기를 맡아 도는 일꾼들.
+ * 후보 하나당 한 번씩만 하는 일을, 한 번에 limit개까지 겹쳐서 돌린다.
  *
- * 한 번에 limit개까지만 돌린다. 폰이 더 바빠져서가 아니라(자바스크립트는 한 줄로 돈다)
- * 서버에 한꺼번에 몰아붙이지 않기 위해서다.
+ * 읽기와 사진 올리기가 각각 하나씩 쓴다. 한 번에 몇 개까지만 도는 것은 폰이 더
+ * 바빠져서가 아니라(자바스크립트는 한 줄로 돈다) 서버에 한꺼번에 몰아붙이지 않기
+ * 위해서다.
  *
- * 이 물건이 하는 진짜 일은 같은 후보를 두 번 읽지 않는 것이다. 훑는 동안 먼저 보낸
- * 것은 started에 남고, 훑기가 끝난 뒤의 한 판은 거기 없는 것만 집어 든다. 없으면
- * 원본 하나가 두 번 읽혀 하루 한도가 그만큼 빨리 닳는다.
+ * 이 물건이 하는 진짜 일은 같은 후보를 두 번 건드리지 않는 것이다. 읽기에서는 훑는
+ * 동안 먼저 보낸 것을 다시 읽지 않게 하고 — 그러지 않으면 하루 한도가 두 배로 닳는다 —
+ * 올리기에서는 미리 올려둔 것을 등록할 때 또 올리지 않게 한다. 그러면 같은 파일이
+ * 두 벌 남는다.
  */
-function makeReadPool(limit) {
-  const started = new Set();
+function makePool(limit) {
+  const jobs = new Map();
   const results = new Map();
-  const jobs = [];
   const waiting = [];
   let active = 0;
 
@@ -89,27 +90,35 @@ function makeReadPool(limit) {
 
   return {
     results,
-    /** 하나를 줄에 세운다. 이미 세운 것이면 아무 일도 하지 않는다. */
+    /**
+     * 하나를 줄에 세우고, 끝나면 그 값을 주는 약속을 돌려준다.
+     * 이미 세운 것이면 하던 것의 약속을 그대로 준다 — 두 번 하지 않는다.
+     * 하다가 넘어지면 값 없이 끝난다. 부르는 쪽이 없으면 없는 대로 처리한다.
+     */
     add(id, task) {
-      if (started.has(id)) return;
-      started.add(id);
+      const already = jobs.get(id);
+      if (already) return already;
+
       let settle;
-      jobs.push(
-        new Promise((resolve) => {
-          settle = resolve;
-        })
-      );
+      const job = new Promise((resolve) => {
+        settle = resolve;
+      });
+      jobs.set(id, job);
+
       waiting.push(async () => {
+        let value;
         try {
-          results.set(id, await task());
+          value = await task();
+          results.set(id, value);
         } finally {
-          settle();
+          settle(value);
         }
       });
       pump();
+      return job;
     },
     /** 지금까지 세운 것이 다 끝날 때까지 기다린다. */
-    settled: () => Promise.all(jobs),
+    settled: () => Promise.all([...jobs.values()]),
   };
 }
 
@@ -128,6 +137,15 @@ const KOREAN_BUCKETS = FOLDERS.map((folder) => folder.label).join(' · ');
 // 압축하는 일은 동시성과 무관하게 차례대로 실행된다. 겹쳐지는 건 서버를 기다리는
 // 시간뿐이다. 한 번 훑어 나오는 수는 대개 여덟 안쪽이라, 여기까지면 한 물결에 담긴다.
 const READ_CONCURRENCY = 8;
+
+// 한 번에 몇 건씩 넣을지.
+//
+// 사진은 대개 미리 올라가 있어서 여기서는 줄 하나를 넣는 일만 남는다. 그래도 하나씩
+// 하면 개수만큼 왕복이 곱해진다 — 여섯 개면 여섯 번 다녀온다.
+//
+// 읽기(8)보다 낮게 둔다. 미처 못 올린 건이 섞여 있으면 여기서 사진까지 올리게 되는데,
+// 그때 여덟 건이 한꺼번에 달려들면 폰의 좁은 업로드를 서로 밀어낸다.
+const SAVE_CONCURRENCY = 3;
 
 // 찾기가 전체 진행에서 차지하는 몫(%).
 //
@@ -372,6 +390,10 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
   const found0Ref = useRef([]);
   // 이번 훑기의 읽기 일꾼들. 훑는 중에 먼저 보낸 것과 나중 한 판이 같은 줄을 쓴다.
   const poolRef = useRef(null);
+  // 사진을 미리 올려두는 일꾼들. 목록이 다 뜬 뒤부터 돈다.
+  const uploadRef = useRef(null);
+  // 미리 올려둔 것 중 실제로 등록에 쓰인 것. 나머지는 창을 닫을 때 지운다.
+  const spentRef = useRef(new Set());
   // 읽기 진행률. 훑는 중에 이미 끝난 건이 있어서 0에서 시작하지 않는다.
   const readTallyRef = useRef({ done: 0, total: 0 });
   // 이번 훑기가 시작된 시각과, 첫 건을 서버로 보낸 시각.
@@ -392,7 +414,15 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
   // 창을 닫는 순간 하던 일을 멈춘다. 안 그러면 닫은 뒤에도 계속 읽어서 폰이 더워지고
   // 배터리와 돈만 쓴다.
   useEffect(() => {
-    return () => abortRef.current?.abort();
+    return () => {
+      abortRef.current?.abort();
+      // 미리 올려두고 등록하지 않은 사진을 지운다. 여기서 놓치면 아무 줄도 가리키지
+      // 않는 파일이 남는다.
+      sweepUploads();
+    };
+    // sweepUploads는 매번 새로 만들어지는 함수지만, 여기서는 창을 닫을 때 한 번만
+    // 부르면 되고 필요한 것은 전부 ref에 들어 있다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // 이미 권한이 있으면 설명 화면을 건너뛰고 바로 훑는다. 두 번째부터는 사용자가
@@ -446,8 +476,13 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
     abortRef.current?.abort();
     abortRef.current = controller;
 
-    const pool = makeReadPool(READ_CONCURRENCY);
+    const pool = makePool(READ_CONCURRENCY);
     poolRef.current = pool;
+    // 지난번에 미리 올려두고 안 쓴 것이 있으면 지금 치운다. 새로 훑으면 그 후보들은
+    // 화면에서 사라지므로, 여기서 놓치면 아무도 지울 수 없는 파일이 된다.
+    sweepUploads();
+    uploadRef.current = makePool(SAVE_CONCURRENCY);
+    spentRef.current = new Set();
 
     let found = [];
     let pending = [];
@@ -660,10 +695,84 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
     setProgress(null);
   }
 
+  // 이 후보에서 잘라낸 것들. 사진과 함께 올라간다.
+  function cropsOf(candidate) {
+    const { prepared, info } = candidate;
+    return {
+      barcodeCropFile:
+        prepared?.code && prepared?.barcodeCropBlob
+          ? new File([prepared.barcodeCropBlob], 'barcode.png', { type: 'image/png' })
+          : null,
+      thumbCropFile: info?.thumbCropBlob
+        ? new File([info.thumbCropBlob], 'thumb.jpg', { type: 'image/jpeg' })
+        : null,
+    };
+  }
+
+  /**
+   * 사진을 등록 전에 미리 올려둔다.
+   *
+   * 등록에서 걸리는 시간은 거의 다 사진을 보내는 시간이다. 그런데 그 사진은 읽기가
+   * 끝난 순간 이미 손에 있다 — 사용자가 목록을 보고 무엇을 넣을지 고르는 그 몇 초
+   * 동안 놀고 있을 뿐이다. 그때 올려두면 등록을 눌렀을 때 남는 일은 줄 하나 넣는
+   * 것뿐이라 거의 즉시 끝난다.
+   *
+   * 훑는 동안에는 시작하지 않는다. 그때는 같은 회선으로 글자를 읽히고 있고, 사용자가
+   * 눈으로 좇는 것도 그쪽이다. 여기서 끼어들면 보이는 것이 느려진다.
+   *
+   * 등록하지 않은 것은 지워야 한다. 아래 sweepUploads가 한다.
+   */
+  useEffect(() => {
+    if (stage !== 'done' || !uploadRef.current) return;
+    candidates.forEach((candidate) => {
+      if (dismissedIds.includes(candidate.id) || !isPickable(candidate)) return;
+      uploadRef.current.add(candidate.id, () =>
+        uploadGifticonImages(family.id, candidate.prepared.storageFiles, cropsOf(candidate))
+      );
+    });
+    // isPickable은 매번 새로 만들어지는 함수라 의존성에 넣으면 효과가 계속 다시 돈다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stage, candidates, dismissedIds]);
+
+  /**
+   * 미리 올려뒀지만 결국 쓰지 않은 사진을 지운다.
+   *
+   * 치운 후보, 끝내 등록하지 않고 닫은 후보의 사진이 여기 걸린다. 그냥 두면 아무
+   * 줄도 가리키지 않는 파일이 남아서, 눈에 보이지도 않는 채로 용량만 먹는다.
+   * 무료 스토리지가 1GB다.
+   *
+   * 등록에 쓴 것은 건드리지 않는다. 그건 이제 그 줄의 것이고, 넣다가 실패한 경우는
+   * createGifticon이 이미 치웠다(client/src/api.js).
+   */
+  function sweepUploads() {
+    const store = uploadRef.current;
+    if (!store) return;
+    // 지금의 '쓴 목록'을 붙들어둔다. 아래는 나중에 도는데, 그 사이 새로 훑기가
+    // 시작되면 이 목록이 빈 것으로 갈아끼워진다. 그러면 방금 등록한 기프티콘의
+    // 사진을 안 쓴 것으로 보고 지워버린다 — 화면에는 남고 사진만 사라진다.
+    const spent = spentRef.current;
+    // 아직 올라가는 중인 것까지 끝난 뒤에 훑는다. 창을 닫는 길에도 부르는데, 그때
+    // 지금까지 올라간 것만 보고 끝내면 뒤늦게 도착한 파일이 영영 남는다.
+    //
+    // 기다렸다가 하지만 아무도 이 약속을 기다리지 않는다. 창은 이미 닫혔고, 지우는
+    // 일은 화면과 상관없이 끝나면 된다.
+    store.settled().then(() => {
+      const orphans = [];
+      store.results.forEach((stored, id) => {
+        if (spent.has(id) || !stored) return;
+        orphans.push(...stored.image_paths, stored.barcode_image_path, stored.thumb_image_path);
+      });
+      const paths = orphans.filter(Boolean);
+      if (paths.length) removeImages(paths).catch(() => {});
+      store.results.clear();
+    });
+  }
+
   /**
    * 고른 것을 전부 넣는다.
    *
-   * 정보는 이미 읽어뒀다. 여기서는 저장만 하므로 금방 끝난다.
+   * 정보도 사진도 이미 올려뒀다. 여기서는 줄을 넣기만 하므로 금방 끝난다.
+   * 세 건씩 겹쳐 돈다 — 하나씩 하면 개수만큼 왕복이 곱해진다.
    */
   async function registerAll() {
     const targets = candidates.filter(isPickable);
@@ -673,49 +782,66 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
     setError('');
     const done = [];
     const failed = [];
-    let noExpiry = 0;
+    const noExpiry = targets.filter((c) => !c.info?.expiresAt).length;
 
-    for (const [index, candidate] of targets.entries()) {
-      setSaving({ current: index + 1, total: targets.length });
+    async function save(candidate) {
       const { prepared, info } = candidate;
-      try {
-        if (!info?.expiresAt) noExpiry += 1;
-        const saved = await createGifticon(
-          family.id,
-          {
-            name: info.name,
-            category: info.category || '기타',
-            brand: info.brand,
-            amount: info.amount ?? '',
-            // 지금 로그인한 사람 것으로 넣는다. 대신 넣어주는 경우도 그렇게 둔다 —
-            // 누가 받았는지보다 누가 쓰는지가 중요하고, 그건 쓸 때 정해진다.
-            owner: myName || null,
-            // 훑을 때 읽은 번호를 뒤에 둔다. 등록 쪽 판독이 실패해도 번호는 남아야 한다.
-            code: info.code || candidate.code,
-            code_type: info.codeType || candidate.codeType || null,
-            expires_at: info.expiresAt || null,
-            is_voucher: voucherIds.includes(candidate.id),
-            created_by: user.id,
-          },
-          prepared.storageFiles,
-          {
-            barcodeCropFile:
-              prepared.code && prepared.barcodeCropBlob
-                ? new File([prepared.barcodeCropBlob], 'barcode.png', { type: 'image/png' })
-                : null,
-            thumbCropFile: info.thumbCropBlob
-              ? new File([info.thumbCropBlob], 'thumb.jpg', { type: 'image/jpeg' })
-              : null,
-          }
-        );
-        done.push(saved);
-      } catch (err) {
-        // 하나가 실패해도 나머지는 계속 넣는다. 여기서 멈추면 넣은 것과 못 넣은 것이
-        // 섞인 채로 화면만 사라진다.
-        failed.push({ candidate, reason: err?.message || '등록하지 못했어요' });
+      // 미리 올려둔 것을 쓴다. 아직 올라가는 중이면 그것만 기다린다. 아직 시작도
+      // 안 했으면(정밀 탐색에서 뒤늦게 나온 것) 여기서 시작해 기다린다.
+      // 어느 쪽이든 같은 파일을 두 번 올리는 일은 없다.
+      const stored = await uploadRef.current?.add(candidate.id, () =>
+        uploadGifticonImages(family.id, prepared.storageFiles, cropsOf(candidate))
+      );
+      // 이제 이 경로들은 아래 createGifticon의 것이다. 실패하면 거기서 치운다.
+      if (stored) spentRef.current.add(candidate.id);
+
+      return createGifticon(
+        family.id,
+        {
+          name: info.name,
+          category: info.category || '기타',
+          brand: info.brand,
+          amount: info.amount ?? '',
+          // 지금 로그인한 사람 것으로 넣는다. 대신 넣어주는 경우도 그렇게 둔다 —
+          // 누가 받았는지보다 누가 쓰는지가 중요하고, 그건 쓸 때 정해진다.
+          owner: myName || null,
+          // 훑을 때 읽은 번호를 뒤에 둔다. 등록 쪽 판독이 실패해도 번호는 남아야 한다.
+          code: info.code || candidate.code,
+          code_type: info.codeType || candidate.codeType || null,
+          expires_at: info.expiresAt || null,
+          is_voucher: voucherIds.includes(candidate.id),
+          created_by: user.id,
+        },
+        // 미리 올려둔 것이 있으면 파일은 넘기지 않는다. 넘겨봐야 쓰지 않는다.
+        stored ? [] : prepared.storageFiles,
+        stored ? {} : cropsOf(candidate),
+        stored || null
+      );
+    }
+
+    let finished = 0;
+    const queue = [...targets];
+
+    async function worker() {
+      while (queue.length > 0) {
+        const candidate = queue.shift();
+        try {
+          done.push(await save(candidate));
+        } catch (err) {
+          // 하나가 실패해도 나머지는 계속 넣는다. 여기서 멈추면 넣은 것과 못 넣은 것이
+          // 섞인 채로 화면만 사라진다.
+          failed.push({ candidate, reason: err?.message || '등록하지 못했어요' });
+        }
+        finished += 1;
+        setSaving({ current: finished, total: targets.length });
       }
     }
 
+    setSaving({ current: 0, total: targets.length });
+    await Promise.all(Array.from({ length: Math.min(SAVE_CONCURRENCY, targets.length) }, worker));
+
+    // 넣지 않은 것들의 사진은 여기서 정리한다. 결과 화면에서 창을 닫으면 다시 볼 일이 없다.
+    sweepUploads();
     setSaving(null);
     // 못 읽어서 애초에 넣을 수 없던 것도 함께 적는다. 목록에서 이미 보여줬지만,
     // 결과 화면만 보고 닫는 사람에게는 여기가 마지막 기회다.

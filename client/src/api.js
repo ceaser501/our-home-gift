@@ -51,24 +51,68 @@ async function withImageUrlsMany(rows) {
   return rows.map((row) => attachImageUrls(row, urls));
 }
 
+async function uploadOne(familyId, file) {
+  const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+  const path = `${familyId}/${Date.now()}-${crypto.randomUUID()}.${ext}`;
+  const { error } = await supabase.storage.from(IMAGE_BUCKET).upload(path, file, {
+    cacheControl: '3600',
+    upsert: false,
+  });
+  if (error) throw new Error(`이미지 업로드 실패: ${error.message}`);
+  return path;
+}
+
+/**
+ * 여러 장을 함께 올린다.
+ *
+ * 예전에는 한 줄로 세워 올렸다. 그런데 한 장이 200KB 남짓이라, 보내는 시간보다
+ * 서버를 다녀오는 시간이 더 걸리는 일이 흔하다 — 장수만큼 그 왕복이 곱해졌다.
+ * 기프티콘 하나에 본 사진·바코드 크롭·목록 썸네일까지 서너 장이고, 여섯 개를
+ * 등록하면 스무 번 넘게 다녀왔다. 서로 상관없는 파일이라 순서를 지킬 이유가 없다.
+ *
+ * 하나라도 실패하면 성공한 것까지 지운다. 안 그러면 저장은 실패했는데 파일만 남아,
+ * 아무도 쓰지 않는 것이 용량을 먹는다.
+ *
+ * 돌려주는 순서는 받은 순서 그대로다. 첫 장이 목록 썸네일이 되므로 섞이면 안 된다.
+ */
 async function uploadImages(familyId, files) {
-  const uploaded = [];
-  try {
-    for (const file of files) {
-      const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
-      const path = `${familyId}/${Date.now()}-${crypto.randomUUID()}.${ext}`;
-      const { error } = await supabase.storage.from(IMAGE_BUCKET).upload(path, file, {
-        cacheControl: '3600',
-        upsert: false,
-      });
-      if (error) throw new Error(`이미지 업로드 실패: ${error.message}`);
-      uploaded.push(path);
-    }
-    return uploaded;
-  } catch (err) {
-    if (uploaded.length) await removeImages(uploaded);
-    throw err;
+  const settled = await Promise.allSettled(files.map((file) => uploadOne(familyId, file)));
+  const failed = settled.find((one) => one.status === 'rejected');
+  if (failed) {
+    const kept = settled.filter((one) => one.status === 'fulfilled').map((one) => one.value);
+    if (kept.length) await removeImages(kept);
+    throw failed.reason;
   }
+  return settled.map((one) => one.value);
+}
+
+/**
+ * 기프티콘 한 건에 딸린 사진을 모두 올리고 경로만 돌려준다.
+ *
+ * 등록을 누르기 전에 미리 올려두려고 떼어냈다. 사용자가 목록을 보고 고르는 몇 초
+ * 동안 올려두면, 등록을 눌렀을 때 남는 일은 줄 하나 넣는 것뿐이라 거의 즉시 끝난다.
+ *
+ * 여기서 올린 것은 아직 아무 줄에도 매여 있지 않다. 결국 등록하지 않으면 지워야
+ * 한다 — 그 뒤처리는 부른 쪽이 한다(client/src/components/GalleryScanSheet.jsx).
+ */
+export async function uploadGifticonImages(familyId, files = [], crops = {}) {
+  const all = [...files];
+  if (crops.barcodeCropFile) all.push(crops.barcodeCropFile);
+  if (crops.thumbCropFile) all.push(crops.thumbCropFile);
+  if (all.length === 0) return { image_paths: [], barcode_image_path: null, thumb_image_path: null };
+
+  const paths = await uploadImages(familyId, all);
+  const rest = paths.slice(files.length);
+  return {
+    image_paths: paths.slice(0, files.length),
+    barcode_image_path: crops.barcodeCropFile ? rest.shift() : null,
+    thumb_image_path: crops.thumbCropFile ? rest.shift() : null,
+  };
+}
+
+// 올려둔 경로를 한 줄로 편다. 지울 때 쓴다.
+function pathsOf(stored) {
+  return [...(stored?.image_paths || []), stored?.barcode_image_path, stored?.thumb_image_path].filter(Boolean);
 }
 
 export async function removeImages(paths) {
@@ -219,27 +263,19 @@ export async function findLookalikeGifticon(familyId, { brand, name, expiresAt }
   return data?.[0] || null;
 }
 
-export async function createGifticon(familyId, fields, files = [], crops = {}) {
-  const image_paths = files.length ? await uploadImages(familyId, files) : [];
-
-  // 올린 사진에서 잘라낸 것들(바코드·상품 사진)까지 모아둔다. 중간에 실패하면 여기 담긴
-  // 것만 지우면 되니, 저장에 실패했는데 파일만 남는 일이 없다.
-  const uploaded = [...image_paths];
-  let barcode_image_path = null;
-  let thumb_image_path = null;
-  try {
-    if (crops.barcodeCropFile) {
-      [barcode_image_path] = await uploadImages(familyId, [crops.barcodeCropFile]);
-      uploaded.push(barcode_image_path);
-    }
-    if (crops.thumbCropFile) {
-      [thumb_image_path] = await uploadImages(familyId, [crops.thumbCropFile]);
-      uploaded.push(thumb_image_path);
-    }
-  } catch (err) {
-    if (uploaded.length) await removeImages(uploaded);
-    throw err;
-  }
+/**
+ * 기프티콘 한 건을 넣는다.
+ *
+ * stored를 받으면 사진은 이미 올라가 있다는 뜻이라 그대로 쓴다. 여기서 다시 올리면
+ * 같은 파일이 두 벌 남는다.
+ *
+ * 넘겨받은 경로는 이 함수가 책임진다 — 줄을 넣지 못하면 여기서 지운다. 그 줄이
+ * 없으면 사진은 아무도 가리키지 않는 파일이 되기 때문이다.
+ */
+export async function createGifticon(familyId, fields, files = [], crops = {}, stored = null) {
+  const images = stored || (await uploadGifticonImages(familyId, files, crops));
+  const { image_paths, barcode_image_path, thumb_image_path } = images;
+  const uploaded = pathsOf(images);
 
   const { data, error } = await supabase
     .from(GIFTICON_TABLE)
