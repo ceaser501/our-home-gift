@@ -1031,14 +1031,6 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
     return () => cancelAnimationFrame(state.raf);
   }, []);
 
-  // 안내를 한 줄씩 넘긴다. 첫 기프티콘이 들어오면 멈춘다 — 그때부터는 보여줄 것이
-  // 생겼고, 읽을 것이 둘이면 둘 다 안 읽힌다.
-  useEffect(() => {
-    if (!isWorking || arrived.length > 0) return;
-    const timer = setInterval(() => setHint((n) => n + 1), HINT_MS);
-    return () => clearInterval(timer);
-  }, [isWorking, arrived.length]);
-
   // 지금 무슨 일을 하는 중인지와, 어디까지 왔는지. 시안의 상태 줄이다 —
   // 왼쪽이 하는 일, 오른쪽이 숫자다.
   const workingLabel = stage === 'scanning' ? '사진첩에서 기프티콘을 찾고 있어요' : '기프티콘 정보를 읽고 있어요';
@@ -1048,6 +1040,7 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
         ? `사진 ${progress.scanned}/${progress.total}`
         : '잠시만요'
       : `${progress?.scanned ?? 0}/${progress?.total ?? 0}개`;
+
 
   const alive = candidates.filter((candidate) => !dismissedIds.includes(candidate.id));
   // 금액권은 따로 묶는다. 확인할 것이 하나 더 있는 무리라, 섞여 있으면 그 하나를
@@ -1060,6 +1053,20 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
   const arrived = alive
     .filter((c) => c.info || c.readError)
     .sort((a, b) => (a.readOrder || 0) - (b.readOrder || 0));
+
+
+  // 안내를 한 줄씩 넘긴다. 첫 기프티콘이 들어오면 멈춘다 — 그때부터는 보여줄 것이
+  // 생겼고, 읽을 것이 둘이면 둘 다 안 읽힌다.
+  //
+  // 이 자리는 arrived 아래여야 한다. 위에 두면 의존성 배열이 렌더 도중 arrived를
+  // 읽는데 그때는 아직 만들어지기 전이라, 이 화면이 뜨는 순간 통째로 죽는다.
+  // 실제로 그래서 흰 화면이 났다 — 자동 찾기가 켜져 있으면 앱을 여는 순간이다.
+  useEffect(() => {
+    if (!isWorking || arrived.length > 0) return;
+    const timer = setInterval(() => setHint((n) => n + 1), HINT_MS);
+    return () => clearInterval(timer);
+  }, [isWorking, arrived.length]);
+
   const dismissed = candidates.filter((candidate) => dismissedIds.includes(candidate.id));
   const keptCount = alive.filter(isPickable).length;
   // 못 읽은 것들이 같은 이유로 막혔으면 한 번만 적는다. 하루 한도를 다 썼을 때가
