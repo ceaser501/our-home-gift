@@ -322,6 +322,8 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
   const readStartRef = useRef(0);
   // 읽기가 끝난 순번. 목록에 쌓이는 차례가 된다.
   const readSeqRef = useRef(0);
+  // 목록의 맨 끝. 카드가 붙을 때마다 화면이 여기까지 따라 내려간다.
+  const listEndRef = useRef(null);
 
   // 창을 닫는 순간 하던 일을 멈춘다. 안 그러면 닫은 뒤에도 계속 읽어서 폰이 더워지고
   // 배터리와 돈만 쓴다.
@@ -701,6 +703,21 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
   const barMs = stage === 'reading' ? readBarMs : 300;
   // 목록을 보여줄 때. 도는 중에도 보여준다 — 창이 갈아치워지지 않게.
   const isListing = isWorking || stage === 'done';
+
+  // 카드가 붙을 때마다 화면도 따라 내려간다.
+  //
+  // 위에 머물러 있으면 새로 들어온 카드가 화면 밖에 쌓인다. 그런데 이 화면에서 하는
+  // 일은 들어오는 것을 보는 것으로 끝나지 않는다 — 다 나오면 등록을 누르는 것이 다음
+  // 순서고, 그 버튼은 목록 아래에 있다. 위에 붙어 있으면 결국 손으로 끝까지 내려야 한다.
+  //
+  // 들어오는 것을 눈으로 따라가다 보면 마지막에 버튼 앞에 서 있게 되는 것이 맞다.
+  // stage를 함께 보는 건 다 끝나는 순간에도 한 번 맞춰주기 위해서다 — 그때 스캐너가
+  // 걷히고 목록이 성격별로 나뉘면서 높이가 통째로 바뀐다.
+  useEffect(() => {
+    if (!isListing) return;
+    const still = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    listEndRef.current?.scrollIntoView({ behavior: still ? 'auto' : 'smooth', block: 'end' });
+  }, [arrived.length, stage, isListing]);
 
   // 지금 무슨 일을 하는 중인지와, 어디까지 왔는지. 시안의 상태 줄이다 —
   // 왼쪽이 하는 일, 오른쪽이 숫자다.
@@ -1242,6 +1259,10 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
                   </Button>
                 )}
               </div>
+
+              {/* 화면이 따라 내려가는 자리. 버튼 뒤에 둬야 마지막에 버튼까지 보인다 —
+                  목록 끝에 두면 새 카드는 보이지만 정작 눌러야 할 것이 화면 밖에 남는다. */}
+              <div ref={listEndRef} aria-hidden="true" />
             </>
           )}
         </div>
