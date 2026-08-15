@@ -5,7 +5,36 @@
 // 개발자센터에 등록한 사이트 도메인에서만 동작하도록 묶인다). 그래서 VITE_ 환경변수로
 // 클라이언트에 넣어도 된다.
 
+import { isNativeApp } from './browser';
+
 let loadPromise = null;
+
+// script 태그의 onerror는 "안 됐다"만 알려준다. 401인지, 인터넷이 끊긴 건지, 주소를
+// 잘못 적은 건지 구별이 안 된다. 도메인을 등록했는데도 계속 안 되는 상황에서는 그
+// 구별이 전부라서, 앱에서는 한 번 더 물어본다.
+//
+// CapacitorHttp는 웹뷰가 아니라 네이티브가 부른다. 그래서 CORS에 막히지 않고 상태
+// 코드와 본문을 그대로 읽을 수 있다. 대신 웹뷰가 보내던 Referer가 안 실리므로 직접
+// 넣는다 — 카카오가 도메인을 판정하는 근거가 그 헤더다.
+async function askWhy(src) {
+  if (!isNativeApp()) return null;
+  try {
+    const { CapacitorHttp } = await import('@capacitor/core');
+    const res = await CapacitorHttp.get({
+      url: src,
+      headers: { Referer: `${window.location.origin}/` },
+      responseType: 'text',
+    });
+    if (res.status >= 200 && res.status < 300) {
+      // 주소로는 받아지는데 웹뷰에서만 막힌다는 뜻이다. 도메인 문제가 아니다.
+      return `주소로는 받아지는데(${res.status}) 화면에서만 막혀요.`;
+    }
+    const body = String(res.data ?? '').replace(/\s+/g, ' ').trim().slice(0, 160);
+    return `카카오가 ${res.status}로 돌려줬어요.${body ? ` ${body}` : ''}`;
+  } catch (err) {
+    return `카카오 주소에 닿지 못했어요. ${err?.message || ''}`.trim();
+  }
+}
 
 // 왜 안 떴는지를 같이 돌려준다.
 //
@@ -32,14 +61,15 @@ export function loadKakaoMap() {
       // autoload=false: SDK가 문서 로드 시점을 놓쳐도 kakao.maps.load()로 직접 초기화한다.
       script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${key}&autoload=false`;
       script.onload = () => window.kakao.maps.load(() => resolve({ kakao: window.kakao, reason: null }));
-      script.onerror = () => {
+      script.onerror = async () => {
         // 실패를 기억해두면 네트워크가 돌아와도 영영 못 쓰니, 다음에 다시 시도하게 비운다.
         loadPromise = null;
-        // script 태그는 401인지 네트워크가 끊긴 건지 알려주지 않는다. 다만 등록 안 된
-        // 도메인에서 부르는 것이 압도적으로 흔하므로, 지금 주소를 그대로 보여준다.
+        const why = await askWhy(script.src);
         resolve({
           kakao: null,
-          reason: `카카오 지도를 불러오지 못했어요. 개발자센터 → 플랫폼 → Web 에 ${window.location.origin} 이(가) 등록돼 있어야 해요.`,
+          reason:
+            `카카오 지도를 불러오지 못했어요. 지금 주소는 ${window.location.origin} 이에요.` +
+            (why ? ` ${why}` : ''),
         });
       };
       document.head.appendChild(script);
