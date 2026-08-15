@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- 안드로이드 12부터 백업 규칙을 이 파일로 읽는다. allowBackup="false"만으로는
+     기기 간 직접 전송(cloud-backup이 아닌 device-transfer)까지 막지 못해서, 둘 다
+     비워 아무것도 나가지 않게 한다.
+
+     이유는 AndroidManifest.xml의 주석에 적어뒀다 — 로그인 세션이 웹뷰 저장소에
+     평문으로 들어 있다. -->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="root" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="root" />
+    </device-transfer>
+</data-extraction-rules>

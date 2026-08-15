@@ -1,7 +1,20 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 구글 자동 백업을 끈다.
+
+         켜두면 안드로이드가 앱 데이터를 통째로 구글 계정에 올렸다가, 기기를 바꾸거나
+         다시 깔 때 되살린다. 그 데이터에는 웹뷰의 localStorage가 들어 있고, 거기에는
+         로그인 세션(Supabase refresh token)이 평문으로 들어 있다. 그 토큰 하나면
+         비밀번호 없이 이 사람의 가족 기프티콘을 전부 열 수 있다.
+
+         편의를 위해 그것을 남의 서버에 맡길 이유가 없다. 다시 깔면 다시 로그인하면
+         된다 — 소셜 로그인이라 두 번 누르는 일이다.
+
+         겸사겸사, 데이터 안전(Data safety) 신고에서 '앱 데이터를 백업에 포함하는가'가
+         빠진다. 안 하는 것이 설명하기도 쉽다. -->
     <application
-        android:allowBackup="true"
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"

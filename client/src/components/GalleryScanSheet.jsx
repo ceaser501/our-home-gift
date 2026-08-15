@@ -167,6 +167,61 @@ function reasonOf(candidate) {
   return '아직 읽지 않았어요';
 }
 
+/**
+ * 훑는 동안 도는 스캐너.
+ *
+ * 예전에는 진행 막대 하나였다. 그런데 이 화면은 6초 넘게 떠 있고, 그 대부분이 서버를
+ * 기다리는 시간이라 막대가 거의 멈춰 있다. 멈춘 막대는 고장 난 것처럼 보인다.
+ *
+ * 그렇다고 막대를 무한 반복으로 바꾸면 "얼마나 왔는지"를 잃는다. 그래서 나눴다 —
+ * 움직임은 이 그림이 맡고, 진행률은 아래 막대와 숫자가 맡는다.
+ *
+ * 모양은 client/src/index.css의 .moacon-scan-* 에 있다.
+ */
+function ScannerArt() {
+  return (
+    <div className="moacon-scan-area" aria-hidden="true">
+      <div className="moacon-scanner">
+        <div className="moacon-paper-back" />
+        <div className="moacon-paper-mid" />
+        <div className="moacon-paper">
+          <div className="moacon-p-line a" />
+          <div className="moacon-p-line b" />
+          <div className="moacon-p-code" />
+          <div className="moacon-p-sweep" />
+        </div>
+        <div className="moacon-frame">
+          <div className="moacon-bracket tl" />
+          <div className="moacon-bracket tr" />
+          <div className="moacon-bracket bl" />
+          <div className="moacon-bracket br" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * 아직 아무것도 못 읽었을 때 자리만 잡아두는 카드.
+ *
+ * 첫 결과까지 4초 안팎이 걸린다. 그동안 목록이 비어 있으면 아무 일도 안 일어나는
+ * 것처럼 보인다. 들어올 줄과 같은 높이·같은 자리라, 값이 채워질 때 자리가 흔들리지
+ * 않는다. 여기에 스캔 선이나 바코드를 또 그리지는 않는다 — 무엇을 하는 중인지는
+ * 위 스캐너가 이미 말하고 있고, 아래는 그냥 기프티콘이 들어오는 자리다.
+ */
+function CandidateSlot() {
+  return (
+    <li className="flex items-start gap-3 rounded-xl border border-border bg-card p-3">
+      <div className="flex min-w-0 flex-1 flex-col gap-2">
+        <span className="h-2.5 w-16 animate-pulse rounded bg-secondary" />
+        <span className="h-4 w-3/4 animate-pulse rounded bg-secondary" />
+        <span className="h-3 w-2/5 animate-pulse rounded bg-secondary" />
+      </div>
+      <span className="h-4 w-14 shrink-0 animate-pulse rounded bg-secondary" />
+    </li>
+  );
+}
+
 function missingFields(info, fallbackCode) {
   const missing = [];
   if (!info?.name) missing.push('상품명');
@@ -264,6 +319,8 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
   // 이번 훑기가 시작된 시각과, 첫 건을 서버로 보낸 시각.
   const runStartRef = useRef(0);
   const readStartRef = useRef(0);
+  // 읽기가 끝난 순번. 목록에 쌓이는 차례가 된다.
+  const readSeqRef = useRef(0);
 
   // 창을 닫는 순간 하던 일을 멈춘다. 안 그러면 닫은 뒤에도 계속 읽어서 폰이 더워지고
   // 배터리와 돈만 쓴다.
@@ -310,6 +367,7 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
     readTallyRef.current = { done: 0, total: 0 };
     runStartRef.current = Date.now();
     readStartRef.current = 0;
+    readSeqRef.current = 0;
     setTotalMs(0);
     setProgress({ scanned: 0, total: 0, found: 0 });
 
@@ -445,6 +503,10 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
     if (controller.signal.aborted) return null;
     const read = await readOne(candidate, files);
     if (controller.signal.aborted) return read;
+
+    // 목록에 쌓이는 차례. 찾은 순서가 아니라 읽기가 끝난 순서다 — 찾은 순서로 두면
+    // 나중에 읽힌 것이 목록 가운데로 끼어들어 아래가 통째로 밀린다.
+    read.readOrder = readSeqRef.current += 1;
 
     setCandidates((prev) => prev.map((item) => (item.id === candidate.id ? { ...item, ...read } : item)));
     found0Ref.current = found0Ref.current.map((item) =>
@@ -639,15 +701,27 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
   // 목록을 보여줄 때. 도는 중에도 보여준다 — 창이 갈아치워지지 않게.
   const isListing = isWorking || stage === 'done';
 
+  // 지금 무슨 일을 하는 중인지와, 어디까지 왔는지. 시안의 상태 줄이다 —
+  // 왼쪽이 하는 일, 오른쪽이 숫자다.
+  const workingLabel = stage === 'scanning' ? '사진첩을 훑고 있어요' : '정보를 읽고 있어요';
+  const workingCount =
+    stage === 'scanning'
+      ? progress?.total
+        ? `사진 ${progress.scanned}/${progress.total}`
+        : '잠시만요'
+      : `${progress?.scanned ?? 0}/${progress?.total ?? 0}개`;
+
   const alive = candidates.filter((candidate) => !dismissedIds.includes(candidate.id));
   // 금액권은 따로 묶는다. 확인할 것이 하나 더 있는 무리라, 섞여 있으면 그 하나를
   // 매번 찾아내야 한다. 나눠 두면 위는 그냥 넘기고 아래만 보면 된다.
   const vouchers = alive.filter((c) => isPickable(c) && voucherIds.includes(c.id));
   const plains = alive.filter((c) => isPickable(c) && !voucherIds.includes(c.id));
-  // 아직 읽지 않은 것. 훑는 중에 카드만 먼저 올라온 상태다.
-  const waiting = alive.filter((c) => !c.info && !c.readError);
-  // 읽었는데 넣을 수 없는 것. 빠진 칸이 있거나, 읽다가 막혔다.
-  const unreadable = alive.filter((c) => !isPickable(c) && !waiting.includes(c));
+  // 넣을 수 없는 것. 빠진 칸이 있거나, 읽다가 막혔거나, 중간에 그만둬서 못 읽었다.
+  const unreadable = alive.filter((c) => !isPickable(c));
+  // 읽기가 끝난 순서대로. 훑는 중에는 이 차례로 카드가 한 장씩 쌓인다.
+  const arrived = alive
+    .filter((c) => c.info || c.readError)
+    .sort((a, b) => (a.readOrder || 0) - (b.readOrder || 0));
   const dismissed = candidates.filter((candidate) => dismissedIds.includes(candidate.id));
   const keptCount = alive.filter(isPickable).length;
   // 못 읽은 것들이 같은 이유로 막혔으면 한 번만 적는다. 하루 한도를 다 썼을 때가
@@ -750,98 +824,73 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
    * 찾을 때 다시 올라온다. X는 기프티콘이 아니라는 뜻이라 다시 묻지 않는다.
    * 그래서 자리도 왼쪽·오른쪽으로 갈라 뒀다.
    */
-  function renderCandidate(candidate, { voucher = false } = {}) {
+  function renderCandidate(candidate, { voucher = false, entering = false } = {}) {
     const isDismissed = dismissedIds.includes(candidate.id);
     const info = candidate.info;
-    // 아직 읽지 않았다. 찾자마자 올라온 카드다 — 못 읽은 것과 다르다.
-    const pendingRead = !info && !candidate.readError;
-    const broken = !isDismissed && !pendingRead && !isPickable(candidate);
+    const broken = !isDismissed && !isPickable(candidate);
 
     return (
       <li
         key={candidate.id}
         className={cn(
-          'flex flex-col gap-2 rounded-xl border border-border bg-background p-2.5',
-          (isDismissed || broken) && 'opacity-60'
+          'relative flex flex-col gap-2 overflow-hidden rounded-xl border border-border bg-card p-3',
+          (isDismissed || broken) && 'opacity-60',
+          entering && 'moacon-card-in'
         )}
       >
-        <div className="flex items-center gap-2.5">
-          {/* 아직 읽는 중인 사진에는 스캔 선이 지나간다. 그 자리가 곧 진행률이다 —
-              위쪽 밝은 부분이 본 만큼, 아래 어두운 부분이 남은 만큼이다.
-              문서 그림을 따로 그리는 것보다 낫다. 지금 실제로 읽히고 있는 그 기프티콘
-              위를 지나가니, 무엇을 하는 중인지가 그림이 아니라 사실로 보인다.
-              다 읽으면 선이 걷히고 사진이 온전히 드러난다. 그래서 어느 것이 끝났고 어느
-              것이 남았는지가 목록에서 그대로 읽힌다. */}
-          <div
-            className={cn(
-              'relative size-16 shrink-0 overflow-hidden rounded-lg bg-black',
-              pendingRead && 'moacon-scanline'
-            )}
-          >
-            <img
-              src={`data:image/jpeg;base64,${candidate.images[0]}`}
-              alt=""
-              className={cn('size-full object-cover', pendingRead && 'opacity-70')}
-            />
-            {/* 몇 %인지는 숫자로 적는다. 선은 계속 돌아 '진행 중'을 말하고, 숫자가
-                '어디까지 왔는지'를 말한다. 둘을 한 자리에 묶어봤더니(선의 위치 = 진행률)
-                읽는 동안 선이 거의 멈춰 있어 오히려 죽어 보였다.
+        <div className="flex items-start gap-3">
+          <div className="flex min-w-0 flex-1 flex-col">
+            {/* 맨 윗줄은 상호와 어느 사진첩에서 나왔는지. 상호를 작게 위에 올려두면
+                아래 상품명이 한 덩어리로 읽힌다. 어디서 나왔는지를 함께 적는 건,
+                같은 기프티콘이 여러 사진첩에 있을 때 무엇을 집었는지 알기 위해서다. */}
+            <div className="flex items-baseline gap-2">
+              <span className="truncate text-xs font-bold tracking-wider text-primary uppercase">
+                {info?.brand || candidate.bucket}
+              </span>
+              {info?.brand && (
+                <span className="shrink-0 text-xs text-muted-foreground">{candidate.bucket}</span>
+              )}
+            </div>
+            <span className="mt-1 text-base leading-snug font-semibold break-keep text-foreground">
+              {info?.name || (broken ? '못 읽었어요' : candidate.code)}
+            </span>
+            <span className="mt-1.5 truncate text-sm tabular-nums text-muted-foreground">
+              {broken
+                ? reasonOf(candidate)
+                : formatDate(info?.expiresAt)
+                  ? `${formatDate(info.expiresAt)} 까지`
+                  : '유효기한 없음'}
+            </span>
+          </div>
 
-                숫자는 훑는 중일 때만 적는다. 결과를 보여준 뒤 뒤에서 도는 정밀 탐색에서
-                뒤늦게 올라온 카드에는 셀 진행률이 없다 — 그때 적으면 끝난 값이 얼어붙은
-                채로 사진에 박힌다. 그 카드는 선만 돌면 된다. */}
-            {pendingRead && isWorking && (
-              <span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-white tabular-nums drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]">
-                {barPercent}%
+          {/* 오른쪽은 금액과, 이 후보를 치우는 자리. 시안에는 '확인됨' 같은 상태 글자가
+              있었는데 빼뒀다 — 아래에서 성격별로 나눠 보여주므로 카드마다 또 적으면
+              같은 말이 두 번 된다. */}
+          <div className="flex shrink-0 flex-col items-end gap-1">
+            {formatWon(info?.amount) && (
+              <span className="text-base font-bold tabular-nums text-foreground">
+                {formatWon(info.amount)}
               </span>
             )}
-          </div>
-          <div className="flex min-w-0 flex-1 flex-col gap-1">
-            {pendingRead ? (
-              /* 사진과 번호는 이미 있다. 상품명 자리만 비워두고 곧 채운다 —
-                 빈 카드를 여섯 개 깔아두는 것과, 하나씩 들어오는 것은 다르다. */
-              <>
-                <span className="h-4 w-2/3 animate-pulse rounded bg-muted" />
-                <span className="truncate font-mono text-sm text-muted-foreground">{candidate.code}</span>
-              </>
-            ) : broken ? (
-              <>
-                <span className="truncate text-base font-semibold text-foreground">
-                  {info?.name || info?.brand || '못 읽었어요'}
-                </span>
-                <span className="text-sm break-keep text-muted-foreground">{reasonOf(candidate)}</span>
-              </>
+            {isDismissed ? (
+              <button
+                type="button"
+                onClick={() => handleUndismiss(candidate)}
+                className="px-1 py-0.5 text-sm font-semibold text-primary underline"
+              >
+                되돌리기
+              </button>
             ) : (
-              <>
-                <span className="truncate text-base font-semibold text-foreground">
-                  {info?.name || candidate.bucket}
-                </span>
-                <span className="truncate text-sm text-muted-foreground">
-                  {[info?.brand, formatWon(info?.amount), formatDate(info?.expiresAt)]
-                    .filter(Boolean)
-                    .join(' · ') || candidate.code}
-                </span>
-              </>
+              <button
+                type="button"
+                onClick={() => handleDismiss(candidate)}
+                aria-label="기프티콘 아님"
+                className="-mr-1 flex size-8 items-center justify-center rounded-lg text-muted-foreground"
+              >
+                <X className="size-4.5" />
+              </button>
             )}
           </div>
-          {pendingRead ? null : isDismissed ? (
-            <button
-              type="button"
-              onClick={() => handleUndismiss(candidate)}
-              className="shrink-0 px-2 py-1 text-sm font-semibold text-primary underline"
-            >
-              되돌리기
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => handleDismiss(candidate)}
-              aria-label="기프티콘 아님"
-              className="flex size-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground"
-            >
-              <X className="size-4.5" />
-            </button>
-          )}
         </div>
 
         {/* 금액권 여부는 사람이 정한다. 사진의 글자로 짐작하는 것이라 확실할 수가 없는데,
@@ -849,7 +898,7 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
             얼마를 썼는지 묻고 잔액이 남아 목록에서 사라지지 않는다. 반대로 꺼두면 잔액을
             못 따라갈 뿐 쓰는 데는 지장이 없다. */}
         {voucher && !isDismissed && (
-          <label className="flex cursor-pointer items-center gap-2 rounded-lg bg-muted/60 px-2.5 py-2">
+          <label className="flex cursor-pointer items-center gap-2 rounded-lg bg-muted px-2.5 py-2">
             <input
               type="checkbox"
               checked={voucherIds.includes(candidate.id)}
@@ -926,29 +975,25 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
               한 가지 일인데 창이 둘이라 "다 됐나?" 하고 한 번 더 기다리게 됐다.
               이제 위에서 막대가 흐르는 동안 아래로 카드가 하나씩 쌓인다. */}
           {isWorking && (
-            <div className="flex flex-col gap-2 rounded-xl border border-primary/30 bg-primary/5 px-3.5 py-3">
-              <div className="flex items-center gap-2.5">
-                <Loader2 className="size-4 shrink-0 animate-spin text-primary" />
-                <span className="flex-1 text-base font-semibold text-foreground">찾는 중이에요</span>
+            <div className="flex flex-col">
+              <ScannerArt />
+              <div className="flex flex-col gap-2">
+                <div className="flex items-baseline justify-between gap-2.5">
+                  <span className="text-base font-semibold text-foreground">{workingLabel}</span>
+                  <span className="text-sm tabular-nums text-muted-foreground">{workingCount}</span>
+                </div>
+                {/* 막대 위로 빛이 한 번씩 지나간다. 막대가 잠시 멈춰 보이는 순간에도
+                    무언가 돌고 있다는 게 보인다. 진행률은 그대로 막대가 말한다 —
+                    움직임만 얹었지 정보를 대신하지 않는다. */}
+                <div className="moacon-sweep relative h-1.5 w-full overflow-hidden rounded-full bg-primary/15">
+                  {/* 찾기는 앞의 몫(SCAN_SHARE)만 채운다. 여기서 100%까지 갔다가 읽기에서
+                      다시 0으로 떨어지면, 다 온 줄 알았다가 처음으로 돌아간다. */}
+                  <div
+                    className="h-full rounded-full bg-primary transition-[width] ease-out"
+                    style={{ width: `${barPercent}%`, transitionDuration: `${barMs}ms` }}
+                  />
+                </div>
               </div>
-              {/* 막대 위로 빛이 한 번씩 지나간다. 막대가 잠시 멈춰 보이는 순간에도
-                  무언가 돌고 있다는 게 보인다. 진행률은 그대로 막대가 말한다 —
-                  움직임만 얹었지 정보를 대신하지 않는다. */}
-              <div className="moacon-sweep relative h-1.5 w-full overflow-hidden rounded-full bg-primary/15">
-                {/* 찾기는 앞의 몫(SCAN_SHARE)만 채운다. 여기서 100%까지 갔다가 읽기에서
-                    다시 0으로 떨어지면, 다 온 줄 알았다가 처음으로 돌아간다. */}
-                <div
-                  className="h-full rounded-full bg-primary transition-[width] ease-out"
-                  style={{ width: `${barPercent}%`, transitionDuration: `${barMs}ms` }}
-                />
-              </div>
-              <p className="m-0 text-sm text-muted-foreground">
-                {stage === 'scanning'
-                  ? progress?.total
-                    ? `사진 ${progress.scanned}/${progress.total}`
-                    : '잠시만요'
-                  : `${candidates.length}개 찾았어요`}
-              </p>
             </div>
           )}
 
@@ -1050,28 +1095,27 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
                     {scanned === 0 ? '+ 로 직접 올려주세요.' : `사진 ${scanned}장을 봤어요. + 로 직접 올려주세요.`}
                   </p>
                 </div>
+              ) : isWorking ? (
+                /* 도는 동안에는 한 줄로만 쌓는다. 읽기가 끝난 차례대로 한 장씩 밀려
+                   들어온다.
+                   성격별로 나누는 건 다 끝난 뒤의 일이다 — 도는 중에 나눠두면 방금
+                   읽힌 카드가 무리를 옮겨 다니면서 자리가 튀고, 옮길 때마다 등장
+                   애니메이션이 다시 돈다. */
+                <ul className="m-0 flex list-none flex-col gap-2 p-0">
+                  {arrived.map((candidate) => renderCandidate(candidate, { entering: true }))}
+                  {arrived.length === 0 && <CandidateSlot />}
+                </ul>
               ) : (
                 <>
                   {plains.length > 0 && (
                     <>
-                      {!isWorking && (
-                        <p className="m-0 text-base break-keep text-foreground">
-                          <b className="font-semibold">{plains.length}개</b> 찾았어요.
-                        </p>
-                      )}
+                      <p className="m-0 text-base break-keep text-foreground">
+                        <b className="font-semibold">{plains.length}개</b> 찾았어요.
+                      </p>
                       <ul className="m-0 flex list-none flex-col gap-2 p-0">
                         {plains.map((candidate) => renderCandidate(candidate))}
                       </ul>
                     </>
-                  )}
-
-                  {/* 아직 읽지 않은 것. 찾자마자 올라온 카드라 사진과 번호만 있다.
-                      제목을 붙이지 않는다 — 위 목록과 이어지는 같은 줄이고, 곧 글자가
-                      채워지면서 위로 합쳐진다. */}
-                  {waiting.length > 0 && (
-                    <ul className="m-0 flex list-none flex-col gap-2 p-0">
-                      {waiting.map((candidate) => renderCandidate(candidate))}
-                    </ul>
                   )}
 
                   {/* 금액권은 아래에 따로 묶는다. 확인할 것이 하나 더 있는 무리라, 위에

@@ -321,3 +321,241 @@ html.is-native-android {
 }
 
 
+
+/* ── 기프티콘 찾는 중에 도는 스캐너 ───────────────────────────────────────────
+   시안(Gifticon_OCR_Scan)의 치수와 키프레임을 그대로 옮겼다. 색만 앱 토큰이다 —
+   시안이 이미 이 팔레트로 그려져 있어서 대부분 값이 그대로 맞는다.
+
+   움직임이 세 군데서 나온다. 겹친 종이 세 장이 각각 다른 각도로 떠다니고, 밝은 선이
+   위아래로 왕복하고, 모서리 브래킷이 조준선처럼 잡아준다. 진행률을 담고 있지는 않다 —
+   그건 아래 막대와 숫자가 맡는다. 이건 "지금 돌고 있다"만 말한다.
+
+   예전에는 사진 한 장 한 장 위에 스캔 선을 그렸다. 그런데 아래로 들어오는 것은
+   기프티콘이지 스캐너가 아니라서, 선이 여러 개면 무엇을 훑는 중인지가 흐려졌다.
+   훑는 일은 맨 위 한 자리에서만 말한다. */
+.moacon-scan-area {
+  position: relative;
+  height: 190px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.moacon-scanner {
+  position: relative;
+  width: 168px;
+  height: 168px;
+}
+
+.moacon-paper-back {
+  position: absolute;
+  inset: 23px 7px;
+  border-radius: 10px;
+  background: var(--color-border);
+  animation: moacon-paper2 3.4s ease-in-out infinite;
+}
+
+.moacon-paper-mid {
+  position: absolute;
+  inset: 16px 14px 30px;
+  border-radius: 10px;
+  background: var(--color-secondary);
+  animation: moacon-paper 2.8s ease-in-out infinite;
+}
+
+@keyframes moacon-paper {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-2.4deg);
+  }
+  50% {
+    transform: translateY(-5px) rotate(-1.2deg);
+  }
+}
+
+@keyframes moacon-paper2 {
+  0%,
+  100% {
+    transform: translateY(0) rotate(1.8deg);
+  }
+  50% {
+    transform: translateY(-3px) rotate(3deg);
+  }
+}
+
+.moacon-paper {
+  position: absolute;
+  inset: 9px 21px 37px;
+  border-radius: 10px;
+  background: var(--color-card);
+  box-shadow: 0 6px 18px -8px rgb(28 30 39 / 0.3);
+  overflow: hidden;
+}
+
+.moacon-p-line {
+  position: absolute;
+  height: 6px;
+  border-radius: 2px;
+  background: var(--color-border);
+}
+
+.moacon-p-line.a {
+  left: 12px;
+  right: 12px;
+  top: 16px;
+}
+
+.moacon-p-line.b {
+  left: 12px;
+  right: 38px;
+  top: 29px;
+}
+
+.moacon-p-code {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 14px;
+  height: 23px;
+  opacity: 0.8;
+  background: repeating-linear-gradient(90deg, var(--color-foreground) 0 2px, transparent 2px 5px);
+}
+
+.moacon-p-sweep {
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 2px;
+  background: var(--color-primary);
+  box-shadow: 0 0 14px 3px color-mix(in srgb, var(--color-primary) 55%, transparent);
+  animation: moacon-p-sweep 2.1s ease-in-out infinite;
+}
+
+@keyframes moacon-p-sweep {
+  0% {
+    transform: translateY(4px);
+  }
+  50% {
+    transform: translateY(110px);
+  }
+  100% {
+    transform: translateY(4px);
+  }
+}
+
+/* 조준선. 종이 더미를 바싹 감싼다 — 멀리 떨어뜨리면 겨누는 것이 아니라 네 귀퉁이
+   장식이 된다. 종이가 기울며 움직이므로 닿지는 않을 만큼만 띄운다. */
+.moacon-frame {
+  position: absolute;
+  inset: 3px 1px 17px;
+}
+
+.moacon-bracket {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+}
+
+.moacon-bracket.tl {
+  left: 0;
+  top: 0;
+  border-top: 2px solid var(--color-primary);
+  border-left: 2px solid var(--color-primary);
+}
+
+.moacon-bracket.tr {
+  right: 0;
+  top: 0;
+  border-top: 2px solid var(--color-primary);
+  border-right: 2px solid var(--color-primary);
+}
+
+.moacon-bracket.bl {
+  left: 0;
+  bottom: 0;
+  border-bottom: 2px solid var(--color-primary);
+  border-left: 2px solid var(--color-primary);
+}
+
+.moacon-bracket.br {
+  right: 0;
+  bottom: 0;
+  border-bottom: 2px solid var(--color-primary);
+  border-right: 2px solid var(--color-primary);
+}
+
+/* 카드가 들어오는 모양 — 시안에서 여러 안을 놓고 고른 '슬라이드 페이드'.
+   오른쪽에서 짧게 밀려 들어와 즉시 멈춘다. 오버슈트도 흔들림도 없다. 한 장씩
+   들어오는 것이라 되튀는 움직임을 쓰면 여러 장이 겹칠 때 화면이 소란스러워진다.
+
+   왼쪽 세로줄과 한 번 스치는 빛은 "이게 방금 들어온 것"을 짚는다. 목록이 길어지면
+   어디에 새로 붙었는지 눈으로 찾아야 하는데, 그걸 대신해준다. */
+@keyframes moacon-card-in {
+  from {
+    opacity: 0;
+    transform: translateX(50px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes moacon-card-flash {
+  from {
+    opacity: 0.1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes moacon-card-edge {
+  0%,
+  45% {
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.moacon-card-in {
+  animation: moacon-card-in 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.moacon-card-in::before,
+.moacon-card-in::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+  background: var(--color-primary);
+}
+
+.moacon-card-in::before {
+  inset: 0;
+  animation: moacon-card-flash 640ms ease-out both;
+}
+
+.moacon-card-in::after {
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  animation: moacon-card-edge 900ms ease-out both;
+}
+
+/* 움직임을 줄여달라고 설정해둔 사람에게는 다 멈춰 있는 그림만 보여준다.
+   여기 있는 것은 전부 느낌을 위한 것이라, 빼도 잃는 정보가 없다 — 진행률은
+   막대와 숫자가 따로 말하고 있다. */
+@media (prefers-reduced-motion: reduce) {
+  .moacon-paper-back,
+  .moacon-paper-mid,
+  .moacon-p-sweep,
+  .moacon-card-in,
+  .moacon-card-in::before,
+  .moacon-card-in::after {
+    animation: none;
+  }
+}
