@@ -33,4 +33,11 @@ export default defineConfig(({ command }) => ({
   server: {
     host: true,
   },
+  // 화면을 실제로 띄워보는 자리. 왜 있는지는 src/test/README.md에 적어뒀다.
+  test: {
+    environment: 'jsdom',
+    globals: true,
+    setupFiles: ['./src/test/setup.js'],
+    include: ['src/**/*.test.jsx', 'src/**/*.test.js'],
+  },
 }))

@@ -74,6 +74,9 @@ jobs:
           VITE_KAKAO_JS_KEY: ${{ secrets.VITE_KAKAO_JS_KEY }}
         run: |
           npm ci
+          # 화면을 한 번 띄워보고 훑기를 끝까지 돌려본다. 여기서 막히면 APK를 만들지
+          # 않는다 — 흰 화면으로 켜지는 판이 두 번 나갔고, 두 번 다 여기서 걸렸을 것이다.
+          npm test
           npm run build
 
       - name: Sync Capacitor
