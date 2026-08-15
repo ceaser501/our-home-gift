@@ -9,7 +9,9 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "licenses": "node scripts/licenses.mjs",
-    "prebuild": "node scripts/licenses.mjs"
+    "prebuild": "node scripts/licenses.mjs",
+    "release": "bash ../scripts/release.sh",
+    "release:dry": "bash ../scripts/release.sh --dry"
   },
   "dependencies": {
     "@capacitor/app": "^8.1.1",
