@@ -16,6 +16,17 @@ let loadPromise = null;
 // CapacitorHttp는 웹뷰가 아니라 네이티브가 부른다. 그래서 CORS에 막히지 않고 상태
 // 코드와 본문을 그대로 읽을 수 있다. 대신 웹뷰가 보내던 Referer가 안 실리므로 직접
 // 넣는다 — 카카오가 도메인을 판정하는 근거가 그 헤더다.
+// CapacitorHttp는 응답이 JSON이면 responseType과 무관하게 객체로 바꿔서 준다. 그걸
+// String()에 넣었더니 화면에 "[object Object]"만 찍혔다 — 정작 알고 싶던 말이 그 안에
+// 들어 있었는데. 객체면 풀어서 적는다.
+function describe(data) {
+  if (!data) return '';
+  const text =
+    typeof data === 'string' ? data : data.message || data.msg || data.errorType || JSON.stringify(data);
+  const trimmed = String(text).replace(/\s+/g, ' ').trim().slice(0, 200);
+  return trimmed ? ` ${trimmed}` : '';
+}
+
 async function askWhy(src) {
   if (!isNativeApp()) return null;
   try {
@@ -29,8 +40,7 @@ async function askWhy(src) {
       // 주소로는 받아지는데 웹뷰에서만 막힌다는 뜻이다. 도메인 문제가 아니다.
       return `주소로는 받아지는데(${res.status}) 화면에서만 막혀요.`;
     }
-    const body = String(res.data ?? '').replace(/\s+/g, ' ').trim().slice(0, 160);
-    return `카카오가 ${res.status}로 돌려줬어요.${body ? ` ${body}` : ''}`;
+    return `카카오가 ${res.status}로 돌려줬어요.${describe(res.data)}`;
   } catch (err) {
     return `카카오 주소에 닿지 못했어요. ${err?.message || ''}`.trim();
   }
