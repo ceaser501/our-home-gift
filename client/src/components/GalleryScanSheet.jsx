@@ -842,6 +842,20 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
 
     async function save(candidate) {
       const { prepared, info } = candidate;
+      const code = info.code || candidate.code;
+
+      // 넣기 직전에 한 번 더 물어본다. 마지막 문이다.
+      //
+      // 후보를 고를 때도 물어보지만(gallery.js의 isRegistered), 그건 훑을 때 읽은 번호로
+      // 묻는 것이고 실제로 들어가는 번호는 읽기가 끝난 뒤에 정해진다. 둘이 갈리면 앞의
+      // 물음은 헛돈다 — 실제로 이미 등록한 6건 중 2건이 다시 잡혀 또 등록됐다.
+      //
+      // 위에서 번호 고르는 규칙을 고쳐서 갈릴 일이 줄었지만, 그건 규칙이고 이건 사실이다.
+      // 사진 한 장 올리기 전에 묻는 것이라 값도 거의 안 든다.
+      if (code && (await findGifticonByCode(family.id, code))) {
+        throw new Error('이미 등록된 기프티콘이에요');
+      }
+
       // 미리 올려둔 것을 쓴다. 아직 올라가는 중이면 그것만 기다린다. 아직 시작도
       // 안 했으면(정밀 탐색에서 뒤늦게 나온 것) 여기서 시작해 기다린다.
       // 어느 쪽이든 같은 파일을 두 번 올리는 일은 없다.
@@ -862,7 +876,7 @@ export default function GalleryScanSheet({ onRegistered, onClose }) {
           // 누가 받았는지보다 누가 쓰는지가 중요하고, 그건 쓸 때 정해진다.
           owner: myName || null,
           // 훑을 때 읽은 번호를 뒤에 둔다. 등록 쪽 판독이 실패해도 번호는 남아야 한다.
-          code: info.code || candidate.code,
+          code,
           code_type: info.codeType || candidate.codeType || null,
           expires_at: info.expiresAt || null,
           is_voucher: voucherIds.includes(candidate.id),

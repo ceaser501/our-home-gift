@@ -346,7 +346,20 @@ export async function readGifticonInfo(prepared, { onProgress, knownCode } = {})
   // 막대를 아예 못 읽었을 때 인쇄된 번호를 대신 쓰는 건 예전과 같다. 이 경우 잘라낸
   // 이미지가 없으니 화면에서 바코드를 새로 그려 보여준다.
   const printed = info.code || null;
-  const scanned = prepared.code || null;
+  // 부르는 쪽이 이미 읽어둔 막대 값이 있으면 그것도 "막대에서 읽은 값"이다.
+  //
+  // 여기 decodeBarcode는 tryHarder 없이 읽고, 갤러리 훑기는 켜고 읽는다. 그래서 훑기가
+  // 제대로 읽어낸 사진을 여기서 못 읽는 일이 있는데, 그때 scanned가 null이 되어
+  // 아래에서 조용히 printed — 즉 모델이 사진 속 숫자를 눈으로 읽은 값 — 이 선택됐다.
+  //
+  // 그 결과가 중복 등록이었다. 훑기는 A라는 번호로 후보를 만들고 "이 번호가 이미
+  // 있나?"를 묻는데, 등록은 B라는 번호로 들어갔다. 다음에 훑으면 A로 물어보니 없다고
+  // 나오고, 같은 기프티콘이 또 등록된다.
+  //
+  // 게다가 모델의 숫자 판독은 우리가 지금 못 믿기로 한 바로 그것이다("떠먹는"을
+  // "더먹는"으로 읽는다). 막대는 검산 자리가 있는 규격이 많아 그쪽이 낫다. 번호가
+  // 틀리면 매장에서 못 쓴다.
+  const scanned = prepared.code || knownCode || null;
   const conflict = Boolean(scanned && printed && scanned !== printed);
   const code = conflict ? printed : scanned || printed;
   // 형식은 막대에서 읽은 것이 맞다. 숫자 한 자리가 갈렸어도 어떤 규격의 바코드인지는
