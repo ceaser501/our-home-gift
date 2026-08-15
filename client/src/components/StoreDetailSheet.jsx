@@ -44,6 +44,8 @@ export default function StoreDetailSheet({ store, origin, onClose }) {
   const mapRef = useRef(null);
   // loading: SDK 받는 중 / ready: 지도 표시됨 / none: 키가 없거나 로드 실패(지도 없이 정보만)
   const [mapState, setMapState] = useState('loading');
+  // 왜 안 떴는지. 화면에 그대로 보여준다 — 조용히 비어 있으면 무엇을 고쳐야 할지 모른다.
+  const [mapReason, setMapReason] = useState(null);
   // null이면 경로를 감춘 상태. 'car'는 카카오, 'walk'는 티맵에서 받아온다.
   const [routeMode, setRouteMode] = useState(null);
   const [mapExpanded, setMapExpanded] = useState(false);
@@ -68,9 +70,10 @@ export default function StoreDetailSheet({ store, origin, onClose }) {
       return undefined;
     }
 
-    loadKakaoMap().then((kakao) => {
+    loadKakaoMap().then(({ kakao, reason }) => {
       if (cancelled) return;
       if (!kakao || !mapRef.current) {
+        setMapReason(reason);
         setMapState('none');
         return;
       }
@@ -232,10 +235,10 @@ export default function StoreDetailSheet({ store, origin, onClose }) {
                 ) : (
                   <>
                     <span className="font-semibold text-foreground">지도를 표시할 수 없어요</span>
-                    <span>
+                    <span className="break-keep">
                       {store.lat == null
                         ? '매장 위치 정보가 없어요. 서버 함수(search-places)를 최신으로 다시 배포하면 나와요.'
-                        : '카카오 JavaScript 키(VITE_KAKAO_JS_KEY)와 Web 플랫폼 도메인 등록이 필요해요.'}
+                        : mapReason || '카카오 JavaScript 키(VITE_KAKAO_JS_KEY)와 Web 플랫폼 도메인 등록이 필요해요.'}
                     </span>
                   </>
                 )}
