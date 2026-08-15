@@ -24,6 +24,14 @@ const SYSTEM_PROMPT = `너는 한국 모바일 기프티콘 이미지를 읽어 
   버튼 글자("선물하기", "사용하기" 등)는 상품명이 아니다.
 - 상호는 그 기프티콘을 쓸 수 있는 브랜드다(예: BBQ, 스타벅스, GS25). 브랜드가 공식적으로
   쓰는 표기를 그대로 쓴다(bbq가 아니라 BBQ).
+  - 한 화면에 한글 이름과 영문 로고가 같이 있으면 **한글을 쓴다**(TWOSOME PLACE가 아니라
+    투썸플레이스, STARBUCKS가 아니라 스타벅스). 같은 브랜드가 어떤 날은 한글로 어떤 날은
+    영문으로 들어오면 목록에서 두 브랜드처럼 갈라진다. 한글 이름이 아예 없는 브랜드
+    (BBQ, GS25 같은)만 영문 그대로 둔다.
+- **상품명 자리에 상호를 적지 않는다.** 상품명을 못 읽겠으면 상호를 대신 넣지 말고 빈
+  문자열로 둔다. 상호와 똑같은 값이 상품명에 들어가면, 사람은 그걸 상품명으로 믿고 그대로
+  등록한다 — 무엇과 바꾸는 기프티콘인지 영영 알 수 없게 된다. 비워두면 사람이 직접
+  적을 기회라도 남는다.
 - 금액은 "금액권/권종"처럼 상품 자체의 가격이 인쇄돼 있을 때만 숫자로 적는다.
   결제 금액, 할인 금액, 배송비는 금액이 아니다.
 - isVoucher는 이것이 "금액권"인지다. 정해진 상품 하나와 바꾸는 교환권(아메리카노 T,
@@ -220,10 +228,20 @@ Deno.serve(async (req) => {
     const digits = (value: unknown) => String(value ?? '').replace(/\D/g, '');
     const amount = digits(parsed.amount);
 
+    const brand = String(parsed.brand ?? '').trim();
+    const rawName = String(parsed.name ?? '').trim();
+    // 상품명 자리에 상호가 들어온 경우는 상품명을 못 읽은 것이다. 프롬프트로도 막지만,
+    // 여기서 한 번 더 본다 — 이건 모델이 지키기로 한 약속이 아니라 우리가 아는 사실이다.
+    //
+    // 비우면 카드가 "상품명을 못 읽었어요"로 남아 등록에서 빠진다. 그게 맞다.
+    // "투썸플레이스"라는 이름으로 등록되면 사람은 그걸 상품명으로 믿고, 무엇과 바꾸는
+    // 기프티콘인지 나중에도 알 수 없다.
+    const name = rawName && rawName === brand ? '' : rawName;
+
     return new Response(
       JSON.stringify({
-        name: parsed.name || null,
-        brand: parsed.brand || null,
+        name: name || null,
+        brand: brand || null,
         amount: amount ? Number(amount) : null,
         expiresAt: /^\d{4}-\d{2}-\d{2}$/.test(parsed.expiresAt || '') ? parsed.expiresAt : null,
         category: categories.includes(parsed.category) ? parsed.category : '기타',
