@@ -12,12 +12,12 @@ import ImageViewerModal from './components/ImageViewerModal';
 import NearbyStoresSheet from './components/NearbyStoresSheet';
 import InstallPrompt from './components/InstallPrompt';
 import GalleryScanSheet from './components/GalleryScanSheet';
-import NoticeBanner from './components/NoticeBanner';
 import WelcomeBanner from './components/WelcomeBanner';
 import NearbyBanner from './components/NearbyBanner';
 import AlertDialog from './components/AlertDialog';
 import PullToRefresh from './components/PullToRefresh';
-import { listGifticons, updateGifticon, deleteGifticon, claimGifticon, releaseGifticon, spendVoucher } from './api';
+import { listGifticons, updateGifticon, deleteGifticon, claimGifticon, releaseGifticon, spendVoucher, listNotices } from './api';
+import { blockingNotice, remainingLabel } from './utils/notices';
 import { subscribeToGifticons, subscribeToFamily } from './realtime';
 import { ensureSampleGifticon } from './sampleData';
 import { daysUntil, todayStr } from './utils/date';
@@ -67,11 +67,13 @@ export default function App() {
   const [error, setError] = useState('');
 
   const [search, setSearch] = useState('');
-  // 중요 공지가 목록 위 띠를 쓰고 있는지. 주변 매장 안내가 이걸 보고 자리를 비켜준다.
-  const [noticeShown, setNoticeShown] = useState(false);
+  // 환영 인사가 목록 위 띠를 쓰고 있는지. 주변 매장 안내가 이걸 보고 자리를 비켜준다.
   const [welcomeShown, setWelcomeShown] = useState(false);
-  // 목록을 다시 읽을 때마다 오르는 수. 공지 띠가 이걸 보고 같이 다시 읽는다.
+  // 목록을 다시 읽을 때마다 오르는 수.
   const [refreshTick, setRefreshTick] = useState(0);
+  // 점검 공지. 게시된 동안에는 등록을 막고, 등록을 누르면 이걸 그 자리에서 보여준다.
+  const [noticeRows, setNoticeRows] = useState([]);
+  const [blockedBy, setBlockedBy] = useState(null);
   const [category, setCategory] = useState('');
   const [statusTab, setStatusTab] = useState('all');
 
@@ -134,12 +136,42 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [fetchList, search]);
 
+  // 점검 공지를 읽어둔다. 등록을 누르는 순간에 서버에 물으면 그만큼 기다려야 하는데,
+  // 그 자리는 사진을 올리려고 누른 자리라 한 박자도 늦으면 안 눌린 것처럼 느껴진다.
+  //
+  // refreshTick은 목록을 다시 읽는 순간(당겨서 새로고침, 다른 앱 다녀오기)마다 바뀐다.
+  // 점검이 시작되거나 끝난 것을 그때 따라잡는다.
+  useEffect(() => {
+    let cancelled = false;
+    listNotices().then((rows) => {
+      if (!cancelled) setNoticeRows(rows);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [refreshTick]);
+
+  // 점검 중이면 등록 창을 열지 않고 그 공지를 그 자리에서 보여준다.
+  //
+  // "점검 중"이라고 해놓고 누를 수 있으면 눌러보고 실패한다. 두 번 실망시키는 셈이다.
+  // 반대로 앱을 열자마자 알리지는 않는다 — 바코드를 띄우러 온 사람은 공지가 있는 줄도
+  // 모르고 잘 쓰고 나가는데, 그게 가장 좋은 결과다. 바코드는 저장된 것이라 점검 중에도
+  // 그대로 된다.
+  function guardUpload(open) {
+    const blocked = blockingNotice(noticeRows);
+    if (blocked) {
+      setBlockedBy(blocked);
+      return;
+    }
+    open();
+  }
+
   // 검색어를 한 글자 칠 때마다 fetchList가 새로 만들어지는데, 그때마다 구독을 끊었다 다시
   // 맺으면 낭비라서 최신 함수만 여기에 담아두고 구독은 가족이 바뀔 때만 다시 맺는다.
   const refreshRef = useRef(null);
   refreshRef.current = () => {
     // 기프티콘만 다시 읽으면 공지는 옛것 그대로다. 사용자가 "최신으로 맞춰줘"라고 한
-    // 순간이니 위쪽 띠도 함께 맞춘다.
+    // 순간이니 공지도 함께 맞춘다 — 점검이 끝났는데 등록이 계속 막혀 있으면 안 된다.
     setRefreshTick((n) => n + 1);
     return Promise.all([fetchList({ silent: true }), refreshFamily()]);
   };
@@ -313,18 +345,18 @@ export default function App() {
       <InstallPrompt />
 
       {/* 목록 위 띠는 한 자리뿐이다. 둘이 같이 뜨면 목록이 두 줄만큼 밀려서 정작 봐야 할
-          기프티콘이 화면 밖으로 나간다. 그래서 서로 자리를 주고받게 했다.
+          기프티콘이 화면 밖으로 나간다.
 
-          평소 그 자리는 주변 매장 안내가 쓴다 — 지금 당장 쓸 수 있는 것을 알려주는
-          쪽이라 자주 쓸모가 있다. 급한 공지(중요 표시)가 게시된 동안에만 공지가 자리를
-          가져가고, 공지가 끝나거나 사용자가 그 공지를 닫으면 다시 매장 안내로 돌아온다. */}
-      <NoticeBanner refreshKey={refreshTick} onShownChange={setNoticeShown} />
+          그 자리는 주변 매장 안내가 갖는다. 기프티콘을 못 쓰고 버리는 진짜 이유는 기한을
+          몰라서가 아니라 매장 앞을 지나가면서도 가진 걸 떠올리지 못해서라, 이 앱에서 가장
+          힘이 센 자리다. 공지는 여기서 뺐다 — 종 안으로 들어갔고, 등록을 막는 점검 공지는
+          등록을 누르는 그 자리에서 뜬다.
 
-      {/* 가입하고 처음 들어온 날에만 뜬다. 그날은 기프티콘이 없어서 매장 안내가 어차피
-          띄울 것이 없다 — 자리를 다투는 일이 실제로는 잘 안 생긴다. */}
+          환영 인사만 예외로 이 자리를 쓴다. 가입하고 처음 들어온 날 한 번뿐이고, 그날은
+          기프티콘이 없어서 매장 안내가 어차피 띄울 것이 없다. */}
       <WelcomeBanner onShownChange={setWelcomeShown} />
 
-      <NearbyBanner gifticons={gifticons} onPick={setSearch} yielded={noticeShown || welcomeShown} />
+      <NearbyBanner gifticons={gifticons} onPick={setSearch} yielded={welcomeShown} />
 
       <FilterBar
         search={search}
@@ -362,7 +394,7 @@ export default function App() {
       {scanSupported && (
         <button
           type="button"
-          onClick={() => setScanOpen(true)}
+          onClick={() => guardUpload(() => setScanOpen(true))}
           aria-label="갤러리에서 기프티콘 찾기"
           style={{ right: 'max(24px, calc((100vw - 480px) / 2 + 24px))' }}
           className="fixed bottom-[calc(var(--safe-bottom)+64px)] z-20 flex size-11 items-center justify-center rounded-full border border-border bg-card text-foreground shadow-md"
@@ -375,7 +407,7 @@ export default function App() {
           사진 없이 손으로 적어 넣고 싶은 사람에게는 길이 막힌 것처럼 보인다. */}
       <button
         type="button"
-        onClick={() => setSheetState({ mode: 'create', initial: null })}
+        onClick={() => guardUpload(() => setSheetState({ mode: 'create', initial: null }))}
         aria-label="기프티콘 추가"
         style={{ right: 'max(20px, calc((100vw - 480px) / 2 + 20px))' }}
         className="fixed bottom-[var(--safe-bottom)] z-20 flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/40"
@@ -385,7 +417,9 @@ export default function App() {
 
       {/* 훑기 창은 등록 창 아래에 그대로 열려 있는다. 여러 장을 찾았을 때 한 장 등록하고
           돌아오면 나머지가 남아 있어야, 매번 처음부터 다시 훑지 않는다. */}
-      {scanOpen && (
+      {/* 자동 훑기는 버튼을 거치지 않고 앱을 열자마자 뜬다. 점검 중에는 그 길도 막는다 —
+          버튼만 막아두면 자동으로 켠 사람은 점검 중에도 훑기 창을 보게 된다. */}
+      {scanOpen && !blockingNotice(noticeRows) && (
         <GalleryScanSheet onRegistered={fetchList} onClose={() => setScanOpen(false)} />
       )}
 
@@ -462,6 +496,22 @@ export default function App() {
       )}
 
       {notice && <AlertDialog {...notice} onClose={() => setNotice(null)} />}
+
+      {/* 점검 중에 등록을 눌렀을 때. 어느 기능이 막히는지는 따로 적지 않는다 —
+          공지 본문에 쓴다. 지금 막힐 만한 것이 등록 하나뿐이라(모델을 부르는 자리가
+          거기뿐이다) 굳이 나눌 이유가 없고, 바코드·목록·매장 찾기는 그대로 된다. */}
+      {blockedBy && (
+        <AlertDialog
+          tone="warning"
+          title={blockedBy.title}
+          description={blockedBy.body || '지금은 기프티콘을 등록할 수 없어요.'}
+          details={[
+            ...(remainingLabel(blockedBy) ? [`${remainingLabel(blockedBy)} 이어져요`] : []),
+            '바코드 보기와 목록·매장 찾기는 그대로 돼요',
+          ]}
+          onClose={() => setBlockedBy(null)}
+        />
+      )}
     </div>
   );
 }

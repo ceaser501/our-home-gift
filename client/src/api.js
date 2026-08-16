@@ -495,6 +495,26 @@ export async function listNotices() {
   return data || [];
 }
 
+// 내가 어느 공지를 읽었는지. 기기가 아니라 계정에 적는다.
+//
+// 기기에 적으면 종의 숫자가 두 기준으로 세게 된다 — 활동 읽음은 서버에 있는데 공지만
+// 기기에 있으면, 한 폰에서 읽고 다른 폰에서 보면 숫자가 다르다.
+export async function listNoticeReads() {
+  const { data, error } = await supabase.from('notice_reads').select('notice_id');
+  // 공지 읽음을 못 읽는 것과 기프티콘을 못 보는 것은 다르다. 없어도 앱은 돌아가야 한다
+  // (표를 아직 안 만든 경우도 여기로 온다). 못 읽으면 안 읽은 것으로 본다.
+  if (error) return [];
+  return (data || []).map((row) => row.notice_id);
+}
+
+export async function markNoticesRead(noticeIds, userId) {
+  if (!noticeIds?.length || !userId) return;
+  const rows = noticeIds.map((id) => ({ user_id: userId, notice_id: id }));
+  // 못 적어도 알리지 않는다. 다음에 종을 열 때 다시 적는다 — 그동안 말풍선이 하루 한 번
+  // 더 뜨는 것뿐이라, 이걸로 사용자를 붙잡아 세울 이유가 없다.
+  await supabase.from('notice_reads').upsert(rows, { onConflict: 'user_id,notice_id' });
+}
+
 // 가족이 기프티콘을 쓰거나 올린 기록. 폰을 울릴 일은 아니라 푸시로는 보내지 않고
 // 앱 안에서만 쌓아뒀다가, 헤더의 종을 누르면 보여준다.
 export async function listActivities(familyId) {

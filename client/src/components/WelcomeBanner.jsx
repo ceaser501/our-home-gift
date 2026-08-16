@@ -4,7 +4,7 @@ import { useFamily } from '../FamilyContext';
 
 // 환영 인사는 공지로 띄우지 않는다.
 //
-// 공지는 성격이 "닫을 때까지 남는 것"이다(client/src/components/NoticeBanner.jsx).
+// 공지는 성격이 "닫을 때까지 남는 것"이다(client/src/components/NoticesSheet.jsx).
 // 거기에 "처음 한 번만"을 섞으면 공지 규칙이 거짓말이 된다 — 닫지도 않았는데 사라지는
 // 공지가 생긴다. 성격이 다르면 자리를 따로 두는 편이 낫다.
 const SEEN_KEY = 'welcome-seen';
