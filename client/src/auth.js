@@ -134,8 +134,21 @@ export async function signOut() {
 export async function deleteAccount() {
   const { data, error } = await supabase.functions.invoke('delete-account');
   if (error) {
+    // 서버가 왜 거절했는지를 그대로 들고 온다. 여기가 뭉개지면 사용자도 우리도
+    // "안 돼요"만 보게 되는데, 탈퇴가 막히는 이유는 대개 화면 밖에 있다 —
+    // 함수를 아직 안 올렸거나, 지우려는 계정을 아직 무언가가 붙들고 있거나.
     const detail = await error.context?.json?.().catch(() => null);
-    throw new Error(detail?.error || error.message || '계정을 지우지 못했어요.');
+    if (detail?.error) throw new Error(detail.error);
+
+    // 본문을 못 읽는 경우가 있다. 함수 자체가 없으면 그렇다 — 그때 supabase가 주는 말은
+    // "non-2xx status code"뿐이라 읽어봐야 알 수가 없다. 무엇을 확인해야 하는지로 바꾼다.
+    const status = error.context?.status;
+    if (status === 404) {
+      throw new Error('탈퇴 기능이 서버에 아직 없어요. (delete-account 함수를 배포해주세요)');
+    }
+    throw new Error(
+      `${error.message || '계정을 지우지 못했어요.'}${status ? ` (서버 응답 ${status})` : ''}`
+    );
   }
 
   // 계정이 이미 없어서 서버에 로그아웃을 물으면 거절당한다. 이 기기 것만 지운다.

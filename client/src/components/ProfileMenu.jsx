@@ -92,7 +92,14 @@ export default function ProfileMenu({ onClose }) {
       // 계정이 없어지면 로그인 상태도 풀려서 앱이 알아서 첫 화면으로 돌아간다.
       onClose();
     } catch (err) {
-      setNotice({ tone: 'warning', title: '계정을 지우지 못했어요', description: err.message });
+      // 서버가 준 이유를 그대로 싣는다. 짧게 다듬지 않는다 — 여기 적힌 한 줄이 고칠
+      // 자리를 가리키는 유일한 단서다.
+      setNotice({
+        tone: 'warning',
+        title: '계정을 지우지 못했어요',
+        description: err.message,
+        details: ['이 문구를 그대로 알려주시면 원인을 찾을 수 있어요'],
+      });
       setDeleting(false);
     }
   }
