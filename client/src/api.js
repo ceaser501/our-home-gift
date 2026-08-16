@@ -220,9 +220,22 @@ export async function listGifticonStats(familyId) {
 }
 
 // 같은 바코드/QR 값을 가진 기프티콘이 이미 등록돼 있는지 확인한다(중복 등록 방지 안내용).
+//
+// 숨겨진 것은 안 본다. 목록(listGifticons)이 숨기는 것을 여기서만 세면, 화면에는 없는데
+// 등록은 막히는 상태가 된다. 실제로 "발견한 기프티콘 6개, 이미 등록된 것 1개"가 떴는데
+// 목록은 비어 있었다. 왜 하나가 빠졌는지 알아낼 방법이 사용자에게 없다.
+//
+// 숨겨지는 건 올린 사람이 가족을 나갔을 때다(schema.sql의 leave_family). 그 기프티콘은
+// 남은 가족 누구에게도 안 보이고 쓸 수도 없으니, 다시 올리려는 사람을 막을 이유가 없다.
 export async function findGifticonByCode(familyId, code, excludeId) {
   if (!code) return null;
-  let query = supabase.from(GIFTICON_TABLE).select('id, name').eq('family_id', familyId).eq('code', code).limit(1);
+  let query = supabase
+    .from(GIFTICON_TABLE)
+    .select('id, name')
+    .eq('family_id', familyId)
+    .eq('code', code)
+    .is('hidden_at', null)
+    .limit(1);
   if (excludeId) query = query.neq('id', excludeId);
 
   const { data, error } = await query;
@@ -253,6 +266,8 @@ export async function findLookalikeGifticon(familyId, { brand, name, expiresAt }
     .eq('brand', brand)
     .eq('name', name)
     .eq('expires_at', expiresAt)
+    // 위와 같은 이유로 숨겨진 것은 안 본다.
+    .is('hidden_at', null)
     .limit(1);
   if (excludeId) query = query.neq('id', excludeId);
 
