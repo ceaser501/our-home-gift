@@ -3,6 +3,7 @@ import { MapPin, MapPinOff, X } from "lucide-react";
 import { searchNearbyStores } from "../api";
 import {
   getFreshPosition,
+  hasSavedPosition,
   readCachedPosition,
   saveCachedPosition,
   distanceBetween,
@@ -47,35 +48,46 @@ const DISMISS_KEY = "nearby-banner-dismissed-on";
 // 쓸 게 있어요"라고 먼저 말을 거는 자리다. 틀린 채로 말을 걸면 안 하느니만 못하다.
 const CACHE_MAX_AGE_MS = 30 * 60 * 1000;
 
-// "위치를 못 잡았다"와 "위치를 안 물어봤다"는 다르다.
+// 이 앱은 위치 권한을 새로 묻지 않는다. 앱을 열자마자 권한 창부터 들이밀면 거절당하기
+// 딱 좋고, 한 번 거절되면 매장 찾기까지 같이 막힌다. 그래서 "이미 준 사람"에게만 잡는다.
 //
-// 지하에서 잡으려다 실패한 것은 밖에 나가면 풀리는 일이라 알려줄 값어치가 있다.
-// 권한을 안 준 것은 장소와 무관하고, 이 앱은 일부러 권한을 조르지 않기로 했으므로
-// 여기서 그 이야기를 꺼내면 결국 조르는 것이 된다. 그래서 둘을 갈라서 돌려준다.
+// 문제는 "이미 줬는지"를 아는 방법이었다. 한때 navigator.permissions.query만 봤는데,
+// 안드로이드 웹뷰에서는 앱 권한이 있어도 'prompt'를 돌려주는 일이 잦다 — 크롬과 달리
+// 웹뷰에는 사이트별 권한 설정이 없고 허용은 앱 권한으로 처리되기 때문이다. 그래서 이 띠는
+// 위치를 잡아본 적이 아예 없었고, 매장 찾기가 적어둔 옛 좌표만 계속 읽고 있었다.
+// 서울숲에서 매장 찾기를 한 번 쓴 뒤로 여의도에서도 서울숲이 떴던 게 이것이다.
+//
+// 그래서 근거를 하나 더 둔다 — 적어둔 위치가 있으면 매장 찾기가 한 번은 잡았다는 뜻이고,
+// 그건 곧 권한을 줬다는 뜻이다. 그러면 다시 잡아도 권한 창이 뜨지 않는다.
 async function getPositionSilently() {
+  let allowed = hasSavedPosition();
+
   try {
     if (navigator.permissions?.query) {
       const status = await navigator.permissions.query({ name: "geolocation" });
-      if (status.state === "granted") {
-        try {
-          const fresh = await getFreshPosition();
-          saveCachedPosition(fresh);
-          return { at: fresh };
-        } catch (err) {
-          const at = readCachedPosition(CACHE_MAX_AGE_MS);
-          if (at) return { at };
-          // 권한은 줬는데 못 잡았다. 지하·실내·엘리베이터가 여기 든다.
-          // 권한을 도로 거둔 경우(code 1)는 장소 탓이 아니라 조용히 넘어간다.
-          return { at: null, unlocatable: err?.code !== 1 };
-        }
-      }
+      // 거절은 확실하다. 이때는 잡아보지 않는다 — 권한 창을 다시 띄우게 된다.
       if (status.state === "denied") return { at: null };
+      if (status.state === "granted") allowed = true;
     }
   } catch {
-    // permissions API가 없는 브라우저는 아래 지난번 위치로 이어간다.
+    // permissions API가 없으면 위의 "적어둔 위치가 있는가"로만 판단한다.
   }
-  // 권한을 물어본 적이 없는 자리다. 새로 묻지 않고 지난번 위치로만 맞춰본다.
-  return { at: readCachedPosition(CACHE_MAX_AGE_MS) };
+
+  // 한 번도 위치를 준 적이 없는 사람. 여기서 조르지 않는다. 매장 찾기를 쓰면 그때
+  // 권한을 묻고, 그 뒤로는 이 띠도 돈다.
+  if (!allowed) return { at: null };
+
+  try {
+    const fresh = await getFreshPosition();
+    saveCachedPosition(fresh);
+    return { at: fresh };
+  } catch (err) {
+    const at = readCachedPosition(CACHE_MAX_AGE_MS);
+    if (at) return { at };
+    // 권한은 줬는데 못 잡았다. 지하·실내·엘리베이터가 여기 든다.
+    // 권한을 도로 거둔 경우(code 1)는 장소 탓이 아니라 조용히 넘어간다.
+    return { at: null, unlocatable: err?.code !== 1 };
+  }
 }
 
 function readDismissedToday() {

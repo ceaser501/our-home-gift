@@ -26,10 +26,12 @@ vi.mock('@capacitor/app', () => ({
 // 아니다.
 const getFreshPosition = vi.fn();
 const readCachedPosition = vi.fn();
+const hasSavedPosition = vi.fn();
 
 vi.mock('../utils/geolocation', () => ({
   getFreshPosition: (...a) => getFreshPosition(...a),
   readCachedPosition: (...a) => readCachedPosition(...a),
+  hasSavedPosition: (...a) => hasSavedPosition(...a),
   saveCachedPosition: () => {},
   distanceBetween: () => 0,
 }));
@@ -46,11 +48,14 @@ beforeEach(() => {
   appStateHandler = null;
   localStorage.clear();
   sessionStorage.clear();
-  // 권한을 이미 준 상태로 둔다.
+  // 안드로이드 웹뷰를 흉내낸다. 앱 권한이 있어도 여기서는 'prompt'가 나온다 —
+  // 이 띠가 위치를 아예 안 잡던 원인이 그것이었다.
   Object.defineProperty(navigator, 'permissions', {
     configurable: true,
-    value: { query: async () => ({ state: 'granted' }) },
+    value: { query: async () => ({ state: 'prompt' }) },
   });
+  // 매장 찾기를 한 번 써서 위치를 적어둔 사람. 곧 권한을 준 사람이다.
+  hasSavedPosition.mockReturnValue(true);
   searchNearbyStores.mockResolvedValue([{ name: '스타벅스 서울숲점', distance: 120 }]);
   getFreshPosition.mockResolvedValue({ lat: 37.5, lng: 127.0 });
   readCachedPosition.mockReturnValue({ lat: 37.5, lng: 127.0 });
@@ -201,5 +206,42 @@ describe('위치를 못 잡았을 때', () => {
 
     expect(await screen.findByText(/스타벅스 서울숲점/, {}, { timeout: 3000 })).toBeTruthy();
     expect(screen.queryByText(CANT)).toBeNull();
+  });
+});
+
+// 권한을 이미 준 사람에게만 위치를 잡는다. 문제는 "이미 줬는지"를 아는 방법이었다.
+describe('권한을 어떻게 아는가', () => {
+  it("웹뷰가 'prompt'라고 해도, 적어둔 위치가 있으면 잡는다", async () => {
+    // 안드로이드 웹뷰에는 사이트별 권한 설정이 없어서 앱 권한이 있어도 'prompt'가 나온다.
+    // 이것만 믿었더니 띠가 위치를 한 번도 안 잡고, 매장 찾기가 적어둔 옛 좌표만 읽었다.
+    render(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
+
+    await waitFor(() => expect(getFreshPosition).toHaveBeenCalled(), { timeout: 3000 });
+    expect(await screen.findByText(/스타벅스 서울숲점/, {}, { timeout: 3000 })).toBeTruthy();
+  });
+
+  // 한 번도 위치를 준 적이 없는 사람에게 앱 열자마자 권한 창을 띄우면 거절당하기 딱 좋고,
+  // 한 번 거절되면 매장 찾기까지 같이 막힌다.
+  it('한 번도 준 적이 없으면 잡아보지 않는다', async () => {
+    hasSavedPosition.mockReturnValue(false);
+    readCachedPosition.mockReturnValue(null);
+
+    render(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
+    expect(getFreshPosition).not.toHaveBeenCalled();
+    expect(screen.queryByText(/스타벅스/)).toBeNull();
+  });
+
+  it('거절한 사람에게는 다시 묻지 않는다', async () => {
+    Object.defineProperty(navigator, 'permissions', {
+      configurable: true,
+      value: { query: async () => ({ state: 'denied' }) },
+    });
+
+    render(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
+    expect(getFreshPosition).not.toHaveBeenCalled();
   });
 });

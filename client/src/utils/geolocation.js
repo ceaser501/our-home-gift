@@ -61,6 +61,24 @@ export function readCachedPosition(maxAgeMs = MAX_CACHE_AGE_MS) {
   }
 }
 
+// 위치를 한 번이라도 잡아서 적어둔 적이 있는지. 나이는 안 본다.
+//
+// "이 사람이 위치 권한을 준 적이 있는가"를 아는 데 쓴다. 권한 자체를 물어볼 방법이
+// 마땅치 않아서다 — 안드로이드 웹뷰에서 navigator.permissions.query는 앱 권한이 있어도
+// 'prompt'를 돌려주는 일이 잦다. 크롬과 달리 웹뷰에는 사이트별 권한 설정이 없고 허용은
+// 앱 권한으로 처리되기 때문이다.
+//
+// 적힌 것이 있다는 건 매장 찾기가 한 번은 위치를 잡았다는 뜻이고, 그건 곧 권한을 줬다는
+// 뜻이다. 그러면 다시 잡아도 권한 창이 뜨지 않는다.
+export function hasSavedPosition() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
+    return Boolean(saved && typeof saved.lat === 'number' && typeof saved.lng === 'number');
+  } catch {
+    return false;
+  }
+}
+
 export function saveCachedPosition({ lat, lng }) {
   try {
     localStorage.setItem(STORE_KEY, JSON.stringify({ lat, lng, at: Date.now() }));
