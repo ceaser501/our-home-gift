@@ -1628,14 +1628,13 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
                   때는 아무도 모르고 틀릴 때는 엉뚱한 기프티콘에 남의 금액과 기한이
                   박힌다. 조용히 틀리는 쪽이 훨씬 나쁘다.
 
-                  되살릴 길은 같이 적는다. 이 앱은 기프티콘을 놓치지 않겠다는 약속으로
-                  서 있고, "뺐어요"만 적으면 그 사진은 거기서 끝난다. */}
+                  되살리는 길은 적지 않는다. "수정에서 사진을 더하면 같이 읽어요"를 한때
+                  붙였는데, 그건 뒷문으로 돌아가라는 말이다. 그 기프티콘 사진만 다시 올리면
+                  한 건으로 잡혀 정보성 캡처까지 같이 읽힌다 — 앞문이 이미 열려 있다. */}
               {picked && tally?.noCode > 0 && !isWorking && (
                 <p className="m-0 rounded-xl bg-muted px-3.5 py-3 text-sm leading-relaxed break-keep text-muted-foreground">
                   바코드가 없는 사진 <b className="font-semibold text-foreground">{tally.noCode}장</b>은 어느
                   기프티콘 것인지 몰라서 뺐어요.
-                  <br />
-                  등록한 뒤 그 기프티콘을 수정에서 열고 사진을 더하면 같이 읽어요.
                 </p>
               )}
 
