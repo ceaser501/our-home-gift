@@ -38,6 +38,12 @@ const MAX_BRANDS = 3;
 // 들면 안 된다. 다음 날 다시 띄우는 것으로 충분하다.
 const DISMISS_KEY = "nearby-banner-dismissed-on";
 
+// '켜기'를 눌렀는데 거절한 날. 그날은 다시 묻지 않는다.
+//
+// 시스템 창은 한 번뿐이라 아껴야 하지만, 우리 띠는 몇 번이든 다시 물을 수 있다. 그렇다고
+// 거절한 그날 또 물으면 조르는 것이 된다. 하루 쉬고 다음 날 다시 묻는다.
+const REFUSED_KEY = "nearby-permission-refused-on";
+
 // 위치 권한을 새로 묻지 않는다. 앱을 열자마자 권한 창부터 들이밀면 거절당하기 딱 좋고,
 // 한 번 거절되면 매장 찾기까지 같이 막힌다. 이미 허용된 경우에만 현재 위치를 잡고,
 // 권한 상태를 알 수 없는 브라우저에서는 지난번 위치(매장 찾기를 써봤다면 남아 있다)로만 맞춰본다.
@@ -73,9 +79,9 @@ async function getPositionSilently() {
     // permissions API가 없으면 위의 "적어둔 위치가 있는가"로만 판단한다.
   }
 
-  // 한 번도 위치를 준 적이 없는 사람. 여기서 조르지 않는다. 매장 찾기를 쓰면 그때
-  // 권한을 묻고, 그 뒤로는 이 띠도 돈다.
-  if (!allowed) return { at: null };
+  // 한 번도 위치를 준 적이 없는 사람. 여기서 시스템 창을 띄우지는 않는다 — 대신 이
+  // 자리에서 우리가 먼저 물어본다(아래 '켜기' 띠).
+  if (!allowed) return { at: null, needsPermission: true };
 
   try {
     const fresh = await getFreshPosition();
@@ -87,6 +93,14 @@ async function getPositionSilently() {
     // 권한은 줬는데 못 잡았다. 지하·실내·엘리베이터가 여기 든다.
     // 권한을 도로 거둔 경우(code 1)는 장소 탓이 아니라 조용히 넘어간다.
     return { at: null, unlocatable: err?.code !== 1 };
+  }
+}
+
+function readRefusedToday() {
+  try {
+    return localStorage.getItem(REFUSED_KEY) === todayStr();
+  } catch {
+    return false;
   }
 }
 
@@ -125,6 +139,9 @@ export default function NearbyBanner({ gifticons, onPick, yielded = false }) {
   const [best, setBest] = useState(null);
   // 권한은 있는데 위치를 못 잡은 상태. 지하·실내에서 그렇다.
   const [unlocatable, setUnlocatable] = useState(false);
+  // 아직 위치를 준 적이 없는 상태. 이 자리에서 먼저 물어본다.
+  const [needsPermission, setNeedsPermission] = useState(false);
+  const [refused, setRefused] = useState(() => readRefusedToday());
   const [dismissed, setDismissed] = useState(() => readDismissedToday());
   // 목록은 검색어를 칠 때마다 다시 오는데, 그때마다 주변을 다시 뒤질 일은 아니다.
   // 처음 목록이 채워졌을 때 한 번만 찾는다.
@@ -182,7 +199,12 @@ export default function NearbyBanner({ gifticons, onPick, yielded = false }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  function search() {
+  // knownAt: 방금 잡은 위치. '켜기'를 눌러 허락받은 직후가 그렇다.
+  //
+  // 없으면 여기서 다시 판단한다. 그런데 방금 받아낸 위치를 버리고 "이 사람이 권한을 줬나"를
+  // 처음부터 다시 따지면, 아직 아무 데도 안 적힌 그 순간에는 또 "안 줬다"가 나온다.
+  // 손에 든 것이 있으면 그걸 쓴다.
+  function search(knownAt = null) {
     stopRef.current?.();
     let cancelled = false;
     stopRef.current = () => {
@@ -214,9 +236,10 @@ export default function NearbyBanner({ gifticons, onPick, yielded = false }) {
         .slice(0, MAX_BRANDS);
       if (brands.length === 0) return;
 
-      const located = await getPositionSilently();
+      const located = knownAt ? { at: knownAt } : await getPositionSilently();
       if (cancelled) return;
       setUnlocatable(Boolean(located.unlocatable));
+      setNeedsPermission(Boolean(located.needsPermission));
       const at = located.at;
       if (!at) return;
 
@@ -278,16 +301,51 @@ export default function NearbyBanner({ gifticons, onPick, yielded = false }) {
       ).length
     : 0;
 
-  // 위치를 못 잡았으면 왜 아무것도 안 뜨는지 알려준다.
+  // 알려줄 것이 있는 사람인가. 목록이 비어 있으면 위치를 물어봐야 소용이 없고, 못 잡았다고
+  // 알려줄 것도 없다.
+  const hasUsable = gifticons.some((g) => g.status !== "used" && g.brand?.trim());
+
+  // 이 자리에 무엇을 띄울지. 위에서부터 먼저 이긴다.
+  if (dismissed || yielded) return null;
+
+  //   1) 찾았다 — 평소의 매장 안내
+  if (best && liveCount > 0) return renderStore();
+
+  //   2) 아직 위치를 준 적이 없다 — 시스템 창을 들이밀지 않고 여기서 먼저 묻는다
+  //
+  // 안드로이드 위치 권한은 되돌리기가 어렵다. 두 번째 거절은 "다시 묻지 않음"이 되어
+  // 그다음부터는 시스템 설정에 들어가야 한다. 그래서 시스템 창이 첫 질문이 되면 안 된다 —
+  // 앱이 뭘 하는지도 모르는 상태에서 "위치를 허용하시겠습니까?"가 뜨면 반사적으로 거절하고,
+  // 그러면 띠도 매장 찾기도 영영 막힌다.
+  //
+  // 이 자리는 어차피 비어 있고, 누르기 전에는 시스템 창이 안 뜬다. 무시해도 잃는 것이 없다.
+  // 그리고 "위치를 허용하시겠습니까?"보다 "근처에서 쓸 수 있는 걸 알려드릴까요?"가 훨씬
+  // 승낙받기 쉽다 — 무엇을 위해 묻는지가 그 자리에 적혀 있어서다.
+  if (needsPermission && hasUsable && !refused) {
+    return (
+      <div className="flex w-full items-center gap-2.5 border-b border-border bg-accent/60 px-5 py-3">
+        <MapPin className="size-4 shrink-0 text-primary" />
+        <span className="min-w-0 flex-1 text-xs break-keep text-foreground">
+          내 주변에서 쓸 수 있는 기프티콘을 알려드릴까요?
+        </span>
+        <button
+          type="button"
+          onClick={askForLocation}
+          className="shrink-0 rounded-lg bg-primary px-2.5 py-1 text-xs font-semibold text-primary-foreground"
+        >
+          켜기
+        </button>
+      </div>
+    );
+  }
+
+  //   3) 허락은 받았는데 못 잡았다 — 왜 아무것도 안 뜨는지 알려준다
   //
   // 아무 말 없이 비워두면 "이 기능이 고장 났나" 하게 된다. 지하에서는 늘 그렇고, 지하는
   // 자주 간다. 대신 X는 붙이지 않았다 — 닫으면 그날 하루 안 뜨는 규칙에 걸리는데, 지하에서
   // 한 번 닫았다고 밖에 나온 뒤 진짜 안내까지 못 받으면 손해가 훨씬 크다. 위치가 잡히는
   // 순간 저절로 사라진다.
-  //
-  // 쓸 기프티콘이 없으면 이 말도 하지 않는다. 찾아줄 것이 애초에 없는 사람에게 "못 찾았다"는
-  // 아무 뜻도 없다.
-  if (unlocatable && !best && gifticons.some((g) => g.status !== "used" && g.brand?.trim()) && !dismissed && !yielded) {
+  if (unlocatable && hasUsable) {
     return (
       <div className="flex w-full items-center gap-2.5 border-b border-border bg-muted/60 px-5 py-3">
         <MapPinOff className="size-4 shrink-0 text-muted-foreground" />
@@ -298,7 +356,33 @@ export default function NearbyBanner({ gifticons, onPick, yielded = false }) {
     );
   }
 
-  if (!best || liveCount === 0 || dismissed || yielded) return null;
+  return null;
+
+  // '켜기'를 눌렀을 때만 시스템 창이 뜬다. 여기까지 온 사람은 무엇을 위해 묻는지 이미
+  // 읽었으므로, 앱을 열자마자 들이미는 것보다 훨씬 잘 허락한다.
+  async function askForLocation() {
+    try {
+      const fresh = await getFreshPosition();
+      saveCachedPosition(fresh);
+      setNeedsPermission(false);
+      search(fresh);
+    } catch (err) {
+      if (err?.code === 1) {
+        // 거절. 그날은 다시 묻지 않는다.
+        try {
+          localStorage.setItem(REFUSED_KEY, todayStr());
+        } catch {
+          // 못 적어도 이번 화면에서는 접힌다.
+        }
+        setRefused(true);
+        setNeedsPermission(false);
+        return;
+      }
+      // 허락은 했는데 못 잡았다. 지하·실내다.
+      setNeedsPermission(false);
+      setUnlocatable(true);
+    }
+  }
 
   function dismiss() {
     try {
@@ -309,7 +393,9 @@ export default function NearbyBanner({ gifticons, onPick, yielded = false }) {
     setDismissed(true);
   }
 
-  return (
+  // 평소의 매장 안내. 위 갈래에서 골라 부른다.
+  function renderStore() {
+    return (
     // 공지 배너와 같은 차림의 상단 띠. 둘이 같이 떠도 한 덩어리로 읽힌다.
     <div className="flex w-full items-center gap-2.5 border-b border-border bg-accent/60 px-5 py-3">
       <MapPin className="size-4 shrink-0 text-primary" />
@@ -337,5 +423,6 @@ export default function NearbyBanner({ gifticons, onPick, yielded = false }) {
         <X className="size-4" />
       </button>
     </div>
-  );
+    );
+  }
 }

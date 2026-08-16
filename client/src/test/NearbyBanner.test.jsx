@@ -245,3 +245,96 @@ describe('권한을 어떻게 아는가', () => {
     expect(getFreshPosition).not.toHaveBeenCalled();
   });
 });
+
+// 위치를 한 번도 준 적이 없는 사람. 시스템 창을 들이밀지 않고 이 자리에서 먼저 묻는다.
+//
+// 안드로이드 위치 권한은 두 번째 거절이 "다시 묻지 않음"이 되어 시스템 설정에 들어가야
+// 풀린다. 그래서 시스템 창이 첫 질문이 되면 안 된다 — 앱이 뭘 하는지도 모르는 상태에서
+// 물으면 반사적으로 거절하고, 그러면 띠도 매장 찾기도 영영 막힌다.
+describe('위치를 아직 안 준 사람에게', () => {
+  const ASK = /내 주변에서 쓸 수 있는 기프티콘을 알려드릴까요/;
+
+  beforeEach(() => {
+    hasSavedPosition.mockReturnValue(false);
+    readCachedPosition.mockReturnValue(null);
+  });
+
+  it('이 자리에서 먼저 물어본다', async () => {
+    render(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
+    expect(await screen.findByText(ASK, {}, { timeout: 3000 })).toBeTruthy();
+  });
+
+  // 무시해도 잃는 것이 없어야 한다. 누르기 전에 시스템 창이 뜨면 그 한 번을 태우는 셈이다.
+  it('누르기 전에는 위치를 잡아보지 않는다', async () => {
+    render(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
+    await screen.findByText(ASK, {}, { timeout: 3000 });
+    expect(getFreshPosition).not.toHaveBeenCalled();
+  });
+
+  it('켜기를 누르면 그때 잡고, 매장 안내로 바뀐다', async () => {
+    render(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
+    await screen.findByText(ASK, {}, { timeout: 3000 });
+
+    await act(async () => screen.getByRole('button', { name: '켜기' }).click());
+
+    expect(getFreshPosition).toHaveBeenCalled();
+    expect(await screen.findByText(/스타벅스 서울숲점/, {}, { timeout: 3000 })).toBeTruthy();
+  });
+
+  // 시스템 창은 한 번뿐이라 아껴야 하지만, 우리 띠는 몇 번이든 다시 물을 수 있다.
+  // 그렇다고 거절한 그날 또 물으면 조르는 것이 된다.
+  it('거절하면 그날은 다시 묻지 않는다', async () => {
+    getFreshPosition.mockRejectedValue({ code: 1 });
+
+    const { unmount } = render(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
+    await screen.findByText(ASK, {}, { timeout: 3000 });
+    await act(async () => screen.getByRole('button', { name: '켜기' }).click());
+    expect(screen.queryByText(ASK)).toBeNull();
+
+    unmount();
+    render(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(screen.queryByText(ASK)).toBeNull();
+  });
+
+  it('알려줄 기프티콘이 없으면 묻지도 않는다', async () => {
+    render(<NearbyBanner gifticons={[{ id: '9', brand: '스타벅스', status: 'used' }]} onPick={() => {}} />);
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(screen.queryByText(ASK)).toBeNull();
+  });
+
+  // 묻고 있는 사이에 마지막 기프티콘을 써버리면, 알려줄 것이 없는데 물음만 남는다.
+  it('묻는 중에 기프티콘이 없어지면 물음도 걷는다', async () => {
+    const { rerender } = render(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
+    await screen.findByText(ASK, {}, { timeout: 3000 });
+
+    rerender(<NearbyBanner gifticons={GIFTICONS.map((g) => ({ ...g, status: 'used' }))} onPick={() => {}} />);
+    expect(screen.queryByText(ASK)).toBeNull();
+  });
+
+  // 거절한 뒤 앱을 뒤로 보냈다 다시 여는 것은 흔한 일이다. 그때 다시 찾으면서 물음이
+  // 되살아나면, 방금 거절한 사람에게 같은 것을 또 들이미는 셈이다.
+  it('거절한 뒤 앱을 다시 열어도 그날은 안 묻는다', async () => {
+    getFreshPosition.mockRejectedValue({ code: 1 });
+
+    render(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
+    await screen.findByText(ASK, {}, { timeout: 3000 });
+    await act(async () => screen.getByRole('button', { name: '켜기' }).click());
+
+    sessionStorage.clear();
+    await act(async () => {
+      await appStateHandler({ isActive: true });
+    });
+
+    expect(screen.queryByText(ASK)).toBeNull();
+  });
+
+  // 매장 찾기에서 이미 허락을 받았으면 물어볼 것이 없다. 그때부터는 바로 띠가 돈다.
+  it('매장 찾기에서 이미 허락했으면 묻지 않고 바로 띄운다', async () => {
+    hasSavedPosition.mockReturnValue(true);
+
+    render(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
+    expect(await screen.findByText(/스타벅스 서울숲점/, {}, { timeout: 3000 })).toBeTruthy();
+    expect(screen.queryByText(ASK)).toBeNull();
+  });
+});
