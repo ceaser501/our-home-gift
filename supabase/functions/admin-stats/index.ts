@@ -106,9 +106,14 @@ Deno.serve(async (req) => {
         body: String(n?.body ?? '').trim() || null,
         starts_at: n?.starts_at ? String(n.starts_at) : new Date().toISOString(),
         ends_at: n?.ends_at ? String(n.ends_at) : null,
-        // 앱 목록 맨 위 띠를 가져갈 공지인지. 그 자리는 하나뿐이라 평소에는 주변 매장
-        // 안내가 쓰고, 이 표시가 붙은 공지만 게시 기간 동안 자리를 넘겨받는다.
+        // 꼭 봐야 하는 공지인지. 앱에서 종 옆에 알리고 알림 목록 맨 위에 고정한다.
         is_important: Boolean(n?.is_important),
+        // 이 공지가 뜬 동안 기프티콘 등록을 막을지.
+        //
+        // is_important와 나눠 둔 이유가 있다. 유료화 안내도 꼭 봐야 하는 공지인데 그게
+        // 등록을 막으면 안 된다 — "꼭 봐야 하는가"와 "지금 그 기능이 되는가"는 다른
+        // 이야기다. 점검·장애 공지에만 이 표시를 붙인다.
+        blocks_upload: Boolean(n?.blocks_upload),
       });
 
       if (payload.action === 'create') {
@@ -139,7 +144,7 @@ Deno.serve(async (req) => {
       .from('notices')
       // is_important를 빼면 화면에서 공지를 "수정"으로 열 때 그 값이 undefined로 와서
       // 체크가 풀린 채 보이고, 그대로 저장하면 중요 표시가 조용히 지워진다.
-      .select('id, title, body, starts_at, ends_at, is_important, created_at')
+      .select('id, title, body, starts_at, ends_at, is_important, blocks_upload, created_at')
       .order('starts_at', { ascending: false });
     if (e) return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: jsonHeaders });
     return new Response(JSON.stringify({ rows }), { headers: jsonHeaders });
