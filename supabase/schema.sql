@@ -1270,6 +1270,23 @@ begin
   set memo_by = null, memo_by_name = '탈퇴한 구성원'
   where memo_by = uid;
 
+  -- 스토리지에 남은 파일의 '주인' 표시.
+  --
+  -- 사진을 올리면 파일마다 올린 사람이 적히고, 그 칸도 auth.users를 가리킨다. 그래서
+  -- 기프티콘을 다 지워도 파일이 남아 있으면 계정 삭제가 거기서 막힌다. 남는 파일은
+  -- 늘 있다 — 예전에 지운 기프티콘의 잔여물, 올리다 만 사진 같은 것들이다.
+  --
+  -- 파일 자체는 여기서 지우지 않는다. 내가 올렸지만 남의 기프티콘에 붙어 있는 사진이
+  -- 있을 수 있고(등록한 뒤 다른 사람이 사진을 더한 경우), 그걸 지우면 멀쩡한 기프티콘의
+  -- 사진이 사라진다. 주인 표시만 끊는다.
+  --
+  -- 스토리지는 우리 스키마가 아니라 Supabase 것이라 판이 다를 수 있다(칸 이름이 다르거나
+  -- 권한이 없을 수 있다). 그때는 그냥 넘어간다 — 여기서 멈추면 탈퇴 전체가 막힌다.
+  begin
+    execute 'update storage.objects set owner = null where owner = $1' using uid;
+  exception when others then null;
+  end;
+
   delete from public.push_subscriptions where user_id = uid;
   delete from public.family_join_requests where user_id = uid;
   update public.family_join_requests set decided_by = null where decided_by = uid;
@@ -1286,6 +1303,57 @@ end;
 $$;
 
 grant execute on function public.purge_my_data() to authenticated;
+
+-- 탈퇴가 막혔을 때, 무엇이 붙들고 있는지 이름으로 알려준다.
+--
+-- 이 기능은 같은 자리에서 세 번 막혔다. 그때마다 "이 칸이겠지" 하고 짚어 고쳤고, 세 번 다
+-- 틀렸거나 절반만 맞았다. 화면에 오는 말이 "계정을 지우지 못했어요"뿐이라 다음에 볼 곳을
+-- 고를 근거가 없었기 때문이다. 그래서 짐작하는 대신 데이터베이스에 직접 묻기로 한다.
+--
+-- 계정을 지우지 못하게 막을 수 있는 것은 auth.users를 가리키면서 '따라 지우기'도 '비우기'도
+-- 아닌 참조뿐이다(confdeltype이 a=아무것도 안 함, r=거절). 그런 칸을 전부 찾아 이 계정을
+-- 가리키는 줄이 남아 있는지 세어 본다. 우리 스키마만 보지 않는다 — 지금까지 우리를 막은
+-- 것들은 대개 storage처럼 우리가 만들지 않은 자리에 있었다.
+create or replace function public.user_delete_blockers(target uuid)
+returns table (ref text, rows bigint)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  r record;
+  n bigint;
+begin
+  for r in
+    select con.conrelid::regclass::text as tbl, att.attname::text as col
+    from pg_constraint con
+    join pg_class ref on ref.oid = con.confrelid
+    join pg_namespace refns on refns.oid = ref.relnamespace
+    join unnest(con.conkey) as k(attnum) on true
+    join pg_attribute att on att.attrelid = con.conrelid and att.attnum = k.attnum
+    where con.contype = 'f'
+      and refns.nspname = 'auth'
+      and ref.relname = 'users'
+      and con.confdeltype in ('a', 'r')
+  loop
+    -- 볼 수 없는 표가 섞여 있어도 나머지는 마저 센다.
+    begin
+      execute format('select count(*) from %s where %I = $1', r.tbl, r.col) into n using target;
+    exception when others then
+      n := 0;
+    end;
+    if n > 0 then
+      ref := r.tbl || '.' || r.col;
+      rows := n;
+      return next;
+    end if;
+  end loop;
+end;
+$$;
+
+-- 남의 계정을 넣어 캐볼 수 있으므로 로그인한 사람에게는 주지 않는다. 서버(탈퇴 함수)만 쓴다.
+revoke all on function public.user_delete_blockers(uuid) from public, anon, authenticated;
+grant execute on function public.user_delete_blockers(uuid) to service_role;
 
 -- ===================== 실시간 반영 =====================
 

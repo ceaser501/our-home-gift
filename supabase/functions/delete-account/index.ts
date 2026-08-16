@@ -53,7 +53,17 @@ Deno.serve(async (req) => {
   }
 
   const { error: deleteError } = await admin.auth.admin.deleteUser(user.id);
-  if (deleteError) return reply({ error: deleteError.message || '계정을 지우지 못했어요.' }, 500);
+  if (deleteError) {
+    // 여기서 막히는 이유는 거의 언제나 하나다 — 아직 이 계정을 가리키는 줄이 어딘가 남아
+    // 있는 것. 그런데 auth가 주는 말은 "Database error deleting user"라서, 어디가 남았는지는
+    // 안 알려준다. 그걸 모르니 그동안 짐작으로 한 칸씩 고쳐왔다. 이제는 물어보고 적는다.
+    let blockers = '';
+    const { data: rows } = await admin.rpc('user_delete_blockers', { target: user.id });
+    if (Array.isArray(rows) && rows.length > 0) {
+      blockers = ` — 아직 이 계정을 붙들고 있어요: ${rows.map((r) => `${r.ref} ${r.rows}건`).join(', ')}`;
+    }
+    return reply({ error: `${deleteError.message || '계정을 지우지 못했어요.'}${blockers}` }, 500);
+  }
 
   return reply({
     ok: true,

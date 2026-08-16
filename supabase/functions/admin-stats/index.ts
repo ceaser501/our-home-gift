@@ -128,11 +128,30 @@ Deno.serve(async (req) => {
         if (!notice.title) {
           return new Response(JSON.stringify({ error: '제목을 입력해주세요.' }), { status: 400, headers: jsonHeaders });
         }
-        const { error: e } = await admin.from('notices').update(notice).eq('id', payload.id);
+        const { data: saved, error: e } = await admin.from('notices').update(notice).eq('id', payload.id).select('id');
         if (e) return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: jsonHeaders });
+        if (!saved || saved.length === 0) {
+          return new Response(JSON.stringify({ error: `공지(${payload.id})를 고치지 못했어요. 목록을 새로고침해주세요.` }), {
+            status: 500,
+            headers: jsonHeaders,
+          });
+        }
       } else if (payload.action === 'delete' && payload.id) {
-        const { error: e } = await admin.from('notices').delete().eq('id', payload.id);
+        // .select()를 붙여 몇 줄이 지워졌는지 받아온다. 이게 없으면 한 줄도 못 지웠을 때도
+        // 오류 없이 조용히 성공으로 돌아온다 — 화면에서는 "눌렀는데 그대로"가 되고,
+        // 무엇이 잘못됐는지 알 길이 없다. 실제로 그렇게 한참 헤맸다.
+        const { data: gone, error: e } = await admin.from('notices').delete().eq('id', payload.id).select('id');
         if (e) return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: jsonHeaders });
+        if (!gone || gone.length === 0) {
+          return new Response(
+            JSON.stringify({
+              error:
+                `공지(${payload.id})를 지우지 못했어요. 이미 지워졌거나, 이 함수가 서비스 롤 키 없이 돌고 있어요 ` +
+                `(SUPABASE_SERVICE_ROLE_KEY를 확인하고 supabase functions deploy admin-stats를 다시 해주세요).`,
+            }),
+            { status: 500, headers: jsonHeaders },
+          );
+        }
       } else {
         return new Response(JSON.stringify({ error: '알 수 없는 동작이에요.' }), { status: 400, headers: jsonHeaders });
       }
