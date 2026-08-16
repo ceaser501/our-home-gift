@@ -7,6 +7,7 @@ import LoginScreen from './LoginScreen';
 import FamilyOnboarding from './FamilyOnboarding';
 import ConsentScreen from './ConsentScreen';
 import LoadingScreen from './LoadingScreen';
+import DeleteAccountError from './DeleteAccountError';
 
 // 예전에는 여기서 로고와 한 줄 소개를 보여주는 인트로 화면을 최소 1.8초 띄웠다.
 // 그런데 설치형 PWA는 앱을 켤 때 브라우저가 먼저 제 스플래시(아이콘 + 앱 이름)를
@@ -152,14 +153,26 @@ export default function AuthGate({ children }) {
 
   const waitingScreen = <LoadingScreen />;
 
-  if (session === undefined) return waitingScreen;
-  if (!session) return <LoginScreen />;
-  if (agreed === undefined) return waitingScreen;
-  if (!agreed) return <ConsentScreen userId={session.user.id} onDone={() => setAgreed(true)} />;
-  if (familyState === undefined) return waitingScreen;
-  if (!familyState) return <FamilyOnboarding userEmail={session.user.email} onDone={refetchFamily} />;
+  // 탈퇴가 막힌 이유는 여기서 들고 있는다. 탈퇴는 데이터부터 지우기 때문에 도중에 실패하면
+  // 아래 화면이 목록에서 가족 만들기로 통째로 갈아끼워지는데, 그때 문구를 그 화면 안에서
+  // 띄우면 세워지자마자 같이 사라진다. 이 자리는 어느 화면으로 바뀌어도 안 사라진다.
+  const withNotice = (screen) => (
+    <>
+      {screen}
+      <DeleteAccountError />
+    </>
+  );
 
-  return (
+  if (session === undefined) return withNotice(waitingScreen);
+  if (!session) return withNotice(<LoginScreen />);
+  if (agreed === undefined) return withNotice(waitingScreen);
+  if (!agreed)
+    return withNotice(<ConsentScreen userId={session.user.id} onDone={() => setAgreed(true)} />);
+  if (familyState === undefined) return withNotice(waitingScreen);
+  if (!familyState)
+    return withNotice(<FamilyOnboarding userEmail={session.user.email} onDone={refetchFamily} />);
+
+  return withNotice(
     <FamilyContext.Provider
       value={{
         user: session.user,

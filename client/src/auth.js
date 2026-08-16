@@ -129,27 +129,68 @@ export async function signOut() {
   if (error) throw new Error(error.message);
 }
 
+// 탈퇴가 왜 막혔는지를 화면 밖에 적어두는 자리.
+//
+// 그동안 이 문구는 뜬 적이 없다. 띄우는 창이 내 메뉴 안에 있었는데, 탈퇴는 데이터부터
+// 지우기 때문에 그 순간 나는 '가족이 없는 사람'이 되고 화면이 통째로 갈아끼워진다.
+// 문구를 세우자마자 화면과 함께 사라진 것이다. 그래서 이유를 남기려면 화면이 아니라
+// 화면 밖에 적어야 한다. 다음에 앱을 켜도 그대로 있다.
+export const DELETE_ERROR_KEY = 'moacon:delete-error';
+
+export function readDeleteError() {
+  try {
+    const raw = localStorage.getItem(DELETE_ERROR_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function clearDeleteError() {
+  try {
+    localStorage.removeItem(DELETE_ERROR_KEY);
+  } catch {
+    // 못 지워도 화면에서는 닫힌다.
+  }
+}
+
+function rememberDeleteError(message) {
+  try {
+    localStorage.setItem(DELETE_ERROR_KEY, JSON.stringify({ at: new Date().toISOString(), message }));
+  } catch {
+    // 저장을 못 해도 던지는 것은 그대로 던진다.
+  }
+}
+
 // 계정 탈퇴. 가족 나가기와 달리 계정 자체가 없어진다.
 // 서버가 데이터·사진·계정을 지운 뒤, 이 기기에 남은 로그인 정보를 정리한다.
 export async function deleteAccount() {
+  const fail = (message) => {
+    rememberDeleteError(message);
+    return new Error(message);
+  };
+
   const { data, error } = await supabase.functions.invoke('delete-account');
   if (error) {
     // 서버가 왜 거절했는지를 그대로 들고 온다. 여기가 뭉개지면 사용자도 우리도
     // "안 돼요"만 보게 되는데, 탈퇴가 막히는 이유는 대개 화면 밖에 있다 —
     // 함수를 아직 안 올렸거나, 지우려는 계정을 아직 무언가가 붙들고 있거나.
     const detail = await error.context?.json?.().catch(() => null);
-    if (detail?.error) throw new Error(detail.error);
+    if (detail?.error) throw fail(detail.error);
 
     // 본문을 못 읽는 경우가 있다. 함수 자체가 없으면 그렇다 — 그때 supabase가 주는 말은
     // "non-2xx status code"뿐이라 읽어봐야 알 수가 없다. 무엇을 확인해야 하는지로 바꾼다.
     const status = error.context?.status;
     if (status === 404) {
-      throw new Error('탈퇴 기능이 서버에 아직 없어요. (delete-account 함수를 배포해주세요)');
+      throw fail('탈퇴 기능이 서버에 아직 없어요. (delete-account 함수를 배포해주세요)');
     }
-    throw new Error(
+    throw fail(
       `${error.message || '계정을 지우지 못했어요.'}${status ? ` (서버 응답 ${status})` : ''}`
     );
   }
+
+  // 여기까지 왔으면 지워진 것이다. 예전에 적어둔 실패 기록이 남아 있으면 지운다.
+  clearDeleteError();
 
   // 계정이 이미 없어서 서버에 로그아웃을 물으면 거절당한다. 이 기기 것만 지운다.
   await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
