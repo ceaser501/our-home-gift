@@ -12,9 +12,8 @@ vi.mock('../utils/imageAnalyze', () => ({
   readGifticonInfo: (...args) => readGifticonInfo(...args),
 }));
 
-vi.mock('../utils/gallery', () => ({
-  groupImages: vi.fn(async () => ({ candidates: [], missed: [], scanned: 0, tally: {} })),
-}));
+const groupImages = vi.fn();
+vi.mock('../utils/gallery', () => ({ groupImages: (...a) => groupImages(...a) }));
 
 vi.mock('../api', () => ({
   createGifticon: vi.fn(async () => ({ id: 'new' })),
@@ -44,6 +43,7 @@ function open(props = {}) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  groupImages.mockResolvedValue({ candidates: [], missed: [], scanned: 0, tally: {} });
   prepareImages.mockResolvedValue({
     code: '111',
     codeType: 'CODE_128',
@@ -96,5 +96,61 @@ describe('UploadSheet 여러 장 안내', () => {
 
     await waitFor(() => expect(screen.queryByText(/기프티콘별로 나눠 담아요/)).toBeNull());
     expect(screen.getByRole('button', { name: /이미지 추가/ })).toBeTruthy();
+  });
+});
+
+// 여러 장을 올렸을 때 이 창이 스스로 판단하는 것은 하나다 — 지금 손에 있는 사진들이
+// 한 건인가 여러 건인가. 그 판단에 "몇 장인가"는 쓰지 않는다. 바코드가 몇 종류인가만 본다.
+describe('여러 장을 올렸을 때 한 건인지 가르는 기준', () => {
+  it('바코드가 한 종류면 바코드 없는 사진까지 같이 읽는다', async () => {
+    // 원본 + 바코드 스크린샷(같은 번호) + 정보성 스크린샷(바코드 없음).
+    // 정보성 사진은 후보가 아니라 missed로 빠지지만, 후보가 하나뿐이므로 이 창에 남는다.
+    groupImages.mockResolvedValue({
+      candidates: [{ id: 'pick-0', code: '111' }],
+      missed: [{ id: 'pick-2' }],
+      scanned: 3,
+      tally: {},
+    });
+
+    const onBulk = vi.fn();
+    open({ onBulk });
+    fireEvent.change(document.querySelector('#gifticon-image'), {
+      target: {
+        files: [
+          new File(['x'], '원본.jpg', { type: 'image/jpeg' }),
+          new File(['x'], '바코드캡처.jpg', { type: 'image/jpeg' }),
+          new File(['x'], '정보캡처.jpg', { type: 'image/jpeg' }),
+        ],
+      },
+    });
+
+    await waitFor(() => expect(prepareImages).toHaveBeenCalled());
+    expect(onBulk).not.toHaveBeenCalled();
+    // 세 장이 통째로 넘어가야 한다. 모델이 셋을 한 번에 보고 답을 합친다.
+    expect(prepareImages.mock.calls[0][0]).toHaveLength(3);
+  });
+
+  it('바코드가 두 종류면 다건 화면으로 넘긴다', async () => {
+    groupImages.mockResolvedValue({
+      candidates: [{ id: 'pick-0', code: '111' }, { id: 'pick-1', code: '222' }],
+      missed: [{ id: 'pick-2' }],
+      scanned: 3,
+      tally: {},
+    });
+
+    const onBulk = vi.fn();
+    open({ onBulk });
+    fireEvent.change(document.querySelector('#gifticon-image'), {
+      target: {
+        files: [
+          new File(['x'], 'a.jpg', { type: 'image/jpeg' }),
+          new File(['x'], 'b.jpg', { type: 'image/jpeg' }),
+          new File(['x'], '정보캡처.jpg', { type: 'image/jpeg' }),
+        ],
+      },
+    });
+
+    await waitFor(() => expect(onBulk).toHaveBeenCalled());
+    expect(prepareImages).not.toHaveBeenCalled();
   });
 });
