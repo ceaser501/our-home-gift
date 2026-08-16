@@ -24,9 +24,12 @@ vi.mock('@capacitor/app', () => ({
 
 // 위치는 늘 잡힌다고 둔다. 여기서 볼 것은 "언제 다시 찾는가"이지 위치를 어떻게 얻는가가
 // 아니다.
+const getFreshPosition = vi.fn();
+const readCachedPosition = vi.fn();
+
 vi.mock('../utils/geolocation', () => ({
-  getFreshPosition: async () => ({ lat: 37.5, lng: 127.0 }),
-  readCachedPosition: () => ({ lat: 37.5, lng: 127.0 }),
+  getFreshPosition: (...a) => getFreshPosition(...a),
+  readCachedPosition: (...a) => readCachedPosition(...a),
   saveCachedPosition: () => {},
   distanceBetween: () => 0,
 }));
@@ -49,6 +52,8 @@ beforeEach(() => {
     value: { query: async () => ({ state: 'granted' }) },
   });
   searchNearbyStores.mockResolvedValue([{ name: '스타벅스 서울숲점', distance: 120 }]);
+  getFreshPosition.mockResolvedValue({ lat: 37.5, lng: 127.0 });
+  readCachedPosition.mockReturnValue({ lat: 37.5, lng: 127.0 });
 });
 
 describe('NearbyBanner', () => {
@@ -114,5 +119,87 @@ describe('NearbyBanner', () => {
 
     render(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
     expect(await screen.findByText(/스타벅스 서울숲점/, {}, { timeout: 3000 })).toBeTruthy();
+  });
+});
+
+// 지하에서는 위치가 안 잡힌다. 그때 아무 말 없이 비워두면 "이 기능이 고장 났나" 하게 되고,
+// 지하는 자주 간다. 다만 아무 때나 하는 말은 아니다 — 권한을 안 준 것은 장소 탓이 아니고,
+// 쓸 기프티콘이 없는 사람에게 "못 찾았다"는 아무 뜻도 없다.
+describe('위치를 못 잡았을 때', () => {
+  const CANT = /지금은 위치를 확인할 수 없어요/;
+
+  beforeEach(() => {
+    getFreshPosition.mockRejectedValue({ code: 2 });
+    readCachedPosition.mockReturnValue(null);
+  });
+
+  it('왜 아무것도 안 뜨는지 알려준다', async () => {
+    render(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
+    expect(await screen.findByText(CANT, {}, { timeout: 3000 })).toBeTruthy();
+  });
+
+  // 닫으면 그날 하루 안 뜨는 규칙에 걸린다. 지하에서 한 번 닫았다고 밖에 나온 뒤
+  // 진짜 안내까지 못 받으면 손해가 훨씬 크다.
+  it('닫는 버튼은 없다', async () => {
+    render(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
+    await screen.findByText(CANT, {}, { timeout: 3000 });
+    expect(screen.queryByRole('button', { name: '주변 매장 안내 닫기' })).toBeNull();
+  });
+
+  // 이 앱은 일부러 위치 권한을 조르지 않는다. 여기서 그 이야기를 꺼내면 결국 조르는 것이 된다.
+  it('권한을 거둔 것은 장소 탓이 아니라 조용히 넘어간다', async () => {
+    getFreshPosition.mockRejectedValue({ code: 1 });
+
+    render(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(screen.queryByText(CANT)).toBeNull();
+  });
+
+  it('쓸 기프티콘이 없으면 이 말도 하지 않는다', async () => {
+    render(<NearbyBanner gifticons={[{ id: '9', brand: '스타벅스', status: 'used' }]} onPick={() => {}} />);
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(screen.queryByText(CANT)).toBeNull();
+  });
+
+  // 위치는 잡혔는데 근처에 쓸 매장이 없는 경우. 이때 "위치를 확인할 수 없어요"가 남아
+  // 있으면 거짓말이 된다 — 확인은 됐고 근처에 없었을 뿐이다. 매장 안내는 원래 조용하지만
+  // 이 말은 조용하지 않아서, 안 걷으면 계속 남는다.
+  it('위치가 잡혔으면 근처에 매장이 없어도 그 말은 걷는다', async () => {
+    render(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
+    await screen.findByText(CANT, {}, { timeout: 3000 });
+
+    getFreshPosition.mockResolvedValue({ lat: 37.5, lng: 127.0 });
+    searchNearbyStores.mockResolvedValue([]);
+    sessionStorage.clear();
+    await act(async () => {
+      await appStateHandler({ isActive: true });
+    });
+
+    await waitFor(() => expect(screen.queryByText(CANT)).toBeNull(), { timeout: 3000 });
+  });
+
+  // 지하에서 이 말이 뜬 채로 마지막 기프티콘을 써버리면, 찾아줄 것이 없는데 "못 찾았다"만
+  // 남는다. 목록이 바뀌는 건 이 말을 띄운 뒤에도 일어난다.
+  it('쓸 기프티콘이 없어지면 그 말도 걷는다', async () => {
+    const { rerender } = render(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
+    await screen.findByText(CANT, {}, { timeout: 3000 });
+
+    rerender(<NearbyBanner gifticons={GIFTICONS.map((g) => ({ ...g, status: 'used' }))} onPick={() => {}} />);
+    expect(screen.queryByText(CANT)).toBeNull();
+  });
+
+  // 밖에 나오면 저절로 사라져야 한다. 앱이 다시 앞으로 올 때 다시 찾는 그 길을 탄다.
+  it('위치가 잡히면 저절로 사라지고 매장 안내로 바뀐다', async () => {
+    render(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
+    await screen.findByText(CANT, {}, { timeout: 3000 });
+
+    getFreshPosition.mockResolvedValue({ lat: 37.5, lng: 127.0 });
+    sessionStorage.clear();
+    await act(async () => {
+      await appStateHandler({ isActive: true });
+    });
+
+    expect(await screen.findByText(/스타벅스 서울숲점/, {}, { timeout: 3000 })).toBeTruthy();
+    expect(screen.queryByText(CANT)).toBeNull();
   });
 });

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { MapPin, X } from "lucide-react";
+import { MapPin, MapPinOff, X } from "lucide-react";
 import { searchNearbyStores } from "../api";
 import {
   getFreshPosition,
@@ -47,6 +47,11 @@ const DISMISS_KEY = "nearby-banner-dismissed-on";
 // 쓸 게 있어요"라고 먼저 말을 거는 자리다. 틀린 채로 말을 걸면 안 하느니만 못하다.
 const CACHE_MAX_AGE_MS = 30 * 60 * 1000;
 
+// "위치를 못 잡았다"와 "위치를 안 물어봤다"는 다르다.
+//
+// 지하에서 잡으려다 실패한 것은 밖에 나가면 풀리는 일이라 알려줄 값어치가 있다.
+// 권한을 안 준 것은 장소와 무관하고, 이 앱은 일부러 권한을 조르지 않기로 했으므로
+// 여기서 그 이야기를 꺼내면 결국 조르는 것이 된다. 그래서 둘을 갈라서 돌려준다.
 async function getPositionSilently() {
   try {
     if (navigator.permissions?.query) {
@@ -55,17 +60,22 @@ async function getPositionSilently() {
         try {
           const fresh = await getFreshPosition();
           saveCachedPosition(fresh);
-          return fresh;
-        } catch {
-          return readCachedPosition(CACHE_MAX_AGE_MS);
+          return { at: fresh };
+        } catch (err) {
+          const at = readCachedPosition(CACHE_MAX_AGE_MS);
+          if (at) return { at };
+          // 권한은 줬는데 못 잡았다. 지하·실내·엘리베이터가 여기 든다.
+          // 권한을 도로 거둔 경우(code 1)는 장소 탓이 아니라 조용히 넘어간다.
+          return { at: null, unlocatable: err?.code !== 1 };
         }
       }
-      if (status.state === "denied") return null;
+      if (status.state === "denied") return { at: null };
     }
   } catch {
     // permissions API가 없는 브라우저는 아래 지난번 위치로 이어간다.
   }
-  return readCachedPosition(CACHE_MAX_AGE_MS);
+  // 권한을 물어본 적이 없는 자리다. 새로 묻지 않고 지난번 위치로만 맞춰본다.
+  return { at: readCachedPosition(CACHE_MAX_AGE_MS) };
 }
 
 function readDismissedToday() {
@@ -101,6 +111,8 @@ function formatDistance(meters) {
 // 떴다가 내용이 채워지는 것보다, 이미 알아둔 것을 바로 보여주는 편이 낫다.
 export default function NearbyBanner({ gifticons, onPick, yielded = false }) {
   const [best, setBest] = useState(null);
+  // 권한은 있는데 위치를 못 잡은 상태. 지하·실내에서 그렇다.
+  const [unlocatable, setUnlocatable] = useState(false);
   const [dismissed, setDismissed] = useState(() => readDismissedToday());
   // 목록은 검색어를 칠 때마다 다시 오는데, 그때마다 주변을 다시 뒤질 일은 아니다.
   // 처음 목록이 채워졌을 때 한 번만 찾는다.
@@ -190,8 +202,11 @@ export default function NearbyBanner({ gifticons, onPick, yielded = false }) {
         .slice(0, MAX_BRANDS);
       if (brands.length === 0) return;
 
-      const at = await getPositionSilently();
-      if (!at || cancelled) return;
+      const located = await getPositionSilently();
+      if (cancelled) return;
+      setUnlocatable(Boolean(located.unlocatable));
+      const at = located.at;
+      if (!at) return;
 
       const cached = readCache(at);
       if (cached) {
@@ -250,6 +265,26 @@ export default function NearbyBanner({ gifticons, onPick, yielded = false }) {
         (g) => g.status !== "used" && g.brand?.trim() === best.brand,
       ).length
     : 0;
+
+  // 위치를 못 잡았으면 왜 아무것도 안 뜨는지 알려준다.
+  //
+  // 아무 말 없이 비워두면 "이 기능이 고장 났나" 하게 된다. 지하에서는 늘 그렇고, 지하는
+  // 자주 간다. 대신 X는 붙이지 않았다 — 닫으면 그날 하루 안 뜨는 규칙에 걸리는데, 지하에서
+  // 한 번 닫았다고 밖에 나온 뒤 진짜 안내까지 못 받으면 손해가 훨씬 크다. 위치가 잡히는
+  // 순간 저절로 사라진다.
+  //
+  // 쓸 기프티콘이 없으면 이 말도 하지 않는다. 찾아줄 것이 애초에 없는 사람에게 "못 찾았다"는
+  // 아무 뜻도 없다.
+  if (unlocatable && !best && gifticons.some((g) => g.status !== "used" && g.brand?.trim()) && !dismissed && !yielded) {
+    return (
+      <div className="flex w-full items-center gap-2.5 border-b border-border bg-muted/60 px-5 py-3">
+        <MapPinOff className="size-4 shrink-0 text-muted-foreground" />
+        <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
+          지금은 위치를 확인할 수 없어요. 지하나 실내에서는 안 잡힐 수 있어요.
+        </span>
+      </div>
+    );
+  }
 
   if (!best || liveCount === 0 || dismissed || yielded) return null;
 
