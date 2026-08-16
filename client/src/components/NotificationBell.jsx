@@ -133,11 +133,24 @@ export default function NotificationBell() {
   // 숫자가 붙는 순간 이미 아는 일이다. 한 건씩 올리던 때는 1씩 붙어 덜 거슬렸는데,
   // 일괄 등록이 생기면서 한 번에 여섯도 열도 붙게 됐다.
   //
-  // 목록에서는 걸러내지 않는다. 그건 "무슨 일이 있었나"를 되짚는 자리라 내가 한 것도
-  // 함께 있어야 한다. 숫자만 남의 소식을 센다.
+  // 내가 한 것도 목록에는 그대로 둔다. 그건 "무슨 일이 있었나"를 되짚는 자리라 내가 한
+  // 것까지 있어야 이어 읽힌다. 숫자만 남의 소식을 센다.
   const unreadActivity = activities.filter(
     (a) => a.actor_id !== user.id && (!since || new Date(a.created_at).getTime() > new Date(since).getTime())
   ).length;
+
+  // 들어오기 전에 있었던 일은 목록에서도 뺀다.
+  //
+  // 숫자는 진작부터 가입 시점부터 셌는데 목록은 전부 보여주고 있었다. 한 기준을 두 자리가
+  // 다르게 쓴 셈이라, 새로 들어온 사람은 배지가 0인데 열어보면 쉰 줄이 쌓여 있었다.
+  // 들어오기 전에 가족이 무엇을 했는지는 새로 온 사람의 소식이 아니다 — 숫자에서 뺀
+  // 이유가 목록에서도 그대로 성립한다.
+  //
+  // 가입 시각을 모르면(구성원 정보를 아직 못 읽었으면) 거르지 않는다. 있는 것을 감추는
+  // 것보다 잠깐 더 보이는 편이 낫다.
+  const sinceJoined = joinedAt
+    ? activities.filter((a) => new Date(a.created_at).getTime() >= new Date(joinedAt).getTime())
+    : activities;
 
   // 공지도 같이 센다. 색을 나누려다 접었다 — 색이 갈리면 "이 색이 무슨 뜻이지"를 새로
   // 배워야 하는데, 사용자에게는 둘 다 그냥 안내다. 열 개면 열 개다.
@@ -194,7 +207,7 @@ export default function NotificationBell() {
 
       {open && (
         <ActivitySheet
-          activities={activities}
+          activities={sinceJoined}
           pinnedNotices={pinned}
           listedNotices={rest}
           lastReadAt={openedWith.current}

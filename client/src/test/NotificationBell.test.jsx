@@ -45,7 +45,7 @@ function notice(id, overrides = {}) {
   };
 }
 
-function activity(id) {
+function activity(id, createdAt) {
   return {
     id,
     kind: 'created',
@@ -53,7 +53,7 @@ function activity(id) {
     actor_name: '엄마',
     gifticon_name: `기프티콘 ${id}`,
     amount: null,
-    created_at: new Date().toISOString(),
+    created_at: createdAt || new Date().toISOString(),
   };
 }
 
@@ -181,5 +181,36 @@ describe('NotificationBell', () => {
     const pinned = sheet.querySelector('.sticky');
     expect([...pinned.querySelectorAll('p')].map((el) => el.textContent)).toEqual(['공지 1', '공지 2']);
     expect(sheet.textContent).toContain('공지 3');
+  });
+});
+
+// 들어오기 전에 가족이 무엇을 했는지는 새로 온 사람의 소식이 아니다.
+//
+// 숫자는 진작부터 가입 시점부터 셌는데 목록은 전부 보여주고 있었다. 한 기준을 두 자리가
+// 다르게 쓴 셈이라, 새로 들어온 사람은 배지가 0인데 열어보면 쉰 줄이 쌓여 있었다.
+describe('가입 전 기록', () => {
+  const BEFORE = '2025-06-01T00:00:00Z';
+
+  it('종을 열어도 목록에 안 나온다', async () => {
+    // 가입은 2026-01-01. BEFORE는 그 전이다.
+    listActivities.mockResolvedValue([activity(1, BEFORE), activity(2)]);
+
+    render(<NotificationBell />);
+    await screen.findByRole('button', { name: '알림 1개' });
+    await act(async () => bellLabel().click());
+
+    const sheet = document.querySelector('[role="dialog"]');
+    expect(sheet.textContent).toContain('기프티콘 2');
+    expect(sheet.textContent).not.toContain('기프티콘 1');
+  });
+
+  it('가입 전 것뿐이면 아직 알림이 없다고 한다', async () => {
+    listActivities.mockResolvedValue([activity(1, BEFORE)]);
+
+    render(<NotificationBell />);
+    await screen.findByRole('button', { name: '알림' });
+    await act(async () => bellLabel().click());
+
+    expect(document.querySelector('[role="dialog"]').textContent).toContain('아직 알림이 없어요');
   });
 });
