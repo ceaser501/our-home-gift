@@ -105,12 +105,15 @@ describe('여러 장을 올렸을 때 한 건인지 가르는 기준', () => {
   it('바코드가 한 종류면 바코드 없는 사진까지 같이 읽는다', async () => {
     // 원본 + 바코드 스크린샷(같은 번호) + 정보성 스크린샷(바코드 없음).
     // 정보성 사진은 후보가 아니라 missed로 빠지지만, 후보가 하나뿐이므로 이 창에 남는다.
-    groupImages.mockResolvedValue({
-      candidates: [{ id: 'pick-0', code: '111' }],
-      missed: [{ id: 'pick-2' }],
-      scanned: 3,
-      tally: {},
-    });
+    groupImages
+      .mockResolvedValueOnce({
+        candidates: [{ id: 'pick-0', code: '111' }],
+        missed: [{ id: 'pick-2', file: new File(['x'], '정보캡처.jpg', { type: 'image/jpeg' }) }],
+        scanned: 3,
+        tally: {},
+      })
+      // 못 읽은 사진을 정밀하게 다시 봐도 바코드가 없다. 진짜 정보성 사진이다.
+      .mockResolvedValueOnce({ candidates: [], missed: [], scanned: 1, tally: {} });
 
     const onBulk = vi.fn();
     open({ onBulk });
@@ -152,5 +155,82 @@ describe('여러 장을 올렸을 때 한 건인지 가르는 기준', () => {
 
     await waitFor(() => expect(onBulk).toHaveBeenCalled());
     expect(prepareImages).not.toHaveBeenCalled();
+  });
+});
+
+// 얕은 판은 일부러 약하다(1600px, 정밀 탐색 없음). 사진첩 훑기는 그 뒤에 정밀한 판을 한 번
+// 더 돌려 놓친 것을 건지는데, 등록 창에는 그 두 번째가 없었다. 그래서 흐릿하게 찍힌
+// 기프티콘 한 장이 안 읽히면 두 건이 한 건으로 보였고, 서로 다른 기프티콘의 사진이 통째로
+// 합쳐져 남의 금액과 기한이 들어갔다.
+describe('얕게 봐서 한 건으로 보일 때', () => {
+  const FILES = [
+    new File(['x'], 'a.jpg', { type: 'image/jpeg' }),
+    new File(['x'], 'b.jpg', { type: 'image/jpeg' }),
+  ];
+
+  function pick(files = FILES) {
+    open({ onBulk });
+    fireEvent.change(document.querySelector('#gifticon-image'), { target: { files } });
+  }
+
+  let onBulk;
+  beforeEach(() => {
+    onBulk = vi.fn();
+  });
+
+  it('못 읽은 사진을 정밀하게 다시 보고, 두 건이면 나눈다', async () => {
+    groupImages
+      .mockResolvedValueOnce({
+        candidates: [{ id: 'pick-0', code: '111' }],
+        missed: [{ id: 'pick-1', file: FILES[1] }],
+        scanned: 2,
+        tally: {},
+      })
+      .mockResolvedValueOnce({
+        candidates: [{ id: 'pick-1', code: '222' }],
+        missed: [],
+        scanned: 1,
+        tally: {},
+      });
+
+    pick();
+
+    await waitFor(() => expect(onBulk).toHaveBeenCalled());
+    // 두 번째 판은 못 읽은 사진만 본다. 정밀 탐색은 느려서, 이미 읽힌 것까지 다시 돌리면
+    // 잘 되던 경우가 같이 느려진다.
+    expect(groupImages.mock.calls[1][0]).toEqual([FILES[1]]);
+    // 이미 찾은 번호는 다시 후보로 만들지 않는다. 안 그러면 한 건이 두 건으로 세어진다.
+    expect([...groupImages.mock.calls[1][1].skipCodes]).toEqual(['111']);
+  });
+
+  it('정밀하게 봐도 바코드가 없으면 한 건 그대로 둔다', async () => {
+    groupImages
+      .mockResolvedValueOnce({
+        candidates: [{ id: 'pick-0', code: '111' }],
+        missed: [{ id: 'pick-1', file: FILES[1] }],
+        scanned: 2,
+        tally: {},
+      })
+      .mockResolvedValueOnce({ candidates: [], missed: [], scanned: 1, tally: {} });
+
+    pick();
+
+    await waitFor(() => expect(prepareImages).toHaveBeenCalled());
+    expect(onBulk).not.toHaveBeenCalled();
+  });
+
+  // 얕은 판이 다 읽었으면 더 볼 것이 없다. 여기서 또 정밀하게 돌면 잘 되던 경우가 느려진다.
+  it('못 읽은 사진이 없으면 다시 보지 않는다', async () => {
+    groupImages.mockResolvedValue({
+      candidates: [{ id: 'pick-0', code: '111' }],
+      missed: [],
+      scanned: 2,
+      tally: {},
+    });
+
+    pick();
+
+    await waitFor(() => expect(prepareImages).toHaveBeenCalled());
+    expect(groupImages).toHaveBeenCalledTimes(1);
   });
 });

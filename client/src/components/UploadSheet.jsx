@@ -141,6 +141,8 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
   // 방금 고른 사진이 지금 편집 중인 것과 다른 기프티콘일 때, 어떻게 할지 물어보려고 들고 있는다.
   const [mismatch, setMismatch] = useState(null);
   const [progress, setProgress] = useState(null);
+  // 여러 장을 한 건으로 본 이유. 테스트 빌드에서만 보여준다.
+  const [groupNote, setGroupNote] = useState('');
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -196,6 +198,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
     setAnalyzing(true);
     setProgress({ step: 'barcode', current: 1, total: selected.length });
     setAutoFilled(false);
+    setGroupNote('');
 
     // 여러 장을 골랐는데 서로 다른 기프티콘이면, 한 건짜리인 이 화면으로는 담을 수 없다.
     //
@@ -211,15 +214,44 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
     const adding = existingImages.length + newFiles.length > 0;
     if (onBulk && selected.length > 1 && !adding) {
       try {
-        const grouped = await groupImages(selected, { quick: true });
+        let grouped = await groupImages(selected, { quick: true });
+
+        // 얕은 판이 "한 건"이라고 했는데 못 읽은 사진이 남아 있으면, 그건 한 건이라는
+        // 뜻이 아니라 **아직 모른다**는 뜻이다.
+        //
+        // 얕은 판은 일부러 약하다(1600px, 정밀 탐색 없음). 사진첩 훑기는 그 뒤에 정밀한
+        // 판을 한 번 더 돌려 놓친 것을 건지는데, 이쪽에는 그 두 번째가 없었다. 그래서
+        // 흐릿하게 찍힌 기프티콘 한 장이 안 읽히면 두 건이 한 건으로 보였고, 서로 다른
+        // 기프티콘의 사진이 통째로 한 건에 합쳐져 남의 금액과 기한이 들어갔다.
+        //
+        // 모르면 더 봐야지, 모르는 채로 합치면 안 된다. 다만 못 읽은 사진만 다시 본다 —
+        // 정밀 탐색은 느려서, 이미 읽힌 것까지 다시 돌리면 잘 되던 경우가 같이 느려진다.
+        if (grouped.candidates.length <= 1 && grouped.missed.length > 0) {
+          const again = await groupImages(
+            grouped.missed.map((image) => image.file),
+            { skipCodes: new Set(grouped.candidates.map((c) => c.code)) }
+          );
+          grouped = { ...grouped, candidates: [...grouped.candidates, ...again.candidates] };
+        }
+
         if (grouped.candidates.length > 1) {
           setAnalyzing(false);
           setProgress(null);
           onBulk(selected);
           return;
         }
-      } catch {
+
+        // 한 건으로 본 이유를 적어둔다(테스트 빌드에서만 보인다).
+        //
+        // 여기서 판단이 틀리면 서로 다른 기프티콘이 한 건으로 합쳐지는데, 화면만 봐서는
+        // "왜 안 나뉘었나"를 알 길이 없다. 바코드를 몇 종류 찾았는지, 못 읽은 사진이
+        // 몇 장인지가 그 답이라 그것만 적는다.
+        setGroupNote(
+          `사진 ${selected.length}장 · 바코드 ${grouped.candidates.length}종류 · 못 읽은 사진 ${grouped.missed.length}장`
+        );
+      } catch (err) {
         // 묶어보지 못했으면 예전 길로 간다. 한 건으로 읽히면 그것대로 맞다.
+        setGroupNote(`묶기 실패: ${err?.message || err}`);
       }
     }
 
@@ -639,6 +671,12 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
             autoFilled && <p className="text-sm text-success">정보를 채웠어요. 확인하고 저장해주세요.</p>
           )}
           {error && <p className="text-sm text-destructive">{error}</p>}
+
+          {/* 왜 한 건으로 봤는지. 출시 빌드에는 안 나온다(VITE_TEST_TOOLS).
+              docs/security.md의 제거 목록에 함께 적어뒀다. */}
+          {import.meta.env.VITE_TEST_TOOLS && groupNote && (
+            <p className="m-0 rounded-lg bg-muted px-2.5 py-2 text-xs text-muted-foreground">{groupNote}</p>
+          )}
 
           <div className="grid grid-cols-2 gap-3">
             <div className="col-span-2 flex flex-col gap-1.5">

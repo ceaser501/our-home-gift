@@ -643,7 +643,7 @@ export async function deepScan({ pending, isRegistered, skipCodes, onProgress, o
  * 등록 화면이 다건으로 넘길지 정할 때 — 를 위한 것이다. 거기서 무거운 판을 돌리면
  * 사진 두 장을 골랐을 뿐인데 몇 초를 서 있게 된다.
  */
-export async function groupImages(files, { isRegistered, onProgress, onCandidate, signal, quick = false } = {}) {
+export async function groupImages(files, { isRegistered, onProgress, onCandidate, signal, quick = false, skipCodes } = {}) {
   const images = (files || []).map((file, index) => ({
     id: `pick-${index}`,
     name: file.name || `사진 ${index + 1}.jpg`,
@@ -660,6 +660,7 @@ export async function groupImages(files, { isRegistered, onProgress, onCandidate
     read: readPickedFile,
     pass: quick ? SHALLOW : DEEP,
     isRegistered,
+    skipCodes,
     onProgress,
     onCandidate,
     signal,
@@ -667,7 +668,9 @@ export async function groupImages(files, { isRegistered, onProgress, onCandidate
 
   return {
     candidates,
-    // 바코드를 못 찾은 사진. 화면이 "이건 직접 올려주세요"로 안내한다.
+    // 바코드를 못 찾은 사진. 화면이 "이건 직접 올려주세요"로 안내하고, 등록 창은
+    // 이것들만 다시 정밀하게 읽어본다(아래 UploadSheet 참고). 그래서 원본 파일을 그대로
+    // 달고 있다.
     missed,
     scanned: images.length,
     tally: {
