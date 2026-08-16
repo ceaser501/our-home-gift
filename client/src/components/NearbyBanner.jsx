@@ -1,7 +1,14 @@
-import { useEffect, useRef, useState } from 'react';
-import { MapPin, X } from 'lucide-react';
-import { searchNearbyStores } from '../api';
-import { getFreshPosition, readCachedPosition, saveCachedPosition, distanceBetween } from '../utils/geolocation';
+import { useEffect, useRef, useState } from "react";
+import { MapPin, X } from "lucide-react";
+import { searchNearbyStores } from "../api";
+import {
+  getFreshPosition,
+  readCachedPosition,
+  saveCachedPosition,
+  distanceBetween,
+} from "../utils/geolocation";
+import { todayStr } from "../utils/date";
+import { isNativeApp } from "../utils/browser";
 
 // "지금 이 근처에서 쓸 수 있는 게 있다"를 알려주는 상단 띠.
 //
@@ -12,7 +19,7 @@ const RADIUS_M = 500;
 
 // 같은 자리에서 앱을 여닫을 때마다 카카오를 다시 부르지 않는다. 검색에는 하루 상한이
 // 걸려 있어서(사람당 200번), 배너가 그걸 조용히 갉아먹으면 정작 "매장" 버튼이 막힌다.
-const CACHE_KEY = 'nearby-banner:result';
+const CACHE_KEY = "nearby-banner:result";
 const CACHE_TTL_MS = 10 * 60 * 1000;
 const CACHE_MOVE_M = 300;
 
@@ -20,7 +27,15 @@ const CACHE_MOVE_M = 300;
 // 다 뒤지면 요청 수가 기프티콘 수만큼 늘어난다.
 const MAX_BRANDS = 3;
 
-const DISMISS_KEY = 'nearby-banner-dismissed';
+// 닫으면 그날 하루는 안 띄운다. 날짜를 적어두고 다음 날이 되면 다시 뜬다.
+//
+// 처음에는 세션 단위였다(앱을 껐다 켜면 다시). 그런데 이 앱은 계산대 앞에서 열었다
+// 닫았다 하는 앱이라, 열 때마다 같은 띠가 다시 뜨는 꼴이었다.
+//
+// 움직였으면 다시 띄울까도 했는데 접었다. 그건 앱 사정이다 — 내용이 달라졌으니 보여줘도
+// 된다는 것. 겨우 한 줄짜리 띠에 X를 눌렀다는 건 안 보겠다는 뜻이고, 거기서 앱이 이기려
+// 들면 안 된다. 다음 날 다시 띄우는 것으로 충분하다.
+const DISMISS_KEY = "nearby-banner-dismissed-on";
 
 // 위치 권한을 새로 묻지 않는다. 앱을 열자마자 권한 창부터 들이밀면 거절당하기 딱 좋고,
 // 한 번 거절되면 매장 찾기까지 같이 막힌다. 이미 허용된 경우에만 현재 위치를 잡고,
@@ -28,8 +43,8 @@ const DISMISS_KEY = 'nearby-banner-dismissed';
 async function getPositionSilently() {
   try {
     if (navigator.permissions?.query) {
-      const status = await navigator.permissions.query({ name: 'geolocation' });
-      if (status.state === 'granted') {
+      const status = await navigator.permissions.query({ name: "geolocation" });
+      if (status.state === "granted") {
         try {
           const fresh = await getFreshPosition();
           saveCachedPosition(fresh);
@@ -38,7 +53,7 @@ async function getPositionSilently() {
           return readCachedPosition();
         }
       }
-      if (status.state === 'denied') return null;
+      if (status.state === "denied") return null;
     }
   } catch {
     // permissions API가 없는 브라우저는 아래 지난번 위치로 이어간다.
@@ -46,9 +61,17 @@ async function getPositionSilently() {
   return readCachedPosition();
 }
 
+function readDismissedToday() {
+  try {
+    return localStorage.getItem(DISMISS_KEY) === todayStr();
+  } catch {
+    return false;
+  }
+}
+
 function readCache(at) {
   try {
-    const saved = JSON.parse(sessionStorage.getItem(CACHE_KEY) || 'null');
+    const saved = JSON.parse(sessionStorage.getItem(CACHE_KEY) || "null");
     if (!saved || Date.now() - saved.ts > CACHE_TTL_MS) return null;
     if (distanceBetween(saved.at, at) > CACHE_MOVE_M) return null;
     return saved;
@@ -58,7 +81,7 @@ function readCache(at) {
 }
 
 function formatDistance(meters) {
-  if (meters == null) return '';
+  if (meters == null) return "";
   if (meters < 1000) return `${Math.round(meters)}m`;
   return `${(meters / 1000).toFixed(1)}km`;
 }
@@ -71,30 +94,92 @@ function formatDistance(meters) {
 // 떴다가 내용이 채워지는 것보다, 이미 알아둔 것을 바로 보여주는 편이 낫다.
 export default function NearbyBanner({ gifticons, onPick, yielded = false }) {
   const [best, setBest] = useState(null);
-  const [dismissed, setDismissed] = useState(() => sessionStorage.getItem(DISMISS_KEY) === '1');
+  const [dismissed, setDismissed] = useState(() => readDismissedToday());
   // 목록은 검색어를 칠 때마다 다시 오는데, 그때마다 주변을 다시 뒤질 일은 아니다.
   // 처음 목록이 채워졌을 때 한 번만 찾는다.
   const ranRef = useRef(false);
+  // 앱이 다시 앞으로 왔을 때 쓸 최신 목록. 그때 이 효과는 이미 끝나 있어서, 그 안의
+  // gifticons는 처음 값에 묶여 있다.
+  const listRef = useRef(gifticons);
+  listRef.current = gifticons;
+  // 지금 돌고 있는 판을 멈추기 위한 손잡이. 앱을 다시 볼 때마다 새로 돈다.
+  const stopRef = useRef(null);
 
   useEffect(() => {
     if (ranRef.current || gifticons.length === 0) return;
     ranRef.current = true;
+    search();
+    return () => stopRef.current?.();
+    // search는 매번 새로 만들어지는 함수라 의존성에 넣으면 효과가 계속 다시 돈다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gifticons]);
 
+  // 앱이 다시 앞으로 오면 한 번 더 찾는다.
+  //
+  // 이게 없으면 앱을 열 때 딱 한 번만 찾는다. 그런데 사람들은 앱을 잘 안 끈다 — 홈을
+  // 누르고 주머니에 넣는다. 그러고 500m를 걸어가서 앱을 다시 봐도 아까 그 내용이 그대로
+  // 있었다. "매장 앞을 지나가면서 가진 걸 떠올리지 못한다"는 게 이 기능을 만든 이유인데,
+  // 정작 그 순간에 아무 일도 안 일어나고 있었던 셈이다.
+  //
+  // 켜둔 채로 주기적으로 돌지는 않는다. 배터리와 검색 한도를 쓰는데, 앱을 켜둔 채 걷는
+  // 일은 드물다. 아래 캐시(10분·300m)가 헛도는 검색을 막아준다.
+  useEffect(() => {
+    if (!isNativeApp()) return undefined;
+
+    let handle = null;
+    let gone = false;
+
+    import("@capacitor/app")
+      .then(({ App }) =>
+        App.addListener("appStateChange", ({ isActive }) => {
+          if (!isActive || listRef.current.length === 0) return;
+          search();
+        }),
+      )
+      .then((h) => {
+        if (gone) h.remove();
+        else handle = h;
+      })
+      .catch(() => {
+        // 플러그인을 못 불러오면 예전처럼 앱을 열 때만 찾는다.
+      });
+
+    return () => {
+      gone = true;
+      handle?.remove();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function search() {
+    stopRef.current?.();
     let cancelled = false;
+    stopRef.current = () => {
+      cancelled = true;
+    };
+
+    const gifticons = listRef.current;
 
     async function run() {
       // 안 쓴 것 중 상호가 있는 것만, 만료가 가까운 브랜드부터 모은다.
       const byBrand = new Map();
       for (const g of gifticons) {
-        if (g.status === 'used' || !g.brand?.trim()) continue;
+        if (g.status === "used" || !g.brand?.trim()) continue;
         const key = g.brand.trim();
-        const entry = byBrand.get(key) || { brand: key, count: 0, soonest: null };
+        const entry = byBrand.get(key) || {
+          brand: key,
+          count: 0,
+          soonest: null,
+        };
         entry.count += 1;
-        if (g.expires_at && (!entry.soonest || g.expires_at < entry.soonest)) entry.soonest = g.expires_at;
+        if (g.expires_at && (!entry.soonest || g.expires_at < entry.soonest))
+          entry.soonest = g.expires_at;
         byBrand.set(key, entry);
       }
       const brands = [...byBrand.values()]
-        .sort((a, b) => (a.soonest || '9999').localeCompare(b.soonest || '9999'))
+        .sort((a, b) =>
+          (a.soonest || "9999").localeCompare(b.soonest || "9999"),
+        )
         .slice(0, MAX_BRANDS);
       if (brands.length === 0) return;
 
@@ -110,20 +195,36 @@ export default function NearbyBanner({ gifticons, onPick, yielded = false }) {
       }
 
       const results = await Promise.all(
-        brands.map((b) => searchNearbyStores({ query: b.brand, lat: at.lat, lng: at.lng }).catch(() => []))
+        brands.map((b) =>
+          searchNearbyStores({
+            query: b.brand,
+            lat: at.lat,
+            lng: at.lng,
+          }).catch(() => []),
+        ),
       );
       if (cancelled) return;
 
       let found = null;
       results.forEach((stores, i) => {
-        const near = stores.find((s) => s.distance != null && s.distance <= RADIUS_M);
+        const near = stores.find(
+          (s) => s.distance != null && s.distance <= RADIUS_M,
+        );
         if (near && (!found || near.distance < found.distance)) {
-          found = { brand: brands[i].brand, count: brands[i].count, store: near.name, distance: near.distance };
+          found = {
+            brand: brands[i].brand,
+            count: brands[i].count,
+            store: near.name,
+            distance: near.distance,
+          };
         }
       });
 
       try {
-        sessionStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), at, best: found }));
+        sessionStorage.setItem(
+          CACHE_KEY,
+          JSON.stringify({ ts: Date.now(), at, best: found }),
+        );
       } catch {
         // 캐시를 못 남겨도 동작에는 지장 없다.
       }
@@ -131,21 +232,26 @@ export default function NearbyBanner({ gifticons, onPick, yielded = false }) {
     }
 
     run();
-    return () => {
-      cancelled = true;
-    };
-  }, [gifticons]);
+  }
 
   // 찾아둔 결과는 10분간 캐시에 남는다(같은 자리에서 앱을 여닫을 때마다 매장을 다시 뒤지지
   // 않으려고). 그런데 그사이 그 브랜드 기프티콘을 다 쓰거나 지웠다면, 캐시만 믿고 "쓸 수
   // 있는 기프티콘 3개"라고 말하게 된다 — 없는 것을 있다고 하는 셈이다.
   // 그래서 띄우기 직전에 지금 목록으로 다시 세어본다. 개수도 여기서 맞춘다.
-  const liveCount = best ? gifticons.filter((g) => g.status !== 'used' && g.brand?.trim() === best.brand).length : 0;
+  const liveCount = best
+    ? gifticons.filter(
+        (g) => g.status !== "used" && g.brand?.trim() === best.brand,
+      ).length
+    : 0;
 
   if (!best || liveCount === 0 || dismissed || yielded) return null;
 
   function dismiss() {
-    sessionStorage.setItem(DISMISS_KEY, '1');
+    try {
+      localStorage.setItem(DISMISS_KEY, todayStr());
+    } catch {
+      // 못 적어도 이번 화면에서는 닫힌다. 다음에 또 뜰 뿐이다.
+    }
     setDismissed(true);
   }
 
@@ -155,7 +261,11 @@ export default function NearbyBanner({ gifticons, onPick, yielded = false }) {
       <MapPin className="size-4 shrink-0 text-primary" />
       {/* 누르면 그 브랜드로 목록을 걸러 보여준다. 여기서 새 창을 열면 목록·바코드·매장까지
           겹겹이 쌓이는데, 어차피 하려는 일은 "그 기프티콘 찾기"라 목록을 걸러주는 것으로 충분하다. */}
-      <button type="button" onClick={() => onPick(best.brand)} className="min-w-0 flex-1 text-left">
+      <button
+        type="button"
+        onClick={() => onPick(best.brand)}
+        className="min-w-0 flex-1 text-left"
+      >
         {/* 좁은 화면에서 문장이 길면 뒤가 잘리는데, 잘려도 되는 건 매장 이름 꼬리뿐이다.
             "몇 개"가 끝에 있으면 그게 먼저 잘리므로 문장을 짧게 줄인다. */}
         <span className="block truncate text-xs text-foreground">
@@ -164,7 +274,12 @@ export default function NearbyBanner({ gifticons, onPick, yielded = false }) {
           <b className="font-semibold">{liveCount}개</b>
         </span>
       </button>
-      <button type="button" onClick={dismiss} aria-label="주변 매장 안내 닫기" className="shrink-0 text-muted-foreground">
+      <button
+        type="button"
+        onClick={dismiss}
+        aria-label="주변 매장 안내 닫기"
+        className="shrink-0 text-muted-foreground"
+      >
         <X className="size-4" />
       </button>
     </div>
