@@ -310,7 +310,13 @@ export async function readGifticonInfo(prepared, { onProgress, knownCode } = {})
   // 갤러리 훑기의 정밀 탐색으로 찾은 건이 통째로 빠진다 — 저쪽은 tryHarder를 켜고 읽고
   // 이쪽 decodeBarcode는 그냥 읽어서, 저쪽만 성공하는 사진이 있다. 그런 건은 열쇠가
   // 없어 저장되지 않았고, 여덟 건을 읽어도 캐시에는 한 건만 남았다.
-  const cacheKey = knownCode || prepared.code;
+  //
+  // 번호에 사진 장수를 붙인다. 번호만으로 두면, 같은 기프티콘에 정보 화면을 한 장 더해
+  // 다시 올려도 예전 답이 그대로 나온다 — 새로 넣은 사진은 모델이 보지도 못한다.
+  // "금액 화면을 같이 올렸는데 금액이 안 채워진다"가 그래서 났고, 그때는 캐시를
+  // 의심하기 어려웠다. 화면에는 사진이 세 장 멀쩡히 붙어 있기 때문이다.
+  const known = knownCode || prepared.code;
+  const cacheKey = known ? `${known}·${prepared.uploads.length}장` : null;
   const cached = readCachedInfo(cacheKey);
   const info = cached || (await analyzeGifticonImages(prepared.uploads, CATEGORY_KEYS));
   if (!cached) writeCachedInfo(cacheKey, info);

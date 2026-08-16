@@ -246,8 +246,13 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
         // 여기서 판단이 틀리면 서로 다른 기프티콘이 한 건으로 합쳐지는데, 화면만 봐서는
         // "왜 안 나뉘었나"를 알 길이 없다. 바코드를 몇 종류 찾았는지, 못 읽은 사진이
         // 몇 장인지가 그 답이라 그것만 적는다.
+        //
+        // "못 읽은 사진"이라고 적었더니 그 사진이 버려진 것으로 읽혔다. 안 버린다 —
+        // 바코드를 못 찾았을 뿐이고, 사진은 그대로 모델에게 같이 간다. 정보 화면처럼
+        // 바코드가 아예 없는 사진이 여기 걸리는 게 정상이다.
         setGroupNote(
-          `사진 ${selected.length}장 · 바코드 ${grouped.candidates.length}종류 · 못 읽은 사진 ${grouped.missed.length}장`
+          `사진 ${selected.length}장 · 바코드 ${grouped.candidates.length}종류 · ` +
+            `바코드 못 찾은 사진 ${grouped.missed.length}장(버리지 않고 같이 읽어요)`
         );
       } catch (err) {
         // 묶어보지 못했으면 예전 길로 간다. 한 건으로 읽히면 그것대로 맞다.
