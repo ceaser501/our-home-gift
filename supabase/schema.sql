@@ -1263,6 +1263,12 @@ begin
   update public.gifticons
   set claimed_by = null, claimed_by_name = null, claimed_at = null
   where claimed_by = uid;
+  -- 메모를 남긴 사람. 이 줄이 없어서 메모를 한 번이라도 쓴 계정은 탈퇴가 막혔다 —
+  -- 데이터는 다 지워지고 마지막 auth.users 삭제에서 이 참조 때문에 거절당한다.
+  -- memo_by는 나중에 더한 칸인데 여기를 같이 안 고쳤다.
+  update public.gifticons
+  set memo_by = null, memo_by_name = '탈퇴한 구성원'
+  where memo_by = uid;
 
   delete from public.push_subscriptions where user_id = uid;
   delete from public.family_join_requests where user_id = uid;

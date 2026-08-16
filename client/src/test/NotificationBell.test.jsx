@@ -121,6 +121,28 @@ describe('NotificationBell', () => {
     expect(screen.queryByText(HINT)).toBeNull();
   });
 
+  // 날짜만 적어뒀더니, 오늘 이미 한 번 띄운 뒤에 새 공지가 올라오면 그건 영영 못 알렸다.
+  // "하루에 한 번"은 같은 안내를 하루에 한 번이라는 뜻이지, 하루에 한 마디만 하겠다는
+  // 뜻이 아니다.
+  it('오늘 이미 띄웠어도 새 공지가 올라오면 다시 띄운다', async () => {
+    listNotices.mockResolvedValue([notice(1)]);
+
+    const { unmount } = render(<NotificationBell />);
+    await screen.findByText(HINT);
+    unmount();
+
+    // 같은 공지로는 다시 안 뜬다.
+    const second = render(<NotificationBell />);
+    await screen.findByRole('button', { name: '알림 1개' });
+    expect(screen.queryByText(HINT)).toBeNull();
+    second.unmount();
+
+    // 그런데 새 공지가 하나 더 올라왔다.
+    listNotices.mockResolvedValue([notice(1), notice(2)]);
+    render(<NotificationBell />);
+    expect(await screen.findByText(HINT)).toBeTruthy();
+  });
+
   it('안 읽은 중요 공지가 없으면 말풍선도 없다', async () => {
     listNotices.mockResolvedValue([notice(1)]);
     listNoticeReads.mockResolvedValue([1]);

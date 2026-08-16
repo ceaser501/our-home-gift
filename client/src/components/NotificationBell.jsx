@@ -24,8 +24,13 @@ import { importantNotices, splitPinned, unreadNotices } from '../utils/notices';
 // 애초에 푸시할 일이 아니다. 이런 것으로 푸시가 몇 번 가면 정작 기한 임박 푸시까지
 // 같이 꺼진다.
 
-// 말풍선을 오늘 이미 띄웠는지. 하루에 한 번만 띄운다.
-const HINT_KEY = 'important-notice-hinted-on';
+// 말풍선을 오늘 어느 공지로 띄웠는지. { on: 날짜, ids: [공지 id] }
+//
+// 날짜만 적어뒀더니, 오늘 이미 한 번 띄운 뒤에 새 공지가 올라오면 그건 영영 못 알렸다.
+// 하루에 한 번이라는 규칙은 "같은 안내를 하루에 한 번"이라는 뜻이지 "하루에 한 마디만"이
+// 아니다. 그래서 어느 공지로 띄웠는지까지 적어두고, 그때 없던 공지가 생기면 다시 한 번
+// 띄운다. 대신 같은 공지로는 그날 다시 띄우지 않는다.
+const HINT_KEY = 'important-notice-hinted';
 
 // 말풍선이 떠 있는 시간.
 //
@@ -37,6 +42,17 @@ const HINT_MS = 6000;
 function todayStr() {
   const d = new Date();
   return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+}
+
+function readHinted() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(HINT_KEY) || 'null');
+    if (!saved || saved.on !== todayStr()) return [];
+    return Array.isArray(saved.ids) ? saved.ids : [];
+  } catch {
+    // 값이 깨져 있으면 오늘 아무것도 안 띄운 것으로 본다. 한 번 더 뜨는 건 불편할 뿐이다.
+    return [];
+  }
 }
 
 export default function NotificationBell() {
@@ -86,16 +102,23 @@ export default function NotificationBell() {
   // 하루에 한 번만 띄운다. 읽으면 그 뒤로 안 뜨고, 안 읽으면 다음 날 다시 한 번.
   // 앱을 하루에 네다섯 번 열 일이 없고, 유료화 같은 것은 한 달 전부터 알리므로 하루
   // 놓쳐도 된다. 급한 점검은 등록을 누르는 자리가 이미 잡아준다.
+  // 오늘 아직 안 알린 공지가 있는지. 있으면 그 목록이, 없으면 빈 배열이 온다.
+  const toHint = unreadNotice.filter((n) => !readHinted().includes(n.id)).map((n) => n.id);
+  const hintKey = toHint.join(',');
+
   useEffect(() => {
-    if (unreadNotice.length === 0) return undefined;
-    if (localStorage.getItem(HINT_KEY) === todayStr()) return undefined;
-    localStorage.setItem(HINT_KEY, todayStr());
+    if (!hintKey) return undefined;
+    try {
+      localStorage.setItem(HINT_KEY, JSON.stringify({ on: todayStr(), ids: [...readHinted(), ...toHint] }));
+    } catch {
+      // 못 적으면 다음에 열 때 한 번 더 뜬다. 그뿐이다.
+    }
     setHint(true);
     const timer = setTimeout(() => setHint(false), HINT_MS);
     return () => clearTimeout(timer);
-    // 안 읽은 공지가 생겼는지만 본다. 목록이 바뀔 때마다 다시 재면 말풍선이 계속 살아난다.
+    // 알릴 공지가 무엇인지만 본다. 목록이 바뀔 때마다 다시 재면 말풍선이 계속 살아난다.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [unreadNotice.length > 0]);
+  }, [hintKey]);
 
   // 어디부터 셀지. 마지막으로 종을 연 때가 있으면 그때부터, 한 번도 안 열었으면
   // 이 가족에 들어온 때부터 센다.

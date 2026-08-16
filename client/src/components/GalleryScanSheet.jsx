@@ -1619,25 +1619,6 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
 
               {error && <p className="m-0 text-sm text-destructive">{error}</p>}
 
-              {/* 바코드 없이 정보만 있는 사진(금액·기한이 적힌 캡처)을 뺐다고 알린다.
-                  아무 말 없이 빼면 사용자는 금액이 빈칸인 걸 보고 "왜 안 읽혔지" 하는데,
-                  사실은 읽을 사진을 우리가 뺀 것이다.
-
-                  왜 빼는가 — 여기 온 사진들은 여러 기프티콘이 섞여 있고, 바코드가 없는
-                  사진은 그중 어느 것 옆에 붙는지 알 방법이 없다. 짐작해서 붙이면 맞을
-                  때는 아무도 모르고 틀릴 때는 엉뚱한 기프티콘에 남의 금액과 기한이
-                  박힌다. 조용히 틀리는 쪽이 훨씬 나쁘다.
-
-                  되살리는 길은 적지 않는다. "수정에서 사진을 더하면 같이 읽어요"를 한때
-                  붙였는데, 그건 뒷문으로 돌아가라는 말이다. 그 기프티콘 사진만 다시 올리면
-                  한 건으로 잡혀 정보성 캡처까지 같이 읽힌다 — 앞문이 이미 열려 있다. */}
-              {picked && tally?.noCode > 0 && !isWorking && (
-                <p className="m-0 rounded-xl bg-muted px-3.5 py-3 text-sm leading-relaxed break-keep text-muted-foreground">
-                  바코드가 없는 사진 <b className="font-semibold text-foreground">{tally.noCode}장</b>은 어느
-                  기프티콘 것인지 몰라서 뺐어요.
-                </p>
-              )}
-
               {alive.length === 0 && !isWorking ? (
                 <div className="flex flex-col items-center gap-2 py-8 text-center">
                   <ImageOff className="size-8 text-muted-foreground" />
@@ -1721,6 +1702,28 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
                 <p className="m-0 flex items-center gap-2 text-sm break-keep text-muted-foreground">
                   <Loader2 className="size-3.5 shrink-0 animate-spin" />
                   흐린 사진도 더 찾아보는 중이에요
+                </p>
+              )}
+
+              {/* 바코드 없이 정보만 있는 사진(금액·기한이 적힌 캡처)을 뺐다고 알린다.
+                  아무 말 없이 빼면 사용자는 금액이 빈칸인 걸 보고 "왜 안 읽혔지" 하는데,
+                  사실은 읽을 사진을 우리가 뺀 것이다.
+
+                  왜 빼는가 — 여기 온 사진들은 여러 기프티콘이 섞여 있고, 바코드가 없는
+                  사진은 그중 어느 것 옆에 붙는지 알 방법이 없다. 짐작해서 붙이면 맞을
+                  때는 아무도 모르고 틀릴 때는 엉뚱한 기프티콘에 남의 금액과 기한이
+                  박힌다. 조용히 틀리는 쪽이 훨씬 나쁘다.
+
+                  되살리는 길은 적지 않는다. 그 기프티콘 사진만 다시 올리면 한 건으로
+                  잡혀 정보성 캡처까지 같이 읽힌다 — 앞문이 이미 열려 있다.
+
+                  자리는 목록 아래, 상세내역 바로 위다. 한때 맨 위에 뒀는데 "N개를 넣을
+                  수 있어요"보다 먼저 읽혀서, 정작 무엇이 담겼는지 보기 전에 빠진 것부터
+                  세게 됐다. 결과를 먼저 보여주고 덧붙이는 말은 뒤에 둔다. */}
+              {picked && tally?.noCode > 0 && !isWorking && (
+                <p className="m-0 rounded-xl bg-muted px-3.5 py-3 text-sm leading-relaxed break-keep text-muted-foreground">
+                  바코드가 없는 사진 <b className="font-semibold text-foreground">{tally.noCode}장</b>은 어느
+                  기프티콘 것인지 몰라서 뺐어요.
                 </p>
               )}
 
