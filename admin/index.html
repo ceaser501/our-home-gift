@@ -794,7 +794,14 @@ let STATS=null, REAL_STATS=null, MODE='day';
 
 // 통계·목록·공지 쓰기 모두 로그인한 사람의 토큰으로 부른다. 관리자인지는 서버가 판단한다.
 // payload를 주면 POST(쓰기), 없으면 GET(읽기)이다.
-async function callApi(query='', payload=null){
+//
+// 토큰이 낡아서 거절당하면 한 번만 새로 받아 다시 해본다.
+//
+// 로그인 토큰은 한 시간짜리다. 평소에는 supabase-js가 알아서 갱신하지만, 그 시계는 탭이
+// 앞에 있을 때만 제대로 돈다 — 관리자 페이지를 열어두고 다른 일을 하다 돌아오면 이미
+// 만료된 토큰을 들고 요청을 보내게 된다. 그때 그대로 로그인 화면으로 넘겨버리니
+// "왜 자꾸 끊기지"가 됐다. 실제로는 끊긴 게 아니라 갱신할 틈이 없었던 것이다.
+async function callApi(query='', payload=null, retried=false){
   const { data: { session } } = await sb.auth.getSession();
   if(!session) { const e=new Error('로그인이 필요해요.'); e.reason='unauthenticated'; throw e; }
   const res=await fetch(CONFIG.url.replace(/\/+$/,'')+'/functions/v1/admin-stats'+query,{
@@ -807,6 +814,12 @@ async function callApi(query='', payload=null){
   });
   const body=await res.json().catch(()=>({}));
   if(!res.ok){
+    const stale = res.status===401 || body.reason==='unauthenticated';
+    if(stale && !retried){
+      const { data, error } = await sb.auth.refreshSession();
+      // 새로 받아졌으면 같은 요청을 한 번 더. 안 받아지면 진짜로 끊긴 것이라 아래로 간다.
+      if(!error && data?.session) return callApi(query, payload, true);
+    }
     const err=new Error(body.error || ('HTTP '+res.status));
     err.reason=body.reason;
     throw err;
@@ -1542,6 +1555,13 @@ async function start(){
     showErr('login-err','이 브라우저에 로그인 기록이 없어요. 앱에는 로그인돼 있는데 여기만 이렇다면, 앱을 설치본이 아니라 이 브라우저에서 열어 로그인한 뒤 다시 와주세요.');
     return;
   }
+  // 탭으로 돌아왔을 때 토큰을 미리 새로 받아둔다. 위 재시도가 있어서 없어도 돌아가지만,
+  // 그건 한 번 실패한 뒤에 도는 길이라 화면이 한 박자 늦게 뜬다. 돌아오는 순간에 갱신해
+  // 두면 그 한 박자가 없다.
+  document.addEventListener('visibilitychange',()=>{
+    if(document.visibilityState==='visible') sb.auth.refreshSession().catch(()=>{});
+  });
+
   connect();
 }
 
