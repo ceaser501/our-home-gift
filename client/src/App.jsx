@@ -13,6 +13,7 @@ import NearbyStoresSheet from './components/NearbyStoresSheet';
 import InstallPrompt from './components/InstallPrompt';
 import GalleryScanSheet from './components/GalleryScanSheet';
 import NoticeBanner from './components/NoticeBanner';
+import WelcomeBanner from './components/WelcomeBanner';
 import NearbyBanner from './components/NearbyBanner';
 import AlertDialog from './components/AlertDialog';
 import PullToRefresh from './components/PullToRefresh';
@@ -68,6 +69,7 @@ export default function App() {
   const [search, setSearch] = useState('');
   // 중요 공지가 목록 위 띠를 쓰고 있는지. 주변 매장 안내가 이걸 보고 자리를 비켜준다.
   const [noticeShown, setNoticeShown] = useState(false);
+  const [welcomeShown, setWelcomeShown] = useState(false);
   // 목록을 다시 읽을 때마다 오르는 수. 공지 띠가 이걸 보고 같이 다시 읽는다.
   const [refreshTick, setRefreshTick] = useState(0);
   const [category, setCategory] = useState('');
@@ -318,7 +320,11 @@ export default function App() {
           가져가고, 공지가 끝나거나 사용자가 그 공지를 닫으면 다시 매장 안내로 돌아온다. */}
       <NoticeBanner refreshKey={refreshTick} onShownChange={setNoticeShown} />
 
-      <NearbyBanner gifticons={gifticons} onPick={setSearch} yielded={noticeShown} />
+      {/* 가입하고 처음 들어온 날에만 뜬다. 그날은 기프티콘이 없어서 매장 안내가 어차피
+          띄울 것이 없다 — 자리를 다투는 일이 실제로는 잘 안 생긴다. */}
+      <WelcomeBanner onShownChange={setWelcomeShown} />
+
+      <NearbyBanner gifticons={gifticons} onPick={setSearch} yielded={noticeShown || welcomeShown} />
 
       <FilterBar
         search={search}
