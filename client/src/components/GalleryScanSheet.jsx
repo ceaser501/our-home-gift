@@ -1273,12 +1273,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
     const isDismissed = dismissedIds.includes(candidate.id);
     const info = candidate.info;
     const broken = !isDismissed && !isPickable(candidate);
-    const conflict = Boolean(info?.codeConflict);
     const editing = editingId === candidate.id;
-    // 번호가 갈렸을 때는 빠진 칸이 없어도 번호 칸을 연다. 볼 데가 있어야 고칠 수 있다.
-    const fields = conflict
-      ? [...new Set([...(candidate.missing || []), '바코드 번호'])]
-      : candidate.missing || [];
 
     return (
       /* 두 겹이다. 바깥은 차지하는 높이가 자라고, 안쪽이 밀려 들어온다.
@@ -1372,30 +1367,16 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
             </label>
           )}
 
-          {/* 막대에서 읽은 번호와 사진에 인쇄된 숫자가 갈렸다. 막대 쪽을 넣어뒀다 —
-              그쪽은 검산 자리가 있어 틀린 값이 그냥 통과하기 어렵고, 인쇄된 숫자를 읽는
-              눈에는 그런 장치가 없다.
-
-              그래도 한 번 짚는다. 검산 자리가 없는 규격이면 막대 쪽도 틀릴 수 있는데,
-              한 자리가 틀린 채로 등록되면 계산대에서 못 쓴다. 여기까지는 직접 올리는
-              화면과 같고, 다른 것은 이 카드에 번호가 안 보인다는 점이다. 그래서 아래
-              '번호 고치기'를 같이 연다 — 짚어만 주고 볼 데가 없으면 짚은 뜻이 없다. */}
-          {conflict && !isDismissed && (
-            <p className="m-0 rounded-lg border border-warning/40 bg-warning/10 px-2.5 py-2 text-sm break-keep text-foreground">
-              <b className="font-semibold">바코드 번호</b>가 사진에 인쇄된 숫자와 달라요. 사진과 맞는지 확인해주세요.
-            </p>
-          )}
-
-          {/* 빠진 칸이 있거나 번호가 갈린 카드에만 나온다. 다 읽힌 카드에까지 붙이면,
-              고칠 것이 없는데도 뭔가 확인해야 할 것처럼 보인다 — 대부분의 날은 다 읽힌다. */}
-          {(broken || conflict) && !isDismissed && candidate.prepared && (
+          {/* 빠진 칸이 있는 카드에만 나온다. 다 읽힌 카드에까지 붙이면, 고칠 것이 없는데도
+              뭔가 확인해야 할 것처럼 보인다 — 대부분의 날은 다 읽힌다. */}
+          {broken && !isDismissed && candidate.prepared && (
             <button
               type="button"
               onClick={() => setEditingId(editing ? null : candidate.id)}
               className="flex items-center justify-center gap-1.5 rounded-lg bg-muted px-2.5 py-2 text-sm font-semibold text-foreground"
             >
               <Pencil className="size-4" />
-              {editing ? '접기' : broken ? '직접 채우기' : '번호 고치기'}
+              {editing ? '접기' : '직접 채우기'}
             </button>
           )}
 
@@ -1421,7 +1402,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
               멀쩡한 값을 건드린다. 모르는 것만 물어보는 쪽이 손도 덜 가고 안전하다. */}
           {editing && (
             <div className="flex flex-col gap-2 rounded-lg bg-muted px-2.5 py-2.5">
-              {fields.map((field) => {
+              {candidate.missing?.map((field) => {
                 const key = FIELD_KEYS[field];
                 if (!key) return null;
                 return (
@@ -1437,16 +1418,6 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
                   </label>
                 );
               })}
-              {/* 갈렸을 때는 무엇과 견줘야 하는지 알려준다. 열여섯 자리 숫자 두 줄을
-                  놓고 다른 자리를 찾으라고 하지는 않는다 — 실제로는 고르지 못하라는 말이다.
-                  사진에 인쇄된 숫자를 한쪽에 적어주고, 위 그림과 견주게만 한다. */}
-              {conflict && (
-                <p className="m-0 text-xs break-keep text-muted-foreground">
-                  사진에 인쇄된 숫자는{' '}
-                  <b className="font-semibold tabular-nums text-foreground">{info.codeConflict.printed}</b>
-                  로 읽혔어요.
-                </p>
-              )}
               <p className="m-0 text-xs break-keep text-muted-foreground">
                 채우면 아래 등록에 함께 들어가요. 나머지는 등록한 뒤에 카드에서 고칠 수 있어요.
               </p>

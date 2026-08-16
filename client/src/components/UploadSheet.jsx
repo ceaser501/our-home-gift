@@ -129,8 +129,6 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
   const [autoFilled, setAutoFilled] = useState(false);
   // 모델이 금액권으로 봤는지. 켜주지는 않고 귀띔만 한다.
   const [voucherHint, setVoucherHint] = useState(false);
-  // 막대에서 읽은 번호와 사진에 인쇄된 번호가 다를 때, 그 둘.
-  const [codeConflict, setCodeConflict] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [searchingPrice, setSearchingPrice] = useState(false);
@@ -198,7 +196,6 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
     setAnalyzing(true);
     setProgress({ step: 'barcode', current: 1, total: selected.length });
     setAutoFilled(false);
-    setCodeConflict(null);
 
     // 여러 장을 골랐는데 서로 다른 기프티콘이면, 한 건짜리인 이 화면으로는 담을 수 없다.
     //
@@ -325,7 +322,6 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
         result.thumbCropBlob ? new File([result.thumbCropBlob], 'thumb.jpg', { type: 'image/jpeg' }) : null
       );
       setVoucherHint(Boolean(result.isVoucher));
-      setCodeConflict(result.codeConflict || null);
       setAutoFilled(true);
     } catch (err) {
       // 서버가 왜 거절했는지 그대로 보여준다. 예전에는 무슨 일이 있었든 "실패했어요"만
@@ -394,7 +390,6 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
     setError('');
     setAutoFilled(false);
     setVoucherHint(false);
-    setCodeConflict(null);
     setPriceSearchNote('');
     setProgress(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
@@ -623,19 +618,6 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
           {/* 못 읽은 항목은 여기서 짚어준다. 목록에 나간 뒤에 알려주면 다시 찾아 들어와야
               하지만, 지금은 사용자가 이 화면에서 입력 중이라 그 자리에서 채울 수 있다.
               값을 채우면 그 줄만 사라지고, 둘 다 채워지면 평소의 "다 채웠어요"로 돌아간다. */}
-          {/* 막대에서 읽은 번호와 사진에 인쇄된 번호가 갈렸다. 막대 쪽을 넣어뒀다 —
-              그쪽은 검산 자리가 있어 틀린 값이 그냥 통과하기 어렵고, 인쇄된 숫자를 읽는
-              눈에는 그런 장치가 없다.
-              그래도 한 번 짚는다. 한 자리가 틀린 채로 저장되면 계산대에서 못 쓴다.
-              고르라고 하지는 않는다. 열여섯 자리 숫자 두 줄을 놓고 다른 자리를 찾아
-              고르라는 건, 실제로는 고르지 못하라는 말이다. 사진은 바로 위에 붙어 있고
-              번호 칸도 아래에 있으니, 볼 곳만 알려주면 된다. */}
-          {codeConflict && (
-            <p className="m-0 rounded-xl border border-warning/40 bg-warning/10 px-3.5 py-3 text-sm break-keep text-foreground">
-              <b className="font-semibold">바코드 번호</b>가 사진에 인쇄된 숫자와 달라요. 사진과 맞는지 확인해주세요.
-            </p>
-          )}
-
           {autoFilled && (missingCode || missingExpiry) ? (
             <div className="flex flex-col gap-1.5 rounded-xl border border-warning/40 bg-warning/10 px-3.5 py-3">
               <p className="m-0 text-sm font-semibold text-foreground">못 읽은 게 있어요</p>

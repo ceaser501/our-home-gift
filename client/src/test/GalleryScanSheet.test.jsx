@@ -245,29 +245,21 @@ describe('GalleryScanSheet', () => {
   });
 });
 
-// 번호는 두 군데서 읽힌다 — zxing이 막대를 읽은 값과, 모델이 사진에 인쇄된 숫자를 눈으로
-// 읽은 값. 막대 쪽을 쓰지만 검산 자리가 없는 규격이면 그쪽도 틀릴 수 있고, 한 자리가
-// 틀린 채로 등록되면 계산대에서 못 쓴다. 직접 올리는 화면은 이걸 짚어주는데 훑기 화면은
-// 그 자리가 없어서, 카드가 그대로 등록까지 갔다.
+// 막대에서 읽은 번호와 사진에 인쇄된 숫자가 갈려도 아무 말도 하지 않는다.
+//
+// 훑기에서는 그 경고가 구조적으로 헛경보다. 후보 자체가 막대에서 읽은 번호로 묶여서
+// 만들어지므로(client/src/utils/gallery.js의 seenCodes) 인쇄된 숫자는 어디에도 쓰이지
+// 않는다. 안 쓰는 값이 틀렸다고 알리는 셈이고, 헛경보가 반복되면 진짜 경고도 안 읽힌다.
 describe('번호가 갈렸을 때', () => {
-  it('카드에 짚어주고 그 자리에서 번호를 볼 수 있다', async () => {
+  it('아무 말도 하지 않는다', async () => {
     readGifticonInfo.mockImplementation(async (_prepared, opts) => ({
       ...info(opts?.knownCode || '111', '상품'),
-      codeConflict: { scanned: '111', printed: '119' },
+      code: '119',
     }));
 
     render(<GalleryScanSheet onRegistered={() => {}} onClose={() => {}} />);
-    await screen.findAllByText(/사진과 맞는지 확인해주세요/, {}, { timeout: 3000 });
+    await screen.findAllByText('상품', {}, { timeout: 3000 });
 
-    fireEvent.click((await screen.findAllByText('번호 고치기'))[0]);
-    // 지금 등록될 번호를 고칠 수 있는 칸과, 견줄 상대(사진에 인쇄된 숫자)가 함께 있어야 한다.
-    expect(await screen.findByDisplayValue('111')).toBeTruthy();
-    expect(screen.getByText(/119/)).toBeTruthy();
-  });
-
-  it('안 갈렸으면 아무 말도 안 한다', async () => {
-    render(<GalleryScanSheet onRegistered={() => {}} onClose={() => {}} />);
-    await screen.findAllByText(/상품 /, {}, { timeout: 3000 });
     expect(screen.queryByText(/사진과 맞는지 확인해주세요/)).toBeNull();
     expect(screen.queryByText('번호 고치기')).toBeNull();
   });

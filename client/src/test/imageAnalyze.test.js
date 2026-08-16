@@ -47,14 +47,16 @@ function prepared(scannedCode) {
 beforeEach(() => vi.clearAllMocks());
 
 describe('readGifticonInfo — 어느 번호를 쓰나', () => {
-  it('막대와 인쇄된 숫자가 갈리면 막대 쪽을 쓴다', async () => {
+  it('막대와 인쇄된 숫자가 갈리면 막대 쪽을 쓰고, 갈렸다는 말은 하지 않는다', async () => {
     analyzeGifticonImages.mockResolvedValue(modelSays('9999999999'));
 
     const info = await readGifticonInfo(prepared('1111111111'));
 
     expect(info.code).toBe('1111111111');
-    // 갈렸다는 사실은 잃어버리지 않는다. 화면이 짚어줘야 하기 때문이다.
-    expect(info.codeConflict).toEqual({ scanned: '1111111111', printed: '9999999999' });
+    // 갈렸다는 건 둘 중 하나가 틀렸다는 뜻인데, 틀린 쪽은 거의 항상 인쇄된 숫자다.
+    // 막대에는 검산 자리가 있어 안 맞으면 값을 아예 안 내놓고, 눈으로 읽는 쪽에는
+    // 그런 장치가 없다. 그걸 알리면 맞는 값을 놓고 사람을 세워두는 일이 대부분이 된다.
+    expect(info).not.toHaveProperty('codeConflict');
   });
 
   it('여기서 막대를 못 읽어도, 부르는 쪽이 아는 번호가 있으면 그것을 쓴다', async () => {
@@ -73,16 +75,13 @@ describe('readGifticonInfo — 어느 번호를 쓰나', () => {
     const info = await readGifticonInfo(prepared(null));
 
     expect(info.code).toBe('9999999999');
-    // 갈릴 대상이 없으니 갈린 것도 아니다.
-    expect(info.codeConflict).toBeNull();
   });
 
-  it('둘이 같으면 갈렸다고 하지 않는다', async () => {
+  it('둘이 같으면 그대로 쓴다', async () => {
     analyzeGifticonImages.mockResolvedValue(modelSays('1111111111'));
 
     const info = await readGifticonInfo(prepared('1111111111'));
 
     expect(info.code).toBe('1111111111');
-    expect(info.codeConflict).toBeNull();
   });
 });

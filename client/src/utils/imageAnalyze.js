@@ -340,8 +340,8 @@ export async function readGifticonInfo(prepared, { onProgress, knownCode } = {})
   //   숫자 읽기에는 그런 것이 없다. 6을 5로 읽으면 그냥 5가 된다. 조용히 실패한다.
   //   게다가 그 눈은 같은 사진의 상품명을 "떠먹는"에서 "더먹는"으로 읽는 눈이다.
   //
-  // 그래서 막대 쪽이 기본이다. 인쇄된 숫자의 몫은 "대신 쓰는 값"이 아니라 두 가지다 —
-  // 막대를 아예 못 읽었을 때 채워주는 것, 그리고 갈렸을 때 알려주는 것.
+  // 그래서 막대 쪽이 기본이다. 인쇄된 숫자의 몫은 하나뿐이다 — 막대를 아예 못 읽었을 때
+  // 채워주는 것.
   //
   // ── 한때 반대로 돼 있었다 ──────────────────────────────────────────────
   // 갤러리에서 찾아 등록한 스타벅스 교환권이 한 자리 틀린 번호로 저장된 일이 있었고
@@ -354,12 +354,23 @@ export async function readGifticonInfo(prepared, { onProgress, knownCode } = {})
   // 번호로 들어갔고, 그래서 이미 등록한 기프티콘이 다시 잡혀 또 등록됐다.
   //
   // 이제 "등록되는 번호 = 후보를 묶은 번호"가 늘 성립한다.
+  //
+  // ── 갈렸다고 알리지도 않는다 ─────────────────────────────────────────────
+  // 한때 둘이 다르면 "사진과 맞는지 확인해주세요"를 띄웠다. 걷어냈다.
+  //
+  // 갈렸다는 건 둘 중 하나가 틀렸다는 뜻인데, 위에 적은 비대칭 때문에 틀린 쪽은 거의
+  // 항상 인쇄된 숫자다. 즉 그 경고는 맞는 값을 놓고 사람을 세워두는 일이 대부분이다.
+  // 헛경보가 반복되면 정작 진짜 경고도 안 읽힌다.
+  //
+  // 갤러리 훑기에서는 아예 구조적으로 헛경보다. 후보 자체가 막대에서 읽은 번호로
+  // 묶여서 만들어지므로(client/src/utils/gallery.js의 seenCodes) scanned가 늘 있고,
+  // 인쇄된 숫자는 어디에도 쓰이지 않는다. 거기서 갈림을 알리는 것은 "안 쓰는 값이
+  // 틀렸다"고 알리는 셈이다.
   const printed = info.code || null;
   // 부르는 쪽이 이미 읽어둔 막대 값이 있으면 그것도 막대에서 읽은 값이다. 여기
   // decodeBarcode는 tryHarder 없이 읽고 갤러리 훑기는 켜고 읽어서, 훑기만 성공하는
   // 사진이 있다. 그 경우까지 인쇄된 숫자로 흘러가면 안 된다.
   const scanned = prepared.code || knownCode || null;
-  const conflict = Boolean(scanned && printed && scanned !== printed);
   const code = scanned || printed;
   // 형식은 막대에서 읽은 것이 맞다. 숫자 한 자리가 갈렸어도 어떤 규격의 바코드인지는
   // 막대 모양이 말해준다.
@@ -368,8 +379,6 @@ export async function readGifticonInfo(prepared, { onProgress, knownCode } = {})
   return {
     code,
     codeType,
-    // 두 값이 갈렸다. 화면에서 사람에게 확인받는다.
-    codeConflict: conflict ? { scanned, printed } : null,
     thumbCropBlob,
     category: info.category || '기타',
     brand: info.brand || null,
