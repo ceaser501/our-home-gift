@@ -11,6 +11,7 @@ import {
 } from '../api';
 import { subscribeToActivities } from '../realtime';
 import { useFamily } from '../FamilyContext';
+import { cn } from '@/lib/utils';
 import { importantNotices, splitPinned, unreadNotices } from '../utils/notices';
 
 // 헤더의 종. 가족이 기프티콘을 올리거나 쓰면 숫자가 붙고, 누르면 목록이 열린다.
@@ -191,7 +192,9 @@ export default function NotificationBell() {
           aria-label={unread > 0 ? `알림 ${unread}개` : '알림'}
           className="relative flex size-7 shrink-0 items-center justify-center rounded-full text-muted-foreground"
         >
-          <Bell className="size-5" />
+          {/* 말풍선이 뜰 때 한 번 까딱한다. 움직이는 것이 말하는 것이라, 종이 먼저
+              움직이면 눈이 그리로 가고 말풍선은 그 뒤를 따른다. */}
+          <Bell className={cn('size-5', hint && 'moacon-bell-shake')} />
           {/* 숫자가 두 자리를 넘으면 종보다 커진다. 그 이상은 "많다"만 알면 충분하다. */}
           {unread > 0 && (
             <span className="absolute -top-0.5 -right-0.5 flex min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] leading-4 font-bold text-destructive-foreground">
@@ -202,14 +205,24 @@ export default function NotificationBell() {
 
         {/* 무슨 공지인지는 적지 않는다. 점검이든 유료화든 같은 말로 덮는다 — 제목을
             띄우면 그것대로 놀라게 하는 데다, 세 줄짜리 제목이면 화면을 가린다.
-            누를 것도 없다. 종을 가리키고 있으니 궁금하면 종을 누르면 된다. */}
+
+            눌러도 아무 일이 없게 뒀다가 고쳤다. 말을 걸어놓고 갈 데가 없으면 고장으로
+            보인다. 다만 "보기" 같은 안내는 붙이지 않는다 — 이걸 본 사람은 어차피 종을
+            누른다. 말풍선을 눌러도 같은 곳으로 가는 것은 덤이지 약속이 아니다.
+
+            색은 검정에서 앱의 보라로 낮췄다. 검정은 이 앱에서 제일 센 색인데 이건
+            알림이 아니라 귀띔이고, 정작 급한 것(빨간 배지)과도 안 겹쳐야 한다. */}
         {hint && (
-          <span
-            role="status"
-            className="animate-in fade-in slide-in-from-top-1 pointer-events-none absolute top-full right-0 z-30 mt-1.5 rounded-lg bg-foreground px-2.5 py-1.5 text-[11px] font-semibold whitespace-nowrap text-background shadow-md"
+          <button
+            type="button"
+            onClick={handleOpen}
+            aria-live="polite"
+            className="animate-in fade-in slide-in-from-top-1 absolute top-full right-0 z-30 mt-2 rounded-lg bg-primary px-2.5 py-1.5 text-[11px] font-semibold whitespace-nowrap text-primary-foreground shadow-md"
           >
+            {/* 꼬리. 이것 하나로 "허공에 뜬 상자"가 "종에 대한 말"이 된다. */}
+            <span aria-hidden="true" className="absolute -top-1 right-3 size-2 rotate-45 rounded-[1px] bg-primary" />
             중요 안내가 있어요
-          </span>
+          </button>
         )}
       </div>
 

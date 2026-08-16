@@ -108,6 +108,29 @@ describe('NotificationBell', () => {
     expect(await screen.findByText(HINT)).toBeTruthy();
   });
 
+  // 눌러도 아무 일이 없게 뒀다가 고쳤다. 말을 걸어놓고 갈 데가 없으면 고장으로 보인다.
+  it('말풍선을 누르면 알림이 열린다', async () => {
+    listNotices.mockResolvedValue([notice(1)]);
+
+    render(<NotificationBell />);
+    const tip = await screen.findByText(HINT);
+
+    await act(async () => tip.click());
+
+    expect(document.querySelector('[role="dialog"]')).toBeTruthy();
+  });
+
+  // 종이 먼저 움직여야 눈이 그리로 간다. 말풍선만 소리 없이 나타나면 "왜 여기 이게
+  // 떠 있지"가 남는다.
+  it('말풍선이 뜰 때 종이 한 번 까딱한다', async () => {
+    listNotices.mockResolvedValue([notice(1)]);
+
+    render(<NotificationBell />);
+    await screen.findByText(HINT);
+
+    expect(bellLabel().querySelector('.moacon-bell-shake')).toBeTruthy();
+  });
+
   // 뜨는 것만 보고 사라지는 것을 안 봤다가 놓쳤다. 말풍선이 안 사라지면 종 옆에 계속
   // 붙어 있어서, 알림이 아니라 화면의 일부가 된다.
   it('잠시 뒤 저절로 사라진다', async () => {
