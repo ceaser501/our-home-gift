@@ -670,7 +670,13 @@ export async function groupImages(files, { isRegistered, onProgress, onCandidate
     // 바코드를 못 찾은 사진. 화면이 "이건 직접 올려주세요"로 안내한다.
     missed,
     scanned: images.length,
-    tally: { readFailed, found: candidates.length + knownCodes.size, alreadyHave: knownCodes.size },
+    tally: {
+      readFailed,
+      found: candidates.length + knownCodes.size,
+      alreadyHave: knownCodes.size,
+      // 바코드가 없어서 어느 기프티콘 것인지 모르는 사진. 화면이 뺐다고 말해줘야 한다.
+      noCode: missed.length,
+    },
   };
 }
 

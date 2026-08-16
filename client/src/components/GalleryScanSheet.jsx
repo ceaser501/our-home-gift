@@ -1619,6 +1619,26 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
 
               {error && <p className="m-0 text-sm text-destructive">{error}</p>}
 
+              {/* 바코드 없이 정보만 있는 사진(금액·기한이 적힌 캡처)을 뺐다고 알린다.
+                  아무 말 없이 빼면 사용자는 금액이 빈칸인 걸 보고 "왜 안 읽혔지" 하는데,
+                  사실은 읽을 사진을 우리가 뺀 것이다.
+
+                  왜 빼는가 — 여기 온 사진들은 여러 기프티콘이 섞여 있고, 바코드가 없는
+                  사진은 그중 어느 것 옆에 붙는지 알 방법이 없다. 짐작해서 붙이면 맞을
+                  때는 아무도 모르고 틀릴 때는 엉뚱한 기프티콘에 남의 금액과 기한이
+                  박힌다. 조용히 틀리는 쪽이 훨씬 나쁘다.
+
+                  되살릴 길은 같이 적는다. 이 앱은 기프티콘을 놓치지 않겠다는 약속으로
+                  서 있고, "뺐어요"만 적으면 그 사진은 거기서 끝난다. */}
+              {picked && tally?.noCode > 0 && !isWorking && (
+                <p className="m-0 rounded-xl bg-muted px-3.5 py-3 text-sm leading-relaxed break-keep text-muted-foreground">
+                  바코드가 없는 사진 <b className="font-semibold text-foreground">{tally.noCode}장</b>은 어느
+                  기프티콘 것인지 몰라서 뺐어요.
+                  <br />
+                  등록한 뒤 그 기프티콘을 수정에서 열고 사진을 더하면 같이 읽어요.
+                </p>
+              )}
+
               {alive.length === 0 && !isWorking ? (
                 <div className="flex flex-col items-center gap-2 py-8 text-center">
                   <ImageOff className="size-8 text-muted-foreground" />

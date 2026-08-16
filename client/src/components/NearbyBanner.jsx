@@ -40,6 +40,13 @@ const DISMISS_KEY = "nearby-banner-dismissed-on";
 // 위치 권한을 새로 묻지 않는다. 앱을 열자마자 권한 창부터 들이밀면 거절당하기 딱 좋고,
 // 한 번 거절되면 매장 찾기까지 같이 막힌다. 이미 허용된 경우에만 현재 위치를 잡고,
 // 권한 상태를 알 수 없는 브라우저에서는 지난번 위치(매장 찾기를 써봤다면 남아 있다)로만 맞춰본다.
+// 띠가 받아들이는 지난 위치의 나이. 30분이면 걸어서 갈 만한 거리 안에 있다.
+//
+// 매장 찾기(하루)보다 훨씬 짧게 둔다. 그쪽은 사용자가 직접 눌러 지도를 보는 자리라
+// 옛 위치로 먼저 보여주고 곧 새 위치로 고쳐도 되지만, 이 띠는 묻지도 않았는데 "이 근처에
+// 쓸 게 있어요"라고 먼저 말을 거는 자리다. 틀린 채로 말을 걸면 안 하느니만 못하다.
+const CACHE_MAX_AGE_MS = 30 * 60 * 1000;
+
 async function getPositionSilently() {
   try {
     if (navigator.permissions?.query) {
@@ -50,7 +57,7 @@ async function getPositionSilently() {
           saveCachedPosition(fresh);
           return fresh;
         } catch {
-          return readCachedPosition();
+          return readCachedPosition(CACHE_MAX_AGE_MS);
         }
       }
       if (status.state === "denied") return null;
@@ -58,7 +65,7 @@ async function getPositionSilently() {
   } catch {
     // permissions API가 없는 브라우저는 아래 지난번 위치로 이어간다.
   }
-  return readCachedPosition();
+  return readCachedPosition(CACHE_MAX_AGE_MS);
 }
 
 function readDismissedToday() {

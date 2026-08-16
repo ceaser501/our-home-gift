@@ -129,10 +129,13 @@ describe('groupImages — 고른 사진을 묶는다', () => {
     barcodes.set('a.jpg', { code: '111', coverage: 0.6 });
     // b.jpg는 등록하지 않는다 — 판독기가 못 찾는다.
 
-    const { candidates, missed } = await groupImages([pick('a.jpg'), pick('b.jpg')]);
+    const { candidates, missed, tally } = await groupImages([pick('a.jpg'), pick('b.jpg')]);
 
     expect(candidates).toHaveLength(1);
     expect(missed).toHaveLength(1);
+    // 화면이 "몇 장을 뺐다"고 말해줘야 해서 개수도 같이 돌려준다. 아무 말 없이 빼면
+    // 사용자는 금액이 빈칸인 걸 보고 왜 안 읽혔는지 모른다.
+    expect(tally.noCode).toBe(1);
   });
 
   it('한 건뿐이면 후보도 하나다 — 등록 창이 이걸 보고 넘길지 정한다', async () => {

@@ -7,6 +7,17 @@
 const STORE_KEY = 'moacon:last-position';
 // 이보다 오래된 위치는 쓰지 않는다. 하루가 지나면 다른 도시에 있을 수도 있다.
 const MAX_CACHE_AGE_MS = 24 * 60 * 60 * 1000;
+// 기기가 들고 있는 좌표를 얼마나 오래된 것까지 그대로 받을지.
+//
+// 한때 Infinity였다. "나이 상관없이 마지막으로 잡아둔 것을 바로 달라"는 뜻이라 기다릴
+// 일이 없었는데, 대가가 컸다 — 여의도에서 앱을 켰는데 몇 시간 전 서울숲에서 잡아둔
+// 좌표가 그대로 나왔다. 이동하는 내내 화면을 꺼두면 기기가 새로 잡을 일이 없어서, 그
+// 옛 기억이 계속 이긴다. 앱을 껐다 켜도 마찬가지였다.
+//
+// 1분으로 둔다. 한 번 열었을 때 배너와 매장 찾기가 각각 물어도 같은 좌표를 나눠 쓰는
+// 정도이고, 그보다 오래된 것은 새로 잡는다. enableHighAccuracy를 끄고 있어 도심에서는
+// 와이파이·기지국으로 1~2초면 잡힌다 — 500m 판단에는 넘친다.
+const RECENT_FIX_MS = 60 * 1000;
 // 저장해둔 위치와 이만큼 넘게 떨어져 있으면 매장 목록을 다시 불러온다.
 export const SIGNIFICANT_MOVE_M = 300;
 
@@ -24,21 +35,25 @@ export function locate(options) {
   });
 }
 
-// 기기가 이미 알고 있는 위치가 있으면 그걸 그대로 받고(즉시), 없으면 시간을 넉넉히 주고
-// 새로 잡는다. maximumAge를 무한으로 두면 나이와 상관없이 기기의 마지막 위치를 바로 준다.
+// 최근에 잡아둔 위치가 있으면 그걸 그대로 받고(즉시), 없으면 시간을 넉넉히 주고 새로 잡는다.
 export function getFreshPosition() {
-  return locate({ enableHighAccuracy: false, timeout: 8000, maximumAge: Infinity }).catch((err) => {
+  return locate({ enableHighAccuracy: false, timeout: 8000, maximumAge: RECENT_FIX_MS }).catch((err) => {
     // 권한을 거부했으면 다시 물어봐야 소용이 없다.
     if (err?.code === 1 || err?.code === 'unsupported') throw err;
     return locate({ enableHighAccuracy: false, timeout: 20000, maximumAge: 0 });
   });
 }
 
-export function readCachedPosition() {
+// maxAgeMs: 부르는 쪽이 얼마나 오래된 것까지 받아들일지 정한다.
+//
+// 자리마다 견딜 수 있는 나이가 다르다. 매장 찾기는 사용자가 직접 눌러 지도까지 보는
+// 자리라 옛 위치로 먼저 보여줘도 되지만(곧 새 위치로 다시 찾는다), "지금 이 근처예요"라고
+// 말하는 띠에게 하루 전 좌표는 다른 동네다.
+export function readCachedPosition(maxAgeMs = MAX_CACHE_AGE_MS) {
   try {
     const saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
     if (!saved || typeof saved.lat !== 'number' || typeof saved.lng !== 'number') return null;
-    if (Date.now() - saved.at > MAX_CACHE_AGE_MS) return null;
+    if (Date.now() - saved.at > maxAgeMs) return null;
     return { lat: saved.lat, lng: saved.lng };
   } catch {
     // 사파리 프라이빗 모드 등에서 접근이 막히면 그냥 없는 것으로 본다.

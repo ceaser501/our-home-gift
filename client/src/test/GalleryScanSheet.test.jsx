@@ -264,3 +264,38 @@ describe('번호가 갈렸을 때', () => {
     expect(screen.queryByText('번호 고치기')).toBeNull();
   });
 });
+
+// 바코드 없이 정보만 있는 사진은 어느 기프티콘 것인지 알 수 없어서 뺀다. 짐작해서 붙이면
+// 틀릴 때 엉뚱한 기프티콘에 남의 금액과 기한이 박힌다 — 조용히 틀리는 쪽이 훨씬 나쁘다.
+// 다만 뺐다는 말은 해야 한다. 안 하면 사용자는 금액이 빈칸인 걸 보고 "왜 안 읽혔지" 한다.
+describe('바코드 없는 사진을 뺐을 때', () => {
+  const FILES = [new File(['x'], 'a.jpg', { type: 'image/jpeg' })];
+
+  function grouped(noCode) {
+    return {
+      candidates: [candidate('a', '111'), candidate('b', '222')],
+      missed: [],
+      scanned: 3,
+      tally: { readFailed: 0, found: 2, alreadyHave: 0, noCode },
+    };
+  }
+
+  it('몇 장을 왜 뺐는지 말해준다', async () => {
+    groupImages.mockResolvedValue(grouped(1));
+
+    render(<GalleryScanSheet files={FILES} onRegistered={() => {}} onClose={() => {}} />);
+
+    expect(
+      await screen.findByText(/어느[\s\S]*기프티콘 것인지 몰라서 뺐어요/, {}, { timeout: 3000 })
+    ).toBeTruthy();
+  });
+
+  it('뺀 게 없으면 아무 말도 안 한다', async () => {
+    groupImages.mockResolvedValue(grouped(0));
+
+    render(<GalleryScanSheet files={FILES} onRegistered={() => {}} onClose={() => {}} />);
+    await screen.findAllByText(/상품 /, {}, { timeout: 3000 });
+
+    expect(screen.queryByText(/몰라서 뺐어요/)).toBeNull();
+  });
+});
