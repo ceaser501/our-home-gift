@@ -26,7 +26,13 @@ import { importantNotices, splitPinned, unreadNotices } from '../utils/notices';
 
 // 말풍선을 오늘 이미 띄웠는지. 하루에 한 번만 띄운다.
 const HINT_KEY = 'important-notice-hinted-on';
-const HINT_MS = 3000;
+
+// 말풍선이 떠 있는 시간.
+//
+// 3초로 뒀다가 늘렸다. 앱을 켜면 목록을 먼저 읽느라 눈이 아래에 가 있는데, 말풍선은
+// 위쪽 종 옆에서 1~2초 뒤에 떴다가 3초 만에 사라진다. 실제로 있는 줄도 모르고 지나갔다.
+// 하루에 한 번뿐이라 놓치면 그날은 끝이라, 짧게 두는 쪽이 손해가 크다.
+const HINT_MS = 6000;
 
 function todayStr() {
   const d = new Date();
