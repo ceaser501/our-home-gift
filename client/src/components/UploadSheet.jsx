@@ -515,6 +515,11 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
     ...newPreviews.map((url, i) => ({ kind: 'new', index: i, url })),
   ];
 
+  // 여러 장을 나눠 담는 안내는 새로 등록할 때만 뜬다. 수정 화면에서 "기프티콘별로
+  // 나눠 담아요"는 거짓말이다 — 거기서 고른 사진은 지금 보고 있는 이 한 건에 붙는다.
+  // 넘겨줄 곳(onBulk)이 없을 때도 마찬가지다.
+  const showBulkHint = mode === 'create' && Boolean(onBulk) && thumbs.length === 0;
+
   return (
     <Sheet open onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="max-h-[92dvh] gap-0 overflow-y-auto pb-[var(--safe-bottom)]">
@@ -535,6 +540,42 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
             사진 없이 직접 적어도 돼요.
           </p>
 
+          {/* 아직 아무 사진도 없는 등록 화면에서는 사진 자리를 세 칸으로 벌려 둔다.
+              여러 장을 골라도 알아서 나눠 담는 기능이 이미 있는데, 그 사실이 화면
+              어디에도 없어서 해보기 전에는 알 수가 없었다. 그리고 대부분은 안 해본다.
+              (+ 를 누르면 한 건짜리 폼이 뜨니, 한 장 넣는 자리로 읽히는 게 당연하다.)
+              칸이 여럿인 것은 글을 안 읽어도 눈에 들어오고, 아래 한 줄이 그게 무슨
+              뜻인지 마무리한다. 셋은 "여기까지"라는 뜻이 아니라 모양일 뿐이다.
+              사진이 한 장이라도 붙으면 평소의 격자로 돌아간다. 그때는 이미 알고
+              있는 사람이고, 빈 칸 둘은 자리만 차지한다. */}
+          {showBulkHint ? (
+            <div className="flex flex-col gap-2.5 rounded-xl border border-dashed border-primary/40 bg-primary/5 px-3 py-3">
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex aspect-square flex-col items-center justify-center gap-0.5 rounded-xl border border-dashed border-primary/50 bg-primary/10 text-xs font-semibold text-primary"
+                >
+                  <Plus className="size-5" />
+                  <span>사진 고르기</span>
+                </button>
+                {/* 눌리지 않는 모양뿐인 칸. 화면을 읽어주는 기기에는 "2", "3"이 아무
+                    뜻도 없어서 빼둔다 — 아래 한 줄이 같은 말을 하고 있다. */}
+                {[2, 3].map((n) => (
+                  <div
+                    key={n}
+                    aria-hidden="true"
+                    className="grid aspect-square place-items-center rounded-xl border border-dashed border-border bg-muted/40 text-sm font-semibold text-muted-foreground"
+                  >
+                    {n}
+                  </div>
+                ))}
+              </div>
+              <p className="m-0 text-center text-xs leading-relaxed break-keep text-muted-foreground">
+                여러 장을 고르면 <b className="font-semibold text-foreground">기프티콘별로 나눠 담아요</b>
+              </p>
+            </div>
+          ) : (
           <div className="grid grid-cols-3 gap-2">
             {thumbs.map((thumb) => (
               <div
@@ -561,6 +602,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
               <span>이미지 추가</span>
             </button>
           </div>
+          )}
           {/* 분석은 몇 초 걸린다. 작은 글씨 한 줄만 있으면 멈춘 것처럼 보여서,
               지금 무슨 단계인지와 진행 중이라는 걸 눈에 띄게 보여준다. */}
           {analyzing && (

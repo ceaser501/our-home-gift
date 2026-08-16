@@ -34,6 +34,12 @@ if (!Element.prototype.hasPointerCapture) {
   Element.prototype.releasePointerCapture = () => {};
 }
 
+// 고른 사진을 그 자리에서 보여주려고 미리보기 주소를 만든다.
+if (!URL.createObjectURL) {
+  URL.createObjectURL = () => 'blob:preview';
+  URL.revokeObjectURL = () => {};
+}
+
 // 스크롤을 흘려 내리는 쪽이 시각을 잰다.
 if (!globalThis.performance?.now) {
   globalThis.performance = { now: () => 0 };
