@@ -935,6 +935,18 @@ create trigger notices_touch_updated_at
   before update on public.notices
   for each row execute function public.touch_notice_updated_at();
 
+-- 이 공지가 뜬 동안에는 등록을 막을지.
+--
+-- is_important와 나눠 둔 이유가 있다. 유료화 안내도 중요 공지인데, 그게 등록을 막으면
+-- 안 된다. "꼭 봐야 하는가"와 "지금 그 기능이 되는가"는 다른 이야기다.
+--
+-- 막는 것은 등록 하나다. 모델을 부르는 자리가 거기뿐이고, 바코드·목록·매장은 점검과
+-- 무관하게 돌아간다. 계산대에서 바코드를 띄우는 사람은 점검 중인 줄도 모르고 잘 쓰고
+-- 나가는데, 그게 맞는 결과다.
+--
+-- 무엇이 왜 막히는지는 공지 본문에 적는다. 여기서 종류를 나누지 않는다.
+alter table public.notices add column if not exists blocks_upload boolean not null default false;
+
 create index if not exists notices_starts_at_idx on public.notices (starts_at desc);
 
 alter table public.notices enable row level security;
@@ -945,6 +957,33 @@ drop policy if exists "notices select all" on public.notices;
 create policy "notices select all" on public.notices
   for select to authenticated
   using (starts_at <= now());
+
+-- ===================== 공지 읽음 =====================
+
+-- 어느 공지를 읽었는지. 기기가 아니라 계정에 적는다.
+--
+-- 종 배지가 안 읽은 활동과 안 읽은 공지를 함께 세기 때문이다. 활동 읽음은 서버에
+-- 있는데(activity_reads) 공지 읽음만 기기에 있으면, 한 폰에서 읽고 다른 폰에서 보면
+-- 숫자가 달라진다. 한 배지가 두 기준으로 세는 셈이다.
+--
+-- 폰을 바꿔도 유지된다는 것도 덤이다.
+--
+-- '읽었다'는 종을 연 것으로 친다. 공지가 목록 맨 위에 고정돼 있어 열면 무조건 보이고,
+-- 한 번 더 누르게 하면 일만 는다.
+create table if not exists public.notice_reads (
+  user_id uuid not null references auth.users (id) on delete cascade,
+  notice_id bigint not null references public.notices (id) on delete cascade,
+  read_at timestamptz not null default now(),
+  primary key (user_id, notice_id)
+);
+
+alter table public.notice_reads enable row level security;
+
+drop policy if exists "notice_reads own" on public.notice_reads;
+create policy "notice_reads own" on public.notice_reads
+  for all to authenticated
+  using (user_id = auth.uid())
+  with check (user_id = auth.uid());
 
 -- ===================== 앱 안 알림 (가족 활동) =====================
 
