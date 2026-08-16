@@ -108,6 +108,21 @@ describe('NotificationBell', () => {
     expect(await screen.findByText(HINT)).toBeTruthy();
   });
 
+  // 뜨는 것만 보고 사라지는 것을 안 봤다가 놓쳤다. 말풍선이 안 사라지면 종 옆에 계속
+  // 붙어 있어서, 알림이 아니라 화면의 일부가 된다.
+  it('잠시 뒤 저절로 사라진다', async () => {
+    listNotices.mockResolvedValue([notice(1)]);
+
+    render(<NotificationBell />);
+    await screen.findByText(HINT);
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 6100));
+    });
+
+    expect(screen.queryByText(HINT)).toBeNull();
+  }, 10000);
+
   // 앱을 하루에 네다섯 번 열 일이 없다. 열 때마다 뜨면 그건 안내가 아니라 방해다.
   it('같은 날 다시 열면 말풍선은 안 뜬다', async () => {
     listNotices.mockResolvedValue([notice(1)]);

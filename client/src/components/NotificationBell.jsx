@@ -102,23 +102,31 @@ export default function NotificationBell() {
   // 하루에 한 번만 띄운다. 읽으면 그 뒤로 안 뜨고, 안 읽으면 다음 날 다시 한 번.
   // 앱을 하루에 네다섯 번 열 일이 없고, 유료화 같은 것은 한 달 전부터 알리므로 하루
   // 놓쳐도 된다. 급한 점검은 등록을 누르는 자리가 이미 잡아준다.
-  // 오늘 아직 안 알린 공지가 있는지. 있으면 그 목록이, 없으면 빈 배열이 온다.
-  const toHint = unreadNotice.filter((n) => !readHinted().includes(n.id)).map((n) => n.id);
-  const hintKey = toHint.join(',');
+  // 이 효과가 무엇을 보고 다시 도는지가 중요하다.
+  //
+  // 한때 "오늘 아직 안 알린 공지"를 밖에서 셈해 그걸 열쇠로 삼았다. 그런데 효과 안에서
+  // 곧바로 "알렸다"고 적으므로, 다음 렌더에 그 셈이 빈 값이 되면서 열쇠가 바뀐다. 열쇠가
+  // 바뀌면 React가 먼저 뒷정리(clearTimeout)를 부르고 새로 도는데, 새로 돈 쪽은 알릴 것이
+  // 없어 곧장 돌아간다. 결과는 6초 뒤 끄는 시계만 사라진 채 말풍선이 영영 남는 것이었다.
+  //
+  // 그래서 열쇠는 우리가 적는 값에 흔들리지 않는 것으로 둔다 — 안 읽은 공지가 무엇인가.
+  // 오늘 알렸는지는 효과 안에서 본다.
+  const unreadKey = unreadNotice.map((n) => n.id).join(',');
 
   useEffect(() => {
-    if (!hintKey) return undefined;
+    const fresh = unreadNotice.filter((n) => !readHinted().includes(n.id)).map((n) => n.id);
+    if (fresh.length === 0) return undefined;
     try {
-      localStorage.setItem(HINT_KEY, JSON.stringify({ on: todayStr(), ids: [...readHinted(), ...toHint] }));
+      localStorage.setItem(HINT_KEY, JSON.stringify({ on: todayStr(), ids: [...readHinted(), ...fresh] }));
     } catch {
       // 못 적으면 다음에 열 때 한 번 더 뜬다. 그뿐이다.
     }
     setHint(true);
     const timer = setTimeout(() => setHint(false), HINT_MS);
     return () => clearTimeout(timer);
-    // 알릴 공지가 무엇인지만 본다. 목록이 바뀔 때마다 다시 재면 말풍선이 계속 살아난다.
+    // 안 읽은 공지가 무엇인지만 본다. 목록이 바뀔 때마다 다시 재면 말풍선이 계속 살아난다.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hintKey]);
+  }, [unreadKey]);
 
   // 어디부터 셀지. 마지막으로 종을 연 때가 있으면 그때부터, 한 번도 안 열었으면
   // 이 가족에 들어온 때부터 센다.
