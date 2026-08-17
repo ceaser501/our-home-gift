@@ -17,6 +17,13 @@ import { corsFor, limitFromEnv, logAiUsage, requireUser, tooManyMessage, withinD
 const MODEL = 'claude-haiku-4-5';
 const MAX_IMAGES = 5;
 
+// 프롬프트를 고칠 때마다 올린다. 답과 함께 돌려줘서, 테스트 빌드 화면에 그대로 찍힌다.
+//
+// 이게 없으면 "고쳤는데 왜 그대로냐"를 가릴 방법이 없다. 함수를 안 올린 것인지, 올렸는데
+// 안 먹은 것인지, 캐시가 옛 답을 준 것인지 — 셋 다 화면에서는 똑같아 보인다. 실제로 그걸
+// 못 가려서 같은 자리를 여러 번 헤맸다.
+const PROMPT_VERSION = '2026-08-17-날짜라벨';
+
 const SYSTEM_PROMPT = `너는 한국 모바일 기프티콘 이미지를 읽어 필요한 정보만 뽑아내는 도구다.
 
 - 이미지에 실제로 보이는 내용만 쓴다. 안 보이면 빈 문자열로 두고, 절대 지어내지 않는다.
@@ -252,6 +259,7 @@ Deno.serve(async (req) => {
 
     return new Response(
       JSON.stringify({
+        promptVersion: PROMPT_VERSION,
         name: name || null,
         brand: brand || null,
         amount: amount ? Number(amount) : null,

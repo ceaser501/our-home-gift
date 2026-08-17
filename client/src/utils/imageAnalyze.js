@@ -361,6 +361,13 @@ export async function readGifticonInfo(prepared, { onProgress, knownCode } = {})
   const info = cached || (await analyzeGifticonImages(prepared.uploads, CATEGORY_KEYS));
   if (!cached) writeCachedInfo(cacheKey, info);
 
+  // 이 답이 어디서 왔는지. 테스트 빌드 화면에만 찍힌다.
+  //
+  // "고쳤는데 왜 그대로냐"를 가리려면 이 셋이 필요하다 — 사진 몇 장을 보냈는지, 캐시에서
+  // 꺼낸 답인지, 서버의 프롬프트가 몇 판인지. 화면에서는 셋 다 똑같아 보여서 그동안
+  // 짐작으로 골랐고, 여러 번 틀렸다.
+  const meta = { shots: prepared.uploads.length, fromCache: Boolean(cached), promptVersion: info.promptVersion };
+
   // 서버가 상품 사진 위치를 못 짚었으면 잘라내지 않는다. 이 경우 목록은 예전처럼
   // 첫 사진을 그대로 보여준다(잘못 자른 그림보다는 캡처 전체가 낫다).
   // 자를 대상은 축소본이다. 썸네일은 480px이라 원본을 다시 열어 읽을 이유가 없다.
@@ -432,5 +439,7 @@ export async function readGifticonInfo(prepared, { onProgress, knownCode } = {})
     expiresAt: info.expiresAt || null,
     name: info.name || '',
     isVoucher: Boolean(info.isVoucher),
+    // 이 답이 어디서 왔는지. 테스트 빌드 화면에만 찍힌다.
+    meta,
   };
 }
