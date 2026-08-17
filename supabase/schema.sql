@@ -1212,8 +1212,29 @@ delete from public.api_usage where day < (now() at time zone 'utc')::date - 30;
 -- supabase/functions/delete-account가 이 함수를 부른 뒤 사진 파일과 계정을 마저 지운다.
 --
 -- 남는 것: 다른 가족이 올린 기프티콘(그건 그 가족의 것이다)과, 내가 쓴 사용 내역의 줄.
--- 사용 내역은 가족이 "언제 뭘 썼나"를 보는 기록이라 통째로 지우면 가족 쪽 기록이 비는데,
--- 이름은 남기지 않도록 '탈퇴한 구성원'으로 바꾼다.
+-- 사용 내역은 가족이 "언제 뭘 썼나"를 보는 기록이라 통째로 지우면 가족 쪽 기록이 빈다.
+-- 이름은 아래 left_member_name으로 '아들(탈퇴한 구성원)'처럼 바꿔 적는다.
+
+-- 나간 사람의 이름을 적는 방법.
+--
+-- 예전에는 그냥 '탈퇴한 구성원'으로 갈아치웠다. 그런데 남은 가족이 보는 기록에서
+-- "탈퇴한 구성원이 스타벅스를 썼어요"는 누구 얘긴지 알 수가 없다. 이름은 그 기록을
+-- 읽는 쪽의 정보이기도 하다 — 지운다고 더 안전해지지도 않는다. 이미 가족이 알던 이름이다.
+--
+-- 그래서 이름은 남기고 지금 없는 사람이라는 것만 덧붙인다: '아들(탈퇴한 구성원)'.
+-- 두 번 붙지 않게 이미 붙어 있으면 그대로 둔다.
+create or replace function public.left_member_name(who text)
+returns text
+language sql
+immutable
+as $$
+  select case
+    when who is null or btrim(who) = '' then '탈퇴한 구성원'
+    when who like '%(탈퇴한 구성원)' then who
+    else who || '(탈퇴한 구성원)'
+  end;
+$$;
+
 create or replace function public.purge_my_data()
 returns json
 language plpgsql
@@ -1258,7 +1279,9 @@ begin
   delete from public.gifticons where id = any(doomed);
 
   -- 남는 기프티콘에서 나를 가리키는 것들을 끊는다(계정이 지워지면 이 참조 때문에 막힌다).
-  update public.gifticons set used_by = null, used_by_name = '탈퇴한 구성원' where used_by = uid;
+  update public.gifticons
+  set used_by = null, used_by_name = public.left_member_name(used_by_name)
+  where used_by = uid;
   update public.gifticons set created_by = null where created_by = uid;
   update public.gifticons
   set claimed_by = null, claimed_by_name = null, claimed_at = null
@@ -1267,8 +1290,17 @@ begin
   -- 데이터는 다 지워지고 마지막 auth.users 삭제에서 이 참조 때문에 거절당한다.
   -- memo_by는 나중에 더한 칸인데 여기를 같이 안 고쳤다.
   update public.gifticons
-  set memo_by = null, memo_by_name = '탈퇴한 구성원'
+  set memo_by = null, memo_by_name = public.left_member_name(memo_by_name)
   where memo_by = uid;
+
+  -- 알림 기록에 남는 이름도 같이 고친다.
+  --
+  -- 여기는 아무도 안 건드리고 있었다. auth.users가 지워지면 actor_id만 비워지고
+  -- (on delete set null) 이름은 그대로 남아서, 남은 가족의 알림 목록에는 "아들이 스타벅스
+  -- 등록했어요"가 그대로 있었다. 정작 그 기프티콘은 이미 지워진 뒤인데 말이다.
+  update public.activities
+  set actor_name = public.left_member_name(actor_name)
+  where actor_id = uid;
 
   -- 스토리지에 남은 파일의 '주인' 표시.
   --
