@@ -1351,6 +1351,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
                 <span className="mt-1 text-[11px] leading-snug break-all text-muted-foreground/70">
                   사진 {info.meta.shots}장 · {info.meta.fromCache ? '캐시에서 꺼냄' : '서버에 물음'} ·{' '}
                   {info.meta.promptVersion || '프롬프트 판 모름(함수가 옛것)'}
+                  {info.meta.sizes?.length > 0 && ` · ${info.meta.sizes.join(', ')}`}
                   {!info.name && ` · 모델이 준 이름: ${info.meta.modelName ? `"${info.meta.modelName}"` : '없음'}`}
                 </span>
               )}

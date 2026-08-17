@@ -111,20 +111,21 @@ async function toBlobAt(canvas, edge, quality) {
   const scale = Math.min(1, edge / Math.max(canvas.width, canvas.height));
   const scaled = scale < 1 ? drawScaled(canvas, canvas.width, canvas.height, scale) : canvas;
   const blob = await new Promise((resolve) => scaled.toBlob(resolve, 'image/jpeg', quality));
+  // 모델이 실제로 보는 크기. 테스트 빌드 화면에 찍어서 두 길을 견준다.
+  const size = { width: scaled.width, height: scaled.height };
 
   if (scaled !== canvas) {
     scaled.width = 0;
     scaled.height = 0;
   }
 
-  return blob;
+  return { blob, size };
 }
 
 async function toOutputBlobs(canvas) {
-  return {
-    storage: await toBlobAt(canvas, UPLOAD_EDGE, STORAGE_QUALITY),
-    analyze: await toBlobAt(canvas, ANALYZE_EDGE, ANALYZE_QUALITY),
-  };
+  const storage = await toBlobAt(canvas, UPLOAD_EDGE, STORAGE_QUALITY);
+  const analyze = await toBlobAt(canvas, ANALYZE_EDGE, ANALYZE_QUALITY);
+  return { storage: storage.blob, analyze: analyze.blob, analyzeSize: analyze.size };
 }
 
 async function toUploadPayload(blob) {
@@ -306,6 +307,7 @@ export async function prepareImages(files, { onProgress } = {}) {
   const barcode = { code: null, codeType: null, cropBlob: null, coverage: 0 };
   const storageFiles = [];
   const uploads = [];
+  const analyzeSizes = [];
 
   for (const [index, file] of files.entries()) {
     report('barcode', { current: index + 1 });
@@ -315,9 +317,11 @@ export async function prepareImages(files, { onProgress } = {}) {
         const found = await decodeBarcode(canvas);
         if (found.code) Object.assign(barcode, found);
       }
-      const { storage, analyze } = await toOutputBlobs(canvas);
+      const { storage, analyze, analyzeSize } = await toOutputBlobs(canvas);
       storageFiles.push(new File([storage], storageName(file), { type: 'image/jpeg' }));
       uploads.push(await toUploadPayload(analyze));
+      // 모델이 본 크기. 같은 사진인데 길에 따라 다르면 여기서 갈린다.
+      analyzeSizes.push(`${analyzeSize.width}×${analyzeSize.height}`);
     } finally {
       // 다 쓴 캔버스가 메모리에 남지 않게 비워둔다.
       canvas.width = 0;
@@ -331,6 +335,8 @@ export async function prepareImages(files, { onProgress } = {}) {
     barcodeCropBlob: barcode.cropBlob,
     // 읽어낸 막대가 사진에서 얼마나 큰가. 화면이 "작게 찍혔어요"를 말할 때 쓴다.
     barcodeCoverage: barcode.coverage,
+    // 모델에게 보낸 그림의 크기. 테스트 빌드 화면에만 쓴다.
+    analyzeSizes,
     // 스토리지에 올릴 파일. 사용자가 고른 원본이 아니라 줄인 것이다.
     storageFiles,
     // 모델에게 보낼 같은 그림의 base64.
@@ -372,6 +378,7 @@ export async function readGifticonInfo(prepared, { onProgress, knownCode } = {})
     promptVersion: info.promptVersion,
     // 모델이 준 이름 그대로. 우리가 비운 것인지 모델이 처음부터 안 준 것인지를 가른다.
     modelName: info.rawName ?? null,
+    sizes: prepared.analyzeSizes || [],
   };
 
   // 서버가 상품 사진 위치를 못 짚었으면 잘라내지 않는다. 이 경우 목록은 예전처럼
