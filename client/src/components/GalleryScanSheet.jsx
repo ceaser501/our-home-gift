@@ -1757,9 +1757,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
               {tally?.tooSmall > 0 && !isWorking && (
                 <p className="m-0 rounded-xl bg-muted px-3.5 py-3 text-sm leading-relaxed break-keep text-muted-foreground">
                   바코드가 너무 작게 찍힌 사진 <b className="font-semibold text-foreground">{tally.tooSmall}장</b>은
-                  뺐어요. 번호는 읽었지만 그 사진으로는 상품명과 기한을 알 수 없고, 옆에 함께 찍힌 다른
-                  기프티콘의 값이 들어올 수 있어요. <b className="font-semibold text-foreground">직접 등록</b>으로
-                  올려주세요.
+                  뺐어요. <b className="font-semibold text-foreground">직접 등록</b>으로 올려주세요.
                 </p>
               )}
 

@@ -693,8 +693,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
           )}
           {smallBarcode && !analyzing && (
             <p className="text-warning m-0 text-sm leading-relaxed break-keep">
-              바코드가 사진에서 작게 찍혀 있어요. <b>상품명과 기한이 옆에 함께 찍힌 다른 기프티콘 것일 수
-              있으니</b> 확인해주세요.
+              바코드가 사진에서 작게 찍혀 있어요. 다시 한번 확인해주세요.
             </p>
           )}
           {error && <p className="text-sm text-destructive">{error}</p>}
