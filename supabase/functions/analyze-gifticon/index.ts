@@ -260,6 +260,9 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         promptVersion: PROMPT_VERSION,
+        // 모델이 실제로 준 이름. 아래에서 우리가 비운 경우와 모델이 처음부터 빈칸을 준
+        // 경우를 화면에서 가르려고 그대로 함께 보낸다(테스트 빌드에서만 쓴다).
+        rawName: rawName || null,
         name: name || null,
         brand: brand || null,
         amount: amount ? Number(amount) : null,
