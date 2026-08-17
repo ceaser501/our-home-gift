@@ -255,8 +255,21 @@ export async function findGifticonByCode(familyId, code, excludeId) {
  *
  * 번호가 비슷한지로 찾지 않는 이유: 기프티콘은 연번으로 발행되기도 해서, 한 자리
  * 차이가 곧 같은 물건이라는 뜻이 아니다. 그걸로 묶으면 멀쩡한 두 장을 하나로 본다.
+ *
+ * ── 언제 묻지 말아야 하는지 ──
+ *
+ * 우리는 막대에서 읽은 번호를 기준으로 삼기로 했다. 막대에는 검산 자리가 있어서 zxing은
+ * 안 맞으면 값을 아예 안 내놓는다 — 틀린 번호를 내놓는 일이 없다. 그러니 양쪽 번호가
+ * 둘 다 막대에서 나왔는데 서로 다르면, 그건 **다른 물건이다.** 되물을 일이 아니다.
+ *
+ * 같은 상품을 두 개 선물받는 건 흔하다(커피 쿠폰 두 장). 그때마다 "이미 등록한 것
+ * 같아요"가 뜨면 사람은 "어 내가 등록했었나" 하고 반사적으로 취소한다. 멀쩡한 기프티콘을
+ * 우리가 잃게 만드는 셈이다.
+ *
+ * 그래서 번호를 못 믿는 경우에만 묻는다 — 막대를 못 읽어 인쇄된 숫자를 눈으로 읽었을
+ * 때(code_type이 비어 있다). 이 검사가 원래 잡으려던 것도 그 경우였다.
  */
-export async function findLookalikeGifticon(familyId, { brand, name, expiresAt }, excludeId) {
+export async function findLookalikeGifticon(familyId, { brand, name, expiresAt, codeType }, excludeId) {
   if (!brand || !name || !expiresAt) return null;
 
   let query = supabase
@@ -269,6 +282,10 @@ export async function findLookalikeGifticon(familyId, { brand, name, expiresAt }
     // 위와 같은 이유로 숨겨진 것은 안 본다.
     .is('hidden_at', null)
     .limit(1);
+
+  // 내 번호가 막대에서 나온 것이면, 막대에서 나온 남의 번호와는 견주지 않는다.
+  // 둘 다 믿을 수 있는 번호인데 서로 다르다 — 다른 물건이라는 뜻이다.
+  if (codeType) query = query.is('code_type', null);
   if (excludeId) query = query.neq('id', excludeId);
 
   const { data, error } = await query;

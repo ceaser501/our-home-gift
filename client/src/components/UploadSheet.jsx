@@ -483,12 +483,18 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
       // 읽히는 일이 실제로 있었고, 그래서 같은 스타벅스 교환권이 두 건으로 들어갔다.
       // 번호가 달라서 아무것도 걸리지 않았다.
       //
-      // 상호·상품명·유효기한이 셋 다 같으면 되묻는다. 막지는 않는다 — 같은 쿠폰을
-      // 두 장 받는 일도 있고, 그건 사용자만 안다.
+      // 상호·상품명·유효기한이 셋 다 같고 **번호를 믿을 수 없을 때만** 되묻는다.
+      // 막대에서 읽은 번호끼리 다르면 다른 물건이므로 묻지 않는다 — 같은 상품을 두 개
+      // 받는 건 흔한 일인데, 그때마다 물으면 사람은 "내가 등록했었나" 하고 취소한다.
       if (!lookalikeOkRef.current) {
         const lookalike = await findLookalikeGifticon(
           family.id,
-          { brand: form.brand?.trim(), name: form.name.trim(), expiresAt: form.expires_at },
+          {
+            brand: form.brand?.trim(),
+            name: form.name.trim(),
+            expiresAt: form.expires_at,
+            codeType: form.code_type || null,
+          },
           excludeId
         );
         if (lookalike) {
@@ -848,9 +854,16 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
         {lookalike && (
           <AlertDialog
             tone="warning"
-            title="이미 등록한 것 같아요"
-            description={`'${lookalike.name}'이(가) 같은 상호·같은 기한으로 목록에 있어요.`}
-            confirmLabel="그래도 등록"
+            // "이미 등록한 것 같아요"라고 물었더니, 사람은 자기가 등록했었나 싶어
+            // 반사적으로 취소했다. 여기까지 온 사람은 손에 기프티콘을 들고 있다.
+            // 되묻더라도 등록하는 쪽으로 서 있어야 한다.
+            title="같은 상품이 하나 더 있어요"
+            description={`'${lookalike.name}'이(가) 상호·상품명·기한까지 똑같아요.`}
+            details={[
+              '이 사진은 바코드를 못 읽어서 번호를 글자로 읽었어요',
+              '같은 걸 두 개 받으셨다면 그대로 등록하세요',
+            ]}
+            confirmLabel="등록"
             onConfirm={() => {
               setLookalike(null);
               lookalikeOkRef.current = true;
