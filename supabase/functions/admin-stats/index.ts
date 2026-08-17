@@ -169,6 +169,66 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ rows }), { headers: jsonHeaders });
   }
 
+  // 미아 사진: 어느 기프티콘도 가리키지 않는 파일. 목록은 GET, 지우기는 POST.
+  //
+  // 지우는 일은 여기서만 할 수 있다. SQL에서 storage.objects의 줄을 지우면 목록만
+  // 지워지고 실제 파일은 남아서 용량이 안 준다. 스토리지 API를 거쳐야 진짜로 없어진다.
+  if (resource === 'storage') {
+    // 며칠 지난 것부터 볼지. 갓 올라온 파일은 아직 등록하는 중일 수 있다.
+    const minAgeDays = num('min_age_days', 90, 3650);
+
+    if (req.method === 'POST') {
+      let payload: { action?: string; paths?: string[] };
+      try {
+        payload = await req.json();
+      } catch {
+        return new Response(JSON.stringify({ error: '요청 형식이 올바르지 않아요.' }), { status: 400, headers: jsonHeaders });
+      }
+      if (payload.action !== 'delete' || !Array.isArray(payload.paths) || payload.paths.length === 0) {
+        return new Response(JSON.stringify({ error: '지울 파일을 골라주세요.' }), { status: 400, headers: jsonHeaders });
+      }
+
+      // 화면이 보낸 목록을 그대로 지우지 않는다. 목록을 띄워둔 사이에 그 파일이 기프티콘에
+      // 붙었을 수 있다 — 그 몇 초 차이로 멀쩡한 사진을 지우면 되돌릴 방법이 없다.
+      // 지우기 직전에 다시 물어보고, 그때도 미아인 것만 지운다.
+      const { data: fresh, error: freshError } = await admin.rpc('orphan_images', { min_age_days: minAgeDays });
+      if (freshError) {
+        return new Response(
+          JSON.stringify({ error: `지우기 전 확인에 실패했어요: ${freshError.message} (supabase/admin-stats.sql을 실행했는지 확인해주세요)` }),
+          { status: 500, headers: jsonHeaders },
+        );
+      }
+
+      const stillOrphan = new Set((fresh || []).map((row: { path: string }) => row.path));
+      const doomed = payload.paths.filter((p) => stillOrphan.has(p));
+      const skipped = payload.paths.length - doomed.length;
+      if (doomed.length === 0) {
+        return new Response(
+          JSON.stringify({ removed: 0, skipped, note: '고른 파일이 더는 미아가 아니에요. 목록을 새로고침해주세요.' }),
+          { headers: jsonHeaders },
+        );
+      }
+
+      const { error: removeError } = await admin.storage.from('gifticon-images').remove(doomed);
+      if (removeError) {
+        return new Response(JSON.stringify({ error: `지우지 못했어요: ${removeError.message}` }), {
+          status: 500,
+          headers: jsonHeaders,
+        });
+      }
+      return new Response(JSON.stringify({ removed: doomed.length, skipped }), { headers: jsonHeaders });
+    }
+
+    const { data: rows, error: e } = await admin.rpc('orphan_images', { min_age_days: minAgeDays });
+    if (e) {
+      return new Response(
+        JSON.stringify({ error: `${e.message} (supabase/admin-stats.sql을 실행했는지 확인해주세요)` }),
+        { status: 500, headers: jsonHeaders },
+      );
+    }
+    return new Response(JSON.stringify({ rows, min_age_days: minAgeDays }), { headers: jsonHeaders });
+  }
+
   // 관리자 명단 고치기. 회원 관리 화면에서 다른 사람을 관리자로 넣고 뺀다.
   // 여기까지 온 사람은 이미 관리자다(위에서 확인했다). 자기 자신을 빼거나 마지막 한 명을
   // 빼는 것은 admin_set_admin이 막는다. 그 판단을 함수 안에 둔 이유는 admin-stats.sql 주석 참고.

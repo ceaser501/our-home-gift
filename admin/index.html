@@ -401,6 +401,7 @@ body.has-bar .auth-main{min-height:calc(100vh - 58px)}
       <a data-page="users">회원 관리</a>
       <a data-page="gifticons">기프티콘 관리</a>
       <a data-page="families">가족 관리</a>
+      <a data-page="storage">미아 사진</a>
     </nav>
     <div class="side-foot"><span id="side-email"></span></div>
   </aside>
@@ -484,6 +485,54 @@ body.has-bar .auth-main{min-height:calc(100vh - 58px)}
       <div class="table-wrap">
         <table id="notices-table">
           <thead><tr><th>상태</th><th>제목</th><th>내용</th><th>게시 시작</th><th>게시 종료</th><th>등록일</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 미아 사진 화면 =====
+       어느 기프티콘도 가리키지 않는 파일. 사진은 등록 버튼을 누르기 전에 미리 올라가서,
+       거기서 창을 닫으면 파일만 남는다.
+
+       여기서 제일 중요한 건 안 지우는 쪽이다. 잘못 남은 파일보다 멀쩡한 기프티콘의 사진이
+       사라지는 쪽이 훨씬 나쁘고 되돌릴 수가 없다. 그래서 자동으로 돌지 않고, 무엇을 왜
+       지우는지 다 보여준 다음 사람이 골라 누르게 한다. -->
+  <div id="page-storage" style="display:none">
+    <div class="card">
+      <div class="card-head"><h2>미아 사진</h2>
+        <span class="card-note">어느 기프티콘도 가리키지 않는 파일이에요. 자동으로 지우지 않습니다</span></div>
+      <p class="muted" style="margin:0 0 12px">
+        사진은 등록 버튼을 누르기 전에 미리 올라가요. 거기서 창을 닫으면 줄은 안 생기고 파일만 남습니다.
+        기프티콘을 지울 때는 사진도 같이 지우지만, 그 삭제만 실패한 경우도 남아요.<br>
+        <b>갓 올라온 파일은 아직 등록하는 중일 수 있어서 목록에 넣지 않습니다.</b>
+      </p>
+      <div class="field-row" style="align-items:flex-end">
+        <label class="field" style="max-width:220px">며칠 지난 것부터 볼까요
+          <select id="orphan-days" class="search">
+            <option value="90" selected>90일</option>
+            <option value="180">180일</option>
+            <option value="365">365일</option>
+            <option value="30">30일</option>
+            <option value="7">7일 (최소)</option>
+          </select>
+        </label>
+        <button class="icon-btn" id="btn-orphan-reload" style="margin-bottom:2px">다시 찾기</button>
+      </div>
+      <div class="form-actions" style="margin-top:12px">
+        <span class="form-err" id="orphan-err" style="display:none"></span>
+        <span class="muted" id="orphan-sum"></span>
+        <button class="icon-btn" id="btn-orphan-all">전체 선택</button>
+        <button class="save-btn" id="btn-orphan-del">고른 것 지우기</button>
+      </div>
+    </div>
+    <div class="card table-card" style="margin-top:16px">
+      <div class="table-wrap">
+        <table id="orphan-table">
+          <thead><tr>
+            <th style="width:36px"></th><th>파일</th><th>가족</th>
+            <th class="num">크기</th><th>올라온 날</th><th class="num">지난 날</th><th>왜 미아인가</th>
+          </tr></thead>
           <tbody></tbody>
         </table>
       </div>
@@ -1327,6 +1376,111 @@ async function saveNotice(){
 }
 
 // ===================== 화면 전환 =====================
+// ===================== 미아 사진 =====================
+
+// 어느 기프티콘도 가리키지 않는 파일. 여기서 하는 일은 "지우기"가 아니라 "보여주기"다.
+//
+// 잘못 남은 파일보다 멀쩡한 기프티콘의 사진이 사라지는 쪽이 훨씬 나쁘고, 그건 되돌릴 수가
+// 없다. 그래서 자동으로 돌지 않고, 무엇을 왜 지우는지 다 보여준 다음 사람이 골라 누르게
+// 한다. 서버도 지우기 직전에 한 번 더 물어보고 그때도 미아인 것만 지운다.
+let ORPHANS=[], ORPHAN_PICKED=new Set(), ORPHAN_ARMED=false, ORPHAN_TIMER=null;
+
+const bytes=n=>{
+  const v=Number(n)||0;
+  if(v<1024) return v+'B';
+  if(v<1024*1024) return (v/1024).toFixed(0)+'KB';
+  return (v/1024/1024).toFixed(1)+'MB';
+};
+
+async function loadOrphans(){
+  const tbody=document.querySelector('#orphan-table tbody');
+  tbody.innerHTML='<tr class="empty-row"><td colspan="7">찾는 중…</td></tr>';
+  hideErr('orphan-err');
+  disarmOrphanDelete();
+  ORPHAN_PICKED=new Set();
+  const days=document.getElementById('orphan-days').value;
+  try{
+    const data=await callApi('?resource=storage&min_age_days='+encodeURIComponent(days));
+    ORPHANS=data.rows||[];
+  }catch(err){
+    ORPHANS=[];
+    tbody.innerHTML=`<tr class="empty-row"><td colspan="7">찾지 못했어요: ${esc(err.message)}</td></tr>`;
+    document.getElementById('orphan-sum').textContent='';
+    return;
+  }
+  renderOrphans();
+}
+
+function renderOrphans(){
+  const tbody=document.querySelector('#orphan-table tbody');
+  tbody.innerHTML = ORPHANS.length ? ORPHANS.map(r=>`<tr>
+    <td><input type="checkbox" data-pick="${esc(r.path)}" ${ORPHAN_PICKED.has(r.path)?'checked':''}></td>
+    <td class="muted" style="word-break:break-all">${esc(r.path)}</td>
+    <td>${r.family_name?esc(r.family_name):'<span class="muted">—</span>'}</td>
+    <td class="num">${bytes(r.size_bytes)}</td>
+    <td class="muted">${dt(r.uploaded_at)}</td>
+    <td class="num">${nf.format(r.age_days||0)}일</td>
+    <td class="muted">${esc(r.reason||'')}</td>
+  </tr>`).join('') : '<tr class="empty-row"><td colspan="7">미아가 된 사진이 없어요</td></tr>';
+
+  tbody.querySelectorAll('[data-pick]').forEach(box=>box.addEventListener('change',()=>{
+    if(box.checked) ORPHAN_PICKED.add(box.dataset.pick); else ORPHAN_PICKED.delete(box.dataset.pick);
+    disarmOrphanDelete();
+    updateOrphanSum();
+  }));
+  updateOrphanSum();
+}
+
+function updateOrphanSum(){
+  const total=ORPHANS.reduce((sum,r)=>sum+(Number(r.size_bytes)||0),0);
+  const picked=ORPHANS.filter(r=>ORPHAN_PICKED.has(r.path));
+  const pickedBytes=picked.reduce((sum,r)=>sum+(Number(r.size_bytes)||0),0);
+  document.getElementById('orphan-sum').textContent=
+    `${nf.format(ORPHANS.length)}건 · ${bytes(total)}` +
+    (picked.length?` · 고른 것 ${nf.format(picked.length)}건 ${bytes(pickedBytes)}`:'');
+}
+
+function disarmOrphanDelete(){
+  clearTimeout(ORPHAN_TIMER);
+  ORPHAN_ARMED=false;
+  const btn=document.getElementById('btn-orphan-del');
+  btn.textContent='고른 것 지우기';
+  btn.classList.remove('danger');
+}
+
+// 공지 삭제와 같은 두 번 누르기다. 브라우저 confirm은 한 번 막히면 묻지도 않고 취소를
+// 돌려줘서, 눌러도 아무 일이 없는 고장이 된다.
+async function handleOrphanDelete(){
+  const paths=ORPHANS.filter(r=>ORPHAN_PICKED.has(r.path)).map(r=>r.path);
+  if(paths.length===0){ showErr('orphan-err','지울 파일을 골라주세요.'); return; }
+  hideErr('orphan-err');
+
+  const btn=document.getElementById('btn-orphan-del');
+  if(!ORPHAN_ARMED){
+    ORPHAN_ARMED=true;
+    btn.textContent=`정말 ${paths.length}건 지우기`;
+    btn.classList.add('danger');
+    ORPHAN_TIMER=setTimeout(disarmOrphanDelete,5000);
+    return;
+  }
+
+  clearTimeout(ORPHAN_TIMER);
+  btn.disabled=true; btn.textContent='지우는 중…';
+  try{
+    const res=await callApi('?resource=storage&min_age_days='+encodeURIComponent(document.getElementById('orphan-days').value),
+      {action:'delete',paths});
+    btn.disabled=false;
+    disarmOrphanDelete();
+    if(res.note) showErr('orphan-err',res.note);
+    else if(res.skipped) showErr('orphan-err',`${res.removed}건을 지웠어요. ${res.skipped}건은 그 사이에 기프티콘에 붙어서 건너뛰었어요.`);
+    loadOrphans();
+  }catch(err){
+    btn.disabled=false;
+    disarmOrphanDelete();
+    showErr('orphan-err','지우지 못했어요: '+err.message);
+  }
+}
+
 let CURRENT_PAGE='dash';
 function openPage(name){
   CURRENT_PAGE=name;
@@ -1334,12 +1488,15 @@ function openPage(name){
   const isDashLike=name==='dash'||name==='sample';
   // ''로 두어 CSS의 display(flex 등)가 그대로 살게 한다. 'block'을 박으면 카드 간격(gap)이 죽는다.
   document.getElementById('page-dash').style.display=isDashLike?'':'none';
-  document.getElementById('page-list').style.display=(isDashLike||name==='notices')?'none':'block';
+  const ownPage=name==='notices'||name==='storage';
+  document.getElementById('page-list').style.display=(isDashLike||ownPage)?'none':'block';
   document.getElementById('page-notices').style.display=name==='notices'?'':'none';
+  document.getElementById('page-storage').style.display=name==='storage'?'':'none';
   document.getElementById('mode-seg').style.display=isDashLike?'':'none';
   document.getElementById('sample-note').style.display=name==='sample'?'':'none';
   document.getElementById('page-title').textContent=
-    name==='dash'?'대시보드':name==='sample'?'대시보드 샘플':name==='notices'?'공지사항':PAGES[name].title;
+    name==='dash'?'대시보드':name==='sample'?'대시보드 샘플'
+      :name==='notices'?'공지사항':name==='storage'?'미아 사진':PAGES[name].title;
 
   if(isDashLike){
     LIST.page=null;
@@ -1348,6 +1505,7 @@ function openPage(name){
     return;
   }
   if(name==='notices'){ LIST.page=null; resetNoticeForm(); loadNotices(); return; }
+  if(name==='storage'){ LIST.page=null; loadOrphans(); return; }
 
   const def=PAGES[name];
   // 다른 화면으로 옮기면 검색어·페이지는 처음부터 시작한다. 회원에서 걸어둔 검색어가
@@ -1442,8 +1600,19 @@ async function start(){
     renderAll();
   }));
   // 새로고침은 지금 보고 있는 화면만 다시 불러온다.
+  document.getElementById('orphan-days').addEventListener('change',loadOrphans);
+  document.getElementById('btn-orphan-reload').addEventListener('click',loadOrphans);
+  document.getElementById('btn-orphan-del').addEventListener('click',handleOrphanDelete);
+  document.getElementById('btn-orphan-all').addEventListener('click',()=>{
+    const all=ORPHAN_PICKED.size===ORPHANS.length&&ORPHANS.length>0;
+    ORPHAN_PICKED=all?new Set():new Set(ORPHANS.map(r=>r.path));
+    disarmOrphanDelete();
+    renderOrphans();
+  });
+
   document.getElementById('btn-refresh').addEventListener('click',()=>{
-    if(CURRENT_PAGE==='notices') loadNotices();
+    if(CURRENT_PAGE==='storage') loadOrphans();
+    else if(CURRENT_PAGE==='notices') loadNotices();
     else if(CURRENT_PAGE==='sample') openPage('sample');
     else if(LIST.page) renderList();
     else connect();

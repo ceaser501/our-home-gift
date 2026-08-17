@@ -499,3 +499,112 @@ begin
     execute format('grant execute on function %s to service_role', fn);
   end loop;
 end $$;
+
+-- ===================== 미아 사진 청소 =====================
+
+-- 어느 기프티콘도 가리키지 않는 사진 파일을 찾는다. 지우지는 않는다 — 목록만 준다.
+--
+-- 왜 이런 파일이 생기나: 사진은 등록 버튼을 누르기 전에 미리 올라간다(그 몇 초를 아끼려고
+-- 떼어놨다). 그러고 창을 닫으면 줄은 안 생기고 파일만 남는다. 기프티콘을 지울 때는 사진도
+-- 같이 지우지만, 그 삭제만 실패한 경우도 남는다. 계정을 지울 때도 남의 기프티콘에 붙지
+-- 않은 것은 주인 표시만 끊고 파일은 뒀다.
+--
+-- ── 이 함수에서 제일 중요한 건 "안 지우는 것" ──
+--
+-- 잘못 올라간 파일이 남는 것보다, 멀쩡한 기프티콘의 사진이 사라지는 쪽이 훨씬 나쁘다.
+-- 되돌릴 방법이 없다. 그래서 세 가지를 건다.
+--
+--   1) 나이 제한. 갓 올라온 파일은 아직 등록 중일 수 있다. 최소 7일은 강제한다.
+--   2) 세 칸을 전부 본다. 사진 경로는 image_paths(배열)·barcode_image_path·
+--      thumb_image_path 세 군데에 나뉘어 있다. 한 칸이라도 빠뜨리면 그 종류가 통째로
+--      미아로 보인다.
+--   3) 안전 밸브. 가리키는 경로가 하나도 없는데 파일은 있다면, 그건 "다 미아"가 아니라
+--      목록을 못 읽은 것이다. 그때는 답을 주지 않고 멈춘다.
+create or replace function public.orphan_images(min_age_days int default 90)
+returns table (
+  path text,
+  family_id uuid,
+  family_name text,
+  size_bytes bigint,
+  uploaded_at timestamptz,
+  age_days int,
+  owner_gone boolean,
+  reason text
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  days int := greatest(coalesce(min_age_days, 90), 7);
+  referenced_count bigint;
+  object_count bigint;
+begin
+  select count(*) into object_count
+  from storage.objects where bucket_id = 'gifticon-images';
+
+  select count(*) into referenced_count
+  from (
+    select unnest(image_paths) as p from public.gifticons
+    union
+    select barcode_image_path from public.gifticons where barcode_image_path is not null
+    union
+    select thumb_image_path from public.gifticons where thumb_image_path is not null
+  ) t
+  where t.p is not null;
+
+  if referenced_count = 0 and object_count > 0 then
+    raise exception
+      '안전장치가 걸렸어요: 기프티콘이 가리키는 사진이 한 장도 없는데 파일은 %개예요. 목록을 못 읽은 것일 수 있어 아무것도 알려주지 않습니다.',
+      object_count;
+  end if;
+
+  return query
+  with referenced as (
+    select unnest(image_paths) as p from public.gifticons
+    union
+    select barcode_image_path from public.gifticons where barcode_image_path is not null
+    union
+    select thumb_image_path from public.gifticons where thumb_image_path is not null
+  ),
+  objs as (
+    select
+      o.name::text as p,
+      -- 경로는 '<가족 id>/<시각>-<임의값>.jpg'로 만든다(client/src/api.js의 uploadOne).
+      -- 형식이 다르면 가족을 못 붙이는 것뿐, 미아 판단에는 쓰지 않는다.
+      case when split_part(o.name, '/', 1) ~ '^[0-9a-fA-F-]{36}$'
+           then split_part(o.name, '/', 1)::uuid end as fam,
+      coalesce((o.metadata->>'size')::bigint, 0) as bytes,
+      o.created_at as made,
+      o.owner as who
+    from storage.objects o
+    where o.bucket_id = 'gifticon-images'
+      and o.created_at < now() - make_interval(days => days)
+      and not exists (select 1 from referenced r where r.p = o.name)
+  )
+  select
+    objs.p,
+    objs.fam,
+    f.name,
+    objs.bytes,
+    objs.made,
+    extract(day from now() - objs.made)::int,
+    (objs.who is null),
+    case
+      when objs.fam is null then '어느 기프티콘에도 안 적혀 있어요 · 경로에 가족이 없어요'
+      when f.id is null then '어느 기프티콘에도 안 적혀 있어요 · 올린 가족이 없어졌어요'
+      when objs.who is null then '어느 기프티콘에도 안 적혀 있어요 · 올린 사람이 탈퇴했어요'
+      else '어느 기프티콘에도 안 적혀 있어요'
+    end
+  from objs
+  left join public.families f on f.id = objs.fam
+  order by objs.made;
+end $$;
+
+do $$
+begin
+  execute 'revoke all on function public.orphan_images(int) from public';
+  execute 'revoke all on function public.orphan_images(int) from anon';
+  execute 'revoke all on function public.orphan_images(int) from authenticated';
+  execute 'grant execute on function public.orphan_images(int) to service_role';
+end $$;
