@@ -209,24 +209,40 @@ Deno.serve(async (req) => {
     }));
 
     const client = new Anthropic({ apiKey });
-    const response = await client.messages.create({
-      model: MODEL,
-      // 답은 짧은 JSON 하나라 200토큰 안팎이면 끝난다. 그런데 모델이 한 번씩 같은 구절을
-      // 되풀이하다 천장에 닿았고, 그때 JSON이 잘려 통째로 실패했다. 천장을 올려도 실제로
-      // 쓴 만큼만 값을 내므로, 여유를 두는 쪽이 싸다.
-      max_tokens: 2048,
-      system: SYSTEM_PROMPT,
-      output_config: { format: { type: 'json_schema', schema: buildSchema(categories) } },
-      messages: [
-        {
-          role: 'user',
-          content: [...imageBlocks, { type: 'text', text: '이 기프티콘의 정보를 뽑아줘.' }],
-        },
-      ],
-    });
+    const ask = () =>
+      client.messages.create({
+        model: MODEL,
+        // 답은 짧은 JSON 하나라 200토큰 안팎이면 끝난다. 그런데 모델이 한 번씩 같은 구절을
+        // 되풀이하다 천장에 닿았고, 그때 JSON이 잘려 통째로 실패했다. 천장을 올려도 실제로
+        // 쓴 만큼만 값을 내므로, 여유를 두는 쪽이 싸다.
+        max_tokens: 2048,
+        system: SYSTEM_PROMPT,
+        output_config: { format: { type: 'json_schema', schema: buildSchema(categories) } },
+        messages: [
+          {
+            role: 'user',
+            content: [...imageBlocks, { type: 'text', text: '이 기프티콘의 정보를 뽑아줘.' }],
+          },
+        ],
+      });
 
+    let response = await ask();
     // 응답을 받았으면(성공이든 거절이든) 토큰 요금은 이미 나갔으니 여기서 적는다.
     await logAiUsage(guard.admin, 'analyze', MODEL, response.usage);
+
+    // 잘렸으면 한 번만 다시 부른다.
+    //
+    // 천장을 더 올려도 소용없다. 되풀이에 빠진 답은 4096에서도 똑같이 잘린다 — 길이가
+    // 모자란 게 아니라 답이 헛도는 것이다. 다시 부르면 대개 한 번에 끝난다.
+    //
+    // 이걸 사람 손에 맡겨뒀었다. 카드에 "다시 읽기"가 붙어서 누르면 되긴 하지만, 여덟 건을
+    // 찾아준 화면에서 한 건만 빨갛게 남아 있으면 그건 앱이 실패한 것으로 보인다. 한 번
+    // 더 부르는 값(한 건 6원)이 그 인상보다 싸다.
+    if (response.stop_reason === 'max_tokens') {
+      console.warn('analyze-gifticon: 답이 잘려 한 번 더 부릅니다');
+      response = await ask();
+      await logAiUsage(guard.admin, 'analyze', MODEL, response.usage);
+    }
 
     if (response.stop_reason === 'refusal') {
       return new Response(JSON.stringify({ error: '이 이미지는 인식할 수 없어요. 직접 입력해주세요.' }), {
