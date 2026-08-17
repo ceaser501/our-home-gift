@@ -317,7 +317,12 @@ Deno.serve(async (req) => {
   // 비용 계산에 쓰는 단가. 코드가 아니라 응답에 실어 보내는 이유는, 요금이 바뀌었을 때
   // 대시보드 HTML을 고칠 필요 없이 여기(또는 secrets)만 고치면 되게 하려는 것이다.
   //
-  // - AI 토큰 단가: claude-haiku-4-5 기준 입력 $1 / 출력 $5 (백만 토큰당, 2026-08 기준)
+  // - AI 토큰 단가(백만 토큰당, 2026-08 기준)
+  //     claude-haiku-4-5  입력 $1 / 출력 $5
+  //     claude-sonnet-5   입력 $3 / 출력 $15
+  //   소개가(입력 $2 / 출력 $10)가 2026-08-31까지지만 정가로 잡는다. 적게 잡아두면
+  //   9월에 요금이 갑자기 오른 것처럼 보이고, 비용을 보는 이유가 "얼마나 나갈까"라서
+  //   높은 쪽으로 세는 편이 쓸모 있다.
   // - 웹 검색: $10 / 1,000회 (search-price가 회당 최대 4번 검색한다)
   // - 토큰 기록(ai_usage_log)이 없는 옛날 호출은 회당 어림값으로 계산한다.
   // - places(카카오 로컬·모빌리티, TMAP 보행자)와 join_attempt는 현재 무료 구간이라 0.
@@ -327,6 +332,10 @@ Deno.serve(async (req) => {
       'claude-haiku-4-5': {
         input_usd_per_mtok: priceFromEnv('AI_INPUT_USD_PER_MTOK', 1),
         output_usd_per_mtok: priceFromEnv('AI_OUTPUT_USD_PER_MTOK', 5),
+      },
+      'claude-sonnet-5': {
+        input_usd_per_mtok: priceFromEnv('SONNET_INPUT_USD_PER_MTOK', 3),
+        output_usd_per_mtok: priceFromEnv('SONNET_OUTPUT_USD_PER_MTOK', 15),
       },
     },
     web_search_usd_per_call: priceFromEnv('WEB_SEARCH_USD_PER_CALL', 0.01),
