@@ -355,8 +355,16 @@ public class GalleryPlugin extends Plugin {
                 bitmap = scaled;
             }
 
+            // 화질을 아끼지 않는다(85 → 95).
+            //
+            // 이 사본은 바코드를 읽는 데만 쓰이는 게 아니다. 등록에 넘길 때 모델이 보는
+            // 그림이 되기도 하는데, 웹에서 한 번 더 줄여 보내므로 눌린 자국 위에 또 눌린다.
+            // 한글은 획 하나로 갈려서(떠/따, 반/밤) 그 한 겹이 상품명을 지운다 — 같은
+            // 쿠폰이 직접 올리면 읽히고 훑으면 못 읽혔다.
+            //
+            // 파일이 커지지만 폰 안에서만 오가고, 모델 요금은 픽셀 수로만 매겨져 그대로다.
             ByteArrayOutputStream out = new ByteArrayOutputStream();
-            bitmap.compress(Bitmap.CompressFormat.JPEG, 85, out);
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 95, out);
             int outWidth = bitmap.getWidth();
             int outHeight = bitmap.getHeight();
             bitmap.recycle();

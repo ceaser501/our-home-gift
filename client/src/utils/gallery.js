@@ -717,7 +717,15 @@ async function readPickedFile(image) {
     ctx.drawImage(loaded, 0, 0, canvas.width, canvas.height);
 
     // 훑기가 넘겨주는 것과 같은 모양으로 돌려준다 — 접두사 없는 base64.
-    const data = canvas.toDataURL('image/jpeg', 0.9).split(',')[1];
+    //
+    // 화질을 아끼지 않는다. 이 사본은 바코드를 읽는 데만 쓰이는 게 아니라, 등록에 넘길
+    // 때 모델이 보는 그림이 되기도 한다(candidateToFiles). 거기서 한 번 더 줄여 보내니
+    // 눌린 자국 위에 또 눌리는 셈이다.
+    //
+    // 한글은 획 하나로 갈린다. 같은 투썸 쿠폰이 직접 올릴 때는 상품명이 읽혔는데 훑기로는
+    // 못 읽혔다 — 그림이 달라서가 아니라 사본이 나빠서였다. 요금은 픽셀 수로 매겨지므로
+    // 화질을 올려도 값은 그대로다.
+    const data = canvas.toDataURL('image/jpeg', 0.95).split(',')[1];
     canvas.width = 0;
     canvas.height = 0;
     return { data };
