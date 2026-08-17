@@ -1344,15 +1344,16 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
               {/* 이 답이 어디서 왔는지. 출시 빌드에는 안 나온다(VITE_TEST_TOOLS).
                   docs/security.md의 제거 목록에 함께 적어뒀다.
 
-                  "고쳤는데 왜 그대로냐"를 가리는 데 이 세 가지가 필요하다 — 사진 몇 장을
-                  보냈는지, 캐시에서 꺼낸 답인지, 서버의 프롬프트가 몇 판인지. 화면에서는
-                  셋 다 똑같아 보여서 그동안 짐작으로 골랐고 여러 번 틀렸다. */}
+                  "고쳤는데 왜 그대로냐"를 가릴 최소한만 남긴다 — 캐시에서 꺼낸 답인지,
+                  서버의 프롬프트가 몇 판인지. 화면에서는 둘 다 똑같아 보여서 그동안
+                  짐작으로 골랐고 여러 번 틀렸다.
+
+                  사진 장수·크기·모델이 준 이름도 찍어봤는데, 그건 그때 쫓던 증상이
+                  재현되지 않아 걷어냈다. 필요해지면 여기 다시 붙이면 된다. */}
               {import.meta.env.VITE_TEST_TOOLS && info?.meta && (
                 <span className="mt-1 text-[11px] leading-snug break-all text-muted-foreground/70">
-                  사진 {info.meta.shots}장 · {info.meta.fromCache ? '캐시에서 꺼냄' : '서버에 물음'} ·{' '}
+                  {info.meta.fromCache ? '캐시에서 꺼냄' : '서버에 물음'} ·{' '}
                   {info.meta.promptVersion || '프롬프트 판 모름(함수가 옛것)'}
-                  {info.meta.sizes?.length > 0 && ` · ${info.meta.sizes.join(', ')}`}
-                  {!info.name && ` · 모델이 준 이름: ${info.meta.modelName ? `"${info.meta.modelName}"` : '없음'}`}
                 </span>
               )}
             </div>

@@ -129,8 +129,6 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
   const [autoFilled, setAutoFilled] = useState(false);
   // 막대가 사진에서 너무 작게 찍혔는가. 앱 화면이나 목록을 통째로 찍은 캡처가 그렇다.
   const [smallBarcode, setSmallBarcode] = useState(false);
-  // 모델이 본 그림의 크기. 테스트 빌드에서 훑기 쪽 값과 견주려고 들고 있는다.
-  const [analyzeSizes, setAnalyzeSizes] = useState([]);
   // 모델이 금액권으로 봤는지. 켜주지는 않고 귀띔만 한다.
   const [voucherHint, setVoucherHint] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -309,7 +307,6 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
     if (prepared.code) {
       setSmallBarcode(prepared.barcodeCoverage > 0 && prepared.barcodeCoverage < SMALL_BARCODE_COVERAGE);
     }
-    setAnalyzeSizes(prepared.analyzeSizes || []);
 
     // 보관하는 건 사용자가 고른 원본이 아니라 줄인 사본이다(긴 변 1400px JPEG).
     // 미리보기도 같은 파일로 만들어서, 화면에 보이는 것과 실제로 올라가는 것이 같게 한다.
@@ -700,14 +697,6 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
             </p>
           )}
           {error && <p className="text-sm text-destructive">{error}</p>}
-
-          {/* 모델이 본 그림의 크기. 훑기 카드에 찍히는 값과 같은 값이라, 같은 사진을
-              두 길로 올려 견주면 어디서 갈리는지 바로 보인다. 출시 빌드에는 안 나온다. */}
-          {import.meta.env.VITE_TEST_TOOLS && analyzeSizes.length > 0 && (
-            <p className="m-0 text-[11px] text-muted-foreground/70">
-              모델이 본 크기: {analyzeSizes.join(', ')}
-            </p>
-          )}
 
           {/* 왜 한 건으로 봤는지. 출시 빌드에는 안 나온다(VITE_TEST_TOOLS).
               docs/security.md의 제거 목록에 함께 적어뒀다. */}
