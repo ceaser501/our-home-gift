@@ -113,6 +113,34 @@ describe('groupImages — 고른 사진을 묶는다', () => {
     expect(candidates[0].images).toHaveLength(1);
   });
 
+  // 앱 화면을 통째로 찍은 캡처가 여기 걸린다. 68px짜리 썸네일 안의 막대도 zxing은
+  // 읽어내서 번호는 맞는데, 그 그림에는 다른 기프티콘이 같이 찍혀 있다. 실제로 스타벅스
+  // 쿠폰에 옆칸 BBQ의 26,500원과 2026.11.04가 들어갔다.
+  //
+  // 예전에는 그것밖에 없으면 "그거라도 쓰자"였다. 등록이 막히는 것보다 낫다고 봤는데,
+  // 틀린 값이 들어간 기프티콘은 화면상 멀쩡해서 아무도 안 고친다. 빈칸보다 나쁘다.
+  it('작게 찍힌 것밖에 없으면 표시를 달아 넘긴다', async () => {
+    barcodes.set('tiny.jpg', { code: '111', coverage: 0.15 });
+
+    const { candidates, tally } = await groupImages([pick('tiny.jpg')]);
+
+    // 후보에서 빼지는 않는다. 몇 건인지 세는 쪽(등록 화면이 다건으로 넘길지 정할 때)은
+    // 이것도 한 건으로 세야, 작게 찍힌 다른 기프티콘이 옆 건에 통째로 합쳐지지 않는다.
+    expect(candidates).toHaveLength(1);
+    expect(candidates[0].tooSmall).toBe(true);
+    expect(tally.tooSmall).toBe(1);
+  });
+
+  it('큰 사진이 한 장이라도 있으면 표시를 달지 않는다', async () => {
+    barcodes.set('big.jpg', { code: '111', coverage: 0.6 });
+    barcodes.set('tiny.jpg', { code: '111', coverage: 0.05 });
+
+    const { candidates, tally } = await groupImages([pick('big.jpg'), pick('tiny.jpg')]);
+
+    expect(candidates[0].tooSmall).toBe(false);
+    expect(tally.tooSmall).toBe(0);
+  });
+
   it('이미 등록된 번호는 후보에서 뺀다', async () => {
     barcodes.set('a.jpg', { code: '111', coverage: 0.6 });
     barcodes.set('b.jpg', { code: '222', coverage: 0.6 });

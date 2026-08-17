@@ -624,7 +624,22 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
             isRegistered,
           });
       if (controller.signal.aborted) return;
-      found = scan.candidates;
+
+      // 바코드는 읽혔지만 그 사진으로는 상품명도 기한도 읽을 수 없는 것은 뺀다.
+      //
+      // 앱 화면을 통째로 찍은 캡처가 여기 걸린다. 68px짜리 썸네일 안의 막대도 zxing은
+      // 읽어낸다 — 번호는 맞다. 그런데 그 그림에는 다른 기프티콘이 같이 찍혀 있어서,
+      // 모델이 옆칸의 금액과 기한을 이 기프티콘 것으로 읽어온다. 실제로 스타벅스 쿠폰에
+      // BBQ의 26,500원과 2026.11.04가 들어갔다.
+      //
+      // 예전에는 "그거라도 쓰자"였다. 등록이 막히는 것보다 낫다고 봤는데, 틀린 값이 들어간
+      // 기프티콘은 화면상 멀쩡해서 아무도 안 고친다. 빈칸보다 나쁘다.
+      //
+      // 카드는 훑는 동안 이미 하나씩 쌓였으므로 여기서 걷어낸다. 무엇을 왜 뺐는지는
+      // 아래 안내로 말해준다.
+      found = scan.candidates.filter((candidate) => !candidate.tooSmall);
+      const keep = new Set(found.map((candidate) => candidate.id));
+      setCandidates((prev) => prev.filter((candidate) => keep.has(candidate.id)));
       pending = scan.pending ?? [];
       setScanned(scan.scanned ?? 0);
       setSince(scan.since ?? 0);
@@ -675,13 +690,19 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
         },
       });
       if (controller.signal.aborted) return;
-      if (deep.candidates.length > 0) {
+      // 정밀 탐색으로 건진 것에도 같은 기준을 건다. 여기서 살아난 사진일수록 작게 찍혀
+      // 있을 가능성이 높아서, 오히려 이쪽이 더 잘 걸린다.
+      const kept = deep.candidates.filter((candidate) => !candidate.tooSmall);
+      const dropped = new Set(
+        deep.candidates.filter((candidate) => candidate.tooSmall).map((candidate) => candidate.id)
+      );
+      if (dropped.size > 0) setCandidates((prev) => prev.filter((item) => !dropped.has(item.id)));
+
+      if (kept.length > 0) {
         // 이미 쌓여 있으니 고른 결과로 갈아끼우기만 한다.
-        setCandidates((prev) =>
-          prev.map((item) => deep.candidates.find((found) => found.id === item.id) || item)
-        );
-        found0Ref.current = [...found0Ref.current, ...deep.candidates];
-        await readAll(deep.candidates, controller, { append: true });
+        setCandidates((prev) => prev.map((item) => kept.find((found) => found.id === item.id) || item));
+        found0Ref.current = [...found0Ref.current, ...kept];
+        await readAll(kept, controller, { append: true });
       }
     } finally {
       if (!controller.signal.aborted) setDigging(false);
@@ -1724,6 +1745,21 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
                 <p className="m-0 rounded-xl bg-muted px-3.5 py-3 text-sm leading-relaxed break-keep text-muted-foreground">
                   바코드가 없는 사진 <b className="font-semibold text-foreground">{tally.noCode}장</b>은 어느
                   기프티콘 것인지 몰라서 뺐어요.
+                </p>
+              )}
+
+              {/* 바코드는 읽혔는데 너무 작게 찍힌 것. 앱 화면이나 목록을 통째로 찍은 캡처가
+                  여기 걸린다. 번호는 맞지만 그 그림에는 다른 기프티콘이 같이 찍혀 있어서,
+                  옆칸의 금액과 기한이 이 기프티콘 것으로 들어온다.
+
+                  왜 뺐는지를 적는다. "바코드를 찾았다"까지는 사용자도 짐작할 수 있어서,
+                  이유 없이 빠지면 앱이 놓친 것으로 보인다. */}
+              {tally?.tooSmall > 0 && !isWorking && (
+                <p className="m-0 rounded-xl bg-muted px-3.5 py-3 text-sm leading-relaxed break-keep text-muted-foreground">
+                  바코드가 너무 작게 찍힌 사진 <b className="font-semibold text-foreground">{tally.tooSmall}장</b>은
+                  뺐어요. 번호는 읽었지만 그 사진으로는 상품명과 기한을 알 수 없고, 옆에 함께 찍힌 다른
+                  기프티콘의 값이 들어올 수 있어요. <b className="font-semibold text-foreground">직접 등록</b>으로
+                  올려주세요.
                 </p>
               )}
 

@@ -517,6 +517,19 @@ async function collect({ images, read: readImage, pass, isRegistered, skipCodes,
     const meaningful = candidate.shots.filter((shot) => shot.coverage >= MIN_BARCODE_COVERAGE);
     const usable = meaningful.length > 0 ? meaningful : candidate.shots;
 
+    // 쓸 만한 크기의 사진이 하나도 없다는 표시. 번호는 제대로 읽혔지만(막대에는 검산
+    // 자리가 있다) 그 사진으로는 상품명도 기한도 읽을 수가 없다.
+    //
+    // 앱 화면을 통째로 찍은 캡처가 여기 걸린다. 68px짜리 썸네일 안의 막대도 zxing은
+    // 읽어낸다. 그런데 그 그림에는 다른 기프티콘이 같이 찍혀 있어서, 모델이 옆칸의
+    // 금액과 기한을 이 기프티콘 것으로 읽어온다 — 실제로 스타벅스 쿠폰에 BBQ의
+    // 26,500원과 2026.11.04가 들어갔다.
+    //
+    // 빼는 판단은 여기서 하지 않는다. 훑기는 이걸 빼고 등록하지만, 몇 건인지 세는 쪽
+    // (등록 화면이 다건으로 넘길지 정할 때)은 이것도 한 건으로 세야 한다. 안 그러면
+    // 작게 찍힌 다른 기프티콘이 통째로 옆 건에 합쳐진다.
+    candidate.tooSmall = meaningful.length === 0;
+
     // 원본이 하나라도 있으면 캡처는 아예 보내지 않는다.
     //
     // 원본에는 상품명·금액·유효기간이 다 적혀 있어서 캡처가 더해줄 게 없다. 반면 해가 될
@@ -589,6 +602,8 @@ export async function scanGallery({ isRegistered, onProgress, onCandidate, signa
     readFailed,
     found: candidates.length + knownCodes.size,
     alreadyHave: knownCodes.size,
+    // 번호는 읽혔지만 그 사진으로는 상품명·기한을 읽을 수 없는 것.
+    tooSmall: candidates.filter((c) => c.tooSmall).length,
   };
 
   return { ...status, candidates, pending: missed, scanned: fresh.length, since, folders, tally };
@@ -679,6 +694,7 @@ export async function groupImages(files, { isRegistered, onProgress, onCandidate
       alreadyHave: knownCodes.size,
       // 바코드가 없어서 어느 기프티콘 것인지 모르는 사진. 화면이 뺐다고 말해줘야 한다.
       noCode: missed.length,
+      tooSmall: candidates.filter((c) => c.tooSmall).length,
     },
   };
 }
