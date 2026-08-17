@@ -1,5 +1,5 @@
 import { BrowserMultiFormatReader } from '@zxing/browser';
-import { BarcodeFormat } from '@zxing/library';
+import { BarcodeFormat, DecodeHintType } from '@zxing/library';
 import { CATEGORY_KEYS } from '../constants';
 import { analyzeGifticonImages } from '../api';
 import { readCachedInfo, writeCachedInfo } from './scanCache';
@@ -147,20 +147,43 @@ function storageName(file) {
   return `${base || 'gifticon'}.jpg`;
 }
 
-async function decodeBarcode(canvas) {
+const HARD_HINTS = new Map([[DecodeHintType.TRY_HARDER, true]]);
+
+// 막대를 읽는다. 한 번 못 읽으면 정밀 탐색으로 한 번 더 본다.
+//
+// 여기서 못 읽으면 대신 쓸 것이 인쇄된 숫자를 모델이 눈으로 읽은 값뿐인데, 그건 검산
+// 자리가 없어서 6을 5로 읽어도 그냥 5가 된다. 매장에서 안 찍히는 번호가 저장되고,
+// 그걸 뒤늦게 알아볼 방법도 없다. 그러니 넘기기 전에 애는 써봐야 한다.
+//
+// 애초에 한 번만 보고 있었다. 사진첩 훑기 쪽은 얕게 본 뒤 못 읽은 것만 정밀 탐색으로
+// 다시 보는데(gallery.js의 DEEP), 등록 화면에는 그 두 번째가 없었다. 정밀 탐색은 느려서
+// 모든 사진에 처음부터 걸 이유는 없지만, 못 읽은 사진 한 장에는 걸 값어치가 있다.
+async function readCanvas(canvas, hints) {
+  const reader = new BrowserMultiFormatReader(hints);
+  return reader.decodeFromCanvas(canvas);
+}
+
+// 테스트에서 직접 부른다. 이 두 번 보는 규칙이 이 파일에서 가장 조용히 깨지는 자리라,
+// 캔버스를 만드는 일까지 끌고 들어가지 않고 여기만 따로 본다.
+export async function decodeBarcode(canvas) {
+  let result = null;
   try {
-    const reader = new BrowserMultiFormatReader();
-    const result = await reader.decodeFromCanvas(canvas);
-    const codeType = result.getBarcodeFormat ? BarcodeFormat[result.getBarcodeFormat()] || null : null;
-    const cropBlob = await cropBarcodeRegion(canvas, result.getResultPoints?.(), codeType);
-    return {
-      code: result.getText(),
-      codeType,
-      cropBlob,
-    };
+    result = await readCanvas(canvas);
   } catch {
-    return { code: null, codeType: null, cropBlob: null };
+    try {
+      result = await readCanvas(canvas, HARD_HINTS);
+    } catch {
+      return { code: null, codeType: null, cropBlob: null };
+    }
   }
+
+  const codeType = result.getBarcodeFormat ? BarcodeFormat[result.getBarcodeFormat()] || null : null;
+  const cropBlob = await cropBarcodeRegion(canvas, result.getResultPoints?.(), codeType);
+  return {
+    code: result.getText(),
+    codeType,
+    cropBlob,
+  };
 }
 
 // 매장에서 실제로 스캔할 바코드/QR만 잘라서 보여주기 위해, zxing이 알려주는
