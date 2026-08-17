@@ -165,11 +165,22 @@ async function readCanvas(canvas, hints) {
 
 // 테스트에서 직접 부른다. 이 두 번 보는 규칙이 이 파일에서 가장 조용히 깨지는 자리라,
 // 캔버스를 만드는 일까지 끌고 들어가지 않고 여기만 따로 본다.
-export async function decodeBarcode(canvas) {
+export async function decodeBarcode(canvas, { deepRetry = true } = {}) {
   let result = null;
   try {
     result = await readCanvas(canvas);
   } catch {
+    // 부르는 쪽이 이미 번호를 알고 있으면 두 번째 판을 돌지 않는다.
+    //
+    // 이 두 번째 판이 있는 이유는 하나뿐이다 — 여기서 못 읽으면 인쇄된 숫자를 눈으로
+    // 읽은 값이 대신 들어가는데 그게 틀리면 매장에서 안 찍힌다. 그런데 훑기는 이미
+    // 막대에서 읽은 번호를 들고 온다. 지킬 것이 없는데 가장 무거운 판을 후보마다
+    // 돌리는 셈이었다.
+    //
+    // 못 읽으면 바코드를 잘라낸 그림이 없어지지만, 화면은 저장된 번호로 막대를 새로
+    // 그려서 보여준다(BarcodeModal.jsx). 크롭은 있으면 좋은 것이지 없으면 안 되는
+    // 것이 아니다.
+    if (!deepRetry) return { code: null, codeType: null, cropBlob: null };
     try {
       result = await readCanvas(canvas, HARD_HINTS);
     } catch {
@@ -301,7 +312,7 @@ async function cropThumbnail(file, box) {
 //
 // onProgress로 지금 어느 단계인지 알려준다. 몇 초 걸리는 동안 화면에 아무 변화가 없으면
 // 멈춘 것처럼 보이기 때문에, 화면 쪽에서 진행 상황을 표시할 수 있게 한다.
-export async function prepareImages(files, { onProgress } = {}) {
+export async function prepareImages(files, { onProgress, knownCode } = {}) {
   const report = (step, extra) => onProgress?.({ step, total: files.length, ...extra });
   const barcode = { code: null, codeType: null, cropBlob: null, coverage: 0 };
   const storageFiles = [];
@@ -312,7 +323,7 @@ export async function prepareImages(files, { onProgress } = {}) {
     const canvas = await toAnalyzeCanvas(file);
     try {
       if (!barcode.code) {
-        const found = await decodeBarcode(canvas);
+        const found = await decodeBarcode(canvas, { deepRetry: !knownCode });
         if (found.code) Object.assign(barcode, found);
       }
       const { storage, analyze } = await toOutputBlobs(canvas);
@@ -338,7 +349,7 @@ export async function prepareImages(files, { onProgress } = {}) {
   };
 }
 
-export async function readGifticonInfo(prepared, { onProgress, knownCode } = {}) {
+export async function readGifticonInfo(prepared, { onProgress, knownCode, knownType } = {}) {
   const total = prepared.uploads.length;
   const report = (step) => onProgress?.({ step, total });
 
@@ -427,7 +438,12 @@ export async function readGifticonInfo(prepared, { onProgress, knownCode } = {})
   const code = scanned || printed;
   // 형식은 막대에서 읽은 것이 맞다. 숫자 한 자리가 갈렸어도 어떤 규격의 바코드인지는
   // 막대 모양이 말해준다.
-  const codeType = scanned ? prepared.codeType : printed ? 'CODE_128' : null;
+  //
+  // 부르는 쪽이 아는 형식도 받는다. 훑기는 막대를 읽어 번호와 형식을 둘 다 들고 오는데,
+  // 여기서 다시 읽다가 실패하면 번호는 넘겨받은 것으로 살아남고 형식만 비어버린다.
+  // 그러면 화면이 막대를 그릴 규격을 몰라서 바코드를 아예 못 보여준다(BarcodeModal).
+  // 계산대에서 못 쓰는 기프티콘이 되는 셈이라, 번호와 같이 넘겨받는다.
+  const codeType = scanned ? prepared.codeType || knownType || null : printed ? 'CODE_128' : null;
 
   return {
     code,

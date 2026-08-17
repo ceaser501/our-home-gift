@@ -70,4 +70,14 @@ describe('등록 화면이 막대를 읽는 방법', () => {
     expect(found.code).toBeNull();
     expect(attempts).toEqual(['plain', 'deep']);
   });
+
+  // 훑기가 넘겨주는 경우다. 두 번째 판이 있는 이유는 못 읽었을 때 눈으로 읽은 숫자가
+  // 대신 들어가는 것을 막으려는 것뿐인데, 부르는 쪽이 이미 막대에서 읽은 번호를 들고
+  // 오면 지킬 것이 없다. 후보마다 가장 무거운 판을 돌릴 이유가 없다.
+  it('부르는 쪽이 번호를 알고 있으면 두 번째 판을 돌지 않는다', async () => {
+    const found = await decodeBarcode({}, { deepRetry: false });
+
+    expect(found.code).toBeNull();
+    expect(attempts).toEqual(['plain']);
+  });
 });

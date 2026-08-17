@@ -85,3 +85,20 @@ describe('readGifticonInfo — 어느 번호를 쓰나', () => {
     expect(info.code).toBe('1111111111');
   });
 });
+
+// 훑기는 막대를 읽어 번호와 형식을 둘 다 들고 온다. 그런데 등록에 넘길 때 여기서 다시
+// 읽다가 실패하면, 번호는 넘겨받은 것으로 살아남고 형식만 비어버렸다. 그러면 화면이
+// 막대를 그릴 규격을 몰라 바코드를 아예 못 보여준다 — 계산대에서 못 쓰는 기프티콘이 된다.
+describe('넘겨받은 바코드 형식', () => {
+  it('여기서 못 읽었어도 부르는 쪽이 아는 형식을 쓴다', async () => {
+    analyzeGifticonImages.mockResolvedValue(modelSays(''));
+
+    const info = await readGifticonInfo(prepared(null), {
+      knownCode: '713353422322',
+      knownType: 'CODE_128',
+    });
+
+    expect(info.code).toBe('713353422322');
+    expect(info.codeType).toBe('CODE_128');
+  });
+});
