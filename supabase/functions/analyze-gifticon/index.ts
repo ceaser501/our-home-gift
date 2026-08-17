@@ -14,7 +14,17 @@
 import Anthropic from 'npm:@anthropic-ai/sdk@0.115.0';
 import { corsFor, limitFromEnv, logAiUsage, requireUser, tooManyMessage, withinDailyLimit } from '../_shared/guard.ts';
 
-const MODEL = 'claude-haiku-4-5';
+// 어느 모델로 읽을지. 값을 안 넣으면 지금 쓰는 것 그대로다.
+//
+//   supabase secrets set ANALYZE_MODEL=claude-sonnet-5     # 재볼 때
+//   supabase secrets unset ANALYZE_MODEL                   # 되돌릴 때
+//
+// 코드에 박아두면 재볼 때마다 고치고 배포하고 되돌려야 한다. 지금 재봐야 하는 것이
+// "이 사진의 상품명을 더 센 모델은 읽는가" 하나뿐이라, 값만 바꿔 끼울 수 있게 뺀다.
+//
+// 값 차이가 크다(한 건 6원 → 18원). 재보고 나면 반드시 되돌리거나, 올릴지 말지를
+// 정해서 여기 기본값을 바꾼다 — 시험하려고 켜둔 것이 그대로 남는 일이 없게.
+const MODEL = Deno.env.get('ANALYZE_MODEL') || 'claude-haiku-4-5';
 const MAX_IMAGES = 5;
 
 // 프롬프트를 고칠 때마다 올린다. 답과 함께 돌려줘서, 테스트 빌드 화면에 그대로 찍힌다.
