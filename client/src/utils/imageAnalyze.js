@@ -178,13 +178,28 @@ export async function decodeBarcode(canvas) {
   }
 
   const codeType = result.getBarcodeFormat ? BarcodeFormat[result.getBarcodeFormat()] || null : null;
-  const cropBlob = await cropBarcodeRegion(canvas, result.getResultPoints?.(), codeType);
+  const points = result.getResultPoints?.();
+  const cropBlob = await cropBarcodeRegion(canvas, points, codeType);
   return {
     code: result.getText(),
     codeType,
     cropBlob,
+    // 막대가 사진 가로폭의 몇 할을 차지하는가. 훑기 쪽과 같은 값이다(gallery.js).
+    // 이 값이 작다는 건 "바코드를 보여주려고 찍은 사진"이 아니라는 뜻이다 — 앱 화면이나
+    // 목록을 통째로 찍은 캡처가 그렇다. 그런 그림에는 다른 기프티콘이 같이 찍혀 있어서,
+    // 모델이 옆칸의 금액과 기한을 이 기프티콘 것으로 읽어온다.
+    coverage: barcodeCoverage(points, canvas.width),
   };
 }
+
+function barcodeCoverage(points, width) {
+  if (!points || points.length === 0 || !width) return 0;
+  const xs = points.map((point) => point.getX());
+  return (Math.max(...xs) - Math.min(...xs)) / width;
+}
+
+// 이보다 작게 찍혔으면 화면에서 한마디 한다. 훑기 쪽과 같은 기준이다.
+export const SMALL_BARCODE_COVERAGE = 0.25;
 
 // 매장에서 실제로 스캔할 바코드/QR만 잘라서 보여주기 위해, zxing이 알려주는
 // 인식 좌표를 기준으로 원본 이미지에서 해당 영역만 잘라낸다.
@@ -288,7 +303,7 @@ async function cropThumbnail(file, box) {
 // 멈춘 것처럼 보이기 때문에, 화면 쪽에서 진행 상황을 표시할 수 있게 한다.
 export async function prepareImages(files, { onProgress } = {}) {
   const report = (step, extra) => onProgress?.({ step, total: files.length, ...extra });
-  const barcode = { code: null, codeType: null, cropBlob: null };
+  const barcode = { code: null, codeType: null, cropBlob: null, coverage: 0 };
   const storageFiles = [];
   const uploads = [];
 
@@ -314,6 +329,8 @@ export async function prepareImages(files, { onProgress } = {}) {
     code: barcode.code,
     codeType: barcode.codeType,
     barcodeCropBlob: barcode.cropBlob,
+    // 읽어낸 막대가 사진에서 얼마나 큰가. 화면이 "작게 찍혔어요"를 말할 때 쓴다.
+    barcodeCoverage: barcode.coverage,
     // 스토리지에 올릴 파일. 사용자가 고른 원본이 아니라 줄인 것이다.
     storageFiles,
     // 모델에게 보낼 같은 그림의 base64.

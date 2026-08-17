@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Loader2, Plus, RotateCcw, Search, X } from 'lucide-react';
 import { CATEGORIES } from '../constants';
-import { prepareImages, readGifticonInfo } from '../utils/imageAnalyze';
+import { prepareImages, readGifticonInfo, SMALL_BARCODE_COVERAGE } from '../utils/imageAnalyze';
 import { createGifticon, updateGifticon, searchPrice, findGifticonByCode, findLookalikeGifticon } from '../api';
 import { useFamily } from '../FamilyContext';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -127,6 +127,8 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
 
   const [analyzing, setAnalyzing] = useState(false);
   const [autoFilled, setAutoFilled] = useState(false);
+  // 막대가 사진에서 너무 작게 찍혔는가. 앱 화면이나 목록을 통째로 찍은 캡처가 그렇다.
+  const [smallBarcode, setSmallBarcode] = useState(false);
   // 모델이 금액권으로 봤는지. 켜주지는 않고 귀띔만 한다.
   const [voucherHint, setVoucherHint] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -198,6 +200,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
     setAnalyzing(true);
     setProgress({ step: 'barcode', current: 1, total: selected.length });
     setAutoFilled(false);
+    setSmallBarcode(false);
     setGroupNote('');
 
     // 여러 장을 골랐는데 서로 다른 기프티콘이면, 한 건짜리인 이 화면으로는 담을 수 없다.
@@ -297,6 +300,13 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
   // 길이 같은 처리를 쓴다.
   async function applyPrepared(prepared, { merge = false } = {}) {
     setAnalyzing(true);
+    // 막대는 읽혔는데 사진에서 차지하는 자리가 작다. 번호는 맞지만(막대에는 검산 자리가
+    // 있다) 그 그림에는 다른 기프티콘이 같이 찍혀 있을 수 있고, 그러면 모델이 옆칸의
+    // 금액과 기한을 이 기프티콘 것으로 읽어온다. 훑기는 그런 건을 아예 빼지만, 여기는
+    // 사람이 폼을 보고 있는 자리라 막지 않고 알린다.
+    if (prepared.code) {
+      setSmallBarcode(prepared.barcodeCoverage > 0 && prepared.barcodeCoverage < SMALL_BARCODE_COVERAGE);
+    }
 
     // 보관하는 건 사용자가 고른 원본이 아니라 줄인 사본이다(긴 변 1400px JPEG).
     // 미리보기도 같은 파일로 만들어서, 화면에 보이는 것과 실제로 올라가는 것이 같게 한다.
@@ -680,6 +690,12 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
             </div>
           ) : (
             autoFilled && <p className="text-sm text-success">정보를 채웠어요. 확인하고 저장해주세요.</p>
+          )}
+          {smallBarcode && !analyzing && (
+            <p className="text-warning m-0 text-sm leading-relaxed break-keep">
+              바코드가 사진에서 작게 찍혀 있어요. <b>상품명과 기한이 옆에 함께 찍힌 다른 기프티콘 것일 수
+              있으니</b> 확인해주세요.
+            </p>
           )}
           {error && <p className="text-sm text-destructive">{error}</p>}
 
