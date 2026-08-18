@@ -345,13 +345,15 @@ Deno.serve(async (req) => {
       guard.admin,
       guard.user.id,
       'analyze',
-      // 1인 한도가 30이면 처음 쓰는 사람이 바로 막힌다. 앱을 깔고 제일 먼저 하는 일이
-      // 사진첩에 쌓인 기프티콘을 자동스캔으로 몰아 넣는 것인데, 그게 서른 건을 넘기 쉽다.
-      // 전체 한도가 따로 있으니 1인 한도를 올려도 하루 요금의 천장은 그대로다.
-      limitFromEnv('ANALYZE_DAILY_LIMIT', 50),
-      // 예상은 하루 100건(사진 300장)이다. 세 배를 열어둔다 — 막히면 요금이 아니라
-      // 등록이 막히는 것이라, 여유가 없는 쪽이 더 나쁘다.
-      limitFromEnv('ANALYZE_TOTAL_DAILY_LIMIT', 300),
+      // ── 이 두 값은 출시 전에 따로 정한다. 여기서 손대지 않는다 ──────────────
+      // 한 번 "처음 쓰는 사람이 몰아 넣다가 막힌다"는 이유로 1인 한도를 50으로 올렸다가
+      // 되돌렸다. 세는 단위가 건(기프티콘 하나)이라 30건이면 사진 90장이고, 하루에 그만큼
+      // 찍어 쌓는 일이 흔하지 않다. 여행 다녀온 날 정도다.
+      //
+      // 두 값은 성격이 다르다. 1인 한도는 "한 사람이 몰아 쓰는 것"을 막고, 전체 한도는
+      // 하루 요금의 천장이다. 따로 보면 한쪽만 조이게 되니 나란히 놓고 한 번에 정한다.
+      limitFromEnv('ANALYZE_DAILY_LIMIT', 30),
+      limitFromEnv('ANALYZE_TOTAL_DAILY_LIMIT', 500),
     );
     if (!usage.allowed) {
       return new Response(JSON.stringify({ error: tooManyMessage(usage) }), {
