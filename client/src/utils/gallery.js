@@ -165,7 +165,11 @@ const READ_EDGE = 2000;
 //
 // 그래서 나눈다. 작은 것을 키우는 일은 싸다 — 그건 첫 번째로 옮겼다(작으면 키우고 크면
 // 줄여, 어느 쪽이든 1600에 맞춘다). 남은 정밀 탐색만 뒤로 미룬다.
-const SHALLOW = { longEdge: 1600, tryHarder: false };
+//
+// quality는 네이티브가 사진을 넘길 때 쓰는 JPEG 화질이다. 얕은 판은 싼 쪽을 쓴다 —
+// 여기를 지나는 사진의 대부분은 기프티콘이 아니라서, 전부의 바이트를 키우면 훑기가
+// 통째로 느려진다(한 번 그렇게 했다가 되돌렸다).
+const SHALLOW = { longEdge: 1600, tryHarder: false, quality: 85 };
 
 // 확인용. 읽어낸 값이 맞는지 다른 배율로 한 번 더 본다.
 //
@@ -186,7 +190,15 @@ const VERIFY = { longEdge: 2000, tryHarder: false };
 // 한때 2400으로 내려볼까 했는데 그만뒀다. 무게를 줄이려던 것인데, 뒤에서 도는 이상
 // 무거워도 사용자를 기다리게 하지 않는다. 놓치지 않는 것이 이 기능의 약속이라, 기다림을
 // 만들지 않는 자리에서까지 찾는 힘을 깎을 이유가 없다.
-const DEEP = { longEdge: 3200, tryHarder: true };
+//
+// 화질도 여기서 올린다. 얕은 판이 쓰는 85는 압축 자국이 얇은 막대 위에 앉아 판독을
+// 깨뜨릴 때가 있다 — 배스킨라빈스 카드가 그랬다. 훑기로는 못 읽었는데 같은 사진을 직접
+// 등록으로 올리면(원본을 그대로 읽는 길) 읽혔다.
+//
+// 여기 오는 것은 얕은 판이 못 읽은 사진뿐이라 값을 치르는 대상이 작고, 이 판은 결과를
+// 보여준 뒤에 도는 것이라 기다림도 안 만든다. 게다가 여기서도 못 읽으면 그 사진은
+// '바코드 없음'으로 적혀 다시는 안 읽힌다 — 마지막 기회에는 좋은 것을 줘야 한다.
+const DEEP = { longEdge: 3200, tryHarder: true, quality: 95 };
 
 // 아니라고 한 사진을 기억해둔다. 안 그러면 훑을 때마다 같은 것을 계속 다시 묻는다.
 const DISMISSED_KEY = 'moacon:gallery-dismissed';
@@ -205,7 +217,7 @@ const NO_BARCODE_KEY = 'moacon:gallery-no-barcode';
 // 예전에는 못 읽던 사진을 지금은 읽을 수 있게 되는 일이 실제로 있었다(작은 이미지를
 // 키워서 읽도록 고친 뒤). 그런데 "없음"으로 적힌 사진은 다시 읽지 않으니, 고쳐놓고도
 // 그 사진들만 영영 안 나온다. 버전이 다르면 기록을 통째로 버리고 다시 읽는다.
-const DECODER_VERSION = 4;
+const DECODER_VERSION = 5;
 
 function readIdSet(key) {
   try {
@@ -396,8 +408,11 @@ async function decodeAt(image, width, height, scale, tryHarder) {
 }
 
 // 사진첩에서 한 장 가져오기. 네이티브가 줄여서 base64로 준다.
-function readFromGallery(image) {
-  return MoaconGallery.readImage({ id: String(image.id), maxEdge: READ_EDGE });
+//
+// 화질은 판마다 다르다. 옛 앱에서는 quality를 모르고 늘 85로 주므로, 새 웹이 옛 앱에
+// 얹혀도 예전처럼 돌 뿐 깨지지 않는다.
+function readFromGallery(image, pass = SHALLOW) {
+  return MoaconGallery.readImage({ id: String(image.id), maxEdge: READ_EDGE, quality: pass.quality });
 }
 
 /**
@@ -437,7 +452,7 @@ async function collect({ images, read: readImage, pass, isRegistered, skipCodes,
 
     let read;
     try {
-      read = await readImage(image);
+      read = await readImage(image, pass);
     } catch {
       // 한 장을 못 읽는다고 전체가 멈추면 안 된다. 너무 큰 사진이거나 지워진 것이다.
       readFailed += 1;

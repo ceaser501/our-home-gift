@@ -62,6 +62,9 @@ public class GalleryPlugin extends Plugin {
     private static final int DEFAULT_LIMIT = 300;
     private static final int DEFAULT_MAX_EDGE = 1400;
 
+    // 사진을 넘길 때의 JPEG 화질. 부르는 쪽이 정할 수 있고, 안 정하면 예전 그대로다.
+    private static final int DEFAULT_QUALITY = 85;
+
     /**
      * 큰 정수는 문자열로 주고받는다.
      *
@@ -300,6 +303,8 @@ public class GalleryPlugin extends Plugin {
             return;
         }
         int maxEdge = call.getInt("maxEdge", DEFAULT_MAX_EDGE);
+        // 터무니없는 값이 와도 여기서 막는다. 100 아래는 그림이 남아나지 않고, 100 위는 없다.
+        int quality = Math.max(40, Math.min(100, call.getInt("quality", DEFAULT_QUALITY)));
 
         Uri uri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id);
         ContentResolver resolver = getContext().getContentResolver();
@@ -355,21 +360,23 @@ public class GalleryPlugin extends Plugin {
                 bitmap = scaled;
             }
 
-            // 화질은 85로 둔다. 한 번 95로 올렸다가 되돌렸다.
+            // 화질은 부르는 쪽이 정한다. 기본은 85다.
             //
-            // 올린 이유는 이 사본이 모델에게도 가기 때문이었다. 그런데 이 함수는 훑는
-            // 사진 전부를 지나간다 — 수백 장 중 기프티콘은 몇 장뿐이고, 나머지는 바코드가
-            // 있는지 보고 버릴 사진이다. 그 전부의 바이트를 키우면 웹뷰로 넘기는 문자열이
-            // 두 배가 되고, 훑기 전체가 눈에 띄게 느려진다(5~7초가 훨씬 길어졌다).
+            // 한 번 전부를 95로 올렸다가 되돌린 적이 있다. 이 함수는 훑는 사진 전부를
+            // 지나가는데 — 수백 장 중 기프티콘은 몇 장뿐이고 나머지는 바코드가 있는지 보고
+            // 버릴 사진이다 — 그 전부의 바이트를 키우니 웹뷰로 넘기는 문자열이 두 배가
+            // 되고 훑기 전체가 눈에 띄게 느려졌다. 그때는 올려서 나아졌다는 증거도 없었다.
             //
-            // 게다가 올려서 나아졌다는 증거가 없었다. 그때 쫓던 증상은 그 뒤 저절로
-            // 재현되지 않았고(같은 사진이 부를 때마다 다르게 읽히는 경계선이었다), 값은
-            // 확실히 치렀다. 확인되지 않은 이득과 확인된 비용이면 되돌리는 쪽이 맞다.
+            // 이제 증거가 생겼다. 85로 넘긴 배스킨라빈스 카드의 막대를 zxing이 못 읽었고,
+            // 같은 사진을 직접 등록으로 올리면(원본 그대로 읽는 길) 읽혔다. 압축 자국이
+            // 얇은 막대 위에 앉으면 판독이 깨진다.
             //
-            // 정말 필요해지면 자리를 옮겨야 한다 — 훑을 때는 싸게 읽고, 후보로 뽑힌 몇 장만
-            // 다시 좋은 화질로 받아오는 식이다. 그건 이 함수에 quality 인자를 더하는 일이다.
+            // 그래서 전부를 올리지 않고 자리를 옮긴다. 얕은 판은 그대로 85로 싸게 훑고,
+            // 거기서 못 읽은 것만 도는 정밀 탐색이 화질을 올려 다시 받는다. 값을 치르는
+            // 대상이 "모든 사진"에서 "못 읽은 사진"으로 줄고, 그마저 결과를 보여준 뒤
+            // 뒤에서 도는 판이라 사용자를 기다리게 하지 않는다.
             ByteArrayOutputStream out = new ByteArrayOutputStream();
-            bitmap.compress(Bitmap.CompressFormat.JPEG, 85, out);
+            bitmap.compress(Bitmap.CompressFormat.JPEG, quality, out);
             int outWidth = bitmap.getWidth();
             int outHeight = bitmap.getHeight();
             bitmap.recycle();
