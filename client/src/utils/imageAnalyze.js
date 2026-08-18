@@ -388,8 +388,20 @@ export async function readGifticonInfo(prepared, { onProgress, knownCode, knownT
   //
   // 여러 장일 때는 못 한다. 어느 사진에 이름이 있는지는 읽어봐야 알고, 아무 장이나 미리
   // 쏘면 이름이 없는 화면을 물어보는 셈이라 값만 나가고 답은 빈칸이다.
+  //
+  // 끝난 시각은 답이 오는 그 자리에서 찍는다. 아래에서 받아 든 시각으로 재면 못 쓴다 —
+  // 나란히 쏜 것은 읽기가 끝난 뒤에야 await하므로, 확인이 먼저 끝나 있어도 읽기가
+  // 끝나기를 기다린 시간까지 얹혀 찍힌다. 그래서 확인이 아무리 빨라도 읽기보다 작게
+  // 나올 수가 없었다. 실제로 화면에 읽기 9.0초·확인 9.0초처럼 같은 값이 나란히 찍혔고,
+  // 그걸 보면 "확인이 읽기만큼 걸린다"고 읽게 된다. 나눠 잰 이유가 없어진다.
+  let soloDoneAt = 0;
   const soloVerify =
-    !cached && prepared.uploads.length === 1 ? verifyGifticonName(prepared.uploads[0]) : null;
+    !cached && prepared.uploads.length === 1
+      ? verifyGifticonName(prepared.uploads[0]).then((name) => {
+          soloDoneAt = now();
+          return name;
+        })
+      : null;
   const soloAt = now();
 
   const info = cached || (await asking);
@@ -416,12 +428,15 @@ export async function readGifticonInfo(prepared, { onProgress, knownCode, knownT
     report('verifying');
     // 나란히 출발시킨 것이 있으면 그것을 받는다. 없으면 이제 짚어준 사진으로 부른다.
     //
-    // 시간은 각자 출발한 자리부터 잰다. 나란히 쏜 것을 읽기 끝난 시각부터 재면 이미 다
-    // 와 있어서 0초로 찍히고, 줄 세운 것을 출발 전부터 재면 읽기 시간까지 얹혀 찍힌다.
+    // 시간은 각자 출발한 자리부터 끝난 자리까지 잰다. 줄 세운 것을 출발 전부터 재면
+    // 읽기 시간까지 얹혀 찍히고, 나란히 쏜 것을 여기서 끝냈다고 치면 읽기를 기다린
+    // 시간이 얹힌다. 양쪽 끝을 다 제 자리에 둬야 두 값을 나란히 놓고 볼 수 있다.
     const upload = prepared.uploads[info.nameImage - 1] || null;
     const startedAt = soloVerify ? soloAt : now();
     const checked = soloVerify ? await soloVerify : upload ? await verifyGifticonName(upload) : null;
-    meta.verifyMs = now() - startedAt;
+    // 나란히 쏜 것은 답이 온 자리에서 찍어둔 시각으로 잰다. 여기서 재면 읽기를 기다린
+    // 시간까지 들어간다.
+    meta.verifyMs = (soloVerify ? soloDoneAt : now()) - startedAt;
     if (checked && checked !== info.name) {
       meta.nameChanged = true;
       meta.nameBefore = info.name;
