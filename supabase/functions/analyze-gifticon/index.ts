@@ -77,6 +77,34 @@ const VERIFY_PROMPT = `기프티콘 사진에서 상품 이름만 찾아 그대�
   흔한 이름일 것 같다는 이유로 고쳐 쓰지 않는다.
 - 못 찾겠으면 빈 문자열로 둔다. 지어내지 않는다.`;
 
+// 모델 호출이 실패했을 때, 그게 무엇 때문인지.
+//
+// 크레딧이 떨어져 이 함수가 통째로 500을 뱉은 날이 있었다. 화면에는 "잠시 뒤에 다시
+// 시도해주세요"가 떴고, 그 말대로 해도 나을 리가 없었다 — 기다려서 낫는 일이 아니라
+// 돈을 넣어야 낫는 일이었다. 원인을 찾는 데 반나절이 갔다.
+//
+// 상태 코드는 저쪽이 이미 주고 있었다. 우리가 그걸 마지막 catch 한 덩어리로 뭉개서,
+// 돈이 떨어진 것·저쪽이 붐비는 것·우리 코드가 틀린 것이 화면에서 똑같이 보였을 뿐이다.
+// 셋은 사람이 할 일이 전혀 다르다. 갈라서 말한다.
+//
+// 우리 버그는 여기서 null을 돌려주고 예전처럼 500으로 간다. 예상 못 한 것을 남의 탓으로
+// 돌려 503으로 적어두면, 고쳐야 할 것이 "잠시 붐빔"으로 묻힌다.
+function upstreamFailure(err: unknown) {
+  const status = (err as { status?: number })?.status;
+  if (!status) return null;
+
+  // 크레딧 부족은 402가 아니라 400에 담겨 온다. 상태 코드만으로는 우리가 스키마를
+  // 잘못 짠 400과 갈리지 않아서, 본문 글자도 함께 본다.
+  const detail = String((err as { message?: string })?.message || '');
+  if (status === 401 || status === 403 || /credit|billing|quota/i.test(detail)) {
+    return { status: 503, kind: 'account', error: '이미지 인식이 멈췄어요. 관리자에게 알려주세요.' };
+  }
+  if (status === 429 || status >= 500) {
+    return { status: 503, kind: 'busy', error: '지금은 붐벼요. 잠시 뒤에 다시 시도해주세요.' };
+  }
+  return { status: 502, kind: `api-${status}`, error: '이미지를 읽지 못했어요. 직접 등록해주세요.' };
+}
+
 const VERIFY_SCHEMA = {
   type: 'object',
   properties: {
@@ -91,7 +119,10 @@ const VERIFY_SCHEMA = {
 // 이게 없으면 "고쳤는데 왜 그대로냐"를 가릴 방법이 없다. 함수를 안 올린 것인지, 올렸는데
 // 안 먹은 것인지, 캐시가 옛 답을 준 것인지 — 셋 다 화면에서는 똑같아 보인다. 실제로 그걸
 // 못 가려서 같은 자리를 여러 번 헤맸다.
-const PROMPT_VERSION = '2026-08-18-위치규칙제거';
+//
+// 프롬프트 말고 읽는 방식이 바뀔 때도 올린다. 가리려는 것이 "올라갔느냐"라서, 화면에서
+// 달라 보일 변경이면 프롬프트든 아니든 여기 걸려 있어야 한다.
+const PROMPT_VERSION = '2026-08-18-확인생각끄기';
 
 // 프롬프트에는 규칙만 적는다. 왜 그렇게 정했는지는 여기 적는다.
 //
@@ -260,6 +291,17 @@ async function verifyName(
       // 답은 상품명 한 줄뿐이다. 그래도 되풀이에 빠져 잘리는 일이 있어 여유를 둔다 —
       // 실제로 쓴 만큼만 값을 내므로 천장을 올려도 비싸지지 않는다.
       max_tokens: 512,
+      // 생각은 꺼둔다. 안 적으면 켜진 채로 돈다.
+      //
+      // 소네트는 thinking을 안 적으면 알아서 생각하고, 그 생각도 max_tokens에서 깎아
+      // 쓴다. 그러니 위의 512는 상품명 한 줄에 주는 여유가 아니라 생각과 나눠 갖는
+      // 천장이었다 — 생각이 길어지면 답이 나오기도 전에 잘리고, 잘린 것은 아래에서
+      // 조용히 null이 된다. 화면에는 "상품명 재확인 못 함"만 남는다.
+      //
+      // 게다가 이 호출에 생각이 필요하지가 않다. 인쇄된 글자를 그대로 옮겨 적는 일이라
+      // 눈이 하는 일이지 머리가 하는 일이 아니다. 확인이 4초대로 나온 것도 대부분 이것이고,
+      // 생각한 만큼은 출력 토큰이라 요금으로도 나갔다. 안 쓰는 것에 값을 치르고 있었다.
+      thinking: { type: 'disabled' as const },
       system: VERIFY_PROMPT,
       output_config: { format: { type: 'json_schema', schema: VERIFY_SCHEMA } },
       messages: [
@@ -288,7 +330,14 @@ async function verifyName(
     const parsed = JSON.parse(textBlock.text);
     return ok(String(parsed.name ?? '').trim() || null);
   } catch (err) {
-    console.error('analyze-gifticon: 상품명 재확인 실패', err);
+    // 여기서 막혀도 등록은 그대로 되므로 화면에는 아무 말도 안 한다. 대신 로그에는
+    // 무엇 때문인지 남긴다 — 크레딧이 떨어지면 이쪽이 먼저 조용해지고, 그때 화면에
+    // 보이는 것은 "상품명 재확인 못 함" 한 줄뿐이라 원인을 짚을 자리가 여기밖에 없다.
+    console.error('analyze-gifticon: 상품명 재확인 실패', {
+      kind: upstreamFailure(err)?.kind ?? 'unknown',
+      status: (err as { status?: number })?.status,
+      message: (err as { message?: string })?.message,
+    });
     return ok(null);
   }
 }
@@ -501,6 +550,19 @@ Deno.serve(async (req) => {
     // 여기 오는 것은 우리가 예상하지 못한 오류다. 그 말을 그대로 화면에 올리면
     // 사용자는 영어 스택 조각을 읽게 된다. 자세한 것은 로그에 남기고, 화면에는
     // 무엇을 할 수 있는지만 말한다.
+    const upstream = upstreamFailure(err);
+    if (upstream) {
+      console.error('analyze-gifticon: 모델 호출 실패', {
+        kind: upstream.kind,
+        status: (err as { status?: number }).status,
+        message: (err as { message?: string }).message,
+      });
+      return new Response(JSON.stringify({ error: upstream.error }), {
+        status: upstream.status,
+        headers: jsonHeaders,
+      });
+    }
+
     console.error('analyze-gifticon 실패', err);
     return new Response(JSON.stringify({ error: '이미지를 읽지 못했어요. 잠시 뒤에 다시 시도해주세요.' }), {
       status: 500,
