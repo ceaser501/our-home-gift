@@ -104,6 +104,7 @@ function progressLabel(progress) {
     return `바코드를 읽고 있어요${count}`;
   }
   if (progress.step === 'reading') return '상품명·금액·유효기한을 읽고 있어요';
+  if (progress.step === 'verifying') return '상품명을 다시 확인하고 있어요';
   if (progress.step === 'thumbnail') return '상품 사진을 잘라내고 있어요';
   return '거의 다 됐어요';
 }

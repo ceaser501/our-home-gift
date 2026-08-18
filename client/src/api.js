@@ -434,6 +434,22 @@ export async function analyzeGifticonImages(images, categories) {
   return data;
 }
 
+// 상품명 글자만 잘라 보내 한 번 더 읽힌다. 앞선 분석이 짚어준 네모를 화면에서 자른 것이다.
+//
+// 실패해도 던지지 않는다. 이건 이미 나온 이름을 더 낫게 만드는 곁가지라, 여기서 막히면
+// 앞서 읽은 이름을 그대로 쓰면 된다 — 등록이 막히는 것보다 낫다.
+export async function verifyGifticonName(image) {
+  try {
+    const { data, error } = await supabase.functions.invoke('analyze-gifticon', {
+      body: { mode: 'verify', image },
+    });
+    if (error) return null;
+    return data?.name || null;
+  } catch {
+    return null;
+  }
+}
+
 export async function searchPrice({ brand, name }) {
   const { data, error } = await supabase.functions.invoke('search-price', {
     body: { brand, name },

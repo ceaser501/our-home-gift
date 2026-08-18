@@ -1,7 +1,7 @@
 import { BrowserMultiFormatReader } from '@zxing/browser';
 import { BarcodeFormat, DecodeHintType } from '@zxing/library';
 import { CATEGORY_KEYS } from '../constants';
-import { analyzeGifticonImages } from '../api';
+import { analyzeGifticonImages, verifyGifticonName } from '../api';
 import { readCachedInfo, writeCachedInfo } from './scanCache';
 
 // 기프티콘 이미지에서 정보를 뽑는 과정은 두 갈래다.
@@ -301,6 +301,59 @@ async function cropThumbnail(file, box) {
   }
 }
 
+// 상품명 글자만 잘라낸다. 서버가 짚어준 네모를 원본에서 잘라 다시 물어보기 위한 것이다.
+//
+// 왜 원본에서 자르나:
+//   모델에게 보내는 사본은 긴 변 1568픽셀이다(ANALYZE_EDGE). 세로로 긴 캡처는 그러고 나면
+//   폭이 700픽셀 언저리라 상품명 글자가 잘아진다 — 떠먹는이 따먹는으로 읽히는 자리가
+//   여기다. 원본에서 그 네모만 잘라내면 같은 글자를 몇 배 큰 그림으로 보낼 수 있다.
+//
+// 왜 값이 싸지나:
+//   전체 사진은 1,500토큰인데 그중 상품명이 차지하는 몫은 50토큰 남짓이다. 네모만 자르면
+//   200토큰짜리 그림이 통째로 그 글자다. 보내는 양은 7분의 1인데 글자에 배정되는 몫은
+//   서너 배가 된다.
+const NAME_CROP_EDGE = 1000;
+
+async function cropNameBox(file, box) {
+  const canvas = await toAnalyzeCanvas(file);
+  try {
+    // 모델이 짚은 네모는 글자에 딱 붙어 있을 때가 많아서, 그대로 자르면 획이 잘린다.
+    // 옆줄이 조금 딸려 들어오는 것보다 글자가 잘리는 쪽이 훨씬 나쁘다.
+    const boxWidth = (box.width / 100) * canvas.width;
+    const boxHeight = (box.height / 100) * canvas.height;
+    const padX = canvas.width * 0.03;
+    const padY = boxHeight * 0.3;
+
+    const x = Math.max(0, (box.x / 100) * canvas.width - padX);
+    const y = Math.max(0, (box.y / 100) * canvas.height - padY);
+    const width = Math.min(canvas.width - x, boxWidth + padX * 2);
+    const height = Math.min(canvas.height - y, boxHeight + padY * 2);
+    if (width < 32 || height < 12) return null;
+
+    const scale = Math.min(1, NAME_CROP_EDGE / Math.max(width, height));
+    const out = document.createElement('canvas');
+    out.width = Math.round(width * scale);
+    out.height = Math.round(height * scale);
+    const ctx = out.getContext('2d');
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(canvas, x, y, width, height, 0, 0, out.width, out.height);
+
+    // 글자만 있는 그림이라 압축 자국이 곧 오독이 된다. 여기는 아끼지 않는다 —
+    // 어차피 200토큰짜리라 크기가 문제 되는 자리가 아니다.
+    const blob = await new Promise((resolve) => out.toBlob(resolve, 'image/jpeg', 0.95));
+    out.width = 0;
+    out.height = 0;
+    return blob ? await toUploadPayload(blob) : null;
+  } catch {
+    // 못 자르면 확인을 건너뛴다. 앞서 읽은 이름이 그대로 남는다.
+    return null;
+  } finally {
+    canvas.width = 0;
+    canvas.height = 0;
+  }
+}
+
 // 기프티콘 한 건을 여러 장으로 나눠 올릴 수 있다(예: 상품명 화면 + 유효기간 화면).
 // 처리는 두 단계다.
 //
@@ -346,6 +399,9 @@ export async function prepareImages(files, { onProgress, knownCode } = {}) {
     storageFiles,
     // 모델에게 보낼 같은 그림의 base64.
     uploads,
+    // 사용자가 고른 그대로. 상품명 네모를 자를 때만 쓴다 — 줄인 사본에서 자르면
+    // 글자를 크게 보내려던 뜻이 없어진다. 파일 손잡이라 들고 있어도 무겁지 않다.
+    sourceFiles: files,
   };
 }
 
@@ -370,14 +426,39 @@ export async function readGifticonInfo(prepared, { onProgress, knownCode, knownT
   const cacheKey = known ? `${known}·${prepared.uploads.length}장` : null;
   const cached = readCachedInfo(cacheKey);
   const info = cached || (await analyzeGifticonImages(prepared.uploads, CATEGORY_KEYS));
-  if (!cached) writeCachedInfo(cacheKey, info);
 
-  // 이 답이 어디서 왔는지. 테스트 빌드 화면에만 찍힌다.
+  // 상품명만 잘라서 한 번 더 읽힌다.
   //
-  // "고쳤는데 왜 그대로냐"를 가리려면 이 셋이 필요하다 — 사진 몇 장을 보냈는지, 캐시에서
-  // 꺼낸 답인지, 서버의 프롬프트가 몇 판인지. 화면에서는 셋 다 똑같아 보여서 그동안
-  // 짐작으로 골랐고, 여러 번 틀렸다.
+  // 틀리는 항목이 상품명 하나로 몰려 있다. 금액·기한·상호는 숫자거나 아는 이름이라 잘
+  // 읽는데, 상품명은 처음 보는 한글 덩어리라 획 하나로 갈린다(떠먹는 → 따먹는). 게다가
+  // 틀린 방식이 조용해서, 멀쩡한 이름처럼 카드에 앉아 그대로 등록된다.
+  //
+  // 헷갈렸다고 말한 것만 골라 다시 보지 않는 이유: 그건 자기가 자기 답을 채점하는 것이다.
+  // 따먹는으로 읽었다는 건 그 순간 그렇게 보였다는 뜻이라 헷갈릴 이유가 없다. 그래서
+  // 거르지 않고 전부 다시 본다 — 잘라 보내면 한 건에 3원이라 거를 값어치가 없다.
+  //
+  // 캐시에서 꺼낸 답은 이미 확인을 거친 이름이라 다시 묻지 않는다(테스트 빌드 전용).
   const meta = { fromCache: Boolean(cached), promptVersion: info.promptVersion };
+  if (!cached && info.name && info.nameBox) {
+    report('verifying');
+    // 원본이 있으면 원본에서 자른다. 줄인 사본에서 자르면 글자를 크게 보내려던 뜻이 없어진다.
+    const index = info.nameBox.image - 1;
+    const source = prepared.sourceFiles?.[index] || prepared.storageFiles?.[index] || null;
+    const crop = source ? await cropNameBox(source, info.nameBox) : null;
+    const checked = crop ? await verifyGifticonName(crop) : null;
+    if (checked) {
+      meta.nameChanged = checked !== info.name;
+      meta.nameBefore = info.name;
+      info.name = checked;
+    } else {
+      // 못 물어본 것과 물어봤는데 같은 것은 다르다. 앞엣것은 확인이 안 된 이름이다.
+      meta.nameUnchecked = true;
+    }
+  } else if (!cached && info.name) {
+    meta.nameUnchecked = true;
+  }
+
+  if (!cached) writeCachedInfo(cacheKey, info);
 
   // 서버가 상품 사진 위치를 못 짚었으면 잘라내지 않는다. 이 경우 목록은 예전처럼
   // 첫 사진을 그대로 보여준다(잘못 자른 그림보다는 캡처 전체가 낫다).
