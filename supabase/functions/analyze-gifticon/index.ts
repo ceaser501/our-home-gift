@@ -32,7 +32,7 @@ const MAX_IMAGES = 5;
 // 이게 없으면 "고쳤는데 왜 그대로냐"를 가릴 방법이 없다. 함수를 안 올린 것인지, 올렸는데
 // 안 먹은 것인지, 캐시가 옛 답을 준 것인지 — 셋 다 화면에서는 똑같아 보인다. 실제로 그걸
 // 못 가려서 같은 자리를 여러 번 헤맸다.
-const PROMPT_VERSION = '2026-08-17-상품명먼저';
+const PROMPT_VERSION = '2026-08-18-확신도';
 
 // 프롬프트에는 규칙만 적는다. 왜 그렇게 정했는지는 여기 적는다.
 //
@@ -59,6 +59,8 @@ const SYSTEM_PROMPT = `너는 한국 모바일 기프티콘 이미지에서 필�
   말고 한 글자씩 확인한다. 흔한 상품명일 것 같다는 이유로 고쳐 쓰지 않는다.
 - 상호를 상품명 자리에 넣지 않는다. 못 읽겠으면 빈 문자열로 둔다.
 - 안내 문구, 버튼("선물하기", "사용하기"), 로고 옆 장식 글자는 상품명이 아니다.
+- 다 옮긴 뒤 nameConfidence를 적는다. 한 글자라도 짐작으로 채웠거나 획이 흐려 둘 중
+  하나로 보였으면 "헷갈림"이다. 전부 또렷하게 읽었을 때만 "확실"이다.
 
 [상호]
 - 이 기프티콘을 쓸 수 있는 브랜드(BBQ, 스타벅스, GS25).
@@ -91,6 +93,11 @@ function buildSchema(categories: string[]) {
     type: 'object',
     properties: {
       name: { type: 'string', description: '상품명. 못 찾으면 빈 문자열' },
+      nameConfidence: {
+        type: 'string',
+        enum: ['확실', '헷갈림'],
+        description: '상품명을 한 글자도 짐작 없이 읽었으면 확실, 한 글자라도 흐릿했으면 헷갈림',
+      },
       brand: { type: 'string', description: '상호(브랜드). 못 찾으면 빈 문자열' },
       amount: { type: 'string', description: '금액. 숫자만(쉼표 없이). 인쇄돼 있지 않으면 빈 문자열' },
       expiresAt: {
@@ -118,7 +125,17 @@ function buildSchema(categories: string[]) {
         additionalProperties: false,
       },
     },
-    required: ['name', 'brand', 'amount', 'expiresAt', 'category', 'code', 'isVoucher', 'thumbnail'],
+    required: [
+      'name',
+      'nameConfidence',
+      'brand',
+      'amount',
+      'expiresAt',
+      'category',
+      'code',
+      'isVoucher',
+      'thumbnail',
+    ],
     additionalProperties: false,
   };
 }
@@ -290,10 +307,25 @@ Deno.serve(async (req) => {
     // 기프티콘인지 나중에도 알 수 없다.
     const name = rawName && rawName === brand ? '' : rawName;
 
+    // 모델이 상품명을 헷갈렸다고 스스로 말한 경우.
+    //
+    // 이게 필요한 이유는, 상품명이 틀리는 방식이 조용하기 때문이다. 못 읽으면 빈칸이라
+    // 눈에 띄지만, "떠먹는"을 "뚜믹는"으로 읽으면 멀쩡한 이름처럼 카드에 앉는다. 사람은
+    // 그걸 보고 맞다고 여기고 넘어간다 — 실제로 그렇게 등록됐다.
+    //
+    // 값 자체는 모델의 자기 신고라 그대로 믿을 것은 못 된다. 다만 두 가지에 쓴다.
+    //   1) 화면 — 헷갈렸다고 한 건만 "확인해주세요"를 붙인다. 전부 붙이면 아무도 안 본다.
+    //   2) 다음 결정 — 헷갈림이 몇 %나 나오는지가 곧 하이쿠를 계속 쓸지의 근거다.
+    //      이게 없으면 "투썸 한 건이 틀렸다"는 인상만 갖고 3배 비싼 모델을 고르게 된다.
+    //
+    // 빈칸은 헷갈림으로 치지 않는다. 그건 이미 카드가 "못 읽었어요"로 말하고 있다.
+    const nameUncertain = Boolean(name) && parsed.nameConfidence === '헷갈림';
+
     return new Response(
       JSON.stringify({
         promptVersion: PROMPT_VERSION,
         name: name || null,
+        nameUncertain,
         brand: brand || null,
         amount: amount ? Number(amount) : null,
         expiresAt: /^\d{4}-\d{2}-\d{2}$/.test(parsed.expiresAt || '') ? parsed.expiresAt : null,

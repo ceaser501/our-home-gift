@@ -129,6 +129,9 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
   const [autoFilled, setAutoFilled] = useState(false);
   // 막대가 사진에서 너무 작게 찍혔는가. 앱 화면이나 목록을 통째로 찍은 캡처가 그렇다.
   const [smallBarcode, setSmallBarcode] = useState(false);
+  // 모델이 상품명을 헷갈렸다고 말한 경우. 사진을 더해 다시 읽혔을 때 앞의 경고가
+  // 남아 있으면 안 되므로, 읽을 때마다 새로 정한다.
+  const [uncertainName, setUncertainName] = useState(false);
   // 모델이 금액권으로 봤는지. 켜주지는 않고 귀띔만 한다.
   const [voucherHint, setVoucherHint] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -201,6 +204,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
     setProgress({ step: 'barcode', current: 1, total: selected.length });
     setAutoFilled(false);
     setSmallBarcode(false);
+    setUncertainName(false);
     setGroupNote('');
 
     // 여러 장을 골랐는데 서로 다른 기프티콘이면, 한 건짜리인 이 화면으로는 담을 수 없다.
@@ -327,6 +331,13 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
     try {
       const result = await readGifticonInfo(prepared, { onProgress: setProgress });
 
+      // 이번에 읽은 상품명이 실제로 칸에 들어갈 때만 경고한다.
+      //
+      // 사진을 더하는 경우(merge) 이미 적힌 상품명이 이긴다. 그때 새 사진에서 헷갈렸다고
+      // 해서 경고를 띄우면, 칸에 있는 것은 앞 사진에서 또렷하게 읽은 이름인데 "확인하라"고
+      // 세워두는 셈이다. 헛경보가 반복되면 진짜 경고도 안 읽힌다.
+      setUncertainName(Boolean(result.nameUncertain && result.name && (!merge || !form.name)));
+
       // 첫 사진을 올리는 건 "이 기프티콘으로 하겠다"는 뜻이라, 설명하는 칸들을 통째로
       // 새 결과로 바꾼다. 못 읽은 항목은 비워서 예전 기프티콘 값이 남지 않게 한다.
       //
@@ -436,6 +447,10 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
     setThumbCropFile(null);
     setError('');
     setAutoFilled(false);
+    // 되돌리기는 읽어온 것을 다 무르는 자리다. 사진에서 나온 경고도 같이 무른다 —
+    // 폼은 처음 값으로 돌아갔는데 "상품명이 흐릿해요"만 남으면 무엇을 보라는 말인지 모른다.
+    setSmallBarcode(false);
+    setUncertainName(false);
     setVoucherHint(false);
     setPriceSearchNote('');
     setProgress(null);
@@ -694,6 +709,11 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
           {smallBarcode && !analyzing && (
             <p className="text-warning m-0 text-sm leading-relaxed break-keep">
               바코드가 사진에서 작게 찍혀 있어요. 다시 한번 확인해주세요.
+            </p>
+          )}
+          {uncertainName && !analyzing && (
+            <p className="text-warning m-0 text-sm leading-relaxed break-keep">
+              상품명이 흐릿해요. 맞는지 봐주세요.
             </p>
           )}
           {error && <p className="text-sm text-destructive">{error}</p>}
