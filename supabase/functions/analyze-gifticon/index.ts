@@ -27,9 +27,12 @@ import { corsFor, limitFromEnv, logAiUsage, requireUser, tooManyMessage, withinD
 const MODEL = Deno.env.get('ANALYZE_MODEL') || 'claude-haiku-4-5';
 const MAX_IMAGES = 5;
 
-// 상품명만 한 번 더 읽는 모델. 값이 없으면 검증하지 않는다(예전 동작 그대로).
+// 상품명만 한 번 더 읽는 모델.
 //
-//   supabase secrets set ANALYZE_VERIFY_MODEL=claude-sonnet-5
+//   supabase secrets set ANALYZE_VERIFY_MODEL=off   # 끌 때
+//
+// 기본값으로 박아둔다. 시크릿에만 두면 함수를 새 환경에 올릴 때 잊기 쉽고, 잊어도
+// 화면은 멀쩡히 도는 탓에 한참 뒤에야 안다 — 그 사이 등록된 것은 확인을 안 거친다.
 //
 // 왜 상품명만 따로 보는가:
 //   틀리는 항목이 상품명 하나로 몰려 있다. 금액·기한·상호는 숫자거나 아는 이름이라
@@ -53,7 +56,8 @@ const MAX_IMAGES = 5;
 //
 //   사진을 통째로 주면 좌표가 아예 필요 없다. 이쪽이 스스로 상품명을 찾으니, 답을 그냥
 //   받으면 된다. 발행사마다 카드 생김새가 달라도 여기는 손댈 것이 없다.
-const VERIFY_MODEL = Deno.env.get('ANALYZE_VERIFY_MODEL') || '';
+const VERIFY_MODEL_SETTING = Deno.env.get('ANALYZE_VERIFY_MODEL') || 'claude-sonnet-5';
+const VERIFY_MODEL = VERIFY_MODEL_SETTING === 'off' ? '' : VERIFY_MODEL_SETTING;
 
 // 어디에 있는지는 적지 않는다.
 //
