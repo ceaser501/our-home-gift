@@ -23,7 +23,7 @@ vi.mock('../utils/scanCache', () => ({
   writeCachedInfo: () => {},
 }));
 
-const { readGifticonInfo } = await import('../utils/imageAnalyze');
+const { readGifticonInfo, nameLooksLikeFix } = await import('../utils/imageAnalyze');
 
 const NAME_BOX = { image: 1, x: 10, y: 20, width: 70, height: 6 };
 
@@ -92,5 +92,37 @@ describe('상품명 재확인', () => {
 
     expect(info.name).toBe('따먹는 스트로베리 케이크');
     expect(info.meta.nameUnchecked).toBe(true);
+  });
+});
+
+// 네모를 엉뚱한 데 짚었을 때가 제일 위험하다. 좌표가 그럴듯하면 우리는 눈치채지 못하고,
+// 소네트는 거기 있는 글자를 정직하게 읽어온다. 그 값으로 갈아끼우면 맞게 읽은 이름이
+// 틀린 이름으로 덮인다 — 고치려던 것이 오히려 망가진다.
+//
+// 배스킨라빈스 카드가 그런 자리다. 맨 위 띠에 "받아랏 내마음"이 제일 크게 적혀 있고
+// 정작 상품명은 그 아래 작게 있다. 크기로 짚으면 인사말을 집는다.
+describe('다시 읽어온 이름을 받아들일지', () => {
+  it('한 글자 갈린 것은 고친 것으로 본다', () => {
+    expect(nameLooksLikeFix('따먹는 스트로베리 케이크', '떠먹는 스트로베리 케이크')).toBe(true);
+  });
+
+  it('앞에 붙은 대괄호를 흘렸으면 채워 넣는다', () => {
+    expect(nameLooksLikeFix('파인트 아이스크림', '[베스킨라빈스] 파인트 아이스크림')).toBe(true);
+  });
+
+  it('통째로 다른 글자는 딴 데를 본 것이라 물리친다', () => {
+    expect(nameLooksLikeFix('[베스킨라빈스] 파인트 아이스크림', '받아랏 내마음')).toBe(false);
+  });
+
+  it('상품명 자리에 발행사 이름이 오면 물리친다', () => {
+    expect(nameLooksLikeFix('아이스 아메리카노 T', 'OFFICECON')).toBe(false);
+  });
+
+  it('앞서 읽은 이름이 없으면 그냥 받는다', () => {
+    expect(nameLooksLikeFix('', '파인트 아이스크림')).toBe(true);
+  });
+
+  it('빈 값으로는 덮지 않는다', () => {
+    expect(nameLooksLikeFix('파인트 아이스크림', '')).toBe(false);
   });
 });

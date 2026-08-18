@@ -314,6 +314,49 @@ async function cropThumbnail(file, box) {
 //   서너 배가 된다.
 const NAME_CROP_EDGE = 1000;
 
+// 다시 읽어온 이름을 받아들일지 정한다.
+//
+// 이 검사가 필요한 이유는, 네모를 엉뚱한 데 짚었을 때가 조용하기 때문이다. 좌표가
+// 그럴듯하면 우리는 아무것도 눈치채지 못하고, 소네트는 거기 있는 글자를 정직하게 읽어
+// 온다. 그 값으로 갈아끼우면 **맞게 읽은 이름이 틀린 이름으로 덮인다** — 고치려던 것이
+// 오히려 망가진다. 기프티콘마다 생김새가 달라서 이건 언젠가 반드시 일어난다.
+//
+// 가르는 자는 "얼마나 다른가"다. 오독을 고치는 일은 본질적으로 작은 차이다
+// (따먹는 → 떠먹는, 한 글자). 통째로 다른 글자가 왔다면 그건 고친 게 아니라 다른 데를
+// 본 것이다("[베스킨라빈스] 파인트 아이스크림"이 "받아랏 내마음"으로 올 수는 없다).
+//
+// 한쪽이 다른 쪽을 품고 있으면 그냥 받는다. 앞에 붙은 대괄호를 하이쿠가 흘린 경우라
+// 이건 채워 넣는 것이 맞다.
+const NAME_MAX_DIFF = 0.5;
+
+function editDistance(a, b) {
+  let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i += 1) {
+    const row = [i];
+    for (let j = 1; j <= b.length; j += 1) {
+      row[j] = Math.min(
+        prev[j] + 1,
+        row[j - 1] + 1,
+        prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)
+      );
+    }
+    prev = row;
+  }
+  return prev[b.length];
+}
+
+export function nameLooksLikeFix(before, after) {
+  if (!after) return false;
+  if (!before) return true;
+  if (before === after) return false;
+
+  const a = before.replace(/\s+/g, '');
+  const b = after.replace(/\s+/g, '');
+  if (a.includes(b) || b.includes(a)) return true;
+
+  return editDistance(a, b) / Math.max(a.length, b.length) <= NAME_MAX_DIFF;
+}
+
 async function cropNameBox(file, box) {
   const canvas = await toAnalyzeCanvas(file);
   try {
@@ -446,10 +489,15 @@ export async function readGifticonInfo(prepared, { onProgress, knownCode, knownT
     const source = prepared.sourceFiles?.[index] || prepared.storageFiles?.[index] || null;
     const crop = source ? await cropNameBox(source, info.nameBox) : null;
     const checked = crop ? await verifyGifticonName(crop) : null;
-    if (checked) {
-      meta.nameChanged = checked !== info.name;
+    if (checked && checked === info.name) {
+      // 두 모델이 같게 읽었다. 여기가 대부분이고, 이때 아무 일도 안 하는 것이 맞다.
+    } else if (checked && nameLooksLikeFix(info.name, checked)) {
+      meta.nameChanged = true;
       meta.nameBefore = info.name;
       info.name = checked;
+    } else if (checked) {
+      // 통째로 다른 글자가 왔다. 네모를 엉뚱한 데 짚었다는 뜻이라 갈아끼우지 않는다.
+      meta.nameRejected = checked;
     } else {
       // 못 물어본 것과 물어봤는데 같은 것은 다르다. 앞엣것은 확인이 안 된 이름이다.
       meta.nameUnchecked = true;
