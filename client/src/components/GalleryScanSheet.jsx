@@ -1394,6 +1394,9 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
                   {info.meta.promptVersion || '프롬프트 판 모름(함수가 옛것)'}
                   {/* 상품명 재확인이 실제로 돌았는지. 이 줄이 없으면 "확인했는데 같았다"와
                       "확인을 못 했다"가 화면에서 똑같아 보인다 — 그동안 여러 번 그랬다. */}
+                  {/* 두 번 부르는 구조라 한 덩어리로 재면 어느 쪽이 느린지 알 수가 없다. */}
+                  {info.meta.askMs > 0 && ` · 읽기 ${(info.meta.askMs / 1000).toFixed(1)}초`}
+                  {info.meta.verifyMs > 0 && ` · 확인 ${(info.meta.verifyMs / 1000).toFixed(1)}초`}
                   {info.meta.nameChanged && ` · 상품명 고침(${info.meta.nameBefore} →)`}
                   {info.meta.nameUnchecked && ' · 상품명 재확인 못 함'}
                   {!info.meta.nameChanged &&

@@ -73,6 +73,11 @@ async function toAnalyzeCanvas(file) {
   return canvas;
 }
 
+// 시간 재기. performance가 없는 환경(오래된 웹뷰, 테스트)에서도 터지지 않게 감싼다.
+function now() {
+  return typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now();
+}
+
 function loadImage(src) {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -371,7 +376,10 @@ export async function readGifticonInfo(prepared, { onProgress, knownCode, knownT
   const known = knownCode || prepared.code;
   const cacheKey = known ? `${known}·${prepared.uploads.length}장` : null;
   const cached = readCachedInfo(cacheKey);
+  // 두 번 부르는 구조라 한 덩어리로 재면 어느 쪽이 느린지 알 수가 없다. 나눠 잰다.
+  const askedAt = now();
   const info = cached || (await analyzeGifticonImages(prepared.uploads, CATEGORY_KEYS));
+  const askMs = cached ? 0 : now() - askedAt;
 
   // 상품명만 한 번 더 읽힌다. 그 사진 한 장을 통째로 다시 보낸다.
   //
@@ -389,12 +397,14 @@ export async function readGifticonInfo(prepared, { onProgress, knownCode, knownT
   // 맞는 교정을 더 확실히 막았다. 통째로 주면 저쪽이 스스로 상품명을 찾으니 좌표가 필요 없다.
   //
   // 캐시에서 꺼낸 답은 이미 확인을 거친 이름이라 다시 묻지 않는다(테스트 빌드 전용).
-  const meta = { fromCache: Boolean(cached), promptVersion: info.promptVersion };
+  const meta = { fromCache: Boolean(cached), promptVersion: info.promptVersion, askMs };
   if (!cached && info.name && info.nameImage) {
     report('verifying');
+    const verifyAt = now();
     // 그 사진 한 장을 통째로 다시 보낸다. 이미 만들어 보낸 base64를 그대로 쓴다.
     const upload = prepared.uploads[info.nameImage - 1] || null;
     const checked = upload ? await verifyGifticonName(upload) : null;
+    meta.verifyMs = now() - verifyAt;
     if (checked && checked !== info.name) {
       meta.nameChanged = true;
       meta.nameBefore = info.name;
