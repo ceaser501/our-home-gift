@@ -104,7 +104,9 @@ const ANALYZE_QUALITY = 0.95;
 // 모델이 보는 그림은 같다. 그래서 줄여서 손해 안 보는 가장 큰 값이 이 값이다.
 //
 // 세로로 긴 캡처는 이래도 폭이 700픽셀 언저리다. 화소 상한이 폭을 묶어버려서 더 넓힐
-// 방법이 없다. 글자를 더 키우려면 결국 필요한 부분만 잘라 보내야 하는데, 그건 다음 일이다.
+// 방법이 없다. 글자만 잘라 크게 보내는 것도 해봤는데, 어디를 자를지 짚는 좌표가 틀리면
+// 맞게 읽은 이름이 틀린 이름으로 덮여서 걷어냈다. 대신 상품명은 사진 한 장을 통째로
+// 다시 보여 확인한다(readGifticonInfo).
 const ANALYZE_EDGE = 1568;
 
 async function toBlobAt(canvas, edge, quality) {
@@ -301,102 +303,6 @@ async function cropThumbnail(file, box) {
   }
 }
 
-// 상품명 글자만 잘라낸다. 서버가 짚어준 네모를 원본에서 잘라 다시 물어보기 위한 것이다.
-//
-// 왜 원본에서 자르나:
-//   모델에게 보내는 사본은 긴 변 1568픽셀이다(ANALYZE_EDGE). 세로로 긴 캡처는 그러고 나면
-//   폭이 700픽셀 언저리라 상품명 글자가 잘아진다 — 떠먹는이 따먹는으로 읽히는 자리가
-//   여기다. 원본에서 그 네모만 잘라내면 같은 글자를 몇 배 큰 그림으로 보낼 수 있다.
-//
-// 왜 값이 싸지나:
-//   전체 사진은 1,500토큰인데 그중 상품명이 차지하는 몫은 50토큰 남짓이다. 네모만 자르면
-//   200토큰짜리 그림이 통째로 그 글자다. 보내는 양은 7분의 1인데 글자에 배정되는 몫은
-//   서너 배가 된다.
-const NAME_CROP_EDGE = 1000;
-
-// 다시 읽어온 이름을 받아들일지 정한다.
-//
-// 이 검사가 필요한 이유는, 네모를 엉뚱한 데 짚었을 때가 조용하기 때문이다. 좌표가
-// 그럴듯하면 우리는 아무것도 눈치채지 못하고, 소네트는 거기 있는 글자를 정직하게 읽어
-// 온다. 그 값으로 갈아끼우면 **맞게 읽은 이름이 틀린 이름으로 덮인다** — 고치려던 것이
-// 오히려 망가진다. 기프티콘마다 생김새가 달라서 이건 언젠가 반드시 일어난다.
-//
-// 가르는 자는 "얼마나 다른가"다. 오독을 고치는 일은 본질적으로 작은 차이다
-// (따먹는 → 떠먹는, 한 글자). 통째로 다른 글자가 왔다면 그건 고친 게 아니라 다른 데를
-// 본 것이다("[베스킨라빈스] 파인트 아이스크림"이 "받아랏 내마음"으로 올 수는 없다).
-//
-// 한쪽이 다른 쪽을 품고 있으면 그냥 받는다. 앞에 붙은 대괄호를 하이쿠가 흘린 경우라
-// 이건 채워 넣는 것이 맞다.
-const NAME_MAX_DIFF = 0.5;
-
-function editDistance(a, b) {
-  let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
-  for (let i = 1; i <= a.length; i += 1) {
-    const row = [i];
-    for (let j = 1; j <= b.length; j += 1) {
-      row[j] = Math.min(
-        prev[j] + 1,
-        row[j - 1] + 1,
-        prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)
-      );
-    }
-    prev = row;
-  }
-  return prev[b.length];
-}
-
-export function nameLooksLikeFix(before, after) {
-  if (!after) return false;
-  if (!before) return true;
-  if (before === after) return false;
-
-  const a = before.replace(/\s+/g, '');
-  const b = after.replace(/\s+/g, '');
-  if (a.includes(b) || b.includes(a)) return true;
-
-  return editDistance(a, b) / Math.max(a.length, b.length) <= NAME_MAX_DIFF;
-}
-
-async function cropNameBox(file, box) {
-  const canvas = await toAnalyzeCanvas(file);
-  try {
-    // 모델이 짚은 네모는 글자에 딱 붙어 있을 때가 많아서, 그대로 자르면 획이 잘린다.
-    // 옆줄이 조금 딸려 들어오는 것보다 글자가 잘리는 쪽이 훨씬 나쁘다.
-    const boxWidth = (box.width / 100) * canvas.width;
-    const boxHeight = (box.height / 100) * canvas.height;
-    const padX = canvas.width * 0.03;
-    const padY = boxHeight * 0.3;
-
-    const x = Math.max(0, (box.x / 100) * canvas.width - padX);
-    const y = Math.max(0, (box.y / 100) * canvas.height - padY);
-    const width = Math.min(canvas.width - x, boxWidth + padX * 2);
-    const height = Math.min(canvas.height - y, boxHeight + padY * 2);
-    if (width < 32 || height < 12) return null;
-
-    const scale = Math.min(1, NAME_CROP_EDGE / Math.max(width, height));
-    const out = document.createElement('canvas');
-    out.width = Math.round(width * scale);
-    out.height = Math.round(height * scale);
-    const ctx = out.getContext('2d');
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = 'high';
-    ctx.drawImage(canvas, x, y, width, height, 0, 0, out.width, out.height);
-
-    // 글자만 있는 그림이라 압축 자국이 곧 오독이 된다. 여기는 아끼지 않는다 —
-    // 어차피 200토큰짜리라 크기가 문제 되는 자리가 아니다.
-    const blob = await new Promise((resolve) => out.toBlob(resolve, 'image/jpeg', 0.95));
-    out.width = 0;
-    out.height = 0;
-    return blob ? await toUploadPayload(blob) : null;
-  } catch {
-    // 못 자르면 확인을 건너뛴다. 앞서 읽은 이름이 그대로 남는다.
-    return null;
-  } finally {
-    canvas.width = 0;
-    canvas.height = 0;
-  }
-}
-
 // 기프티콘 한 건을 여러 장으로 나눠 올릴 수 있다(예: 상품명 화면 + 유효기간 화면).
 // 처리는 두 단계다.
 //
@@ -442,9 +348,6 @@ export async function prepareImages(files, { onProgress, knownCode } = {}) {
     storageFiles,
     // 모델에게 보낼 같은 그림의 base64.
     uploads,
-    // 사용자가 고른 그대로. 상품명 네모를 자를 때만 쓴다 — 줄인 사본에서 자르면
-    // 글자를 크게 보내려던 뜻이 없어진다. 파일 손잡이라 들고 있어도 무겁지 않다.
-    sourceFiles: files,
   };
 }
 
@@ -470,7 +373,7 @@ export async function readGifticonInfo(prepared, { onProgress, knownCode, knownT
   const cached = readCachedInfo(cacheKey);
   const info = cached || (await analyzeGifticonImages(prepared.uploads, CATEGORY_KEYS));
 
-  // 상품명만 잘라서 한 번 더 읽힌다.
+  // 상품명만 한 번 더 읽힌다. 그 사진 한 장을 통째로 다시 보낸다.
   //
   // 틀리는 항목이 상품명 하나로 몰려 있다. 금액·기한·상호는 숫자거나 아는 이름이라 잘
   // 읽는데, 상품명은 처음 보는 한글 덩어리라 획 하나로 갈린다(떠먹는 → 따먹는). 게다가
@@ -478,27 +381,25 @@ export async function readGifticonInfo(prepared, { onProgress, knownCode, knownT
   //
   // 헷갈렸다고 말한 것만 골라 다시 보지 않는 이유: 그건 자기가 자기 답을 채점하는 것이다.
   // 따먹는으로 읽었다는 건 그 순간 그렇게 보였다는 뜻이라 헷갈릴 이유가 없다. 그래서
-  // 거르지 않고 전부 다시 본다 — 잘라 보내면 한 건에 3원이라 거를 값어치가 없다.
+  // 거르지 않고 전부 다시 본다.
+  //
+  // 한때 상품명 네모만 잘라 보냈다(값이 3분의 1이었다). 좌표가 엉뚱하면 맞게 읽은 이름이
+  // 틀린 이름으로 덮이는데, 그걸 막으려고 "앞서 읽은 이름과 너무 다르면 물리친다"를 넣었다가
+  // 둘 다 걷어냈다 — 못 믿는 쪽을 자로 삼는 셈이라, 하이쿠가 크게 틀릴수록("또망는 케이크")
+  // 맞는 교정을 더 확실히 막았다. 통째로 주면 저쪽이 스스로 상품명을 찾으니 좌표가 필요 없다.
   //
   // 캐시에서 꺼낸 답은 이미 확인을 거친 이름이라 다시 묻지 않는다(테스트 빌드 전용).
   const meta = { fromCache: Boolean(cached), promptVersion: info.promptVersion };
-  if (!cached && info.name && info.nameBox) {
+  if (!cached && info.name && info.nameImage) {
     report('verifying');
-    // 원본이 있으면 원본에서 자른다. 줄인 사본에서 자르면 글자를 크게 보내려던 뜻이 없어진다.
-    const index = info.nameBox.image - 1;
-    const source = prepared.sourceFiles?.[index] || prepared.storageFiles?.[index] || null;
-    const crop = source ? await cropNameBox(source, info.nameBox) : null;
-    const checked = crop ? await verifyGifticonName(crop) : null;
-    if (checked && checked === info.name) {
-      // 두 모델이 같게 읽었다. 여기가 대부분이고, 이때 아무 일도 안 하는 것이 맞다.
-    } else if (checked && nameLooksLikeFix(info.name, checked)) {
+    // 그 사진 한 장을 통째로 다시 보낸다. 이미 만들어 보낸 base64를 그대로 쓴다.
+    const upload = prepared.uploads[info.nameImage - 1] || null;
+    const checked = upload ? await verifyGifticonName(upload) : null;
+    if (checked && checked !== info.name) {
       meta.nameChanged = true;
       meta.nameBefore = info.name;
       info.name = checked;
-    } else if (checked) {
-      // 통째로 다른 글자가 왔다. 네모를 엉뚱한 데 짚었다는 뜻이라 갈아끼우지 않는다.
-      meta.nameRejected = checked;
-    } else {
+    } else if (!checked) {
       // 못 물어본 것과 물어봤는데 같은 것은 다르다. 앞엣것은 확인이 안 된 이름이다.
       meta.nameUnchecked = true;
     }

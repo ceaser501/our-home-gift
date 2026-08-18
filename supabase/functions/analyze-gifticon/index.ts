@@ -41,16 +41,30 @@ const MAX_IMAGES = 5;
 //   그렇게 보였다는 뜻이라, 헷갈릴 이유가 없다 — 틀린 줄 알면 애초에 안 틀렸다.
 //   그래서 헷갈림 표시로 거르지 않고 전부 다시 본다.
 //
-// 왜 잘라서 보내는가:
-//   전체 사진(1568px)에서 상품명 글자가 차지하는 몫은 1,500토큰 중 50토큰 남짓이다.
-//   그 네모만 잘라 보내면 같은 글자가 130토큰을 받는다 — 모델이 그 글자에 쏟는 몫이
-//   두세 배가 된다. 값도 함께 내려간다(8.1원 → 3원).
+// 왜 잘라 보내지 않고 사진을 통째로 주는가:
+//   한때 상품명 네모만 잘라 보냈다. 값이 3분의 1이라 그게 나아 보였는데, 좌표에 기대는
+//   순간 조용히 망가지는 길이 열린다 — 네모가 엉뚱한 데를 짚으면 이쪽은 거기 있는 글자를
+//   정직하게 읽어오고, 그 값으로 갈아끼우면 맞게 읽은 이름이 틀린 이름으로 덮인다.
+//
+//   막아보려고 "앞서 읽은 이름과 너무 다르면 물리친다"를 넣었다가 걷어냈다. 못 믿는 쪽을
+//   자로 삼는 셈이라, 하이쿠가 크게 틀릴수록("또망는 케이크") 맞는 교정을 더 확실히
+//   막았다. 게다가 "이쪽이 맞고 하이쿠가 많이 틀림"과 "네모가 딴 데를 짚음"은 둘 다
+//   "크게 다름"으로 보여서 가를 수가 없다.
+//
+//   사진을 통째로 주면 좌표가 아예 필요 없다. 이쪽이 스스로 상품명을 찾으니, 답을 그냥
+//   받으면 된다. 발행사마다 카드 생김새가 달라도 여기는 손댈 것이 없다.
 const VERIFY_MODEL = Deno.env.get('ANALYZE_VERIFY_MODEL') || '';
 
-const VERIFY_PROMPT = `이미지에 인쇄된 상품 이름을 한 글자도 바꾸지 말고 그대로 옮긴다.
-한글은 획 하나로 갈린다(떠/따/뚜, 반/밤, 올/울). 한 글자씩 확인한다.
-흔한 이름일 것 같다는 이유로 고쳐 쓰지 않는다.
-상품 이름이 안 보이면 빈 문자열로 둔다.`;
+const VERIFY_PROMPT = `기프티콘 사진에서 상품 이름만 찾아 그대로 옮긴다.
+
+- 무엇과 바꾸는 상품인지를 말하는 이름이다. 대개 상호 이름 옆이나 아래에 있고,
+  "교환처"·"유효기간"이 적힌 줄보다 위에 있다.
+- 크다고 상품 이름이 아니다. 맨 위 띠의 인사말("받아랏 내마음"), 상호, 버튼,
+  쿠폰 파는 회사 이름은 아니다.
+- 한 글자도 바꾸지 않는다. 대괄호가 붙어 있으면 대괄호째로 옮긴다.
+- 한글은 획 하나로 갈린다(떠/따/뚜, 반/밤, 올/울). 한 글자씩 확인한다.
+  흔한 이름일 것 같다는 이유로 고쳐 쓰지 않는다.
+- 상품 이름을 못 찾겠으면 빈 문자열로 둔다. 지어내지 않는다.`;
 
 const VERIFY_SCHEMA = {
   type: 'object',
@@ -99,8 +113,7 @@ const SYSTEM_PROMPT = `너는 한국 모바일 기프티콘 이미지에서 필�
 - 안내 문구, 버튼("선물하기", "사용하기"), 쿠폰을 파는 회사 이름은 상품명이 아니다.
 - 다 옮긴 뒤 nameConfidence를 적는다. 한 글자라도 짐작으로 채웠거나 획이 흐려 둘 중
   하나로 보였으면 "헷갈림"이다. 전부 또렷하게 읽었을 때만 "확실"이다.
-- nameBox에는 그 이름 글자가 들어있는 네모를 짚는다. 글자 둘레로 조금 넉넉하게 잡되
-  다른 줄은 넣지 않는다. 두 줄에 걸쳐 있으면 두 줄을 다 덮는다. 못 찾으면 image를 0으로.
+- nameImage에는 그 이름이 인쇄된 사진이 몇 번째인지 적는다. 못 찾으면 0.
 
 [상호]
 - 이 기프티콘을 쓸 수 있는 브랜드(BBQ, 스타벅스, GS25).
@@ -138,18 +151,9 @@ function buildSchema(categories: string[]) {
         enum: ['확실', '헷갈림'],
         description: '상품명을 한 글자도 짐작 없이 읽었으면 확실, 한 글자라도 흐릿했으면 헷갈림',
       },
-      nameBox: {
-        type: 'object',
-        description: '상품명 글자가 들어있는 네모',
-        properties: {
-          image: { type: 'integer', description: '몇 번째 이미지인지(1부터). 못 찾으면 0' },
-          x: { type: 'number', description: '왼쪽 위 x. 이미지 너비의 백분율(0~100)' },
-          y: { type: 'number', description: '왼쪽 위 y. 이미지 높이의 백분율(0~100)' },
-          width: { type: 'number', description: '가로 길이. 이미지 너비의 백분율(0~100)' },
-          height: { type: 'number', description: '세로 길이. 이미지 높이의 백분율(0~100)' },
-        },
-        required: ['image', 'x', 'y', 'width', 'height'],
-        additionalProperties: false,
+      nameImage: {
+        type: 'integer',
+        description: '상품명이 인쇄된 이미지가 몇 번째인지(1부터). 못 찾으면 0',
       },
       brand: { type: 'string', description: '상호(브랜드). 못 찾으면 빈 문자열' },
       amount: { type: 'string', description: '금액. 숫자만(쉼표 없이). 인쇄돼 있지 않으면 빈 문자열' },
@@ -181,7 +185,7 @@ function buildSchema(categories: string[]) {
     required: [
       'name',
       'nameConfidence',
-      'nameBox',
+      'nameImage',
       'brand',
       'amount',
       'expiresAt',
@@ -225,32 +229,7 @@ function parseThumbnail(raw: Record<string, unknown> | null, imageCount: number)
   return { image: index, x, y, width, height };
 }
 
-// 상품명 네모는 썸네일과 검사 기준이 다르다. 썸네일은 정사각형에 가까운 그림이라
-// 길쭉한 것을 버리지만, 상품명은 원래 가로로 길쭉한 글자 띠다 — 같은 자로 재면 다 버린다.
-//
-// 여기서 버려야 하는 것은 두 가지뿐이다. 화면을 통째로 짚은 것(자르는 뜻이 없다)과,
-// 글자가 들어갈 수 없을 만큼 작은 것(엉뚱한 데를 짚었다는 뜻이다).
-const MIN_NAME_WIDTH = 8;
-const MIN_NAME_HEIGHT = 1.5;
-const MAX_NAME_PERCENT = 95;
-
-function parseNameBox(raw: Record<string, unknown> | null, imageCount: number) {
-  const box = raw as { image?: unknown; x?: unknown; y?: unknown; width?: unknown; height?: unknown } | null;
-  if (!box) return null;
-
-  const index = Number(box.image);
-  if (!Number.isInteger(index) || index < 1 || index > imageCount) return null;
-
-  const [x, y, width, height] = [box.x, box.y, box.width, box.height].map(Number);
-  if (![x, y, width, height].every(Number.isFinite)) return null;
-  if (width < MIN_NAME_WIDTH || height < MIN_NAME_HEIGHT) return null;
-  if (width > MAX_NAME_PERCENT && height > MAX_NAME_PERCENT) return null;
-  if (x < 0 || y < 0 || x + width > 101 || y + height > 101) return null;
-
-  return { image: index, x, y, width, height };
-}
-
-// 잘라 보낸 네모에서 상품명만 다시 읽는다.
+// 사진 한 장을 통째로 주고 상품명만 다시 읽힌다.
 //
 // 실패해도 400이나 500을 돌려주지 않는다. 이건 이미 나온 답을 더 낫게 만드는 곁가지라,
 // 여기서 막히면 화면은 앞서 읽은 이름을 그대로 쓰면 된다. 검증이 안 됐다고 등록 자체가
@@ -493,9 +472,12 @@ Deno.serve(async (req) => {
         promptVersion: PROMPT_VERSION,
         name: name || null,
         nameUncertain,
-        // 상품명 글자가 있는 네모. 화면 쪽이 여기를 잘라 한 번 더 물어본다.
-        // 이름을 못 읽었으면 짚어봐야 확인할 것이 없다.
-        nameBox: name ? parseNameBox(parsed.nameBox, imageBlocks.length) : null,
+        // 상품명이 인쇄된 사진 번호. 화면 쪽이 그 한 장을 다시 물어볼 때 쓴다.
+        // 이름을 못 읽었으면 다시 물어봐야 확인할 것이 없다.
+        nameImage:
+          name && Number.isInteger(parsed.nameImage) && parsed.nameImage >= 1 && parsed.nameImage <= imageBlocks.length
+            ? parsed.nameImage
+            : null,
         brand: brand || null,
         amount: amount ? Number(amount) : null,
         expiresAt: /^\d{4}-\d{2}-\d{2}$/.test(parsed.expiresAt || '') ? parsed.expiresAt : null,

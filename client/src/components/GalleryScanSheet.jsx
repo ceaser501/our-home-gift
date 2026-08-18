@@ -1395,10 +1395,8 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
                   {/* 상품명 재확인이 실제로 돌았는지. 이 줄이 없으면 "확인했는데 같았다"와
                       "확인을 못 했다"가 화면에서 똑같아 보인다 — 그동안 여러 번 그랬다. */}
                   {info.meta.nameChanged && ` · 상품명 고침(${info.meta.nameBefore} →)`}
-                  {info.meta.nameRejected && ` · 딴 데를 봤다(${info.meta.nameRejected})`}
                   {info.meta.nameUnchecked && ' · 상품명 재확인 못 함'}
                   {!info.meta.nameChanged &&
-                    !info.meta.nameRejected &&
                     !info.meta.nameUnchecked &&
                     !info.meta.fromCache &&
                     ' · 상품명 확인됨'}
