@@ -13,6 +13,9 @@ const analyzeGifticonImages = vi.fn();
 
 vi.mock('../api', () => ({
   analyzeGifticonImages: (...args) => analyzeGifticonImages(...args),
+  // 사진이 한 장이면 상품명 확인이 나란히 출발한다. 여기서는 그 답을 쓰지 않지만,
+  // 없으면 부르다 터진다.
+  verifyGifticonName: () => Promise.resolve(null),
 }));
 
 vi.mock('../utils/scanCache', () => ({

@@ -378,7 +378,21 @@ export async function readGifticonInfo(prepared, { onProgress, knownCode, knownT
   const cached = readCachedInfo(cacheKey);
   // 두 번 부르는 구조라 한 덩어리로 재면 어느 쪽이 느린지 알 수가 없다. 나눠 잰다.
   const askedAt = now();
-  const info = cached || (await analyzeGifticonImages(prepared.uploads, CATEGORY_KEYS));
+  const asking = cached ? null : analyzeGifticonImages(prepared.uploads, CATEGORY_KEYS);
+
+  // 사진이 한 장뿐이면 상품명이 어디 있는지 물어볼 것도 없다. 그 한 장이다.
+  // 그래서 답을 기다리지 않고 상품명 확인을 같이 출발시킨다.
+  //
+  // 재보니 읽기 7초대에 확인 4초대였다. 줄 세우면 12초, 나란히 두면 8초다 — 훑기가
+  // 여러 건을 동시에 굴려도 한 건 안에서 두 번 기다리는 것은 그대로 쌓였다.
+  //
+  // 여러 장일 때는 못 한다. 어느 사진에 이름이 있는지는 읽어봐야 알고, 아무 장이나 미리
+  // 쏘면 이름이 없는 화면을 물어보는 셈이라 값만 나가고 답은 빈칸이다.
+  const soloVerify =
+    !cached && prepared.uploads.length === 1 ? verifyGifticonName(prepared.uploads[0]) : null;
+  const soloAt = now();
+
+  const info = cached || (await asking);
   const askMs = cached ? 0 : now() - askedAt;
 
   // 상품명만 한 번 더 읽힌다. 그 사진 한 장을 통째로 다시 보낸다.
@@ -400,11 +414,14 @@ export async function readGifticonInfo(prepared, { onProgress, knownCode, knownT
   const meta = { fromCache: Boolean(cached), promptVersion: info.promptVersion, askMs };
   if (!cached && info.name && info.nameImage) {
     report('verifying');
-    const verifyAt = now();
-    // 그 사진 한 장을 통째로 다시 보낸다. 이미 만들어 보낸 base64를 그대로 쓴다.
+    // 나란히 출발시킨 것이 있으면 그것을 받는다. 없으면 이제 짚어준 사진으로 부른다.
+    //
+    // 시간은 각자 출발한 자리부터 잰다. 나란히 쏜 것을 읽기 끝난 시각부터 재면 이미 다
+    // 와 있어서 0초로 찍히고, 줄 세운 것을 출발 전부터 재면 읽기 시간까지 얹혀 찍힌다.
     const upload = prepared.uploads[info.nameImage - 1] || null;
-    const checked = upload ? await verifyGifticonName(upload) : null;
-    meta.verifyMs = now() - verifyAt;
+    const startedAt = soloVerify ? soloAt : now();
+    const checked = soloVerify ? await soloVerify : upload ? await verifyGifticonName(upload) : null;
+    meta.verifyMs = now() - startedAt;
     if (checked && checked !== info.name) {
       meta.nameChanged = true;
       meta.nameBefore = info.name;
@@ -416,6 +433,10 @@ export async function readGifticonInfo(prepared, { onProgress, knownCode, knownT
   } else if (!cached && info.name) {
     meta.nameUnchecked = true;
   }
+  // 나란히 쏜 것을 안 쓰게 된 경우(이름을 못 읽었다). 답이 와도 받을 곳이 없지만,
+  // 붙잡지 않으면 처리 안 된 거절로 콘솔에 남는다. verifyGifticonName은 실패해도
+  // 던지지 않으므로 여기 걸릴 일은 거의 없다.
+  soloVerify?.catch(() => {});
 
   if (!cached) writeCachedInfo(cacheKey, info);
 
