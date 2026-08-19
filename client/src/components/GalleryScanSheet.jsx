@@ -24,6 +24,7 @@ import {
   undismissImages,
   countSkipped,
   forgetSkipped,
+  probeBarcode,
   FOLDERS,
   summarizeFolders,
   getGalleryStatus,
@@ -462,6 +463,8 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
   // 들어왔는데 막대를 못 읽은 것인지 가릴 방법이 없었다 — 배스킨라빈스 한 장을 두고
   // 며칠을 짐작으로 고쳤다. 둘은 고칠 자리가 전혀 다르다.
   const [missedShots, setMissedShots] = useState([]);
+  // 눌러본 사진의 판독 결과. { [id]: rows | 'working' }
+  const [probes, setProbes] = useState({});
   // 금액권으로 넣을 후보. 판정이 확실하지 않아서 켜는 건 사람이 한다.
   const [voucherIds, setVoucherIds] = useState([]);
   const [scanned, setScanned] = useState(0);
@@ -692,6 +695,16 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
    * 결과 화면이 뜬 뒤에 돈다. 여기서 나오는 것은 정보까지 읽어서 목록에 얹는다.
    * 사용자가 그 사이에 등록을 눌러도 상관없다 — 얹히는 건 새로 찾은 것뿐이다.
    */
+  async function runProbe(shot) {
+    setProbes((prev) => ({ ...prev, [shot.id]: 'working' }));
+    try {
+      const rows = await probeBarcode(shot);
+      setProbes((prev) => ({ ...prev, [shot.id]: rows }));
+    } catch (err) {
+      setProbes((prev) => ({ ...prev, [shot.id]: [{ label: err?.message || '읽지 못했어요', code: null }] }));
+    }
+  }
+
   async function digDeeper(pending, controller) {
     if (!pending?.length || controller.signal.aborted) return;
     setDigging(true);
@@ -1841,10 +1854,30 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
               {import.meta.env.VITE_TEST_TOOLS && stage === 'done' && missedShots.length > 0 && (
                 <details className="m-0 rounded-xl bg-muted px-3.5 py-3 text-xs text-muted-foreground">
                   <summary className="cursor-pointer">막대를 못 읽은 사진 {missedShots.length}장</summary>
-                  <ul className="mt-2 flex list-none flex-col gap-1 p-0">
+                  <ul className="mt-2 flex list-none flex-col gap-2 p-0">
                     {missedShots.map((shot) => (
                       <li key={shot.id} className="break-all">
-                        {shot.bucket || '?'} / {shot.name || shot.id}
+                        {/* 눌러서 조건을 바꿔가며 읽어본다. 무엇이 되고 무엇이 안 되는지
+                            봐야 다음 수가 정해진다 — 나흘을 짐작으로 고쳤다. */}
+                        <button
+                          type="button"
+                          className="text-left underline decoration-dotted"
+                          onClick={() => runProbe(shot)}
+                        >
+                          {shot.bucket || '?'} / {shot.name || shot.id}
+                        </button>
+                        {probes[shot.id] === 'working' && <div className="mt-1">읽어보는 중…</div>}
+                        {Array.isArray(probes[shot.id]) && (
+                          <div className="mt-1 flex flex-col gap-0.5 rounded-lg bg-background/60 p-2">
+                            {probes[shot.id].map((row) => (
+                              <div key={row.label}>
+                                {row.label}
+                                {row.code === null ? '' : ` → ${row.code}`}
+                                {row.code === null && row.label.includes('배') ? ' → 못 읽음' : ''}
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </li>
                     ))}
                   </ul>
