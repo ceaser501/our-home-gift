@@ -203,7 +203,7 @@ const VERIFY = { longEdge: 2000, tryHarder: false };
 // 경계의 자국이 남는다. 여기 오는 것은 얕은 판이 못 읽은 사진뿐이고 결과를 보여준 뒤
 // 도는 판이라, 마지막 기회에는 손대지 않은 것을 준다. quality는 원본이 너무 커서
 // 그대로 못 넘길 때의 대비책으로 남겨둔다.
-const DEEP = { longEdge: 3200, tryHarder: true, quality: 95, raw: true };
+const DEEP = { longEdge: 3200, tryHarder: true, quality: 95, raw: true, ladder: true };
 
 // 아니라고 한 사진을 기억해둔다. 안 그러면 훑을 때마다 같은 것을 계속 다시 묻는다.
 const DISMISSED_KEY = 'moacon:gallery-dismissed';
@@ -222,7 +222,7 @@ const NO_BARCODE_KEY = 'moacon:gallery-no-barcode';
 // 예전에는 못 읽던 사진을 지금은 읽을 수 있게 되는 일이 실제로 있었다(작은 이미지를
 // 키워서 읽도록 고친 뒤). 그런데 "없음"으로 적힌 사진은 다시 읽지 않으니, 고쳐놓고도
 // 그 사진들만 영영 안 나온다. 버전이 다르면 기록을 통째로 버리고 다시 읽는다.
-const DECODER_VERSION = 7;
+const DECODER_VERSION = 8;
 
 function readIdSet(key) {
   try {
@@ -389,12 +389,36 @@ export function scaleTo(width, height, longEdgeTarget) {
   return Math.max(2, Math.floor(raw));
 }
 
+// 작은 사진을 키울 때 정밀 탐색이 훑어볼 배율들.
+//
+// 한 배율에 걸지 않는다. 배스킨라빈스 카드(404x677) 하나를 두고 화질·원본 바이트·정수배를
+// 차례로 고쳐봤지만 전부 빗나갔다. 매번 "이 배율이면 될 것이다"에 걸었기 때문이다.
+//
+// 직접 등록은 이 사진을 읽는다. 거기는 2배로 키운 뒤 한 번 실패하면 tryHarder를 켜고 다시
+// 본다. 훑기에는 그 조합만 없었다 — 얕은 판은 2배지만 tryHarder가 없고, 정밀 탐색은
+// tryHarder를 켜지만 4배다. 배율이 커질수록 잘 읽히는 것이 아니다.
+//
+// 키우는 경우에만 사다리를 탄다. 큰 사진은 어차피 줄이는 쪽이라 배율이 하나뿐이고,
+// 작은 사진은 캔버스가 작아서 몇 번 더 봐도 싸다.
+const UPSCALES = [2, 3, 4];
+
 async function decodeBarcode(read, pass = SHALLOW) {
   const image = await loadImage(asDataUrl(read.data, read.mime));
   const width = image.naturalWidth;
   const height = image.naturalHeight;
 
-  const found = await decodeAt(image, width, height, scaleTo(width, height, pass.longEdge), pass.tryHarder);
+  const scale = scaleTo(width, height, pass.longEdge);
+  let found = await decodeAt(image, width, height, scale, pass.tryHarder);
+
+  // 정밀 탐색은 마지막 기회다. 여기서 못 읽으면 그 사진은 '바코드 없음'으로 적혀 다시는
+  // 안 읽힌다. 키우는 사진이라면 배율을 바꿔가며 한 번씩 더 본다.
+  if (!found && pass.ladder && scale > 1) {
+    for (const step of UPSCALES) {
+      if (step === scale) continue;
+      found = await decodeAt(image, width, height, step, true);
+      if (found) break;
+    }
+  }
   if (!found) return null;
 
   // 읽혔다고 바로 믿지 않는다. 조건을 바꿔 한 번 더 읽고, 두 번 다 같은 값일 때만 그대로
