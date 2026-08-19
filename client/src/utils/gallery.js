@@ -165,11 +165,7 @@ const READ_EDGE = 2000;
 //
 // 그래서 나눈다. 작은 것을 키우는 일은 싸다 — 그건 첫 번째로 옮겼다(작으면 키우고 크면
 // 줄여, 어느 쪽이든 1600에 맞춘다). 남은 정밀 탐색만 뒤로 미룬다.
-//
-// quality는 네이티브가 사진을 넘길 때 쓰는 JPEG 화질이다. 얕은 판은 싼 쪽을 쓴다 —
-// 여기를 지나는 사진의 대부분은 기프티콘이 아니라서, 전부의 바이트를 키우면 훑기가
-// 통째로 느려진다(한 번 그렇게 했다가 되돌렸다).
-const SHALLOW = { longEdge: 1600, tryHarder: false, quality: 85 };
+const SHALLOW = { longEdge: 1600, tryHarder: false };
 
 // 확인용. 읽어낸 값이 맞는지 다른 배율로 한 번 더 본다.
 //
@@ -219,7 +215,7 @@ const NO_BARCODE_KEY = 'moacon:gallery-no-barcode';
 // 예전에는 못 읽던 사진을 지금은 읽을 수 있게 되는 일이 실제로 있었다(작은 이미지를
 // 키워서 읽도록 고친 뒤). 그런데 "없음"으로 적힌 사진은 다시 읽지 않으니, 고쳐놓고도
 // 그 사진들만 영영 안 나온다. 버전이 다르면 기록을 통째로 버리고 다시 읽는다.
-const DECODER_VERSION = 9;
+const DECODER_VERSION = 10;
 
 function readIdSet(key) {
   try {
@@ -359,10 +355,8 @@ async function loadImage(src) {
 }
 
 // 네이티브가 주는 base64에는 접두사가 없다.
-// 네이티브가 알려준 형식을 그대로 쓴다. 정밀 탐색은 원본 바이트를 손대지 않고 받아오는데,
-// 그 원본이 PNG일 수 있다. 형식을 jpeg로 못 박아두면 브라우저가 눈치껏 읽어주기는 하지만
-// 기대고 있을 이유가 없다. 옛 앱은 mime를 안 주므로 그때는 예전대로 jpeg로 본다.
-const asDataUrl = (base64, mime) => `data:${mime || 'image/jpeg'};base64,${base64}`;
+// 네이티브는 늘 JPEG로 줄여서 넘긴다(GalleryPlugin.readImage).
+const asDataUrl = (base64) => `data:image/jpeg;base64,${base64}`;
 
 // 작으면 키우고 크면 줄여, 어느 쪽이든 목표 크기에 맞춘다.
 //
@@ -398,7 +392,7 @@ export function scaleTo(width, height, longEdgeTarget) {
 // 결과를 찍어준다(probeBarcode).
 
 async function decodeBarcode(read, pass = SHALLOW) {
-  const image = await loadImage(asDataUrl(read.data, read.mime));
+  const image = await loadImage(asDataUrl(read.data));
   const width = image.naturalWidth;
   const height = image.naturalHeight;
 
@@ -544,10 +538,11 @@ export function looksLikeBarcode(image) {
 
 // 사진첩에서 한 장 가져오기. 네이티브가 줄여서 base64로 준다.
 //
-// 화질은 판마다 다르다. 옛 앱에서는 quality를 모르고 늘 85로 주므로, 새 웹이 옛 앱에
-// 얹혀도 예전처럼 돌 뿐 깨지지 않는다.
-function readFromGallery(image, pass = SHALLOW) {
-  return MoaconGallery.readImage({ id: String(image.id), maxEdge: READ_EDGE, quality: pass.quality });
+// 한때 판마다 화질을 달리 줬다. 정밀 탐색만 95로 올려 얇은 막대를 살려보려던 것인데,
+// 그 카드는 어떤 화질로도 안 읽혀서 되돌렸다. 이제 세 판이 다 같은 값이라 네이티브
+// 기본값(85)에 맡긴다.
+function readFromGallery(image) {
+  return MoaconGallery.readImage({ id: String(image.id), maxEdge: READ_EDGE });
 }
 
 /**
@@ -618,7 +613,7 @@ async function collect({ images, read: readImage, pass, isRegistered, skipCodes,
     const already = seenCodes.get(found.code);
     if (already) {
       if (already.shots.length < COLLECT_PER_CODE) {
-        already.shots.push({ data: read.data, mime: read.mime, bucket: image.bucket, coverage: found.coverage });
+        already.shots.push({ data: read.data, bucket: image.bucket, coverage: found.coverage });
       }
       continue;
     }
@@ -640,7 +635,7 @@ async function collect({ images, read: readImage, pass, isRegistered, skipCodes,
       codeType: found.codeType,
       // 고르기 전의 사진 조각들. 같은 번호의 사진이 더 나오면 여기에 붙고,
       // 훑기가 끝나면 아래에서 골라 images로 옮긴다.
-      shots: [{ data: read.data, mime: read.mime, bucket: image.bucket, coverage: found.coverage }],
+      shots: [{ data: read.data, bucket: image.bucket, coverage: found.coverage }],
       // 화면이 곧바로 쓰는 미리보기. 아래에서 고른 결과로 갈아끼워진다.
       //
       // 예전에는 여기에도 위의 조각 객체를 그대로 넣었는데, 화면은 이걸 base64 문자열로
@@ -693,10 +688,7 @@ async function collect({ images, read: readImage, pass, isRegistered, skipCodes,
     const pool = originals.length > 0 ? originals : usable;
 
     const sorted = [...pool].sort((a, b) => b.coverage - a.coverage);
-    const kept = sorted.slice(0, IMAGES_PER_CODE);
-    candidate.images = kept.map((shot) => shot.data);
-    // 조각마다 형식이 다를 수 있다 — 얕은 판이 준 것은 JPEG, 정밀 탐색이 준 것은 원본이다.
-    candidate.mimes = kept.map((shot) => shot.mime || 'image/jpeg');
+    candidate.images = sorted.slice(0, IMAGES_PER_CODE).map((shot) => shot.data);
     // 다 골랐으면 나머지 조각은 놓는다. 한 장이 수백 KB라 후보 몇 개만 되어도 쌓인다.
     candidate.shots = null;
   });
@@ -899,11 +891,11 @@ async function readPickedFile(image) {
  * 한 번도 없어서다. 무엇이 되고 무엇이 안 되는지 눈으로 봐야 다음 수가 정해진다.
  */
 export async function probeBarcode(image) {
-  const read = await readFromGallery(image, DEEP);
-  const loaded = await loadImage(asDataUrl(read.data, read.mime));
+  const read = await readFromGallery(image);
+  const loaded = await loadImage(asDataUrl(read.data));
   const width = loaded.naturalWidth;
   const height = loaded.naturalHeight;
-  const rows = [{ label: `원본 ${width}x${height} · ${read.mime || 'image/jpeg'}`, code: null }];
+  const rows = [{ label: `원본 ${width}x${height}`, code: null }];
 
   for (const scale of [1, 2, 3, 4, 6]) {
     for (const tryHarder of [false, true]) {
@@ -924,13 +916,10 @@ export async function probeBarcode(image) {
 
 export function candidateToFiles(candidate) {
   const base = (candidate.name || 'gifticon').replace(/\.[^.]+$/, '');
-  const mimes = candidate.mimes || [];
   return candidate.images.map((data, index) => {
     const binary = atob(data);
     const bytes = new Uint8Array(binary.length);
     for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
-    const mime = mimes[index] || 'image/jpeg';
-    const ext = mime === 'image/png' ? 'png' : 'jpg';
-    return new File([bytes], `${base}${index ? `-${index + 1}` : ''}.${ext}`, { type: mime });
+    return new File([bytes], `${base}${index ? `-${index + 1}` : ''}.jpg`, { type: 'image/jpeg' });
   });
 }

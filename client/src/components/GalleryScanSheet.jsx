@@ -1415,12 +1415,6 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
               <span className="mt-1 text-base leading-snug font-semibold break-keep text-foreground">
                 {info?.name || (broken ? '못 읽었어요' : candidate.code)}
               </span>
-              {/* 모델이 상품명을 헷갈렸다고 말한 건에만 붙인다.
-                  틀린 상품명은 빈칸과 달리 멀쩡해 보여서 그냥 넘어간다. 그걸 여기서 한 번
-                  세워두는 것인데, 모든 카드에 붙이면 아무도 안 읽으므로 이 경우만 붙인다. */}
-              {info?.nameUncertain && (
-                <span className="mt-1 text-sm break-keep text-warning">상품명 확인해주세요</span>
-              )}
               <span className="mt-1.5 truncate text-sm tabular-nums text-muted-foreground">
                 {broken
                   ? reasonOf(candidate)

@@ -76,37 +76,6 @@ public class GalleryPlugin extends Plugin {
      *
      * 문자열로 주고받으면 파서가 어떤 타입을 고르든 상관이 없다.
      */
-    // 원본을 그대로 넘길 수 있는 최대 크기. 넘으면 null을 돌려주고 부르는 쪽이 줄여 보낸다.
-    // 카톡·기프티쇼로 받는 기프티콘 카드는 대개 수백 KB라 이 안에 들어온다.
-    private static final int RAW_MAX_BYTES = 4 * 1024 * 1024;
-
-    /** 파일을 통째로 읽는다. 한도를 넘으면 읽던 것을 버리고 null. */
-    private static byte[] readAllUpTo(ContentResolver resolver, Uri uri, int limit) {
-        InputStream stream = null;
-        try {
-            stream = resolver.openInputStream(uri);
-            if (stream == null) return null;
-            ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-            byte[] chunk = new byte[8192];
-            int read;
-            int total = 0;
-            while ((read = stream.read(chunk)) > 0) {
-                total += read;
-                if (total > limit) return null;
-                buffer.write(chunk, 0, read);
-            }
-            return buffer.toByteArray();
-        } catch (Exception e) {
-            return null;
-        } catch (OutOfMemoryError e) {
-            return null;
-        } finally {
-            if (stream != null) {
-                try { stream.close(); } catch (Exception ignored) {}
-            }
-        }
-    }
-
     private static long parseLong(String text, long fallback) {
         if (text == null) return fallback;
         try {
@@ -335,17 +304,6 @@ public class GalleryPlugin extends Plugin {
         }
         int maxEdge = call.getInt("maxEdge", DEFAULT_MAX_EDGE);
         // 터무니없는 값이 와도 여기서 막는다. 100 아래는 그림이 남아나지 않고, 100 위는 없다.
-        int quality = Math.max(40, Math.min(100, call.getInt("quality", DEFAULT_QUALITY)));
-        // 원본 바이트를 손대지 않고 그대로 넘길지.
-        //
-        // 아래 길은 사진을 무조건 JPEG로 다시 인코딩한다. 원본이 PNG면 없던 압축 자국이
-        // 생기고, 원본이 JPEG여도 눌린 위에 또 눌린다. 그 자국이 바코드의 얇은 막대
-        // 경계에 앉으면 zxing이 못 읽는다 — 같은 사진을 직접 등록으로 올리면(브라우저가
-        // 원본을 그대로 디코딩하는 길) 읽히는데 훑기로만 안 읽히는 자리가 여기다.
-        //
-        // 전부에 쓰지는 않는다. 원본은 JPEG보다 훨씬 무거워서 수백 장을 그대로 넘기면
-        // 웹뷰가 버겁다. 얕은 판이 못 읽은 사진만 도는 정밀 탐색에서만 쓴다.
-        boolean raw = Boolean.TRUE.equals(call.getBoolean("raw", false));
 
         Uri uri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id);
         ContentResolver resolver = getContext().getContentResolver();
@@ -368,22 +326,6 @@ public class GalleryPlugin extends Plugin {
             if (longest <= 0) {
                 call.reject("사진을 읽지 못했어요.", "decode_failed");
                 return;
-            }
-
-            // 원본 그대로 넘기기. 너무 크면 조용히 아래 길로 내려가 예전처럼 줄여 보낸다 —
-            // 여기서 막아버리면 큰 사진 한 장 때문에 정밀 탐색이 통째로 비는 셈이 된다.
-            if (raw) {
-                byte[] original = readAllUpTo(resolver, uri, RAW_MAX_BYTES);
-                if (original != null) {
-                    JSObject rawResult = new JSObject();
-                    rawResult.put("data", Base64.encodeToString(original, Base64.NO_WRAP));
-                    String type = resolver.getType(uri);
-                    rawResult.put("mime", type == null ? "image/jpeg" : type);
-                    rawResult.put("width", bounds.outWidth);
-                    rawResult.put("height", bounds.outHeight);
-                    call.resolve(rawResult);
-                    return;
-                }
             }
 
             BitmapFactory.Options opts = new BitmapFactory.Options();
@@ -417,30 +359,20 @@ public class GalleryPlugin extends Plugin {
                 bitmap = scaled;
             }
 
-            // 화질은 부르는 쪽이 정한다. 기본은 85다.
+            // 화질은 85 하나로 굳혔다.
             //
-            // 한 번 전부를 95로 올렸다가 되돌린 적이 있다. 이 함수는 훑는 사진 전부를
-            // 지나가는데 — 수백 장 중 기프티콘은 몇 장뿐이고 나머지는 바코드가 있는지 보고
-            // 버릴 사진이다 — 그 전부의 바이트를 키우니 웹뷰로 넘기는 문자열이 두 배가
-            // 되고 훑기 전체가 눈에 띄게 느려졌다. 그때는 올려서 나아졌다는 증거도 없었다.
-            //
-            // 이제 증거가 생겼다. 85로 넘긴 배스킨라빈스 카드의 막대를 zxing이 못 읽었고,
-            // 같은 사진을 직접 등록으로 올리면(원본 그대로 읽는 길) 읽혔다. 압축 자국이
-            // 얇은 막대 위에 앉으면 판독이 깨진다.
-            //
-            // 그래서 전부를 올리지 않고 자리를 옮긴다. 얕은 판은 그대로 85로 싸게 훑고,
-            // 거기서 못 읽은 것만 도는 정밀 탐색이 화질을 올려 다시 받는다. 값을 치르는
-            // 대상이 "모든 사진"에서 "못 읽은 사진"으로 줄고, 그마저 결과를 보여준 뒤
-            // 뒤에서 도는 판이라 사용자를 기다리게 하지 않는다.
+            // 한때 부르는 쪽이 판마다 다르게 줬다. 정밀 탐색만 95로 올려 얇은 막대를
+            // 살려보려던 것인데, 문제의 카드는 어떤 화질로도 안 읽혀서 되돌렸다.
+            // 이 길을 지나는 사진의 대부분은 기프티콘이 아니라서, 전부의 바이트를 키우면
+            // 웹뷰로 넘기는 문자열이 두 배가 되고 훑기 전체가 눈에 띄게 느려진다.
             ByteArrayOutputStream out = new ByteArrayOutputStream();
-            bitmap.compress(Bitmap.CompressFormat.JPEG, quality, out);
+            bitmap.compress(Bitmap.CompressFormat.JPEG, DEFAULT_QUALITY, out);
             int outWidth = bitmap.getWidth();
             int outHeight = bitmap.getHeight();
             bitmap.recycle();
 
             JSObject result = new JSObject();
             result.put("data", Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP));
-            result.put("mime", "image/jpeg");
             result.put("width", outWidth);
             result.put("height", outHeight);
             call.resolve(result);

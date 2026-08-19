@@ -530,9 +530,6 @@ export async function readGifticonInfo(prepared, { onProgress, knownCode, knownT
     amount: info.amount ?? null,
     expiresAt: info.expiresAt || null,
     name: info.name || '',
-    // 모델이 상품명을 헷갈렸다고 스스로 말했는지. 화면이 "확인해주세요"를 붙일 때 쓴다.
-    // 함수가 옛것이면 이 값이 없다 — 없으면 안 붙는다(예전과 같다).
-    nameUncertain: Boolean(info.nameUncertain),
     isVoucher: Boolean(info.isVoucher),
     // 이 답이 어디서 왔는지. 테스트 빌드 화면에만 찍힌다.
     meta,
