@@ -87,15 +87,20 @@ export default function SpendSheet({ gifticon, onSpend, onClose }) {
             {spent > 0 && spent < left ? `${won(spent)} 쓰고 ${won(left - spent)} 남기기` : '이만큼 썼어요'}
           </Button>
 
-          {/* 잔돈을 굳이 남기고 싶지 않은 사람도 있다. 계산기를 두드리게 하지 않는다. */}
-          <button
+          {/* 잔돈을 굳이 남기고 싶지 않은 사람도 있다. 계산기를 두드리게 하지 않는다.
+              위 버튼과 같은 모양이되 색을 뺀다 — 나란히 놓였을 때 어느 쪽이 기본인지
+              한눈에 갈려야 하고, 앱 안에서 이 짝은 늘 같은 모양이어야 한다
+              (기한 늘리기 창의 '다른 날짜예요'도 같다). */}
+          <Button
             type="button"
+            variant="outline"
+            size="lg"
             onClick={() => submit(left)}
             disabled={saving}
-            className="text-xs font-semibold text-muted-foreground underline underline-offset-2 disabled:opacity-50"
+            className="w-full rounded-xl text-muted-foreground"
           >
             남은 {won(left)} 전부 썼어요
-          </button>
+          </Button>
         </div>
       </SheetContent>
     </Sheet>

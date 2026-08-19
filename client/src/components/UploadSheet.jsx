@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 import AlertDialog from './AlertDialog';
 import useBackClose from '../utils/useBackClose';
 import { groupImages } from '../utils/gallery';
+import { todayStr } from '../utils/date';
 
 // 스토리지 버킷에 걸어둔 제한과 같은 값이어야 한다(supabase/schema.sql).
 // 달라지면 화면에서는 통과했는데 올릴 때 실패하는, 이유를 알 수 없는 오류가 난다.
@@ -461,6 +462,21 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
     const missing = REQUIRED_FIELDS.find((field) => !String(form[field.key] ?? '').trim());
     if (missing) {
       setError(missing.message);
+      return;
+    }
+
+    // 이미 지난 기한은 등록하지 않는다.
+    //
+    // 넣어봐야 목록에서 처음부터 빨간 배지를 달고 앉아 있고, 알림은 이미 지나간 날에
+    // 대해 울릴 수가 없다. 쓸 수 없는 것이 자리만 차지하는 셈이다.
+    //
+    // 오늘까지는 받는다. 기한이 오늘인 기프티콘은 오늘 쓰면 되고, 계산대 앞에서 급히
+    // 넣는 경우가 실제로 그 자리다.
+    //
+    // 수정은 막지 않는다. 이미 들어와 있는 것의 다른 값을 고치려는 것뿐인데 기한 때문에
+    // 저장이 안 되면 손댈 방법이 없어진다.
+    if (mode !== 'edit' && form.expires_at && form.expires_at < todayStr()) {
+      setError('사용기한이 지난 기프티콘은 등록할 수 없어요.');
       return;
     }
 

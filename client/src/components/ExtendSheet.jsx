@@ -15,7 +15,10 @@ import useBackClose from '../utils/useBackClose';
 
 // 카카오 선물하기 표준. 대부분의 기프티콘이 여기 해당한다.
 const DEFAULT_DAYS = 90;
-const GIFT_BOX_URL = 'https://gift.kakao.com/order/history';
+// 선물함(주문내역)으로 바로 보내면 "잘못된 접근입니다"가 뜬다. 그 주소는 로그인 세션을
+// 달고 안에서 눌러 들어가야 하는 자리라, 밖에서 곧장 열면 카카오가 막는다.
+// 홈으로 보낸다 — 한 번 더 눌러야 하지만 오류 화면을 보는 것보다 낫다.
+const GIFT_BOX_URL = 'https://gift.kakao.com/';
 
 export default function ExtendSheet({ gifticon, onExtend, onClose }) {
   // 뒤로가기로 이 창을 닫는다. 안 그러면 설치해서 쓸 때 앱이 통째로 꺼진다.
@@ -48,8 +51,8 @@ export default function ExtendSheet({ gifticon, onExtend, onClose }) {
 
         <div className="flex flex-col gap-4 px-5 pt-2">
           <div className="flex flex-col gap-1">
-            <p className="m-0 text-sm font-semibold text-foreground">{gifticon.name}</p>
-            <p className="m-0 text-xs text-muted-foreground">
+            <p className="m-0 text-base font-semibold break-keep text-foreground">{gifticon.name}</p>
+            <p className="m-0 text-sm text-muted-foreground">
               {formatDate(gifticon.expires_at)}까지 · {formatDday(gifticon.expires_at)}
             </p>
           </div>
@@ -57,14 +60,13 @@ export default function ExtendSheet({ gifticon, onExtend, onClose }) {
           {expired ? (
             // 만료된 것에 연장을 권하면 헛걸음이 된다. 대신 돈을 돌려받는 길을 알려준다.
             // 신유형 상품권 표준약관에서 정한 권리라, 모르고 버리는 사람이 많다.
-            <p className="m-0 rounded-xl bg-accent px-3.5 py-3 text-[13px] leading-relaxed break-keep text-foreground">
-              기한이 지나도 <b className="font-semibold">구매일로부터 5년</b> 안이면 발행사에 <b className="font-semibold">90% 환불</b>을
-              요청할 수 있어요. 선물함에서 해당 상품의 고객센터로 문의해보세요.
+            <p className="m-0 rounded-xl bg-accent px-4 py-3.5 text-[15px] leading-relaxed break-keep text-foreground">
+              기한이 지나도 <b className="font-semibold">5년 안</b>이면 <b className="font-semibold">90% 환불</b>을 받을 수 있어요.
+              선물함에서 문의해보세요.
             </p>
           ) : (
-            <p className="m-0 rounded-xl bg-accent px-3.5 py-3 text-[13px] leading-relaxed break-keep text-foreground">
-              대부분의 기프티콘은 만료 전에 유효기간을 늘릴 수 있어요. 보통 <b className="font-semibold">90일씩</b>, 구매일로부터
-              5년까지요. 선물함에서 이 상품을 찾아 <b className="font-semibold">연장</b>을 눌러주세요.
+            <p className="m-0 rounded-xl bg-accent px-4 py-3.5 text-[15px] leading-relaxed break-keep text-foreground">
+              선물함에서 <b className="font-semibold">90일씩</b> 늘릴 수 있어요. 구매일로부터 5년까지요.
             </p>
           )}
 
@@ -75,15 +77,15 @@ export default function ExtendSheet({ gifticon, onExtend, onClose }) {
             href={GIFT_BOX_URL}
             target="_blank"
             rel="noreferrer"
-            className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-border py-3 text-sm font-semibold text-foreground no-underline"
+            className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-border py-3.5 text-base font-semibold text-foreground no-underline"
           >
-            <ExternalLink className="size-4 text-muted-foreground" />
+            <ExternalLink className="size-4.5 text-muted-foreground" />
             카카오톡 선물함 열기
           </a>
 
           {!expired && (
             <div className="flex flex-col gap-2 border-t border-border pt-4">
-              <p className="m-0 text-xs font-semibold text-muted-foreground">연장하고 오셨나요?</p>
+              <p className="m-0 text-sm font-semibold text-muted-foreground">연장하고 오셨나요?</p>
 
               {!custom ? (
                 <>
@@ -99,16 +101,21 @@ export default function ExtendSheet({ gifticon, onExtend, onClose }) {
                     <CalendarPlus className="size-4.5" />
                     {formatDate(suggested)}까지로 바꾸기
                   </Button>
-                  <button
+                  {/* 위 버튼과 같은 모양이되 색을 뺀다. 나란히 놓였을 때 어느 쪽이 기본인지
+                      한눈에 갈려야 한다 — 글자만 있는 링크로 두니 버튼으로 안 보였다. */}
+                  <Button
                     type="button"
+                    variant="outline"
+                    size="lg"
                     onClick={() => {
                       setDate(suggested);
                       setCustom(true);
                     }}
-                    className="text-xs font-semibold text-muted-foreground underline underline-offset-2"
+                    disabled={saving}
+                    className="w-full rounded-xl text-muted-foreground"
                   >
                     다른 날짜예요
-                  </button>
+                  </Button>
                 </>
               ) : (
                 <div className="flex gap-2">
@@ -121,8 +128,8 @@ export default function ExtendSheet({ gifticon, onExtend, onClose }) {
 
               {/* 연장을 안 하고 돌아왔을 수도 있다. 그래서 "선물함 열기"를 누른 것만으로는
                   기한을 늘리지 않고, 반드시 여기서 한 번 더 확인받는다. */}
-              <p className="m-0 text-[11px] leading-relaxed break-keep text-muted-foreground">
-                연장이 실제로 됐을 때만 눌러주세요. 여기서 바꾼 날짜는 앱에만 반영돼요.
+              <p className="m-0 text-[13px] leading-relaxed break-keep text-muted-foreground">
+                실제로 연장한 뒤에 눌러주세요. 앱에만 반영돼요.
               </p>
             </div>
           )}

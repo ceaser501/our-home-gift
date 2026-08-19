@@ -36,6 +36,7 @@ import { createGifticon, findGifticonByCode, removeImages, uploadGifticonImages 
 import { prepareImages, readGifticonInfo } from '../utils/imageAnalyze';
 import { useFamily } from '../FamilyContext';
 import useBackClose from '../utils/useBackClose';
+import { todayStr } from '../utils/date';
 import { cn } from '@/lib/utils';
 
 // 갤러리에 받아둔 기프티콘을 찾아 등록까지 이어주는 창.
@@ -252,8 +253,22 @@ const FIELD_HINTS = {
 
 function reasonOf(candidate) {
   if (candidate.readError) return candidate.readError;
+  if (isExpired(candidate)) return '사용기한이 지났어요';
   if (candidate.missing?.length > 0) return `${withParticle(candidate.missing.join('·'))} 못 읽었어요`;
   return '아직 읽지 않았어요';
+}
+
+// 이미 지난 기한은 넣지 않는다.
+//
+// 넣어봐야 목록에서 처음부터 빨간 배지를 달고 앉아 있고, 알림은 이미 지나간 날에 대해
+// 울릴 수가 없다. 게다가 여기는 한 번에 여러 건이 올라오는 자리라, 쓸 수 없는 것이
+// 섞여 있으면 "N개 등록"을 누르는 손이 그걸 걸러낼 수가 없다.
+//
+// 오늘까지는 받는다. 기한이 오늘인 기프티콘은 오늘 쓰면 된다.
+// 기한을 못 읽은 것은 여기서 막지 않는다 — 그건 missing이 이미 잡는다.
+function isExpired(candidate) {
+  const expires = candidate.info?.expiresAt;
+  return Boolean(expires && expires < todayStr());
 }
 
 /**
@@ -1076,7 +1091,12 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
 
   // 치우지 않았고, 읽기가 끝났고, 빠진 게 없는 것만 넣을 수 있다.
   function isPickable(candidate) {
-    return !dismissedIds.includes(candidate.id) && candidate.info && candidate.missing?.length === 0;
+    return (
+      !dismissedIds.includes(candidate.id) &&
+      candidate.info &&
+      candidate.missing?.length === 0 &&
+      !isExpired(candidate)
+    );
   }
 
   // 치운 것을 목록에서 곧바로 빼지 않는다. 자리에 흐리게 남겨두고 되돌릴 수 있게 한다.
@@ -1558,6 +1578,8 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
               <b className="font-semibold text-foreground">{formatDay(since)} 0시</b> 이후 사진만 봐요.
               <br />
               이전 사진은 + 로 올려주세요.
+              <br />
+              사용기한이 지난 기프티콘은 등록할 수 없어요.
             </p>
           </div>
         )}
