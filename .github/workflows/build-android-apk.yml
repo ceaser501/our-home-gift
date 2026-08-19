@@ -161,6 +161,19 @@ jobs:
           아이폰은 이 파일을 쓸 수 없습니다.
           https://ceaser501.github.io/our-home-gift/ 로 접속해서 홈 화면에 추가해주세요.
           NOTES
-          gh release create "${{ github.ref_name }}" "${{ steps.apk.outputs.path }}" \
-            --title "모아콘 앱 ${{ steps.version.outputs.name }}" \
-            --notes-file notes.md
+          # 이미 있으면 만들지 않고 파일만 갈아 끼운다.
+          #
+          # gh release create는 같은 이름이 있으면 그냥 실패한다. 빌드가 다 끝난 뒤 마지막
+          # 줄에서 터지므로, 화면에는 "빌드 실패"로 보이고 실제로는 apk가 다 만들어진
+          # 상태다. 같은 태그로 한 번 더 돌리는 일은 드물지 않다 — 네트워크로 job이
+          # 끊겨 재실행하거나, 첫 판이 릴리스만 만들어놓고 죽은 경우다.
+          tag="${{ github.ref_name }}"
+          apk="${{ steps.apk.outputs.path }}"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "::notice title=이미 있는 릴리스::$tag 에 파일만 새로 올립니다."
+            gh release upload "$tag" "$apk" --clobber
+          else
+            gh release create "$tag" "$apk" \
+              --title "모아콘 앱 ${{ steps.version.outputs.name }}" \
+              --notes-file notes.md
+          fi
