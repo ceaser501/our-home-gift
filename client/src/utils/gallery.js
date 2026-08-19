@@ -404,7 +404,8 @@ async function decodeBarcode(read, pass = SHALLOW) {
 
   const scale = scaleTo(width, height, pass.longEdge);
   const found = await decodeAt(image, width, height, scale, pass.tryHarder);
-  if (!found) return null;
+  // 못 읽었으면 막대가 있기라도 한지 본다. 사진을 이미 열어둔 이 자리가 제일 싸다.
+  if (!found) return { code: null, bars: looksLikeBarcode(image) };
 
   // 읽혔다고 바로 믿지 않는다. 조건을 바꿔 한 번 더 읽고, 두 번 다 같은 값일 때만 그대로
   // 쓴다. 갈리면 확인 쪽을 택한다. 두 번째로는 못 읽었다면 확인은 못 한 것이지만, 읽은
@@ -441,6 +442,103 @@ async function decodeAt(image, width, height, scale, tryHarder) {
   } finally {
     canvas.width = 0;
     canvas.height = 0;
+  }
+}
+
+// ── 막대가 있는지만 본다 (읽지는 않는다) ──────────────────────────────────
+//
+// 읽는 것과 있는지 보는 것은 다른 일이다. 막대 굵기를 하나하나 재서 숫자로 바꾸려면
+// 막대 하나가 두세 픽셀은 돼야 하는데, 카톡이 404픽셀로 줄여 보낸 카드는 1.4픽셀이라
+// 어떤 배율로 키워도 안 된다(실제로 1·2·3·4·6배를 다 재봤다). 그런데 사람 눈에는 그
+// 카드에도 바코드가 보인다. 읽을 수 없을 뿐이다.
+//
+// 그 "보인다"를 흉내낸다. 밝기가 자주 뒤집히는 가로줄이 세로로 연달아 있고, 뒤집히는
+// 자리가 위아래로 비슷하면 막대다.
+//
+// 마지막 조건이 핵심이다. 글자가 빽빽한 줄도 밝기는 자주 뒤집히지만 줄마다 자리가
+// 다르다. 바코드는 위아래가 거의 같은 자리에서 뒤집힌다 — 그게 밥 사진·문서 캡처와
+// 갈리는 지점이다.
+//
+// 휴리스틱이라 줄무늬 옷이나 블라인드를 짚을 수 있고, 아주 흐린 것은 놓친다.
+// 이 값으로 무엇을 지우거나 등록하지 않는다. "여기 있을지도 모른다"고 말할 뿐이다.
+const BARS_WIDTH = 240;
+const BARS_MAX_HEIGHT = 480;
+// 한 줄에서 밝기가 이만큼 뒤집히면 빽빽한 줄로 본다. 바코드는 수십 번 뒤집힌다.
+const BARS_MIN_EDGES = 18;
+// 그런 줄이 세로로 이만큼 이어져야 막대로 본다. 글자 한 줄은 이만큼 안 이어진다.
+const BARS_MIN_ROWS = 6;
+// 위아래 줄의 뒤집히는 자리가 이만큼 겹쳐야 한다.
+//
+// 0.6으로 뒀다가 올렸다. 뒤집히는 자리가 촘촘하면(240픽셀에 여든 곳쯤) 아무 상관 없는
+// 두 줄도 우연히 일고여덟은 겹친다 — 굵기가 제각각인 무작위 줄무늬 두 개로 재보니 0.7이
+// 나왔다. 진짜 막대는 위아래가 거의 그대로 겹쳐서 1에 가깝다. 그 사이를 갈라야 한다.
+const BARS_MATCH = 0.85;
+
+function edgesOfRow(data, offset, width) {
+  // 그 줄의 평균보다 밝은지 어두운지로 가른다. 조명이 고르지 않아도 줄 단위로 보면
+  // 기울기가 작아서, 줄마다 제 평균을 쓰는 것으로 충분하다.
+  let sum = 0;
+  const gray = new Array(width);
+  for (let x = 0; x < width; x += 1) {
+    const i = offset + x * 4;
+    const value = (data[i] * 299 + data[i + 1] * 587 + data[i + 2] * 114) / 1000;
+    gray[x] = value;
+    sum += value;
+  }
+  const mean = sum / width;
+
+  const edges = [];
+  let dark = gray[0] < mean;
+  for (let x = 1; x < width; x += 1) {
+    const nowDark = gray[x] < mean;
+    if (nowDark !== dark) {
+      edges.push(x);
+      dark = nowDark;
+    }
+  }
+  return edges;
+}
+
+function overlapRatio(a, b) {
+  if (a.length === 0 || b.length === 0) return 0;
+  let matched = 0;
+  let j = 0;
+  for (const x of a) {
+    while (j < b.length && b[j] < x) j += 1;
+    if (j < b.length && b[j] === x) matched += 1;
+  }
+  return matched / a.length;
+}
+
+export function looksLikeBarcode(image) {
+  try {
+    const scale = Math.min(1, BARS_WIDTH / image.naturalWidth);
+    const width = Math.max(1, Math.round(image.naturalWidth * scale));
+    const height = Math.min(BARS_MAX_HEIGHT, Math.max(1, Math.round(image.naturalHeight * scale)));
+
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    ctx.drawImage(image, 0, 0, width, height);
+    const { data } = ctx.getImageData(0, 0, width, height);
+    canvas.width = 0;
+    canvas.height = 0;
+
+    let run = 0;
+    let previous = null;
+    for (let y = 0; y < height; y += 1) {
+      const edges = edgesOfRow(data, y * width * 4, width);
+      const dense = edges.length >= BARS_MIN_EDGES;
+      const aligned = dense && previous && overlapRatio(edges, previous) >= BARS_MATCH;
+      run = aligned ? run + 1 : dense ? 1 : 0;
+      if (run >= BARS_MIN_ROWS) return true;
+      previous = dense ? edges : null;
+    }
+    return false;
+  } catch {
+    // 못 보면 모르는 것으로 둔다. 이 값으로 막는 것이 없으므로 안전한 쪽이 없음이다.
+    return false;
   }
 }
 
@@ -506,7 +604,8 @@ async function collect({ images, read: readImage, pass, isRegistered, skipCodes,
       continue;
     }
     if (!found?.code) {
-      missed.push(image);
+      // 막대로 보이는지를 함께 들고 간다. 화면이 "여기 있을지도 모른다"고 말할 때 쓴다.
+      missed.push(found?.bars ? { ...image, bars: true } : image);
       continue;
     }
 

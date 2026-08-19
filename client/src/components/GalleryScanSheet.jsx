@@ -1120,10 +1120,14 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
   // 지금까지 건너뛰기로 감춰둔 사진 수. 훑기가 끝난 뒤에만 쓰므로 그때 세면 된다.
   const skipped = complete ? countSkipped() : 0;
 
-  // 못 읽은 사진을 폴더별로 센다. 많은 순으로 적어야 어디부터 열어볼지가 바로 보인다.
+  // 막대로 보이는데 못 읽은 사진을 폴더별로 센다.
+  //
+  // 못 읽은 것 전부를 세지 않는다. 서른 장 중 스물몇 장은 밥 사진과 앱 캡처인데, 그걸
+  // 다 세어 "서른 장 있어요"라고 하면 어디를 열어볼지 정해지지 않고 열어볼 마음도 안
+  // 생긴다. 막대로 보이는 것만 세면 대개 한두 장이라, 그 말이 실제로 할 일이 된다.
   const missedByFolder = useMemo(() => {
     const counts = new Map();
-    missedShots.forEach((shot) => {
+    missedShots.filter((shot) => shot.bars).forEach((shot) => {
       const label = folderLabel(shot.bucket) || shot.bucket || '그 밖';
       counts.set(label, (counts.get(label) || 0) + 1);
     });
@@ -1871,7 +1875,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
                   없는지를 모른다. */}
               {!picked && missedByFolder.length > 0 && !isWorking && (
                 <p className="m-0 rounded-xl bg-muted px-3.5 py-3 text-sm leading-relaxed break-keep text-muted-foreground">
-                  바코드를 못 읽은 사진이{' '}
+                  바코드로 보이는데 못 읽은 사진이{' '}
                   {missedByFolder.map((folder, index) => (
                     <span key={folder.label}>
                       {index > 0 && ', '}
@@ -1900,7 +1904,10 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
                   것인지만 가리면 되고, 그 둘은 고칠 자리가 전혀 다르다. */}
               {import.meta.env.VITE_TEST_TOOLS && stage === 'done' && missedShots.length > 0 && (
                 <details className="m-0 rounded-xl bg-muted px-3.5 py-3 text-xs text-muted-foreground">
-                  <summary className="cursor-pointer">막대를 못 읽은 사진 {missedShots.length}장</summary>
+                  <summary className="cursor-pointer">
+                    막대를 못 읽은 사진 {missedShots.length}장 (막대로 보이는 것{' '}
+                    {missedShots.filter((shot) => shot.bars).length}장)
+                  </summary>
                   <ul className="mt-2 flex list-none flex-col gap-2 p-0">
                     {missedShots.map((shot) => (
                       <li key={shot.id} className="break-all">
@@ -1911,6 +1918,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
                           className="text-left underline decoration-dotted"
                           onClick={() => runProbe(shot)}
                         >
+                          {shot.bars ? '▮ ' : ''}
                           {shot.bucket || '?'} / {shot.name || shot.id}
                         </button>
                         {probes[shot.id] === 'working' && <div className="mt-1">읽어보는 중…</div>}
