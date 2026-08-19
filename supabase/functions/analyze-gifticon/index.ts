@@ -271,30 +271,32 @@ async function verifyName(
   guard: { admin: unknown },
   jsonHeaders: Record<string, string>,
 ) {
-  const ok = (name: string | null) =>
-    new Response(JSON.stringify({ name, model: VERIFY_MODEL || null }), { headers: jsonHeaders });
+  // 실패해도 200으로 돌려주되 왜 못 했는지는 함께 싣는다. 이게 없으면 화면에 남는 것이
+  // "상품명 재확인 못 함" 한 줄뿐이라, 크레딧이 떨어진 것인지 요청이 틀린 것인지 답이
+  // 잘린 것인지가 전부 똑같아 보인다. 실제로 그걸 못 가려 한나절을 헤맸다.
+  const ok = (name: string | null, why?: string) =>
+    new Response(JSON.stringify({ name, why: why || null, model: VERIFY_MODEL || null }), {
+      headers: jsonHeaders,
+    });
 
   const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
-  if (!VERIFY_MODEL || !apiKey || !body?.image?.data) return ok(null);
+  if (!VERIFY_MODEL) return ok(null, '재확인 꺼짐');
+  if (!apiKey) return ok(null, '키 없음');
+  if (!body?.image?.data) return ok(null, '사진 안 옴');
 
   try {
     const client = new Anthropic({ apiKey });
     const response = await client.messages.create({
       model: VERIFY_MODEL,
-      // 답은 상품명 한 줄뿐이다. 그래도 되풀이에 빠져 잘리는 일이 있어 여유를 둔다 —
-      // 실제로 쓴 만큼만 값을 내므로 천장을 올려도 비싸지지 않는다.
-      max_tokens: 512,
-      // 생각은 꺼둔다. 안 적으면 켜진 채로 돈다.
+      // 천장은 생각과 답이 나눠 갖는다. 상품명 한 줄에는 512면 넉넉하지만 생각이 길어지면
+      // 답이 나오기도 전에 잘리고, 잘린 것은 아래에서 조용히 null이 된다.
       //
-      // 소네트는 thinking을 안 적으면 알아서 생각하고, 그 생각도 max_tokens에서 깎아
-      // 쓴다. 그러니 위의 512는 상품명 한 줄에 주는 여유가 아니라 생각과 나눠 갖는
-      // 천장이었다 — 생각이 길어지면 답이 나오기도 전에 잘리고, 잘린 것은 아래에서
-      // 조용히 null이 된다. 화면에는 "상품명 재확인 못 함"만 남는다.
+      // 한때 thinking을 꺼서 이 문제를 없애려 했다. 그러자 이 호출이 통째로 실패했다 —
+      // 확인이 0.5초 만에 끝나고 모든 카드에 "상품명 재확인 못 함"이 붙었다. 무엇이
+      // 거절당한 것인지는 아래 실패 이유가 알려준다. 지금은 되돌려두고 천장만 올린다.
       //
-      // 게다가 이 호출에 생각이 필요하지가 않다. 인쇄된 글자를 그대로 옮겨 적는 일이라
-      // 눈이 하는 일이지 머리가 하는 일이 아니다. 확인이 4초대로 나온 것도 대부분 이것이고,
-      // 생각한 만큼은 출력 토큰이라 요금으로도 나갔다. 안 쓰는 것에 값을 치르고 있었다.
-      thinking: { type: 'disabled' as const },
+      // 올려도 비싸지지 않는다. 실제로 쓴 만큼만 값을 낸다.
+      max_tokens: 2048,
       system: VERIFY_PROMPT,
       output_config: { format: { type: 'json_schema', schema: VERIFY_SCHEMA } },
       messages: [
@@ -316,22 +318,25 @@ async function verifyName(
     });
     await logAiUsage(guard.admin, 'verify', VERIFY_MODEL, response.usage);
 
-    if (response.stop_reason === 'max_tokens' || response.stop_reason === 'refusal') return ok(null);
+    if (response.stop_reason === 'max_tokens') return ok(null, '답이 잘림');
+    if (response.stop_reason === 'refusal') return ok(null, '거절');
     const textBlock = response.content.find((block) => block.type === 'text');
-    if (!textBlock || !('text' in textBlock)) return ok(null);
+    if (!textBlock || !('text' in textBlock)) return ok(null, '답에 글자 없음');
 
     const parsed = JSON.parse(textBlock.text);
-    return ok(String(parsed.name ?? '').trim() || null);
+    return ok(String(parsed.name ?? '').trim() || null, '이름 못 찾음');
   } catch (err) {
     // 여기서 막혀도 등록은 그대로 되므로 화면에는 아무 말도 안 한다. 대신 로그에는
     // 무엇 때문인지 남긴다 — 크레딧이 떨어지면 이쪽이 먼저 조용해지고, 그때 화면에
     // 보이는 것은 "상품명 재확인 못 함" 한 줄뿐이라 원인을 짚을 자리가 여기밖에 없다.
+    const kind = upstreamFailure(err)?.kind ?? 'unknown';
+    const status = (err as { status?: number })?.status;
     console.error('analyze-gifticon: 상품명 재확인 실패', {
-      kind: upstreamFailure(err)?.kind ?? 'unknown',
-      status: (err as { status?: number })?.status,
+      kind,
+      status,
       message: (err as { message?: string })?.message,
     });
-    return ok(null);
+    return ok(null, status ? `${kind} ${status}` : kind);
   }
 }
 

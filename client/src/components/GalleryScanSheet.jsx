@@ -1424,7 +1424,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
                   {info.meta.askMs > 0 && ` · 읽기 ${(info.meta.askMs / 1000).toFixed(1)}초`}
                   {info.meta.verifyMs > 0 && ` · 확인 ${(info.meta.verifyMs / 1000).toFixed(1)}초`}
                   {info.meta.nameChanged && ` · 상품명 고침(${info.meta.nameBefore} →)`}
-                  {info.meta.nameUnchecked && ' · 상품명 재확인 못 함'}
+                  {info.meta.nameUnchecked && ` · 상품명 재확인 못 함(${info.meta.verifyWhy || '?'})`}
                   {!info.meta.nameChanged &&
                     !info.meta.nameUnchecked &&
                     !info.meta.fromCache &&

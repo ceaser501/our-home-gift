@@ -444,10 +444,10 @@ export async function verifyGifticonName(image) {
     const { data, error } = await supabase.functions.invoke('analyze-gifticon', {
       body: { mode: 'verify', image },
     });
-    if (error) return null;
-    return data?.name || null;
+    if (error) return { name: null, why: '서버 오류' };
+    return { name: data?.name || null, why: data?.why || null };
   } catch {
-    return null;
+    return { name: null, why: '못 부름' };
   }
 }
 
