@@ -203,7 +203,7 @@ const VERIFY = { longEdge: 2000, tryHarder: false };
 // 경계의 자국이 남는다. 여기 오는 것은 얕은 판이 못 읽은 사진뿐이고 결과를 보여준 뒤
 // 도는 판이라, 마지막 기회에는 손대지 않은 것을 준다. quality는 원본이 너무 커서
 // 그대로 못 넘길 때의 대비책으로 남겨둔다.
-const DEEP = { longEdge: 3200, tryHarder: true, quality: 95, raw: true, ladder: true };
+const DEEP = { longEdge: 3200, tryHarder: true, quality: 95, raw: true };
 
 // 아니라고 한 사진을 기억해둔다. 안 그러면 훑을 때마다 같은 것을 계속 다시 묻는다.
 const DISMISSED_KEY = 'moacon:gallery-dismissed';
@@ -389,18 +389,16 @@ export function scaleTo(width, height, longEdgeTarget) {
   return Math.max(2, Math.floor(raw));
 }
 
-// 작은 사진을 키울 때 정밀 탐색이 훑어볼 배율들.
+// ── 배율 사다리를 뺐다 ──────────────────────────────────────────────────────
+// 한때 정밀 탐색이 2·3·4배를 차례로 봤다. 배스킨라빈스 카드가 안 읽히는 이유를 모른 채
+// "어느 배율이든 걸리겠지"로 넣은 것이다.
 //
-// 한 배율에 걸지 않는다. 배스킨라빈스 카드(404x677) 하나를 두고 화질·원본 바이트·정수배를
-// 차례로 고쳐봤지만 전부 빗나갔다. 매번 "이 배율이면 될 것이다"에 걸었기 때문이다.
+// 그 카드는 여전히 안 읽혔고, 정밀 탐색만 12초에서 42초가 됐다. 사진 서른 장이 대부분
+// 바코드가 없는 캡처인데 거기에 네 번씩 돌린 셈이다. 뒤에서 도는 판이라 기다리게 하지는
+// 않지만, 배터리와 열은 그대로 쓴다.
 //
-// 직접 등록은 이 사진을 읽는다. 거기는 2배로 키운 뒤 한 번 실패하면 tryHarder를 켜고 다시
-// 본다. 훑기에는 그 조합만 없었다 — 얕은 판은 2배지만 tryHarder가 없고, 정밀 탐색은
-// tryHarder를 켜지만 4배다. 배율이 커질수록 잘 읽히는 것이 아니다.
-//
-// 키우는 경우에만 사다리를 탄다. 큰 사진은 어차피 줄이는 쪽이라 배율이 하나뿐이고,
-// 작은 사진은 캔버스가 작아서 몇 번 더 봐도 싸다.
-const UPSCALES = [2, 3, 4];
+// 되는 조건을 알아낸 뒤에 그 하나만 넣는다. 목록에서 사진 이름을 누르면 조건별로 읽어보고
+// 결과를 찍어준다(probeBarcode).
 
 async function decodeBarcode(read, pass = SHALLOW) {
   const image = await loadImage(asDataUrl(read.data, read.mime));
@@ -408,17 +406,7 @@ async function decodeBarcode(read, pass = SHALLOW) {
   const height = image.naturalHeight;
 
   const scale = scaleTo(width, height, pass.longEdge);
-  let found = await decodeAt(image, width, height, scale, pass.tryHarder);
-
-  // 정밀 탐색은 마지막 기회다. 여기서 못 읽으면 그 사진은 '바코드 없음'으로 적혀 다시는
-  // 안 읽힌다. 키우는 사진이라면 배율을 바꿔가며 한 번씩 더 본다.
-  if (!found && pass.ladder && scale > 1) {
-    for (const step of UPSCALES) {
-      if (step === scale) continue;
-      found = await decodeAt(image, width, height, step, true);
-      if (found) break;
-    }
-  }
+  const found = await decodeAt(image, width, height, scale, pass.tryHarder);
   if (!found) return null;
 
   // 읽혔다고 바로 믿지 않는다. 조건을 바꿔 한 번 더 읽고, 두 번 다 같은 값일 때만 그대로
