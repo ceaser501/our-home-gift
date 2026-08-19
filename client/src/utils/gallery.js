@@ -883,37 +883,6 @@ async function readPickedFile(image) {
 // 정밀 탐색은 원본 바이트를 그대로 받아오므로 그 조각이 PNG일 수 있다. 이름과 형식을
 // jpg로 못 박아두면 내용과 어긋난 파일이 되고, 그 이름이 스토리지 경로에까지 따라간다.
 // (브라우저는 내용을 보고 읽어주므로 화면이 깨지진 않지만, 기대고 있을 이유가 없다.)
-/**
- * 한 장을 여러 조건으로 읽어보고 무엇이 되는지 그대로 돌려준다. 테스트 빌드 전용.
- *
- * 배스킨라빈스 카드 한 장이 왜 안 읽히는지를 나흘 동안 짐작으로 고쳤다. 화질, 원본
- * 바이트, 정수배, 배율 사다리 — 매번 그럴듯한 이유가 있었고 매번 빗나갔다. 재본 적이
- * 한 번도 없어서다. 무엇이 되고 무엇이 안 되는지 눈으로 봐야 다음 수가 정해진다.
- */
-export async function probeBarcode(image) {
-  const read = await readFromGallery(image);
-  const loaded = await loadImage(asDataUrl(read.data));
-  const width = loaded.naturalWidth;
-  const height = loaded.naturalHeight;
-  const rows = [{ label: `원본 ${width}x${height}`, code: null }];
-
-  for (const scale of [1, 2, 3, 4, 6]) {
-    for (const tryHarder of [false, true]) {
-      let found = null;
-      try {
-        found = await decodeAt(loaded, width, height, scale, tryHarder);
-      } catch {
-        // 여기서 터지는 것도 결과다. 못 읽은 것으로 적는다.
-      }
-      rows.push({
-        label: `${scale}배${tryHarder ? ' + 정밀' : ''}`,
-        code: found ? `${found.code} (${found.codeType})` : null,
-      });
-    }
-  }
-  return rows;
-}
-
 export function candidateToFiles(candidate) {
   const base = (candidate.name || 'gifticon').replace(/\.[^.]+$/, '');
   return candidate.images.map((data, index) => {

@@ -24,7 +24,6 @@ import {
   undismissImages,
   countSkipped,
   forgetSkipped,
-  probeBarcode,
   FOLDERS,
   summarizeFolders,
   getGalleryStatus,
@@ -465,15 +464,8 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
   const [retryingId, setRetryingId] = useState(null);
   // 이번 창에서 치운 후보. 목록에 흐리게 남겨두고 되돌릴 수 있게 한다.
   const [dismissedIds, setDismissedIds] = useState([]);
-  // 바코드를 못 읽어 후보가 안 된 사진들. 테스트 빌드 화면에만 이름을 찍는다.
-  //
-  // 자동스캔에서는 이게 화면에 한마디도 안 나온다("바코드가 없는 사진 N장"은 직접 고른
-  // 경우에만 뜬다). 그래서 어떤 기프티콘이 안 나올 때 그게 목록에 아예 안 들어온 것인지,
-  // 들어왔는데 막대를 못 읽은 것인지 가릴 방법이 없었다 — 배스킨라빈스 한 장을 두고
-  // 며칠을 짐작으로 고쳤다. 둘은 고칠 자리가 전혀 다르다.
+  // 바코드를 못 읽어 후보가 안 된 사진들. 아래에서 폴더별로 세어 알려준다.
   const [missedShots, setMissedShots] = useState([]);
-  // 눌러본 사진의 판독 결과. { [id]: rows | 'working' }
-  const [probes, setProbes] = useState({});
   // 금액권으로 넣을 후보. 판정이 확실하지 않아서 켜는 건 사람이 한다.
   const [voucherIds, setVoucherIds] = useState([]);
   const [scanned, setScanned] = useState(0);
@@ -704,16 +696,6 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
    * 결과 화면이 뜬 뒤에 돈다. 여기서 나오는 것은 정보까지 읽어서 목록에 얹는다.
    * 사용자가 그 사이에 등록을 눌러도 상관없다 — 얹히는 건 새로 찾은 것뿐이다.
    */
-  async function runProbe(shot) {
-    setProbes((prev) => ({ ...prev, [shot.id]: 'working' }));
-    try {
-      const rows = await probeBarcode(shot);
-      setProbes((prev) => ({ ...prev, [shot.id]: rows }));
-    } catch (err) {
-      setProbes((prev) => ({ ...prev, [shot.id]: [{ label: err?.message || '읽지 못했어요', code: null }] }));
-    }
-  }
-
   async function digDeeper(pending, controller) {
     if (!pending?.length || controller.signal.aborted) return;
     setDigging(true);
@@ -1893,46 +1875,6 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
                 </p>
               )}
 
-              {/* 무엇이 빠졌는지. 출시 빌드에는 안 나온다(VITE_TEST_TOOLS).
-                  이름과 폴더만 적는다 — 목록에 있는데 못 읽은 것인지, 아예 안 들어온
-                  것인지만 가리면 되고, 그 둘은 고칠 자리가 전혀 다르다. */}
-              {import.meta.env.VITE_TEST_TOOLS && stage === 'done' && missedShots.length > 0 && (
-                <details className="m-0 rounded-xl bg-muted px-3.5 py-3 text-xs text-muted-foreground">
-                  <summary className="cursor-pointer">
-                    막대를 못 읽은 사진 {missedShots.length}장 (막대로 보이는 것{' '}
-                    {missedShots.filter((shot) => shot.bars).length}장)
-                  </summary>
-                  <ul className="mt-2 flex list-none flex-col gap-2 p-0">
-                    {missedShots.map((shot) => (
-                      <li key={shot.id} className="break-all">
-                        {/* 눌러서 조건을 바꿔가며 읽어본다. 무엇이 되고 무엇이 안 되는지
-                            봐야 다음 수가 정해진다 — 나흘을 짐작으로 고쳤다. */}
-                        <button
-                          type="button"
-                          className="text-left underline decoration-dotted"
-                          onClick={() => runProbe(shot)}
-                        >
-                          {shot.bars ? '▮ ' : ''}
-                          {shot.bucket || '?'} / {shot.name || shot.id}
-                        </button>
-                        {probes[shot.id] === 'working' && <div className="mt-1">읽어보는 중…</div>}
-                        {Array.isArray(probes[shot.id]) && (
-                          <div className="mt-1 flex flex-col gap-0.5 rounded-lg bg-background/60 p-2">
-                            {probes[shot.id].map((row) => (
-                              <div key={row.label}>
-                                {row.label}
-                                {row.code === null ? '' : ` → ${row.code}`}
-                                {row.code === null && row.label.includes('배') ? ' → 못 읽음' : ''}
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                </details>
-              )}
-
               {stage === 'done' && panelBody}
 
               {/* 두 버튼의 차이를 이름에 담는다. 둘 다 설치일 0시부터 보되, 위는 아직
@@ -1992,7 +1934,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
                 {stage === 'done' && !picked && skipped > 0 && (
                   <Button
                     type="button"
-                    variant="ghost"
+                    variant="outline"
                     size="lg"
                     className="w-full rounded-xl text-muted-foreground"
                     onClick={() => start({ forgetHistory: true })}
