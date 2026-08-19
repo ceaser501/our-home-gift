@@ -191,19 +191,16 @@ const VERIFY = { longEdge: 2000, tryHarder: false };
 // 무거워도 사용자를 기다리게 하지 않는다. 놓치지 않는 것이 이 기능의 약속이라, 기다림을
 // 만들지 않는 자리에서까지 찾는 힘을 깎을 이유가 없다.
 //
-// 화질도 여기서 올린다. 얕은 판이 쓰는 85는 압축 자국이 얇은 막대 위에 앉아 판독을
-// 깨뜨릴 때가 있다 — 배스킨라빈스 카드가 그랬다. 훑기로는 못 읽었는데 같은 사진을 직접
-// 등록으로 올리면(원본을 그대로 읽는 길) 읽혔다.
+// ── 화질을 올리고 원본을 그대로 받아보다가 되돌렸다 ────────────────────────
+// 배스킨라빈스 카드(404x677)가 훑기로만 안 읽혀서, 압축 자국이 얇은 막대를 지운다고 보고
+// 화질을 95로 올렸다가 아예 원본 바이트를 그대로 받게까지 했다. 둘 다 그 카드를 못
+// 살렸고, 정밀 탐색만 무거워졌다 — 못 읽은 사진마다 원본을 통째로 웹뷰로 넘기니 서른
+// 장이면 그만큼이 오간다.
 //
-// 여기 오는 것은 얕은 판이 못 읽은 사진뿐이라 값을 치르는 대상이 작고, 이 판은 결과를
-// 보여준 뒤에 도는 것이라 기다림도 안 만든다. 게다가 여기서도 못 읽으면 그 사진은
-// '바코드 없음'으로 적혀 다시는 안 읽힌다 — 마지막 기회에는 좋은 것을 줘야 한다.
-//
-// 화질 대신 원본을 그대로 받는다. 화질을 95로 올려도 JPEG는 여전히 손실이라, 얇은 막대
-// 경계의 자국이 남는다. 여기 오는 것은 얕은 판이 못 읽은 사진뿐이고 결과를 보여준 뒤
-// 도는 판이라, 마지막 기회에는 손대지 않은 것을 준다. quality는 원본이 너무 커서
-// 그대로 못 넘길 때의 대비책으로 남겨둔다.
-const DEEP = { longEdge: 3200, tryHarder: true, quality: 95, raw: true };
+// 나중에 목록에서 그 사진을 눌러 조건별로 읽어보니(probeBarcode) 1·2·3·4·6배를
+// 정밀 탐색 켜고 끄고 열 번 다 못 읽었다. 원본에 이미 정보가 없다는 뜻이라, 어떻게 받아
+// 오든 달라지지 않는다. 증거 없이 넣은 것을 값만 내고 둘 이유가 없어 되돌린다.
+const DEEP = { longEdge: 3200, tryHarder: true };
 
 // 아니라고 한 사진을 기억해둔다. 안 그러면 훑을 때마다 같은 것을 계속 다시 묻는다.
 const DISMISSED_KEY = 'moacon:gallery-dismissed';
@@ -222,7 +219,7 @@ const NO_BARCODE_KEY = 'moacon:gallery-no-barcode';
 // 예전에는 못 읽던 사진을 지금은 읽을 수 있게 되는 일이 실제로 있었다(작은 이미지를
 // 키워서 읽도록 고친 뒤). 그런데 "없음"으로 적힌 사진은 다시 읽지 않으니, 고쳐놓고도
 // 그 사진들만 영영 안 나온다. 버전이 다르면 기록을 통째로 버리고 다시 읽는다.
-const DECODER_VERSION = 8;
+const DECODER_VERSION = 9;
 
 function readIdSet(key) {
   try {
@@ -452,12 +449,7 @@ async function decodeAt(image, width, height, scale, tryHarder) {
 // 화질은 판마다 다르다. 옛 앱에서는 quality를 모르고 늘 85로 주므로, 새 웹이 옛 앱에
 // 얹혀도 예전처럼 돌 뿐 깨지지 않는다.
 function readFromGallery(image, pass = SHALLOW) {
-  return MoaconGallery.readImage({
-    id: String(image.id),
-    maxEdge: READ_EDGE,
-    quality: pass.quality,
-    raw: Boolean(pass.raw),
-  });
+  return MoaconGallery.readImage({ id: String(image.id), maxEdge: READ_EDGE, quality: pass.quality });
 }
 
 /**

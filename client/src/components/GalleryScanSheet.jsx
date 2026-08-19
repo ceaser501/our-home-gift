@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   CalendarClock,
   Check,
@@ -141,6 +141,15 @@ function makePool(limit) {
 }
 
 const KOREAN_BUCKETS = FOLDERS.map((folder) => folder.label).join(' · ');
+
+// 기기가 알려준 폴더 이름을 화면에 쓸 한글 이름으로. 이름은 제조사마다 다르게 오므로
+// (Screenshots / Screenshot / 스크린샷) 정확히 같은지가 아니라 품고 있는지를 본다 —
+// gallery.js의 matchesName과 같은 규칙이다.
+function folderLabel(bucket) {
+  const lower = String(bucket || '').toLowerCase();
+  const found = FOLDERS.find((folder) => folder.names.some((name) => lower.includes(name) || name.includes(lower)));
+  return found?.label || null;
+}
 
 // 첫 결과가 나오기 전에 한 줄씩 돌려 보여주는 안내.
 //
@@ -727,6 +736,9 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
       if (controller.signal.aborted) return;
       // 정밀 탐색으로 건진 것에도 같은 기준을 건다. 여기서 살아난 사진일수록 작게 찍혀
       // 있을 가능성이 높아서, 오히려 이쪽이 더 잘 걸린다.
+      // 여기서 건진 사진은 더 이상 '못 읽은' 것이 아니다. 안내 숫자에서 빼준다.
+      const rescued = new Set(deep.candidates.map((candidate) => candidate.id));
+      setMissedShots((prev) => prev.filter((shot) => !rescued.has(shot.id)));
       const kept = deep.candidates.filter((candidate) => !candidate.tooSmall);
       const dropped = new Set(
         deep.candidates.filter((candidate) => candidate.tooSmall).map((candidate) => candidate.id)
@@ -1107,6 +1119,18 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
   const summary = summarizeFolders(folders);
   // 지금까지 건너뛰기로 감춰둔 사진 수. 훑기가 끝난 뒤에만 쓰므로 그때 세면 된다.
   const skipped = complete ? countSkipped() : 0;
+
+  // 못 읽은 사진을 폴더별로 센다. 많은 순으로 적어야 어디부터 열어볼지가 바로 보인다.
+  const missedByFolder = useMemo(() => {
+    const counts = new Map();
+    missedShots.forEach((shot) => {
+      const label = folderLabel(shot.bucket) || shot.bucket || '그 밖';
+      counts.set(label, (counts.get(label) || 0) + 1);
+    });
+    return [...counts.entries()]
+      .map(([label, count]) => ({ label, count }))
+      .sort((a, b) => b.count - a.count);
+  }, [missedShots]);
 
   // 훑거나 읽는 중. 위에 막대가 뜨고, 아래로 카드가 쌓인다.
   const isWorking = stage === 'scanning' || stage === 'reading';
@@ -1832,6 +1856,29 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
                 <p className="m-0 rounded-xl bg-muted px-3.5 py-3 text-sm leading-relaxed break-keep text-muted-foreground">
                   바코드가 없는 사진 <b className="font-semibold text-foreground">{tally.noCode}장</b>은 어느
                   기프티콘 것인지 몰라서 뺐어요.
+                </p>
+              )}
+
+              {/* 사진첩을 훑었을 때. 여기는 그동안 아무 말도 안 했다.
+                  막대를 못 읽으면 후보가 아예 안 만들어지므로, 사용자 눈에는 그 기프티콘이
+                  세상에 없었던 것처럼 보인다. 카톡으로 받은 카드가 너무 작게 줄어들어
+                  막대가 뭉개진 경우가 실제로 있었고(404x677), 그건 어떤 배율로도 못 읽는다.
+                  못 읽었다는 사실과 어디를 뒤져야 하는지는 알려줘야 한다.
+
+                  폴더를 적는 이유: 스물몇 장이 스크린샷이면 대개 밥 사진이고, 기프티콘은
+                  카카오톡이나 다운로드에 있다. 어디를 열어볼지가 그 한 줄로 정해진다.
+                  "바코드가 있는 사진"이라고는 못 쓴다 — 우리는 못 읽었을 뿐이지 있는지
+                  없는지를 모른다. */}
+              {!picked && missedByFolder.length > 0 && !isWorking && (
+                <p className="m-0 rounded-xl bg-muted px-3.5 py-3 text-sm leading-relaxed break-keep text-muted-foreground">
+                  바코드를 못 읽은 사진이{' '}
+                  {missedByFolder.map((folder, index) => (
+                    <span key={folder.label}>
+                      {index > 0 && ', '}
+                      {folder.label} <b className="font-semibold text-foreground">{folder.count}장</b>
+                    </span>
+                  ))}{' '}
+                  있어요. 기프티콘이면 <b className="font-semibold text-foreground">+</b> 로 올려주세요.
                 </p>
               )}
 
