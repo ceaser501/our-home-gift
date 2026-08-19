@@ -455,6 +455,13 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
   const [retryingId, setRetryingId] = useState(null);
   // 이번 창에서 치운 후보. 목록에 흐리게 남겨두고 되돌릴 수 있게 한다.
   const [dismissedIds, setDismissedIds] = useState([]);
+  // 바코드를 못 읽어 후보가 안 된 사진들. 테스트 빌드 화면에만 이름을 찍는다.
+  //
+  // 자동스캔에서는 이게 화면에 한마디도 안 나온다("바코드가 없는 사진 N장"은 직접 고른
+  // 경우에만 뜬다). 그래서 어떤 기프티콘이 안 나올 때 그게 목록에 아예 안 들어온 것인지,
+  // 들어왔는데 막대를 못 읽은 것인지 가릴 방법이 없었다 — 배스킨라빈스 한 장을 두고
+  // 며칠을 짐작으로 고쳤다. 둘은 고칠 자리가 전혀 다르다.
+  const [missedShots, setMissedShots] = useState([]);
   // 금액권으로 넣을 후보. 판정이 확실하지 않아서 켜는 건 사람이 한다.
   const [voucherIds, setVoucherIds] = useState([]);
   const [scanned, setScanned] = useState(0);
@@ -565,6 +572,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
     setComplete(false);
     setCandidates([]);
     setDismissedIds([]);
+    setMissedShots([]);
     setVoucherIds([]);
     setResult(null);
     setDigging(false);
@@ -651,6 +659,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
       const keep = new Set(found.map((candidate) => candidate.id));
       setCandidates((prev) => prev.filter((candidate) => keep.has(candidate.id)));
       pending = scan.pending ?? [];
+      setMissedShots(pending);
       setScanned(scan.scanned ?? 0);
       setSince(scan.since ?? 0);
       setFolders(scan.folders ?? []);
@@ -1824,6 +1833,22 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
                   바코드가 너무 작게 찍힌 사진 <b className="font-semibold text-foreground">{tally.tooSmall}장</b>은
                   뺐어요. <b className="font-semibold text-foreground">직접 등록</b>으로 올려주세요.
                 </p>
+              )}
+
+              {/* 무엇이 빠졌는지. 출시 빌드에는 안 나온다(VITE_TEST_TOOLS).
+                  이름과 폴더만 적는다 — 목록에 있는데 못 읽은 것인지, 아예 안 들어온
+                  것인지만 가리면 되고, 그 둘은 고칠 자리가 전혀 다르다. */}
+              {import.meta.env.VITE_TEST_TOOLS && stage === 'done' && missedShots.length > 0 && (
+                <details className="m-0 rounded-xl bg-muted px-3.5 py-3 text-xs text-muted-foreground">
+                  <summary className="cursor-pointer">막대를 못 읽은 사진 {missedShots.length}장</summary>
+                  <ul className="mt-2 flex list-none flex-col gap-1 p-0">
+                    {missedShots.map((shot) => (
+                      <li key={shot.id} className="break-all">
+                        {shot.bucket || '?'} / {shot.name || shot.id}
+                      </li>
+                    ))}
+                  </ul>
+                </details>
               )}
 
               {stage === 'done' && panelBody}
