@@ -76,6 +76,37 @@ public class GalleryPlugin extends Plugin {
      *
      * 문자열로 주고받으면 파서가 어떤 타입을 고르든 상관이 없다.
      */
+    // 원본을 그대로 넘길 수 있는 최대 크기. 넘으면 null을 돌려주고 부르는 쪽이 줄여 보낸다.
+    // 카톡·기프티쇼로 받는 기프티콘 카드는 대개 수백 KB라 이 안에 들어온다.
+    private static final int RAW_MAX_BYTES = 4 * 1024 * 1024;
+
+    /** 파일을 통째로 읽는다. 한도를 넘으면 읽던 것을 버리고 null. */
+    private static byte[] readAllUpTo(ContentResolver resolver, Uri uri, int limit) {
+        InputStream stream = null;
+        try {
+            stream = resolver.openInputStream(uri);
+            if (stream == null) return null;
+            ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+            byte[] chunk = new byte[8192];
+            int read;
+            int total = 0;
+            while ((read = stream.read(chunk)) > 0) {
+                total += read;
+                if (total > limit) return null;
+                buffer.write(chunk, 0, read);
+            }
+            return buffer.toByteArray();
+        } catch (Exception e) {
+            return null;
+        } catch (OutOfMemoryError e) {
+            return null;
+        } finally {
+            if (stream != null) {
+                try { stream.close(); } catch (Exception ignored) {}
+            }
+        }
+    }
+
     private static long parseLong(String text, long fallback) {
         if (text == null) return fallback;
         try {
@@ -305,6 +336,16 @@ public class GalleryPlugin extends Plugin {
         int maxEdge = call.getInt("maxEdge", DEFAULT_MAX_EDGE);
         // 터무니없는 값이 와도 여기서 막는다. 100 아래는 그림이 남아나지 않고, 100 위는 없다.
         int quality = Math.max(40, Math.min(100, call.getInt("quality", DEFAULT_QUALITY)));
+        // 원본 바이트를 손대지 않고 그대로 넘길지.
+        //
+        // 아래 길은 사진을 무조건 JPEG로 다시 인코딩한다. 원본이 PNG면 없던 압축 자국이
+        // 생기고, 원본이 JPEG여도 눌린 위에 또 눌린다. 그 자국이 바코드의 얇은 막대
+        // 경계에 앉으면 zxing이 못 읽는다 — 같은 사진을 직접 등록으로 올리면(브라우저가
+        // 원본을 그대로 디코딩하는 길) 읽히는데 훑기로만 안 읽히는 자리가 여기다.
+        //
+        // 전부에 쓰지는 않는다. 원본은 JPEG보다 훨씬 무거워서 수백 장을 그대로 넘기면
+        // 웹뷰가 버겁다. 얕은 판이 못 읽은 사진만 도는 정밀 탐색에서만 쓴다.
+        boolean raw = Boolean.TRUE.equals(call.getBoolean("raw", false));
 
         Uri uri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id);
         ContentResolver resolver = getContext().getContentResolver();
@@ -327,6 +368,22 @@ public class GalleryPlugin extends Plugin {
             if (longest <= 0) {
                 call.reject("사진을 읽지 못했어요.", "decode_failed");
                 return;
+            }
+
+            // 원본 그대로 넘기기. 너무 크면 조용히 아래 길로 내려가 예전처럼 줄여 보낸다 —
+            // 여기서 막아버리면 큰 사진 한 장 때문에 정밀 탐색이 통째로 비는 셈이 된다.
+            if (raw) {
+                byte[] original = readAllUpTo(resolver, uri, RAW_MAX_BYTES);
+                if (original != null) {
+                    JSObject rawResult = new JSObject();
+                    rawResult.put("data", Base64.encodeToString(original, Base64.NO_WRAP));
+                    String type = resolver.getType(uri);
+                    rawResult.put("mime", type == null ? "image/jpeg" : type);
+                    rawResult.put("width", bounds.outWidth);
+                    rawResult.put("height", bounds.outHeight);
+                    call.resolve(rawResult);
+                    return;
+                }
             }
 
             BitmapFactory.Options opts = new BitmapFactory.Options();
@@ -383,6 +440,7 @@ public class GalleryPlugin extends Plugin {
 
             JSObject result = new JSObject();
             result.put("data", Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP));
+            result.put("mime", "image/jpeg");
             result.put("width", outWidth);
             result.put("height", outHeight);
             call.resolve(result);

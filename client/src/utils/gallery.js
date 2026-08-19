@@ -198,7 +198,12 @@ const VERIFY = { longEdge: 2000, tryHarder: false };
 // 여기 오는 것은 얕은 판이 못 읽은 사진뿐이라 값을 치르는 대상이 작고, 이 판은 결과를
 // 보여준 뒤에 도는 것이라 기다림도 안 만든다. 게다가 여기서도 못 읽으면 그 사진은
 // '바코드 없음'으로 적혀 다시는 안 읽힌다 — 마지막 기회에는 좋은 것을 줘야 한다.
-const DEEP = { longEdge: 3200, tryHarder: true, quality: 95 };
+//
+// 화질 대신 원본을 그대로 받는다. 화질을 95로 올려도 JPEG는 여전히 손실이라, 얇은 막대
+// 경계의 자국이 남는다. 여기 오는 것은 얕은 판이 못 읽은 사진뿐이고 결과를 보여준 뒤
+// 도는 판이라, 마지막 기회에는 손대지 않은 것을 준다. quality는 원본이 너무 커서
+// 그대로 못 넘길 때의 대비책으로 남겨둔다.
+const DEEP = { longEdge: 3200, tryHarder: true, quality: 95, raw: true };
 
 // 아니라고 한 사진을 기억해둔다. 안 그러면 훑을 때마다 같은 것을 계속 다시 묻는다.
 const DISMISSED_KEY = 'moacon:gallery-dismissed';
@@ -357,15 +362,18 @@ async function loadImage(src) {
 }
 
 // 네이티브가 주는 base64에는 접두사가 없다.
-const asDataUrl = (base64) => `data:image/jpeg;base64,${base64}`;
+// 네이티브가 알려준 형식을 그대로 쓴다. 정밀 탐색은 원본 바이트를 손대지 않고 받아오는데,
+// 그 원본이 PNG일 수 있다. 형식을 jpeg로 못 박아두면 브라우저가 눈치껏 읽어주기는 하지만
+// 기대고 있을 이유가 없다. 옛 앱은 mime를 안 주므로 그때는 예전대로 jpeg로 본다.
+const asDataUrl = (base64, mime) => `data:${mime || 'image/jpeg'};base64,${base64}`;
 
 // 작으면 키우고 크면 줄여, 어느 쪽이든 목표 크기에 맞춘다.
 function scaleTo(width, height, longEdgeTarget) {
   return longEdgeTarget / Math.max(width, height);
 }
 
-async function decodeBarcode(base64, pass = SHALLOW) {
-  const image = await loadImage(asDataUrl(base64));
+async function decodeBarcode(read, pass = SHALLOW) {
+  const image = await loadImage(asDataUrl(read.data, read.mime));
   const width = image.naturalWidth;
   const height = image.naturalHeight;
 
@@ -412,7 +420,12 @@ async function decodeAt(image, width, height, scale, tryHarder) {
 // 화질은 판마다 다르다. 옛 앱에서는 quality를 모르고 늘 85로 주므로, 새 웹이 옛 앱에
 // 얹혀도 예전처럼 돌 뿐 깨지지 않는다.
 function readFromGallery(image, pass = SHALLOW) {
-  return MoaconGallery.readImage({ id: String(image.id), maxEdge: READ_EDGE, quality: pass.quality });
+  return MoaconGallery.readImage({
+    id: String(image.id),
+    maxEdge: READ_EDGE,
+    quality: pass.quality,
+    raw: Boolean(pass.raw),
+  });
 }
 
 /**
@@ -463,7 +476,7 @@ async function collect({ images, read: readImage, pass, isRegistered, skipCodes,
     // 훑기 전체가 중단되고, 사용자에게는 이유 없이 "훑지 못했어요"만 뜬다.
     let found = null;
     try {
-      found = await decodeBarcode(read.data, pass);
+      found = await decodeBarcode(read, pass);
     } catch {
       readFailed += 1;
       continue;
@@ -482,7 +495,7 @@ async function collect({ images, read: readImage, pass, isRegistered, skipCodes,
     const already = seenCodes.get(found.code);
     if (already) {
       if (already.shots.length < COLLECT_PER_CODE) {
-        already.shots.push({ data: read.data, bucket: image.bucket, coverage: found.coverage });
+        already.shots.push({ data: read.data, mime: read.mime, bucket: image.bucket, coverage: found.coverage });
       }
       continue;
     }
@@ -504,7 +517,7 @@ async function collect({ images, read: readImage, pass, isRegistered, skipCodes,
       codeType: found.codeType,
       // 고르기 전의 사진 조각들. 같은 번호의 사진이 더 나오면 여기에 붙고,
       // 훑기가 끝나면 아래에서 골라 images로 옮긴다.
-      shots: [{ data: read.data, bucket: image.bucket, coverage: found.coverage }],
+      shots: [{ data: read.data, mime: read.mime, bucket: image.bucket, coverage: found.coverage }],
       // 화면이 곧바로 쓰는 미리보기. 아래에서 고른 결과로 갈아끼워진다.
       //
       // 예전에는 여기에도 위의 조각 객체를 그대로 넣었는데, 화면은 이걸 base64 문자열로
@@ -557,7 +570,10 @@ async function collect({ images, read: readImage, pass, isRegistered, skipCodes,
     const pool = originals.length > 0 ? originals : usable;
 
     const sorted = [...pool].sort((a, b) => b.coverage - a.coverage);
-    candidate.images = sorted.slice(0, IMAGES_PER_CODE).map((shot) => shot.data);
+    const kept = sorted.slice(0, IMAGES_PER_CODE);
+    candidate.images = kept.map((shot) => shot.data);
+    // 조각마다 형식이 다를 수 있다 — 얕은 판이 준 것은 JPEG, 정밀 탐색이 준 것은 원본이다.
+    candidate.mimes = kept.map((shot) => shot.mime || 'image/jpeg');
     // 다 골랐으면 나머지 조각은 놓는다. 한 장이 수백 KB라 후보 몇 개만 되어도 쌓인다.
     candidate.shots = null;
   });
@@ -749,12 +765,18 @@ async function readPickedFile(image) {
   }
 }
 
+// 정밀 탐색은 원본 바이트를 그대로 받아오므로 그 조각이 PNG일 수 있다. 이름과 형식을
+// jpg로 못 박아두면 내용과 어긋난 파일이 되고, 그 이름이 스토리지 경로에까지 따라간다.
+// (브라우저는 내용을 보고 읽어주므로 화면이 깨지진 않지만, 기대고 있을 이유가 없다.)
 export function candidateToFiles(candidate) {
   const base = (candidate.name || 'gifticon').replace(/\.[^.]+$/, '');
+  const mimes = candidate.mimes || [];
   return candidate.images.map((data, index) => {
     const binary = atob(data);
     const bytes = new Uint8Array(binary.length);
     for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
-    return new File([bytes], `${base}${index ? `-${index + 1}` : ''}.jpg`, { type: 'image/jpeg' });
+    const mime = mimes[index] || 'image/jpeg';
+    const ext = mime === 'image/png' ? 'png' : 'jpg';
+    return new File([bytes], `${base}${index ? `-${index + 1}` : ''}.${ext}`, { type: mime });
   });
 }
