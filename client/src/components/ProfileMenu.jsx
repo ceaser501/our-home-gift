@@ -36,6 +36,10 @@ export default function ProfileMenu({ onClose }) {
   // 갤러리 자동 스캔은 앱에서만 있다. 브라우저에는 폴더를 볼 방법이 없어서 줄 자체를 감춘다.
   const [scanSupported] = useState(() => isGalleryScanSupported());
   const [autoScan, setAutoScan] = useState(() => isAutoScanOn());
+  // 알림 테스트 줄에 지금 상태를 같이 보여준다. 꺼둔 상태에서 "5초 뒤 도착"이라고
+  // 적혀 있으면 눌러도 아무것도 안 오는 이유를 알 수가 없다.
+  // 값은 바로 위 NotificationToggle이 알려준다 — 같은 걸 두 군데서 물어보면 어긋난다.
+  const [pushOn, setPushOn] = useState(false);
 
   async function handleTestNotification() {
     setTesting(true);
@@ -140,7 +144,7 @@ export default function ProfileMenu({ onClose }) {
 
           <p className="m-0 pt-3 pb-1 text-xs font-semibold text-muted-foreground">설정</p>
           <ThemeToggle asRow />
-          <NotificationToggle asRow />
+          <NotificationToggle asRow onChange={setPushOn} />
 
           {/* 켜두면 앱을 열 때 바로 찾아준다. 받아둔 기프티콘을 넣는 게 이 앱에 들어오는
               이유라, 그걸 매번 눌러서 시작하게 할 이유가 없다. 다만 사진을 보는 일이라
@@ -177,7 +181,15 @@ export default function ProfileMenu({ onClose }) {
           >
             <BellRing className="size-4.5 text-muted-foreground" />
             <span className="flex-1 text-foreground">알림 테스트</span>
-            <span className="text-xs text-muted-foreground">{testing ? '보내는 중…' : '5초 뒤 도착'}</span>
+            <span
+              className={
+                pushOn && !testing
+                  ? 'shrink-0 text-xs font-semibold text-primary'
+                  : 'shrink-0 text-xs text-muted-foreground'
+              }
+            >
+              {testing ? '보내는 중…' : pushOn ? '켜짐' : '꺼짐'}
+            </span>
           </button>
 
           {/* 배너를 닫아도 여기서는 늘 다시 볼 수 있어야 한다. 배너에만 있으면

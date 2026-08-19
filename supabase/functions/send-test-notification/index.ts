@@ -9,6 +9,12 @@
 //   - 부른 사람 본인에게만 보낸다(가족 전체를 방해하지 않게).
 //   - expiry_notified 표시를 건드리지 않아서 몇 번이든 다시 눌러볼 수 있다.
 //   - 앱을 배경으로 돌릴 시간을 주려고 5초 뒤에 보낸다.
+//
+// 그 5초를 응답으로 붙들고 있으면 안 된다. 5초를 기다리라는 건 곧 앱을 배경으로
+// 돌리라는 뜻인데, 안드로이드는 배경으로 간 웹뷰의 요청을 끊어버린다. 그러면 알림은
+// 정상으로 갔는데도 화면에는 "알림 테스트에 실패했어요(Failed to send a request to
+// the Edge Function)"가 뜬다 — 요청이 실패한 게 아니라 답을 받을 창이 먼저 닫힌 것이다.
+// 그래서 판단이 끝나는 즉시 답하고, 기다렸다 보내는 일은 뒤에서 이어서 한다.
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import webpush from 'npm:web-push@3';
@@ -99,29 +105,37 @@ Deno.serve(async (req) => {
     }`,
   });
 
-  // 앱을 배경으로 돌릴 시간을 준다. 브라우저가 잠들어도 이 요청은 서버에서 계속 진행된다.
-  await new Promise((resolve) => setTimeout(resolve, SEND_DELAY_MS));
+  // 여기서부터는 답을 돌려준 뒤에 진행한다. 기다렸다 보내는 게 목적이라 응답을
+  // 붙들 수가 없다(맨 위 주석 참고).
+  const deliver = async () => {
+    await new Promise((resolve) => setTimeout(resolve, SEND_DELAY_MS));
 
-  webpush.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey);
+    webpush.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey);
 
-  let sent = 0;
-  const deadSubscriptionIds = [];
-  for (const sub of subscriptions) {
-    try {
-      await webpush.sendNotification(
-        { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
-        payload
-      );
-      sent++;
-    } catch (err) {
-      if (err?.statusCode === 404 || err?.statusCode === 410) deadSubscriptionIds.push(sub.id);
+    const deadSubscriptionIds = [];
+    for (const sub of subscriptions) {
+      try {
+        await webpush.sendNotification(
+          { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+          payload
+        );
+      } catch (err) {
+        if (err?.statusCode === 404 || err?.statusCode === 410) deadSubscriptionIds.push(sub.id);
+      }
     }
-  }
 
-  // 이미 없어진 구독은 정리해둔다(예전 주소로 계속 보내지 않도록).
-  if (deadSubscriptionIds.length > 0) {
-    await admin.from('push_subscriptions').delete().in('id', deadSubscriptionIds);
-  }
+    // 이미 없어진 구독은 정리해둔다(예전 주소로 계속 보내지 않도록).
+    if (deadSubscriptionIds.length > 0) {
+      await admin.from('push_subscriptions').delete().in('id', deadSubscriptionIds);
+    }
+  };
 
-  return reply({ sent, gifticon: target.name });
+  // waitUntil이 있어야 응답 뒤에도 함수가 살아 있다. 없으면 그냥 띄워만 둔다.
+  const task = deliver();
+  if (typeof EdgeRuntime !== 'undefined' && EdgeRuntime?.waitUntil) EdgeRuntime.waitUntil(task);
+  else task.catch(() => {});
+
+  // sent는 "몇 군데로 보내기로 했는지"다. 실제로 도착했는지는 폰에 알림이 뜨는지로
+  // 확인한다 — 그걸 기다리려면 다시 응답을 붙들어야 하고, 그게 원래 문제였다.
+  return reply({ sent: subscriptions.length, gifticon: target.name });
 });

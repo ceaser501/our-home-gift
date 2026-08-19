@@ -4,7 +4,9 @@ import { isPushSupported, isPushEnabled, subscribeToPush, unsubscribeFromPush } 
 import { useFamily } from '../FamilyContext';
 import AlertDialog from './AlertDialog';
 
-export default function NotificationToggle({ asRow = false }) {
+// onChange는 켜짐/꺼짐이 바뀐 걸 바깥에도 알려준다. 같은 창의 '알림 테스트' 줄이
+// 이 상태를 함께 보여주는데, 여기서만 알고 있으면 그쪽이 낡은 값을 계속 띄운다.
+export default function NotificationToggle({ asRow = false, onChange }) {
   const { user, family } = useFamily();
   const [enabled, setEnabled] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -13,9 +15,15 @@ export default function NotificationToggle({ asRow = false }) {
   useEffect(() => {
     if (!isPushSupported()) return;
     isPushEnabled()
-      .then(setEnabled)
-      .catch(() => setEnabled(false));
+      .then(apply)
+      .catch(() => apply(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  function apply(value) {
+    setEnabled(value);
+    onChange?.(value);
+  }
 
   if (!isPushSupported()) return null;
 
@@ -24,10 +32,10 @@ export default function NotificationToggle({ asRow = false }) {
     try {
       if (enabled) {
         await unsubscribeFromPush(user.id);
-        setEnabled(false);
+        apply(false);
       } else {
         await subscribeToPush({ familyId: family.id });
-        setEnabled(true);
+        apply(true);
       }
     } catch (err) {
       setNotice({ tone: 'warning', title: '알림 설정에 실패했어요', description: err.message });
