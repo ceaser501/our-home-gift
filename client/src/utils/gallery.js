@@ -222,7 +222,7 @@ const NO_BARCODE_KEY = 'moacon:gallery-no-barcode';
 // 예전에는 못 읽던 사진을 지금은 읽을 수 있게 되는 일이 실제로 있었다(작은 이미지를
 // 키워서 읽도록 고친 뒤). 그런데 "없음"으로 적힌 사진은 다시 읽지 않으니, 고쳐놓고도
 // 그 사진들만 영영 안 나온다. 버전이 다르면 기록을 통째로 버리고 다시 읽는다.
-const DECODER_VERSION = 6;
+const DECODER_VERSION = 7;
 
 function readIdSet(key) {
   try {
@@ -368,8 +368,25 @@ async function loadImage(src) {
 const asDataUrl = (base64, mime) => `data:${mime || 'image/jpeg'};base64,${base64}`;
 
 // 작으면 키우고 크면 줄여, 어느 쪽이든 목표 크기에 맞춘다.
-function scaleTo(width, height, longEdgeTarget) {
-  return longEdgeTarget / Math.max(width, height);
+//
+// 다만 키울 때는 정수배로만 키운다. 목표에 딱 맞추지 않는다는 뜻이다.
+//
+// ── 왜 ────────────────────────────────────────────────────────────────────
+// 카톡으로 받은 배스킨라빈스 카드가 404x677이었다. 훑기는 이걸 1600에 맞추려고
+// 2.363배로 키웠고 막대를 못 읽었다. 같은 사진을 직접 등록으로 올리면 읽혔는데,
+// 그쪽은 analyzeScale이 Math.min(2, ...)로 묶어둬서 정확히 2배로 키운다.
+//
+// 배율이 정수면 원본 픽셀 하나가 출력 픽셀 4개(2배)에 그대로 떨어진다. 비정수면
+// 경계가 픽셀 사이에 걸쳐서 이웃한 검정과 흰색이 섞인다 — 바코드는 그 경계가 전부라,
+// 얇은 막대일수록 섞인 회색이 막대를 지워버린다.
+//
+// 키워도 없던 정보가 생기지는 않는다. 다만 있는 경계를 뭉개지 않는 것만으로 갈린다.
+export function scaleTo(width, height, longEdgeTarget) {
+  const raw = longEdgeTarget / Math.max(width, height);
+  if (raw <= 1) return raw;
+  // 목표를 조금 넘겨도 정수배가 낫다. 1.2배가 필요해도 2배로 키운다 —
+  // 캔버스가 조금 커질 뿐이고, 경계는 그대로 남는다.
+  return Math.max(2, Math.floor(raw));
 }
 
 async function decodeBarcode(read, pass = SHALLOW) {
@@ -393,7 +410,10 @@ async function decodeAt(image, width, height, scale, tryHarder) {
   canvas.width = Math.max(1, Math.round(width * scale));
   canvas.height = Math.max(1, Math.round(height * scale));
   const ctx = canvas.getContext('2d');
-  ctx.imageSmoothingEnabled = true;
+  // 키울 때는 보간을 끈다. 정수배로 키우므로 원본 픽셀이 그대로 복제되고, 검정과 흰색
+  // 사이에 없던 회색이 끼지 않는다. 줄일 때는 반대다 — 여러 픽셀을 하나로 모아야 하니
+  // 보간이 있어야 막대가 통째로 사라지지 않는다.
+  ctx.imageSmoothingEnabled = scale <= 1;
   ctx.imageSmoothingQuality = 'high';
   ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
 
