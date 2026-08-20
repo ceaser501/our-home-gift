@@ -13,6 +13,12 @@ dist
 *.keystore
 *.jks
 
+# 파이어베이스 설정. 앱 알림(FCM)이 어느 프로젝트로 갈지 적혀 있다.
+# APK 안에는 어차피 들어가지만 저장소에는 두지 않는다 — 빌드할 때
+# GitHub 시크릿(GOOGLE_SERVICES_JSON)에서 꺼내 넣는다.
+google-services.json
+GoogleService-Info.plist
+
 # Supabase CLI가 작업하면서 만드는 임시 폴더. 이 컴퓨터에서만 뜻이 있다.
 supabase/.temp/
 
