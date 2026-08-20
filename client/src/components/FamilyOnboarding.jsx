@@ -10,7 +10,9 @@ import { signOut } from '../auth';
 
 export default function FamilyOnboarding({ userEmail, onDone }) {
   const [mode, setMode] = useState('create');
-  const [familyName, setFamilyName] = useState('우리집');
+  // 빈칸으로 시작한다. '우리집'을 미리 적어두면 그대로 두고 넘어가는 사람이 많은데,
+  // 이 이름은 가족 모두가 매일 보는 이름이라 자기 말로 짓게 하는 편이 낫다.
+  const [familyName, setFamilyName] = useState('');
   const [memberName, setMemberName] = useState('');
   const [code, setCode] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -159,14 +161,14 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
           <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-4">
             <div className="flex flex-col gap-1.5">
               {/* '이름'만 적으면 무엇의 이름인지 묻게 된다. 바로 아래가 '내 이름'이라
-                  더 그렇다. */}
-              <Label htmlFor="fam-name">그룹 이름</Label>
+                  더 그렇다. '가족 이름'도 아니다 — 혼자 쓰는 사람에게는 맞지 않는 말이다. */}
+              <Label htmlFor="fam-name">공간 이름</Label>
               {/* autoComplete="off": 예전에 적었던 값이 아래로 뜨지 않게 한다. */}
               <Input
                 id="fam-name"
                 value={familyName}
                 onChange={(e) => setFamilyName(e.target.value)}
-                placeholder="예: 우리집"
+                placeholder="우리집"
                 autoComplete="off"
                 required
               />
@@ -177,7 +179,7 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
                 id="fam-my-name"
                 value={memberName}
                 onChange={(e) => setMemberName(e.target.value)}
-                placeholder="예: 태수"
+                placeholder="아들"
                 autoComplete="off"
                 required
               />
@@ -210,7 +212,7 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
                 id="fam-join-name"
                 value={memberName}
                 onChange={(e) => setMemberName(e.target.value)}
-                placeholder="예: 보연"
+                placeholder="아들"
                 autoComplete="off"
                 required
               />
