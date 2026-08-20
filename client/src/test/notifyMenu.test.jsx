@@ -1,15 +1,17 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { act, render, screen } from '@testing-library/react';
 
-// 내 메뉴의 알림 두 줄을 실제로 그려본다.
+// 내 메뉴의 알림 테스트 줄.
 //
-// 앱 웹뷰에는 PushManager가 없다. 그래서 '폰으로 알림 받기'(NotificationToggle)는
-// 앱에서 원래부터 안 그려지는데, 그걸 모르고 '알림 테스트'까지 isPushSupported()로
-// 감쌌다가 앱에서 두 줄이 통째로 사라졌다 — v0.0.79가 그렇게 나갔다.
-// 화면을 안 그려보고 내보낸 것이라, 여기서 두 환경을 다 그려서 지킨다.
+// v0.0.80에서 isPushSupported()로 감쌌다가 앱에서 통째로 사라진 적이 있다(앱 웹뷰에는
+// PushManager가 없다). 이제 줄은 항상 그려지고, 켜짐/꺼짐은 위의 켜기 줄이 계정
+// 기준으로 알려준다. 여기서는 그 결합을 그려서 지킨다.
 
 const sendTestNotification = vi.fn();
-vi.mock('../api', () => ({ sendTestNotification: (...a) => sendTestNotification(...a) }));
+vi.mock('../api', () => ({
+  sendTestNotification: (...a) => sendTestNotification(...a),
+  hasMyPushSubscriptions: () => Promise.resolve(false),
+}));
 vi.mock('../auth', () => ({ deleteAccount: vi.fn() }));
 vi.mock('../family', () => ({ leaveFamily: vi.fn(), renameMember: vi.fn() }));
 vi.mock('../components/UsageReportSheet', () => ({ default: () => null }));
@@ -49,29 +51,15 @@ beforeEach(() => {
   sendTestNotification.mockResolvedValue({ sent: 1, gifticon: '아이스 아메리카노 T' });
 });
 
-afterEach(() => {
-  delete window.PushManager;
-  delete navigator.serviceWorker;
-});
-
 describe('알림 테스트 줄', () => {
-  // jsdom에는 PushManager가 없다 — 앱 웹뷰와 같은 조건이다.
-  it('앱(웹푸시 없음)에서도 그려지고 눌린다', async () => {
+  // 줄 자체는 어떤 환경에서도 있어야 한다. 감췄다가 앱에서 사라진 적이 있다.
+  it('항상 그려진다', () => {
     render(<ProfileMenu onClose={() => {}} />);
 
-    const row = testRow();
-    expect(row).toBeTruthy();
-    expect(row.disabled).toBe(false);
-    // 켜는 줄이 없는 환경에서 "위에서 켜라"고 하면 없는 줄을 찾게 된다.
-    expect(screen.queryByText('위에서 알림을 켜야 보낼 수 있어요')).toBe(null);
-
-    await act(async () => row.click());
-    expect(sendTestNotification).toHaveBeenCalled();
+    expect(testRow()).toBeTruthy();
   });
 
-  it('웹에서 알림이 꺼져 있으면 눌리지 않고 켜는 길을 알려준다', () => {
-    Object.defineProperty(navigator, 'serviceWorker', { value: {}, configurable: true });
-    window.PushManager = function PushManager() {};
+  it('알림이 꺼져 있으면 눌리지 않고 켜는 길을 알려준다', () => {
     toggleReports = false;
 
     render(<ProfileMenu onClose={() => {}} />);
@@ -80,9 +68,7 @@ describe('알림 테스트 줄', () => {
     expect(screen.getByText('위에서 알림을 켜야 보낼 수 있어요')).toBeTruthy();
   });
 
-  it('웹에서 알림이 켜져 있으면 눌린다', async () => {
-    Object.defineProperty(navigator, 'serviceWorker', { value: {}, configurable: true });
-    window.PushManager = function PushManager() {};
+  it('알림이 켜져 있으면 눌러서 보낸다', async () => {
     toggleReports = true;
 
     render(<ProfileMenu onClose={() => {}} />);

@@ -14,7 +14,6 @@ import { leaveFamily, renameMember } from '../family';
 import { OWNER_TAG_PALETTE, memberTagColorClass } from '../utils/tagColor';
 import useBackClose from '../utils/useBackClose';
 import { isGalleryScanSupported, isAutoScanOn, setAutoScanOn } from '../utils/gallery';
-import { isPushSupported } from '../push';
 
 export default function ProfileMenu({ onClose }) {
   // 뒤로가기로 이 창을 닫는다. 안 그러면 설치해서 쓸 때 앱이 통째로 꺼진다.
@@ -173,28 +172,20 @@ export default function ProfileMenu({ onClose }) {
             </button>
           )}
 
-          {/* 실제 발송과 같은 길로 보내보는 테스트. 항상 그린다.
-
-              한때 isPushSupported()로 감쌌다가 앱에서 통째로 사라졌다(v0.0.79). 앱
-              웹뷰에는 PushManager가 없어서 그 검사가 거짓이다 — 그런데 알림 자체는
-              같은 폰의 브라우저(PWA) 구독으로 도착하므로, 앱에서 눌러도 테스트는 뜻이
-              있다. 보낼 곳이 정말 없으면 서버가 "꺼져 있어요"라고 정확히 답해준다.
-
-              켜기 줄이 있는 환경(웹)에서만 켜짐과 묶는다. 꺼진 걸 알면서 보내게 두면
-              "눌렀는데 안 와요"가 되고, 위에 켜는 줄이 있으니 그리로 보낸다.
-              시험은 test/notifyMenu.test.jsx — 두 환경을 다 그려본다. */}
+          {/* 실제 발송과 같은 길로 보내보는 테스트. 항상 그린다 — 한때 isPushSupported()로
+              감쌌다가 앱에서 통째로 사라졌다(v0.0.80). 켜짐/꺼짐은 위의 켜기 줄이
+              계정 기준으로 알려주므로(NotificationToggle), 꺼져 있으면 잠그고 켜는
+              길을 알려준다. 시험은 test/notifyMenu.test.jsx. */}
           <button
             type="button"
             onClick={handleTestNotification}
-            disabled={testing || (isPushSupported() && !pushOn)}
+            disabled={testing || !pushOn}
             className="flex w-full items-center gap-3 px-1 py-3 text-left text-sm disabled:opacity-50"
           >
             <BellRing className="size-4.5 shrink-0 text-muted-foreground" />
             <span className="flex min-w-0 flex-1 flex-col">
               <span className="text-foreground">알림 테스트</span>
-              {isPushSupported() && !pushOn && (
-                <span className="text-xs break-keep text-muted-foreground">위에서 알림을 켜야 보낼 수 있어요</span>
-              )}
+              {!pushOn && <span className="text-xs break-keep text-muted-foreground">위에서 알림을 켜야 보낼 수 있어요</span>}
             </span>
             <span className="shrink-0 text-xs font-semibold text-primary">{testing ? '보내는 중…' : '보내기'}</span>
           </button>

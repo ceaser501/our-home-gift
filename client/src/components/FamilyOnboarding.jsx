@@ -66,7 +66,10 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
           초대 코드를 알려준 분에게 말씀해 주세요.
         </p>
         <div className="flex w-full flex-col gap-2">
-          <Button size="lg" className="w-full rounded-xl" onClick={onDone}>
+          {/* 승인은 상대가 눌러줘야 나는 일이라 여기서 기다릴 것이 없다. 로그인
+              화면으로 돌아간다 — onDone으로 두면 참여 신청 화면이 또 떠서, 승인을
+              기다리라는 건지 다시 신청하라는 건지 알 수 없었다. */}
+          <Button size="lg" className="w-full rounded-xl" onClick={() => signOut()}>
             확인했어요
           </Button>
           {/* 밑줄 글자였는데 버튼으로 바꿨다. 보라 버튼 밑에 놓이는 두 번째 길은 어디서든
@@ -114,7 +117,9 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
         <Users className="size-9 text-primary" />
         <h1 className="m-0 text-xl font-bold text-foreground">기프티콘을 모아둘 곳을 만들어요</h1>
         <p className="m-0 text-center text-base break-keep text-muted-foreground">
-          혼자 써도 좋아요. 나중에 가족을 초대할 수 있어요.
+          혼자 써도 좋아요.
+          <br />
+          나중에 가족을 초대할 수 있어요.
         </p>
         <p className="m-0 text-center text-sm text-muted-foreground">{userEmail}로 로그인했어요.</p>
       </div>

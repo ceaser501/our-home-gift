@@ -72,15 +72,9 @@ export default function FamilyMembersSheet({ onClose }) {
           </p>
         </div>
 
-        {/* 헤더에 있던 "가족 3명"이 여기로 왔다. 구성원 목록 바로 위가 그 숫자를 세는
-            자리라, 헤더에서보다 오히려 제자리다. */}
-        <p className="m-0 px-5 pb-1 text-xs font-semibold text-muted-foreground">
-          {members.length > 1 ? `가족 ${members.length}명` : '혼자 쓰는 중'}
-        </p>
-
         {/* 초대 코드는 짧아서 우연히 맞힐 수도 있다. 그래서 코드가 맞아도 여기서 승인해야 들어온다. */}
         {joinRequests.length > 0 && (
-          <div className="mx-5 mt-2 flex flex-col gap-2 rounded-xl border border-primary/30 bg-primary/5 p-3">
+          <div className="mx-5 flex flex-col gap-2 rounded-xl border border-primary/30 bg-primary/5 p-3">
             <p className="m-0 flex items-center gap-1.5 text-xs font-semibold text-primary">
               <UserPlus className="size-4" />
               참여를 기다리는 사람이 {joinRequests.length}명 있어요
@@ -105,6 +99,13 @@ export default function FamilyMembersSheet({ onClose }) {
             {error && <p className="m-0 text-xs text-destructive">{error}</p>}
           </div>
         )}
+
+        {/* '혼자 쓰는 중/가족 N명'은 구성원 목록의 머리말이다. 한때 승인 대기 상자 위에
+            있었는데, 그러면 "혼자 쓰는 중" 밑에 참여 신청이 붙어 서로 다른 이야기가 한
+            덩어리로 읽혔다. 세는 대상 바로 위에 둔다. */}
+        <p className="m-0 px-5 pt-3 pb-1 text-xs font-semibold text-muted-foreground">
+          {members.length > 1 ? `가족 ${members.length}명` : '혼자 쓰는 중'}
+        </p>
 
         {/* 대표는 "가장 먼저 들어온 사람"이다(목록은 들어온 순서대로 온다). 가족을 만든 사람이
             늘 첫 번째라 평소에는 만든 사람이지만, 그 사람이 나가면 다음으로 먼저 들어온

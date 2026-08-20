@@ -635,6 +635,18 @@ export async function hasPushSubscription(endpoint) {
   return (count ?? 0) > 0;
 }
 
+// 이 계정으로 등록된 구독이 하나라도 있는지. 앱(웹뷰)은 웹푸시를 지원하지 않아 자기
+// 브라우저의 구독을 물을 수 없는데, 알림은 같은 폰의 크롬(웹) 구독으로 도착하므로
+// 계정 단위로 물어야 앱 화면의 켜짐/꺼짐이 실제 동작과 맞는다.
+export async function hasMyPushSubscriptions(userId) {
+  const { count, error } = await supabase
+    .from('push_subscriptions')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId);
+  if (error) throw new Error(error.message);
+  return (count ?? 0) > 0;
+}
+
 // 알림을 끌 때는 이 계정으로 등록된 구독을 전부 지운다.
 // 앱을 다시 설치하거나 브라우저가 구독을 갱신하면 주소(endpoint)가 새로 생기는데,
 // 지금 주소 하나만 지우면 예전 주소가 목록에 남아 그쪽으로 알림이 계속 갔다.
