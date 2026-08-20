@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CalendarPlus, ExternalLink } from 'lucide-react';
+import { CalendarPlus, ChevronRight, ExternalLink } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -57,34 +57,52 @@ export default function ExtendSheet({ gifticon, onExtend, onClose }) {
             </p>
           </div>
 
+          {/* 발행사를 단정하지 않는다.
+              카카오·기프티쇼·SK… 어디서 받은 것인지 우리는 알 방법이 없다. 그런데 예전
+              문구는 "선물함에서 늘릴 수 있어요"라고 적어, 카카오톡이 아닌 사람에게는
+              그냥 틀린 말이 됐다. 어디서 받았든 같은 사실만 적고, 카카오톡으로 가는
+              문은 아래에 조건을 붙여 따로 둔다.
+
+              문의할 곳도 적지 않는다. 카카오 말고는 짚어줄 자리가 없어서, 아는 척하느니
+              말하지 않는 편이 낫다. */}
           {expired ? (
             // 만료된 것에 연장을 권하면 헛걸음이 된다. 대신 돈을 돌려받는 길을 알려준다.
             // 신유형 상품권 표준약관에서 정한 권리라, 모르고 버리는 사람이 많다.
             <p className="m-0 rounded-xl bg-accent px-4 py-3.5 text-[15px] leading-relaxed break-keep text-foreground">
-              기한이 지나도 <b className="font-semibold">5년 안</b>이면 <b className="font-semibold">90% 환불</b>을 받을 수 있어요.
-              선물함에서 문의해보세요.
+              기한이 지나도 <b className="font-semibold">5년 안</b>이면 <b className="font-semibold">90% 환불</b>을 받을 수
+              있어요.
             </p>
           ) : (
             <p className="m-0 rounded-xl bg-accent px-4 py-3.5 text-[15px] leading-relaxed break-keep text-foreground">
-              선물함에서 <b className="font-semibold">90일씩</b> 늘릴 수 있어요. 구매일로부터 5년까지요.
+              기프티콘은 대부분 기한을 늘릴 수 있어요. 보통 <b className="font-semibold">90일씩</b>, 최대{' '}
+              <b className="font-semibold">5년</b>까지요.
             </p>
           )}
 
-          {/* 우리가 여는 건 카카오 선물하기 구매내역이다. 다른 발행사(기프티쇼 등)를 쓰는
-              기프티콘도 있어서 "카카오톡 선물함"이라고 이름을 밝혀 적는다. 엉뚱한 데로
-              보냈을 때 사용자가 스스로 알아챌 수 있어야 한다. */}
+          {/* 카카오톡으로 나가는 문. 버튼이 아니라 줄 하나로 둔다.
+
+              한때 테두리 버튼이었는데, 바로 아래 '다른 날짜예요'와 생김새가 같아서
+              나가는 문과 저장이 같은 무게로 보였다. 선 긋고 · 작은 회색 라벨 · 버튼이
+              두 번 반복되는 것도 그래서였다. 줄로 두면 지나가는 길로 읽힌다 —
+              설정 화면의 줄들과 같은 모양이라 눈에 익기도 하다.
+
+              조건은 제목이 아니라 밑에 붙인다. 해당 안 되는 사람이 먼저 걸러진다. */}
           <a
             href={GIFT_BOX_URL}
             target="_blank"
             rel="noreferrer"
-            className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-border py-3.5 text-base font-semibold text-foreground no-underline"
+            className="flex items-center gap-2.5 border-y border-border py-3 text-foreground no-underline"
           >
-            <ExternalLink className="size-4.5 text-muted-foreground" />
-            카카오톡 선물함 열기
+            <ExternalLink className="size-4.5 shrink-0 text-muted-foreground" />
+            <span className="flex min-w-0 flex-1 flex-col">
+              <span className="text-base font-semibold">선물함 열기</span>
+              <span className="text-[13px] break-keep text-muted-foreground">카카오톡 기프티콘이라면</span>
+            </span>
+            <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
           </a>
 
           {!expired && (
-            <div className="flex flex-col gap-2 border-t border-border pt-4">
+            <div className="flex flex-col gap-2 pt-1">
               <p className="m-0 text-sm font-semibold text-muted-foreground">연장하고 오셨나요?</p>
 
               {!custom ? (
