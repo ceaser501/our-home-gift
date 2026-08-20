@@ -80,4 +80,17 @@ describe('등록 화면이 막대를 읽는 방법', () => {
     expect(found.code).toBeNull();
     expect(attempts).toEqual(['plain']);
   });
+
+  // 카카오 카드 크기다. 원본에서 못 읽는 사진이 있어 배율 사다리를 탄다 —
+  // 근거는 gallery.js의 barcodeScaleLadder 주석에 있다.
+  it('크기를 알면 배율을 바꿔가며 여러 번 본다', async () => {
+    answers.deep = '713353422322';
+
+    const found = await decodeBarcode({ width: 800, height: 1670 });
+
+    expect(found.code).toBe('713353422322');
+    // 사다리(축소 5단 + 원본)를 다 내려간 뒤에야 정밀이 돈다.
+    expect(attempts.filter((kind) => kind === 'plain').length).toBeGreaterThan(3);
+    expect(attempts.at(-1)).toBe('deep');
+  });
 });

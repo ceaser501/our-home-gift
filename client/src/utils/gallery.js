@@ -153,50 +153,57 @@ function canReadEarly(bucket, coverage) {
 // 아래 시도들이 이 안에서 줄이고 키우므로, 여기서는 넉넉히 받아만 둔다.
 const READ_EDGE = 2000;
 
-// 바코드를 읽는 세 가지 조건.
+// 바코드를 읽는 두 판.
 //
-// 예전에는 두 번 시도했다. 1600으로 줄여 한 번, 못 찾으면 3200으로 키우고 정밀 탐색까지
-// 켜서 또 한 번. 그런데 바코드가 없는 사진도 두 번째를 다 돌았다 — 밥 사진 스무 장이면
-// 없는 것을 찾으려고 가장 무거운 작업을 스무 번 돌린 셈이다. 시간의 대부분이 거기 갔다.
-//
-// 그렇다고 두 번째를 없앨 수는 없었다. 첫 번째가 '줄이기만' 했기 때문이다. 기프티쇼에서
-// 받은 가로 660px짜리 그림은 줄일 것이 없어 그대로 읽혔고, 막대가 뭉개져 못 읽었다.
-// 그걸 살린 게 두 번째의 2배 확대였다.
-//
-// 그래서 나눈다. 작은 것을 키우는 일은 싸다 — 그건 첫 번째로 옮겼다(작으면 키우고 크면
-// 줄여, 어느 쪽이든 1600에 맞춘다). 남은 정밀 탐색만 뒤로 미룬다.
-const SHALLOW = { longEdge: 1600, tryHarder: false };
+// 조건의 핵심은 배율이고, 배율은 아래 barcodeScaleLadder가 정한다. 여기서는 사다리를
+// 몇 단까지 내려가 볼지만 가른다 — 훑기는 짧게(사진 수백 장을 지나가야 한다), 정밀은
+// 끝까지 + 마지막에 tryHarder 한 번.
+const SHALLOW = { deep: false, tryHarder: false };
 
-// 확인용. 읽어낸 값이 맞는지 다른 배율로 한 번 더 본다.
-//
-// 실제로 한 자리가 틀린 채 등록된 일이 있었다(스타벅스 교환권 7 → 2). 막대를 읽는 일은
-// 사진을 줄여서 하기 때문에, 압축 자국에 한 칸이 뭉개지면 다른 숫자가 나온다. 형식에
-// 검산 자리가 없으면 걸러지지도 않는다.
-//
-// 정밀 탐색은 쓰지 않는다. 여기서 필요한 건 '더 잘 읽는 것'이 아니라 '다른 조건으로도
-// 같은 값이 나오는지'라서, 배율만 달리하면 목적을 이룬다. 예전에는 이 확인에 가장 무거운
-// 조건을 썼는데 그럴 이유가 없었다.
-const VERIFY = { longEdge: 2000, tryHarder: false };
+// 정밀 탐색. 느린 대신 흐린 것을 살린다. 훑기 결과를 보여준 다음에 조용히 돈다.
+// 수기등록(고른 사진 몇 장)도 처음부터 이걸로 본다 — 장수가 적어 값이 싸다.
+const DEEP = { deep: true, tryHarder: true };
 
-// 정밀 탐색. 느린 대신 흐린 것을 살린다.
+// 어떤 배율들로 읽어볼지. 큰 쪽부터 차례로 줄여 본다.
 //
-// 결과를 보여준 다음에 조용히 돈다. 찾는 능력은 그대로 두고 기다리는 자리만 옮긴 것이라,
-// 놓치는 것은 없고 사용자는 먼저 목록을 본다.
+// ── 왜 축소인가 (2026-08-20, 실물로 잰 결과) ─────────────────────────────────
+// 실제 카카오 카드 6장(800x1670 PNG)을 zxing에 배율별로 넣어봤다.
 //
-// 한때 2400으로 내려볼까 했는데 그만뒀다. 무게를 줄이려던 것인데, 뒤에서 도는 이상
-// 무거워도 사용자를 기다리게 하지 않는다. 놓치지 않는 것이 이 기능의 약속이라, 기다림을
-// 만들지 않는 자리에서까지 찾는 힘을 깎을 이유가 없다.
+//   원본(1x)          : 6장 전부 실패
+//   2배 확대          : 6장 전부 실패
+//   0.96~0.7 축소     : 4장 읽힘
+//   0.45 축소         : 나머지 2장까지 전부 읽힘
 //
-// ── 화질을 올리고 원본을 그대로 받아보다가 되돌렸다 ────────────────────────
-// 배스킨라빈스 카드(404x677)가 훑기로만 안 읽혀서, 압축 자국이 얇은 막대를 지운다고 보고
-// 화질을 95로 올렸다가 아예 원본 바이트를 그대로 받게까지 했다. 둘 다 그 카드를 못
-// 살렸고, 정밀 탐색만 무거워졌다 — 못 읽은 사진마다 원본을 통째로 웹뷰로 넘기니 서른
-// 장이면 그만큼이 오간다.
+// 카드의 바코드는 모듈이 4~5px에 경계가 안티앨리어싱으로 뭉개져 있는데, zxing은 그
+// 뭉개진 경계를 원본 크기에서 못 가른다. 줄이면 이웃 픽셀이 평균되면서 막대가 다시
+// 또렷해진다. "확대가 살린다"고 믿고 2배·3배를 돌리던 것이 오답이었다 — 수기등록이
+// 7장 중 1장만 잡던 원인이 정확히 이것이다(훑기는 1600에 맞추느라 우연히 0.96으로
+// 줄여서 읽었고, 정밀은 2배로 키워서 죽였다).
 //
-// 나중에 목록에서 그 사진을 눌러 조건별로 읽어보니(probeBarcode) 1·2·3·4·6배를
-// 정밀 탐색 켜고 끄고 열 번 다 못 읽었다. 원본에 이미 정보가 없다는 뜻이라, 어떻게 받아
-// 오든 달라지지 않는다. 증거 없이 넣은 것을 값만 내고 둘 이유가 없어 되돌린다.
-const DEEP = { longEdge: 3200, tryHarder: true };
+// 확대는 정말 작은 그림(기프티쇼 450px류)을 위해 맨 뒤에만 남긴다. 축소는 캔버스가
+// 작아져 오히려 싸다 — 실측으로 한 장 전부 실패해도 200ms(훑기)/600ms(정밀)이다.
+//
+// 검증 스크립트: 판독기 패턴표로 합성한 카드 + 실물 8장 전부로 돌려 확인했다.
+// 여기 숫자를 바꾸면 그 실측부터 다시 해야 한다.
+export function barcodeScaleLadder(longEdge, deep = false) {
+  // 크기를 모르는 그림(시험의 가짜 캔버스 등)은 원본 한 번만 본다.
+  if (!(longEdge > 0)) return [1];
+  const targets = deep ? [1600, 1150, 900, 750, 640] : [1600, 1150, 750];
+  const factors = [];
+  for (const target of targets) {
+    const factor = target / longEdge;
+    // 1에 바짝 붙은 축소는 원본과 같은 판이라 건너뛴다.
+    if (factor < 0.98) factors.push(factor);
+  }
+  factors.push(1);
+  // 작은 그림만 키워본다. 큰 그림의 확대는 실측에서 전부 실패했고 캔버스만 커진다.
+  if (longEdge < 900) {
+    factors.push(0.7);
+    factors.push(2);
+    if (deep) factors.push(3);
+  }
+  return factors;
+}
 
 // 아니라고 한 사진을 기억해둔다. 안 그러면 훑을 때마다 같은 것을 계속 다시 묻는다.
 const DISMISSED_KEY = 'moacon:gallery-dismissed';
@@ -215,7 +222,7 @@ const NO_BARCODE_KEY = 'moacon:gallery-no-barcode';
 // 예전에는 못 읽던 사진을 지금은 읽을 수 있게 되는 일이 실제로 있었다(작은 이미지를
 // 키워서 읽도록 고친 뒤). 그런데 "없음"으로 적힌 사진은 다시 읽지 않으니, 고쳐놓고도
 // 그 사진들만 영영 안 나온다. 버전이 다르면 기록을 통째로 버리고 다시 읽는다.
-const DECODER_VERSION = 11;
+const DECODER_VERSION = 12;
 
 function readIdSet(key) {
   try {
@@ -405,64 +412,41 @@ async function loadImage(src) {
 // 네이티브는 늘 JPEG로 줄여서 넘긴다(GalleryPlugin.readImage).
 const asDataUrl = (base64) => `data:image/jpeg;base64,${base64}`;
 
-// 작으면 키우고 크면 줄여, 어느 쪽이든 목표 크기에 맞춘다.
-//
-// 다만 키울 때는 정수배로만 키운다. 목표에 딱 맞추지 않는다는 뜻이다.
-//
-// ── 왜 ────────────────────────────────────────────────────────────────────
-// 카톡으로 받은 배스킨라빈스 카드가 404x677이었다. 훑기는 이걸 1600에 맞추려고
-// 2.363배로 키웠고 막대를 못 읽었다. 같은 사진을 직접 등록으로 올리면 읽혔는데,
-// 그쪽은 analyzeScale이 Math.min(2, ...)로 묶어둬서 정확히 2배로 키운다.
-//
-// 배율이 정수면 원본 픽셀 하나가 출력 픽셀 4개(2배)에 그대로 떨어진다. 비정수면
-// 경계가 픽셀 사이에 걸쳐서 이웃한 검정과 흰색이 섞인다 — 바코드는 그 경계가 전부라,
-// 얇은 막대일수록 섞인 회색이 막대를 지워버린다.
-//
-// 키워도 없던 정보가 생기지는 않는다. 다만 있는 경계를 뭉개지 않는 것만으로 갈린다.
-export function scaleTo(width, height, longEdgeTarget) {
-  const raw = longEdgeTarget / Math.max(width, height);
-  if (raw <= 1) return raw;
-  // 목표를 조금 넘겨도 정수배가 낫다. 1.2배가 필요해도 2배로 키운다 —
-  // 캔버스가 조금 커질 뿐이고, 경계는 그대로 남는다.
-  return Math.max(2, Math.floor(raw));
-}
-
-// ── 배율 사다리를 뺐다 ──────────────────────────────────────────────────────
-// 한때 정밀 탐색이 2·3·4배를 차례로 봤다. 배스킨라빈스 카드가 안 읽히는 이유를 모른 채
-// "어느 배율이든 걸리겠지"로 넣은 것이다.
-//
-// 그 카드는 여전히 안 읽혔고, 정밀 탐색만 12초에서 42초가 됐다. 사진 서른 장이 대부분
-// 바코드가 없는 캡처인데 거기에 네 번씩 돌린 셈이다. 뒤에서 도는 판이라 기다리게 하지는
-// 않지만, 배터리와 열은 그대로 쓴다.
-//
-// 되는 조건을 알아낸 뒤에 그 하나만 넣는다. 목록에서 사진 이름을 누르면 조건별로 읽어보고
-// 결과를 찍어준다(probeBarcode).
+// 예전에 확대(2·3·4배) 사다리를 넣었다가 뺀 적이 있다 — 그때는 증거 없이 넣었고,
+// 확대는 캔버스가 커져 정밀 탐색이 12초에서 42초가 됐다. 지금 사다리는 반대로 축소
+// 쪽이라 캔버스가 작아지고(실패해도 장당 0.2~0.6초), 배율마다 실물로 재서 넣었다.
+// 근거는 barcodeScaleLadder 위 주석에 있다.
 
 async function decodeBarcode(read, pass = SHALLOW) {
   const image = await loadImage(asDataUrl(read.data));
   const width = image.naturalWidth;
   const height = image.naturalHeight;
+  const longEdge = Math.max(width, height);
 
-  const scale = scaleTo(width, height, pass.longEdge);
-  // 키울 상황이면 원본 크기를 먼저 본다.
-  //
-  // "정수배 확대는 경계를 보존한다"는 위 주석은 절반만 맞았다. 카카오 카드의 바코드는
-  // 모듈이 4.5px 같은 비정수 폭이라 경계가 처음부터 회색인데, 확대는 그 회색을 2px
-  // 띠로 복제한다. 판독기 패턴표로 카드를 합성해 재보니 원본 그대로는 전부 읽히고
-  // 2배 확대는 전부 죽었다 — 훑기는 읽는데 정밀만 못 읽던 것("+ 로 올리면 1개만
-  // 잡힌다")이 이것이었다. 확대가 필요한 건 정말 작은 사진뿐이라, 원본을 먼저 보고
-  // 안 될 때만 키운다.
-  // 첫 시도는 정밀 없이 본다. 정밀(tryHarder)은 1차원 판독기를 맨 뒤로 미뤄서, 성공해도
-  // QR·데이터매트릭스 판독기들을 다 거친 뒤에야 읽는다 — 원본이 멀쩡하면 그 값이 아깝다.
-  let found = scale > 1 ? await decodeAt(image, width, height, 1, false) : null;
-  if (!found) found = await decodeAt(image, width, height, scale, pass.tryHarder);
+  let found = null;
+  let usedFactor = 1;
+  for (const factor of barcodeScaleLadder(longEdge, pass.deep)) {
+    found = await decodeAt(image, width, height, factor, false);
+    if (found) {
+      usedFactor = factor;
+      break;
+    }
+  }
+  // 사다리가 다 실패했을 때만 정밀(tryHarder)을 한 번. tryHarder는 1차원 판독기를 맨
+  // 뒤로 미뤄서 성공해도 느리다 — 사다리 단마다 켜면 실패 사진마다 그 값을 곱으로 낸다.
+  if (!found && pass.tryHarder) {
+    const factor = Math.min(1, 900 / longEdge);
+    found = await decodeAt(image, width, height, factor, true);
+    usedFactor = factor;
+  }
   // 못 읽었으면 막대가 있기라도 한지 본다. 사진을 이미 열어둔 이 자리가 제일 싸다.
   if (!found) return { code: null, bars: looksLikeBarcode(image) };
 
-  // 읽혔다고 바로 믿지 않는다. 조건을 바꿔 한 번 더 읽고, 두 번 다 같은 값일 때만 그대로
-  // 쓴다. 갈리면 확인 쪽을 택한다. 두 번째로는 못 읽었다면 확인은 못 한 것이지만, 읽은
-  // 것은 읽은 것이다.
-  const again = await decodeAt(image, width, height, scaleTo(width, height, VERIFY.longEdge), VERIFY.tryHarder);
+  // 읽혔다고 바로 믿지 않는다. 배율을 바꿔 한 번 더 읽고, 두 번 다 같은 값일 때만 그대로
+  // 쓴다. 갈리면 확인 쪽을 택한다(실제로 한 자리가 틀린 채 등록된 일이 있었다 — 7이 2로.
+  // ITF처럼 검산 자리가 없는 형식은 걸러지지도 않는다). 두 번째로는 못 읽었다면 확인은
+  // 못 한 것이지만, 읽은 것은 읽은 것이다.
+  const again = await decodeAt(image, width, height, usedFactor * 0.85, false);
   if (!again) return found;
   return again.code === found.code ? found : again;
 }

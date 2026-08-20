@@ -1,4 +1,5 @@
 import { BrowserMultiFormatReader } from '@zxing/browser';
+import { barcodeScaleLadder } from './gallery';
 import { BarcodeFormat, DecodeHintType } from '@zxing/library';
 import { CATEGORY_KEYS } from '../constants';
 import { analyzeGifticonImages, verifyGifticonName } from '../api';
@@ -27,10 +28,9 @@ const UPLOAD_EDGE = 1400;
 // 이 정도면 넉넉하고, 원본을 그대로 두는 것보다 훨씬 가볍게 받는다.
 const THUMB_EDGE = 480;
 
-// 바코드를 읽기 좋은 크기로 맞추는 배율. 큰 것은 줄이고, 작은 것은 오히려 키운다 —
-// 막대가 뭉개지면 아무리 선명한 사진이어도 못 읽는다.
-// 갤러리 훑기(client/src/utils/gallery.js)도 이 함수를 쓴다. 판독 조건이 두 곳에서
-// 달라지면 "직접 올리면 되는데 갤러리로는 안 되는" 일이 생긴다 — 실제로 그랬다.
+// 서버로 보내고 화면에 쓸 캔버스의 크기 배율. 너무 크면 줄이고 너무 작으면 키운다.
+// 바코드 판독은 이 캔버스를 놓고 배율 사다리(barcodeScaleLadder)로 따로 돈다 —
+// 판독 배율을 여기서 정하려다 두 곳이 어긋난 적이 있어 사다리 하나로 합쳤다.
 export function analyzeScale(longEdge) {
   if (longEdge > MAX_ANALYZE_EDGE) return MAX_ANALYZE_EDGE / longEdge;
   if (longEdge < MIN_ANALYZE_EDGE) return Math.min(2, MIN_ANALYZE_EDGE / longEdge);
@@ -42,7 +42,10 @@ function drawScaled(source, width, height, scale) {
   canvas.width = Math.max(1, Math.round(width * scale));
   canvas.height = Math.max(1, Math.round(height * scale));
   const ctx = canvas.getContext('2d');
-  ctx.imageSmoothingEnabled = true;
+  // 캔버스를 못 만드는 환경(시험의 jsdom)에서는 원본을 그대로 쓴다.
+  if (!ctx) return source;
+  // 축소는 보간이 있어야 막대가 안 사라지고, 정수배 확대는 보간이 없어야 경계가 안 뭉갠다.
+  ctx.imageSmoothingEnabled = scale <= 1;
   ctx.imageSmoothingQuality = 'high';
   ctx.drawImage(source, 0, 0, canvas.width, canvas.height);
   return canvas;
@@ -173,30 +176,45 @@ async function readCanvas(canvas, hints) {
 // 테스트에서 직접 부른다. 이 두 번 보는 규칙이 이 파일에서 가장 조용히 깨지는 자리라,
 // 캔버스를 만드는 일까지 끌고 들어가지 않고 여기만 따로 본다.
 export async function decodeBarcode(canvas, { deepRetry = true } = {}) {
+  // 배율을 바꿔가며 차례로 읽는다. 카카오 카드(800px대)는 원본에서 못 읽고 줄여야
+  // 읽힌다 — 근거와 실측은 gallery.js의 barcodeScaleLadder 주석에 있다. 훑기와 여기가
+  // 같은 사다리를 써야 "갤러리로는 되는데 직접 올리면 안 되는" 일이 안 생긴다.
+  //
+  // deepRetry가 꺼진 경우는 부르는 쪽(훑기)이 이미 막대에서 읽은 번호를 들고 온
+  // 경우다. 지킬 것이 없으니 마지막 정밀 판까지는 돌지 않는다.
+  const longEdge = Math.max(canvas.width || 0, canvas.height || 0);
   let result = null;
-  try {
-    result = await readCanvas(canvas);
-  } catch {
-    // 부르는 쪽이 이미 번호를 알고 있으면 두 번째 판을 돌지 않는다.
-    //
-    // 이 두 번째 판이 있는 이유는 하나뿐이다 — 여기서 못 읽으면 인쇄된 숫자를 눈으로
-    // 읽은 값이 대신 들어가는데 그게 틀리면 매장에서 안 찍힌다. 그런데 훑기는 이미
-    // 막대에서 읽은 번호를 들고 온다. 지킬 것이 없는데 가장 무거운 판을 후보마다
-    // 돌리는 셈이었다.
-    //
-    // 못 읽으면 바코드를 잘라낸 그림이 없어지지만, 화면은 저장된 번호로 막대를 새로
-    // 그려서 보여준다(BarcodeModal.jsx). 크롭은 있으면 좋은 것이지 없으면 안 되는
-    // 것이 아니다.
-    if (!deepRetry) return { code: null, codeType: null, cropBlob: null };
+  let usedFactor = 1;
+  for (const factor of barcodeScaleLadder(longEdge, deepRetry)) {
     try {
-      result = await readCanvas(canvas, HARD_HINTS);
+      result = await readCanvas(factor === 1 ? canvas : drawScaled(canvas, canvas.width, canvas.height, factor));
+      usedFactor = factor;
+      break;
+    } catch {
+      // 이 배율로는 못 읽었다. 다음 단으로 내려간다.
+    }
+  }
+  if (!result && deepRetry) {
+    try {
+      const factor = longEdge > 0 ? Math.min(1, 900 / longEdge) : 1;
+      result = await readCanvas(factor === 1 ? canvas : drawScaled(canvas, canvas.width, canvas.height, factor), HARD_HINTS);
+      usedFactor = factor;
     } catch {
       return { code: null, codeType: null, cropBlob: null };
     }
   }
+  // 못 읽으면 바코드를 잘라낸 그림이 없어지지만, 화면은 저장된 번호로 막대를 새로
+  // 그려서 보여준다(BarcodeModal.jsx). 크롭은 있으면 좋은 것이지 없으면 안 되는
+  // 것이 아니다.
+  if (!result) return { code: null, codeType: null, cropBlob: null };
 
   const codeType = result.getBarcodeFormat ? BarcodeFormat[result.getBarcodeFormat()] || null : null;
-  const points = result.getResultPoints?.();
+  // 좌표는 줄인 그림의 눈금이다. 잘라내는 건 원래 캔버스라 배율을 되돌려 준다.
+  const points = (result.getResultPoints?.() || []).map((point) => {
+    const x = point.getX() / usedFactor;
+    const y = point.getY() / usedFactor;
+    return { getX: () => x, getY: () => y };
+  });
   const cropBlob = await cropBarcodeRegion(canvas, points, codeType);
   return {
     code: result.getText(),
