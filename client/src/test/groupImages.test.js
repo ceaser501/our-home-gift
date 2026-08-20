@@ -9,9 +9,11 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 
 // 파일 이름 → 그 사진에서 읽힐 바코드. 테스트마다 갈아끼운다.
 let barcodes = new Map();
-// 파일 이름 → 그 사진의 픽셀 모양. { ink } 는 그림이 얼마나 차 있는지(infoInk가 보는 값),
-// { bars: true } 는 세로 줄무늬(looksLikeBarcode가 막대로 보는 것). 안 적으면 못 보는
-// 사진으로 둔다 — 실제 앱에서도 캔버스를 못 읽으면 그렇게 넘어간다.
+// 파일 이름 → 그 사진의 픽셀 모양.
+//   { ink, color } — 그림이 얼마나 차 있고 그중 색이 있는 것이 얼마인지. infoRichness가
+//                    이 둘을 더해서 본다. color는 ink 이하여야 한다.
+//   { bars: true } — 세로 줄무늬. looksLikeBarcode가 막대로 보는 것.
+// 안 적으면 못 보는 사진으로 둔다 — 실제 앱에서도 캔버스를 못 읽으면 그렇게 넘어간다.
 let pixels = new Map();
 
 vi.mock('@capacitor/core', () => ({ registerPlugin: () => ({}) }));
@@ -96,11 +98,13 @@ beforeEach(() => {
               }
             }
           } else {
-            // 흰 바탕에 정해준 비율만큼 잉크를 칠한다.
-            const inked = Math.round(width * height * (spec.ink ?? 0));
+            // 흰 바탕에 정해준 비율만큼 칠한다. 앞쪽은 빨강(색이 있는 픽셀), 뒤는 검정.
+            const total = width * height;
+            const colored = Math.round(total * (spec.color ?? 0));
+            const inked = Math.round(total * (spec.ink ?? 0));
             for (let p = 0; p < inked; p += 1) {
               const i = p * 4;
-              data[i] = 0;
+              data[i] = p < colored ? 255 : 0;
               data[i + 1] = 0;
               data[i + 2] = 0;
             }
@@ -236,8 +240,8 @@ describe('groupImages — 고른 사진을 묶는다', () => {
   it('바코드만 큰 캡처보다 글자가 있는 원본을 먼저 보낸다', async () => {
     barcodes.set('original.jpg', { code: '111', coverage: 0.45 });
     barcodes.set('barcode-shot.jpg', { code: '111', coverage: 0.9 });
-    pixels.set('original.jpg', { ink: 0.4 });
-    pixels.set('barcode-shot.jpg', { ink: 0.03 });
+    pixels.set('original.jpg', { ink: 0.435, color: 0.283 });
+    pixels.set('barcode-shot.jpg', { ink: 0.031, color: 0 });
 
     const { candidates } = await groupImages([pick('barcode-shot.jpg'), pick('original.jpg')]);
 
@@ -250,12 +254,29 @@ describe('groupImages — 고른 사진을 묶는다', () => {
   it('둘 다 읽을 것이 있으면 더 꽉 찬 쪽을 먼저 보낸다', async () => {
     barcodes.set('original.jpg', { code: '111', coverage: 0.477 });
     barcodes.set('screenshot.jpg', { code: '111', coverage: 0.512 });
-    pixels.set('original.jpg', { ink: 0.587 });
-    pixels.set('screenshot.jpg', { ink: 0.344 });
+    pixels.set('original.jpg', { ink: 0.587, color: 0.436 });
+    pixels.set('screenshot.jpg', { ink: 0.344, color: 0.16 });
 
     const { candidates } = await groupImages([pick('screenshot.jpg'), pick('original.jpg')]);
 
     expect(candidates[0].images[0]).toBe(btoa('original.jpg'));
+  });
+
+  // 어느 쪽이 원본인지 그림만 보고 맞히는 규칙은 틀릴 수 있다. 기프티쇼 카드는 발행사가
+  // 만든 것인데도 흰 바탕에 검은 글자뿐이라 값이 낮게 나온다(색 0.253으로 원본 중 최저).
+  // 그때 그 사진을 버리면 거기에만 있는 유효기간이 통째로 사라진다. 뒤로 밀 뿐 버리지
+  // 않는다 — 모델은 여러 장을 한 번에 보고 빈칸을 서로 채운다.
+  it('값이 낮게 나온 사진도 버리지 않고 뒤에 붙여 보낸다', async () => {
+    barcodes.set('rich.jpg', { code: '111', coverage: 0.5 });
+    barcodes.set('plain.jpg', { code: '111', coverage: 0.5 });
+    pixels.set('rich.jpg', { ink: 0.56, color: 0.436 });
+    // 기프티쇼처럼 흰 바탕에 검은 글자뿐이라 합이 거름망 아래로 떨어진 경우.
+    pixels.set('plain.jpg', { ink: 0.2, color: 0.02 });
+
+    const { candidates } = await groupImages([pick('plain.jpg'), pick('rich.jpg')]);
+
+    expect(candidates[0].images[0]).toBe(btoa('rich.jpg'));
+    expect(candidates[0].images).toHaveLength(2);
   });
 
   it('한 건뿐이면 후보도 하나다 — 등록 창이 이걸 보고 넘길지 정한다', async () => {

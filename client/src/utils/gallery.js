@@ -52,6 +52,12 @@ const BUCKETS = FOLDERS.flatMap((folder) => folder.names);
 // 보여줄 이름을 아는 쪽에서 정하는 게 맞아서 여기 둔다.
 function matchesName(bucket, name) {
   const lower = String(bucket || '').toLowerCase();
+  // 폴더를 모르는 사진은 어느 폴더도 아니다.
+  //
+  // 이 줄이 없으면 빈 이름이 모든 폴더에 걸린다 — 'download'.includes('') 가 참이라서다.
+  // 직접 고른 사진(+)에는 폴더가 없어서, 그 사진들이 통째로 '원본 폴더에서 나온 것'으로
+  // 판정됐다. 원본을 가리는 규칙이 늘 참이 되니 아무것도 가리지 못했다.
+  if (!lower) return false;
   return lower.includes(name) || name.includes(lower);
 }
 
@@ -444,7 +450,7 @@ async function decodeBarcode(read, pass = SHALLOW) {
 
   // 읽을 것이 있는 사진인지도 같이 재둔다. 어느 사진을 대표로 보낼지 고를 때 쓴다.
   // 사진을 이미 열어둔 자리라 여기서 재는 게 제일 싸다.
-  const ink = infoInk(image);
+  const rich = infoRichness(image);
 
   // 읽혔다고 바로 믿지 않는다. 배율을 바꿔 한 번 더 읽고, 두 번 다 같은 값일 때만 그대로
   // 쓴다. 갈리면 확인 쪽을 택한다(실제로 한 자리가 틀린 채 등록된 일이 있었다 — 7이 2로.
@@ -452,7 +458,7 @@ async function decodeBarcode(read, pass = SHALLOW) {
   // 못 한 것이지만, 읽은 것은 읽은 것이다.
   const again = await decodeAt(image, width, height, usedFactor * 0.85, false);
   const chosen = !again || again.code === found.code ? found : again;
-  return { ...chosen, ink };
+  return { ...chosen, rich };
 }
 
 async function decodeAt(image, width, height, scale, tryHarder) {
@@ -485,37 +491,51 @@ async function decodeAt(image, width, height, scale, tryHarder) {
   }
 }
 
-// ── 이 사진에 읽을 것이 있는가 ─────────────────────────────────────────────
+// ── 이 사진에 읽을 것이 있는가 ────────────────────────────────────────────
 //
-// 발행사가 만든 카드에는 상품명·금액·유효기간이 다 적혀 있어 그림이 꽉 찬다.
-// 계산대에서 쓰려고 바코드만 크게 띄워 찍은 캡처에는 그게 없다 — 흰 여백에 막대 하나다.
-// 같은 기프티콘의 사진이 여러 장일 때 어느 것을 모델에게 보낼지가 이 값으로 갈린다.
+// 발행사가 만든 카드에는 상품명·금액·유효기간이 브랜드 색과 함께 꽉 차 있다.
+// 앱 화면을 찍은 캡처는 흰 바탕에 검은 글자고, 계산대용으로 바코드만 크게 띄운 캡처는
+// 여백에 막대 하나다. 같은 기프티콘의 사진이 여러 장일 때 어느 것을 모델에게 보낼지가
+// 이 값으로 갈린다.
 //
-// 재는 법: 가장 흔한 밝기(=배경)를 찾아 그 언저리를 빼고 남는 비율.
-// 밝기가 몇 이하인지로 세지 않는 이유는 다크 모드다 — 검은 바탕에 흰 막대인 캡처는
-// "어두운 픽셀"로 세면 온통 잉크로 잡혀서, 정보가 꽉 찬 사진으로 둔갑한다.
+// 두 가지를 더해서 본다.
+//   잉크 — 가장 흔한 밝기(=배경)를 빼고 남는 비율. 글자와 그림이 얼마나 차 있는가.
+//          밝기가 몇 이하인지로 세지 않는 이유는 다크 모드다 — 검은 바탕에 흰 막대인
+//          캡처를 "어두운 픽셀"로 세면 온통 잉크로 잡혀 정보가 꽉 찬 사진으로 둔갑한다.
+//   색   — 색이 있는 픽셀 비율. 앱 화면에는 뒤로가기·검색·닫기 같은 무채색 UI가 넓고,
+//          발행 카드는 브랜드 색으로 덮여 있다.
 //
 // ── 실측 (2026-08-20, 태수님이 올린 실물) ──
-//   발행사 원본 6종            0.350 ~ 0.576   (교촌 0.390, 스벅 0.350, 라떼 0.560 …)
-//   giftishow 450px 카드       0.472, 0.476
-//   카톡이 줄여 보낸 배스킨    0.490
-//   상세화면을 통째로 찍은 캡처 0.363          ← 정보가 있으니 통과해야 한다
-//   바코드만 크게 띄운 캡처     0.031
-//   같은 것, 다크 모드          0.136
+//                                 색      잉크    합
+//   스벅 원본 800x1670           0.436   0.587   1.023
+//   같은 기프티콘 선물하기 캡처   0.160   0.344   0.504   ← 갈라야 하는 짝
+//   교촌 원본                    0.288   0.390   0.678
+//   라떼 원본                    0.436   0.560   0.996
+//   투썸 원본                    0.283   0.435   0.718
+//   카드1618 원본                0.515   0.576   1.091
+//   giftishow 450 원본           0.253   0.472   0.725
+//   카톡이 줄여 보낸 배스킨       0.417   0.490   0.907
+//   바코드만 크게 띄운 캡처       0.03    0.031   0.06
+//   같은 것, 다크 모드            0.03    0.136   0.17
 //
-//   선물하기 화면 스크린샷      0.344          ← 상품명·바코드가 있으니 통과해야 한다
+// 잉크만으로는 아슬아슬했다 — 원본 최저가 0.350인데 갈라야 할 캡처가 0.344다. 태수님이
+// 올린 스벅은 0.587이라 갈렸지만 교촌이었으면 뒤집혔다. 색을 더하면 원본 최저 0.678,
+// 캡처 0.504로 벌어진다.
 //
-// 경계는 0.25. 통과해야 하는 것의 최저(0.344)와 걸러야 하는 것의 최고(0.136) 사이다.
 // 이 숫자를 바꾸려면 위 실측부터 다시 해야 한다 — 재던 스크립트는 scratchpad/repro다.
-const MIN_INFO_INK = 0.25;
 
-// 잉크가 이만큼도 차이 안 나면 같은 종류의 사진으로 보고 순서를 coverage에 넘긴다.
-// 실측에서 갈라야 했던 두 장은 0.243 벌어져 있었다(원본 0.587 ↔ 스크린샷 0.344).
-const INK_TIE = 0.05;
-const INK_WIDTH = 240;
+// 이보다 낮으면 읽을 것이 없는 사진으로 본다. 다크 모드 바코드 캡처(0.17)와
+// 갈라야 할 캡처(0.504) 사이.
+const MIN_RICHNESS = 0.35;
 
-function infoInk(image) {
-  const width = Math.min(INK_WIDTH, image.naturalWidth || INK_WIDTH);
+// 이만큼도 차이 안 나면 같은 종류의 사진으로 보고 순서를 coverage에 넘긴다.
+// 실측에서 갈라야 했던 두 장은 0.174 벌어져 있었다(원본 최저 0.678 ↔ 캡처 0.504).
+const RICHNESS_TIE = 0.10;
+
+const RICHNESS_WIDTH = 240;
+
+function infoRichness(image) {
+  const width = Math.min(RICHNESS_WIDTH, image.naturalWidth || RICHNESS_WIDTH);
   const scale = width / (image.naturalWidth || width);
   const height = Math.max(1, Math.round((image.naturalHeight || width) * scale));
 
@@ -540,10 +560,15 @@ function infoInk(image) {
 
   const hist = new Uint32Array(256);
   const total = data.length / 4;
+  let colored = 0;
   for (let i = 0; i < data.length; i += 4) {
+    const r = data[i];
+    const g = data[i + 1];
+    const b = data[i + 2];
     // 정수로 내려야 한다. 소수 자리가 남으면 배열이 아니라 이름표로 들어가서 아무 데도
     // 안 쌓이고, 히스토그램이 통째로 0이 된다.
-    hist[((data[i] * 299 + data[i + 1] * 587 + data[i + 2] * 114) / 1000) | 0] += 1;
+    hist[((r * 299 + g * 587 + b * 114) / 1000) | 0] += 1;
+    if (Math.max(r, g, b) - Math.min(r, g, b) > COLOR_EDGE) colored += 1;
   }
   let peak = 0;
   for (let value = 1; value < 256; value += 1) if (hist[value] > hist[peak]) peak = value;
@@ -552,8 +577,12 @@ function infoInk(image) {
   for (let value = Math.max(0, peak - 12); value <= Math.min(255, peak + 12); value += 1) {
     background += hist[value];
   }
-  return 1 - background / total;
+  const ink = 1 - background / total;
+  return ink + colored / total;
 }
+
+// 이만큼 벌어져야 "색이 있다"고 본다. 사진 압축이 남기는 색 얼룩은 이 아래다.
+const COLOR_EDGE = 30;
 
 // ── 막대가 있는지만 본다 (읽지는 않는다) ──────────────────────────────────
 //
@@ -731,7 +760,7 @@ async function collect({ images, read: readImage, pass, isRegistered, skipCodes,
     const already = seenCodes.get(found.code);
     if (already) {
       if (already.shots.length < COLLECT_PER_CODE) {
-        already.shots.push({ data: read.data, bucket: image.bucket, coverage: found.coverage, ink: found.ink });
+        already.shots.push({ data: read.data, bucket: image.bucket, coverage: found.coverage, rich: found.rich });
       }
       continue;
     }
@@ -753,7 +782,7 @@ async function collect({ images, read: readImage, pass, isRegistered, skipCodes,
       codeType: found.codeType,
       // 고르기 전의 사진 조각들. 같은 번호의 사진이 더 나오면 여기에 붙고,
       // 훑기가 끝나면 아래에서 골라 images로 옮긴다.
-      shots: [{ data: read.data, bucket: image.bucket, coverage: found.coverage, ink: found.ink }],
+      shots: [{ data: read.data, bucket: image.bucket, coverage: found.coverage, rich: found.rich }],
       // 화면이 곧바로 쓰는 미리보기. 아래에서 고른 결과로 갈아끼워진다.
       //
       // 예전에는 여기에도 위의 조각 객체를 그대로 넣었는데, 화면은 이걸 base64 문자열로
@@ -819,15 +848,8 @@ async function collect({ images, read: readImage, pass, isRegistered, skipCodes,
     // 작게 찍힌 다른 기프티콘이 통째로 옆 건에 합쳐진다.
     candidate.tooSmall = meaningful.length === 0;
 
-    // 읽을 것이 없는 사진은 먼저 물린다.
-    //
-    // 폴더를 알 때는 원본 폴더가 곧 답이었다. 그런데 직접 고른 사진(+)에는 폴더가 없다 —
-    // 아래 원본 우선 규칙이 통째로 꺼지고, 남는 기준이 "바코드가 크게 찍힌 순서" 하나라
-    // 바코드만 큰 캡처가 늘 1등이었다. 상품명도 기한도 없는 사진이 대표로 올라갔다.
-    //
-    // 그래서 그림이 얼마나 차 있는지로 한 번 거른다(infoInk). 폴더를 몰라도 되고,
-    // 상세화면을 통째로 찍은 캡처처럼 정보가 있는 캡처는 그대로 통과한다.
-    const informative = usable.filter((shot) => !(shot.ink < MIN_INFO_INK));
+    // 읽을 것이 없어 보이는 사진은 뒤로 민다.
+    const informative = usable.filter((shot) => !(shot.rich < MIN_RICHNESS));
     const readable = informative.length > 0 ? informative : usable;
 
     // 원본이 하나라도 있으면 캡처는 아예 보내지 않는다.
@@ -839,7 +861,21 @@ async function collect({ images, read: readImage, pass, isRegistered, skipCodes,
     // 빈칸으로 남는 것보다 틀린 값이 들어가는 쪽이 나쁘다. 기한이 틀리면 알림이 엉뚱한
     // 날에 오고, 정작 만료되는 날에는 아무 말이 없다.
     const originals = readable.filter((shot) => isOriginal(shot.bucket));
-    const pool = originals.length > 0 ? originals : readable;
+
+    // 폴더를 모를 때(직접 고른 사진)는 아무것도 버리지 않는다.
+    //
+    // 어느 것이 원본인지 그림만 보고 맞히는 규칙(richness)을 뒀지만, 그 규칙은 틀릴 수
+    // 있다 — 기프티쇼 카드처럼 발행사가 만든 것인데도 흰 바탕에 검은 글자뿐인 그림이
+    // 있고(색 0.253으로 원본 중 최저), 앱 화면이 다크 모드면 또 값이 달라진다.
+    //
+    // 그래서 규칙이 틀려도 잃는 게 없게 한다. 순서만 그 규칙으로 정하고, 바코드가
+    // 제대로 찍힌 사진은 다 보낸다. 모델은 여러 장을 한 번에 보고 빈칸을 서로 채운다 —
+    // 원본에만 있는 유효기간은 원본에서, 캡처에만 있는 것은 캡처에서 읽는다.
+    // 순서가 뒤집혀도 값이 사라지지 않는다.
+    //
+    // 이래도 되는 이유는 위 coverage 거름망이다. 목록 화면을 통째로 찍은 캡처처럼 다른
+    // 기프티콘이 같이 찍힌 그림은 바코드가 작게 나와서 이미 빠져 있다.
+    const pool = originals.length > 0 ? originals : attachLoners ? usable : readable;
 
     // 순서도 그림이 얼마나 차 있는지로 정한다.
     //
@@ -852,7 +888,7 @@ async function collect({ images, read: readImage, pass, isRegistered, skipCodes,
     // 잉크가 엇비슷하면 예전처럼 coverage로 가른다. 같은 종류의 사진 둘 중에서는 바코드가
     // 크게 찍힌 쪽이 낫다.
     const sorted = [...pool].sort((a, b) => {
-      if (a.ink != null && b.ink != null && Math.abs(b.ink - a.ink) > INK_TIE) return b.ink - a.ink;
+      if (a.rich != null && b.rich != null && Math.abs(b.rich - a.rich) > RICHNESS_TIE) return b.rich - a.rich;
       return b.coverage - a.coverage;
     });
     // 위에서 붙인 '바코드 없는 사진'은 자리를 먼저 받는다. 금액이나 기한이 적힌 사진이라
