@@ -1130,7 +1130,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
   const missedByFolder = useMemo(() => {
     const counts = new Map();
     missedShots.filter((shot) => shot.bars).forEach((shot) => {
-      const label = folderLabel(shot.bucket) || shot.bucket || '그 밖';
+      const label = folderLabel(shot.bucket) || shot.bucket || '다른';
       counts.set(label, (counts.get(label) || 0) + 1);
     });
     return [...counts.entries()]
@@ -1877,7 +1877,9 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
                   {missedByFolder.map((folder, index) => (
                     <span key={folder.label}>
                       {index > 0 && ', '}
-                      {folder.label} <b className="font-semibold text-foreground">{folder.count}장</b>
+                      {/* 폴더 이름만 적으면 "카카오톡 1장"이 되어 그게 무엇을 가리키는지
+                          읽히지 않는다. 열어볼 곳이라는 걸 말로 붙여준다. */}
+                      {folder.label} 사진첩에 <b className="font-semibold text-foreground">{folder.count}장</b>
                     </span>
                   ))}{' '}
                   있어요. 기프티콘이면 <b className="font-semibold text-foreground">+</b> 로 올려주세요.

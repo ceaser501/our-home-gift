@@ -14,6 +14,7 @@ import { leaveFamily, renameMember } from '../family';
 import { OWNER_TAG_PALETTE, memberTagColorClass } from '../utils/tagColor';
 import useBackClose from '../utils/useBackClose';
 import { isGalleryScanSupported, isAutoScanOn, setAutoScanOn } from '../utils/gallery';
+import { isPushSupported } from '../push';
 
 export default function ProfileMenu({ onClose }) {
   // 뒤로가기로 이 창을 닫는다. 안 그러면 설치해서 쓸 때 앱이 통째로 꺼진다.
@@ -172,25 +173,34 @@ export default function ProfileMenu({ onClose }) {
             </button>
           )}
 
-          {/* 실제 발송과 같은 길로 보내보는 테스트. 알림을 꺼뒀으면 아무것도 오지 않는다. */}
-          <button
-            type="button"
-            onClick={handleTestNotification}
-            disabled={testing}
-            className="flex w-full items-center gap-3 px-1 py-3 text-left text-sm disabled:opacity-50"
-          >
-            <BellRing className="size-4.5 text-muted-foreground" />
-            <span className="flex-1 text-foreground">알림 테스트</span>
-            <span
-              className={
-                pushOn && !testing
-                  ? 'shrink-0 text-xs font-semibold text-primary'
-                  : 'shrink-0 text-xs text-muted-foreground'
-              }
+          {/* 실제 발송과 같은 길로 보내보는 테스트.
+
+              한때 오른쪽에 켜짐/꺼짐을 적었다가 걷어냈다. 위 두 줄과 똑같이 생겨서
+              눌러도 안 켜지는 가짜 스위치가 됐다 — 켜고 끄는 일은 바로 위 한 줄만
+              맡는다. 여기는 누르는 자리라 하는 일을 적는다.
+
+              알림이 꺼져 있으면 보낼 곳이 없다. 눌러놓고 "꺼져 있어서 안 왔어요"를
+              읽게 하는 대신 아예 못 누르게 하고, 무엇을 하면 되는지 밑에 적는다.
+
+              알림을 못 쓰는 브라우저에서는 위의 켜기 줄이 통째로 없다. 그 밑에서
+              "위에서 켜라"고 하면 없는 줄을 찾게 되므로 이 줄도 같이 감춘다. */}
+          {isPushSupported() && (
+            <button
+              type="button"
+              onClick={handleTestNotification}
+              disabled={testing || !pushOn}
+              className="flex w-full items-center gap-3 px-1 py-3 text-left text-sm disabled:opacity-50"
             >
-              {testing ? '보내는 중…' : pushOn ? '켜짐' : '꺼짐'}
-            </span>
-          </button>
+              <BellRing className="size-4.5 shrink-0 text-muted-foreground" />
+              <span className="flex min-w-0 flex-1 flex-col">
+                <span className="text-foreground">알림 테스트</span>
+                {!pushOn && (
+                  <span className="text-xs break-keep text-muted-foreground">위에서 알림을 켜야 보낼 수 있어요</span>
+                )}
+              </span>
+              <span className="shrink-0 text-xs font-semibold text-primary">{testing ? '보내는 중…' : '보내기'}</span>
+            </button>
+          )}
 
           {/* 배너를 닫아도 여기서는 늘 다시 볼 수 있어야 한다. 배너에만 있으면
               한 번 닫는 순간 그 공지를 다시 찾을 데가 없어진다. */}
