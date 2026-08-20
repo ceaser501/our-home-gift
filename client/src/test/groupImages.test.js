@@ -10,9 +10,8 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 // 파일 이름 → 그 사진에서 읽힐 바코드. 테스트마다 갈아끼운다.
 let barcodes = new Map();
 // 파일 이름 → 그 사진의 픽셀 모양.
-//   { ink, color, corner } — 그림이 얼마나 차 있고(ink), 그중 색이 있는 것이 얼마이며
-//                    (color, ink 이하여야 한다), 우상단 모서리에 색이 있는지(corner).
-//                    infoRichness가 이 셋을 더해서 본다.
+//   { ink, color } — 그림이 얼마나 차 있고 그중 색이 있는 것이 얼마인지. infoRichness가
+//                    이 둘을 더해서 본다. color는 ink 이하여야 한다.
 //   { bars: true } — 세로 줄무늬. looksLikeBarcode가 막대로 보는 것.
 // 안 적으면 못 보는 사진으로 둔다 — 실제 앱에서도 캔버스를 못 읽으면 그렇게 넘어간다.
 let pixels = new Map();
@@ -108,18 +107,6 @@ beforeEach(() => {
               data[i] = p < colored ? 255 : 0;
               data[i + 1] = 0;
               data[i + 2] = 0;
-            }
-            // 우상단 모서리는 따로 칠한다. 발행 카드는 거기까지 브랜드 색이 차고,
-            // 앱 화면은 닫기(X) 자리라 흰 바탕이다.
-            const cornerFrom = Math.round(width * 0.85);
-            const cornerRows = Math.max(1, Math.round(height * 0.05));
-            for (let y = 0; y < cornerRows; y += 1) {
-              for (let x = cornerFrom; x < width; x += 1) {
-                const i = (y * width + x) * 4;
-                data[i] = spec.corner ? 255 : 255;
-                data[i + 1] = spec.corner ? 0 : 255;
-                data[i + 2] = spec.corner ? 0 : 255;
-              }
             }
           }
           return { data };
@@ -253,7 +240,7 @@ describe('groupImages — 고른 사진을 묶는다', () => {
   it('바코드만 큰 캡처보다 글자가 있는 원본을 먼저 보낸다', async () => {
     barcodes.set('original.jpg', { code: '111', coverage: 0.45 });
     barcodes.set('barcode-shot.jpg', { code: '111', coverage: 0.9 });
-    pixels.set('original.jpg', { ink: 0.435, color: 0.283, corner: true });
+    pixels.set('original.jpg', { ink: 0.435, color: 0.283 });
     pixels.set('barcode-shot.jpg', { ink: 0.031, color: 0 });
 
     const { candidates } = await groupImages([pick('barcode-shot.jpg'), pick('original.jpg')]);
@@ -267,27 +254,12 @@ describe('groupImages — 고른 사진을 묶는다', () => {
   it('둘 다 읽을 것이 있으면 더 꽉 찬 쪽을 먼저 보낸다', async () => {
     barcodes.set('original.jpg', { code: '111', coverage: 0.477 });
     barcodes.set('screenshot.jpg', { code: '111', coverage: 0.512 });
-    pixels.set('original.jpg', { ink: 0.587, color: 0.436, corner: true });
+    pixels.set('original.jpg', { ink: 0.587, color: 0.436 });
     pixels.set('screenshot.jpg', { ink: 0.344, color: 0.16 });
 
     const { candidates } = await groupImages([pick('screenshot.jpg'), pick('original.jpg')]);
 
     expect(candidates[0].images[0]).toBe(btoa('original.jpg'));
-  });
-
-  // 앱 화면은 우상단이 닫기(X)나 검색 자리라 흰(또는 검은) 바탕에 무채색 획뿐이고,
-  // 발행 카드는 모서리까지 브랜드 색이 찬다. 실측에서 스크린샷은 0.000, 발행 카드는
-  // 0.310~1.000이었다. X 모양을 찾지는 않는다 — 획 자체는 잉크 0.037뿐이고 아이콘은
-  // 제조사·테마마다 다르다.
-  it('나머지가 같으면 우상단에 색이 있는 쪽을 앞에 둔다', async () => {
-    barcodes.set('card.jpg', { code: '111', coverage: 0.5 });
-    barcodes.set('appshot.jpg', { code: '111', coverage: 0.5 });
-    pixels.set('card.jpg', { ink: 0.4, color: 0.25, corner: true });
-    pixels.set('appshot.jpg', { ink: 0.4, color: 0.25, corner: false });
-
-    const { candidates } = await groupImages([pick('appshot.jpg'), pick('card.jpg')]);
-
-    expect(candidates[0].images[0]).toBe(btoa('card.jpg'));
   });
 
   // 어느 쪽이 원본인지 그림만 보고 맞히는 규칙은 틀릴 수 있다. 기프티쇼 카드는 발행사가
@@ -297,7 +269,7 @@ describe('groupImages — 고른 사진을 묶는다', () => {
   it('값이 낮게 나온 사진도 버리지 않고 뒤에 붙여 보낸다', async () => {
     barcodes.set('rich.jpg', { code: '111', coverage: 0.5 });
     barcodes.set('plain.jpg', { code: '111', coverage: 0.5 });
-    pixels.set('rich.jpg', { ink: 0.56, color: 0.436, corner: true });
+    pixels.set('rich.jpg', { ink: 0.56, color: 0.436 });
     // 기프티쇼처럼 흰 바탕에 검은 글자뿐이라 합이 거름망 아래로 떨어진 경우.
     pixels.set('plain.jpg', { ink: 0.2, color: 0.02 });
 
