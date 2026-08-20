@@ -6,6 +6,7 @@
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import webpush from 'npm:web-push@3';
+import { sendFcm, isFcmConfigured } from '../_shared/fcm.ts';
 
 const EXPIRY_WINDOW_DAYS = 49;
 
@@ -48,11 +49,14 @@ Deno.serve(async (req) => {
   const vapidPrivateKey = Deno.env.get('VAPID_PRIVATE_KEY');
   const vapidSubject = Deno.env.get('VAPID_SUBJECT') || 'mailto:noreply@ourhomegift.app';
 
-  if (!supabaseUrl || !serviceRoleKey || !vapidPublicKey || !vapidPrivateKey) {
+  // 알림이 가는 길이 둘이다 — 브라우저 구독(웹푸시)과 파이어베이스 토큰(앱).
+  // 둘 중 하나만 설정돼 있어도 그쪽으로는 보낸다. 둘 다 없을 때만 멈춘다.
+  const webReady = Boolean(vapidPublicKey && vapidPrivateKey);
+  if (!supabaseUrl || !serviceRoleKey || (!webReady && !isFcmConfigured())) {
     return new Response(JSON.stringify({ error: '서버 설정(VAPID 키 등)이 완료되지 않았어요.' }), { status: 500 });
   }
 
-  webpush.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey);
+  if (webReady) webpush.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey);
 
   const admin = createClient(supabaseUrl, serviceRoleKey);
 
@@ -99,43 +103,53 @@ Deno.serve(async (req) => {
   const familyNames = new Map((families || []).map((f) => [f.id, f.name]));
   const userIds = [...new Set((memberships || []).map((m) => m.user_id))];
 
-  const { data: subscriptions, error: subError } = await admin
-    .from('push_subscriptions')
-    .select('id, user_id, endpoint, p256dh, auth')
-    .in('user_id', userIds);
+  const [{ data: subscriptions, error: subError }, { data: nativeTokens, error: tokenError }] = await Promise.all([
+    admin.from('push_subscriptions').select('id, user_id, endpoint, p256dh, auth').in('user_id', userIds),
+    admin.from('native_push_tokens').select('user_id, token').in('user_id', userIds),
+  ]);
 
-  if (subError) {
-    return new Response(JSON.stringify({ error: subError.message }), { status: 500 });
+  if (subError || tokenError) {
+    return new Response(JSON.stringify({ error: (subError || tokenError).message }), { status: 500 });
   }
 
-  const subsByUser = new Map();
-  for (const sub of subscriptions || []) {
-    if (!subsByUser.has(sub.user_id)) subsByUser.set(sub.user_id, []);
-    subsByUser.get(sub.user_id).push(sub);
+  // 사람 → 그 사람의 받을 곳, 그다음 가족 → 그 가족 사람들의 받을 곳.
+  // 웹 구독과 앱 토큰이 같은 모양으로 접힌다.
+  function groupByFamily(rows, pick) {
+    const byUser = new Map();
+    for (const row of rows || []) {
+      if (!byUser.has(row.user_id)) byUser.set(row.user_id, []);
+      byUser.get(row.user_id).push(pick(row));
+    }
+    const byFamily = new Map();
+    for (const membership of memberships || []) {
+      const mine = byUser.get(membership.user_id);
+      if (!mine) continue;
+      if (!byFamily.has(membership.family_id)) byFamily.set(membership.family_id, []);
+      byFamily.get(membership.family_id).push(...mine);
+    }
+    return byFamily;
   }
 
-  const subsByFamily = new Map();
-  for (const membership of memberships || []) {
-    const mine = subsByUser.get(membership.user_id);
-    if (!mine) continue;
-    if (!subsByFamily.has(membership.family_id)) subsByFamily.set(membership.family_id, []);
-    subsByFamily.get(membership.family_id).push(...mine);
-  }
+  const subsByFamily = groupByFamily(webReady ? subscriptions : [], (row) => row);
+  const tokensByFamily = groupByFamily(nativeTokens, (row) => row.token);
 
   let sentCount = 0;
   const notifiedIds = [];
   const deadSubscriptionIds = [];
+  const deadTokens = [];
 
   for (const gifticon of gifticons) {
     const familySubs = subsByFamily.get(gifticon.family_id) || [];
-    if (familySubs.length === 0) continue; // 아직 아무도 알림을 안 켜뒀으면 나중에 다시 시도
+    const familyTokens = tokensByFamily.get(gifticon.family_id) || [];
+    // 아직 아무도 알림을 안 켜뒀으면 나중에 다시 시도
+    if (familySubs.length === 0 && familyTokens.length === 0) continue;
 
     const dday = daysUntil(gifticon.expires_at, today);
     const [, month, day] = gifticon.expires_at.split('-');
     const remaining = dday === 0 ? '오늘까지예요' : `${dday}일 남았어요`;
     // 여러 가족에 속해 있으면 어느 가족 기프티콘인지가 중요해서 제목에 가족 이름을 붙인다.
     const familyName = familyNames.get(gifticon.family_id);
-    const payload = JSON.stringify({
+    const message = {
       title: `${familyName ? `${familyName} · ` : ''}유효기한이 곧 만료돼요`,
       // 연장할 수 있다는 걸 여기서 알린다. 연장이 필요한 바로 그 순간에 도착하는 말이라,
       // 앱 어딘가에 상시 안내를 두는 것보다 이 한 줄이 더 잘 가르쳐준다.
@@ -144,7 +158,8 @@ Deno.serve(async (req) => {
         `${gifticon.brand ? `${gifticon.brand} · ` : ''}${gifticon.name}\n` +
         `${Number(month)}월 ${Number(day)}일까지 · ${remaining}\n` +
         `기한은 늘릴 수도 있어요. 카드의 남은 기간 표시를 눌러보세요.`,
-    });
+    };
+    const payload = JSON.stringify(message);
 
     for (const sub of familySubs) {
       try {
@@ -161,6 +176,10 @@ Deno.serve(async (req) => {
       }
     }
 
+    const fcm = await sendFcm(familyTokens, message);
+    sentCount += fcm.sent;
+    deadTokens.push(...fcm.dead);
+
     notifiedIds.push(gifticon.id);
   }
 
@@ -169,6 +188,9 @@ Deno.serve(async (req) => {
   }
   if (deadSubscriptionIds.length > 0) {
     await admin.from('push_subscriptions').delete().in('id', deadSubscriptionIds);
+  }
+  if (deadTokens.length > 0) {
+    await admin.from('native_push_tokens').delete().in('token', deadTokens);
   }
 
   return new Response(JSON.stringify({ sent: sentCount, notifiedGifticons: notifiedIds.length }));

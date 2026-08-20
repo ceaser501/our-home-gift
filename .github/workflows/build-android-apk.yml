@@ -104,6 +104,23 @@ jobs:
           fi
           echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/moacon.keystore"
 
+      # 알림(FCM) 설정 파일. 파이어베이스 콘솔에서 받은 google-services.json을 base64로
+      # 시크릿에 넣어둔 것이다. 저장소에 두지 않는 이유는 서명 키와 같다 — 프로젝트를
+      # 가리키는 값이 그대로 들어 있어서다.
+      #
+      # 없으면 빌드는 그대로 진행한다(gradle이 파일 유무로 갈라진다). 대신 그 APK는
+      # 앱 알림이 안 켜지므로, 조용히 넘어가지 않고 경고를 남긴다.
+      - name: Restore Firebase config
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          if [ -z "$GOOGLE_SERVICES_JSON" ]; then
+            echo "::warning::GOOGLE_SERVICES_JSON 시크릿이 없어 앱 알림 없이 빌드합니다."
+            exit 0
+          fi
+          echo "$GOOGLE_SERVICES_JSON" | base64 -d > app/android/app/google-services.json
+          echo "google-services.json 복원 완료"
+
       - name: Build signed APK
         working-directory: app/android
         env:

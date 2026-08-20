@@ -60,6 +60,10 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- 안드로이드 13부터 알림을 띄우려면 이 권한을 선언하고, 켤 때 사용자에게 물어야
+         한다(PushNotifications.requestPermissions가 묻는다). 선언이 없으면 묻는 창도
+         안 뜨고 알림이 조용히 버려진다. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <!-- 갤러리에서 기프티콘 후보를 찾기 위한 사진 접근.
          버전마다 이름이 다르다. 13(TIRAMISU)부터는 사진 전용 권한이 따로 생겼고,

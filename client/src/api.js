@@ -635,6 +635,32 @@ export async function hasPushSubscription(endpoint) {
   return (count ?? 0) > 0;
 }
 
+// ── 앱(FCM) 알림 토큰. 웹 구독(push_subscriptions)과 짝이다 ──────────────────
+// 표에 직접 넣지 않고 함수를 거치는 이유는 웹 구독과 같다 — 같은 폰에서 다른 계정으로
+// 로그인하면 같은 토큰이 예전 계정 소유로 남아 RLS에 막힌다. 함수가 지우고 새로 적는다
+// (supabase/native-push.sql).
+export async function saveNativePushToken({ familyId, token }) {
+  const { error } = await supabase.rpc('save_native_push_token', {
+    p_token: token,
+    p_family_id: familyId ?? null,
+  });
+  if (error) throw new Error(error.message);
+}
+
+export async function deleteMyNativePushTokens(userId) {
+  const { error } = await supabase.from('native_push_tokens').delete().eq('user_id', userId);
+  if (error) throw new Error(error.message);
+}
+
+export async function hasMyNativePushTokens(userId) {
+  const { count, error } = await supabase
+    .from('native_push_tokens')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId);
+  if (error) throw new Error(error.message);
+  return (count ?? 0) > 0;
+}
+
 // 이 계정으로 등록된 구독이 하나라도 있는지. 앱(웹뷰)은 웹푸시를 지원하지 않아 자기
 // 브라우저의 구독을 물을 수 없는데, 알림은 같은 폰의 크롬(웹) 구독으로 도착하므로
 // 계정 단위로 물어야 앱 화면의 켜짐/꺼짐이 실제 동작과 맞는다.

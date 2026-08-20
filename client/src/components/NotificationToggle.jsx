@@ -1,36 +1,27 @@
 import { useEffect, useState } from 'react';
 import { Bell, BellOff } from 'lucide-react';
 import { isPushSupported, isPushEnabled, subscribeToPush, unsubscribeFromPush } from '../push';
-import { hasMyPushSubscriptions } from '../api';
+import { isNativePushSupported, isNativePushEnabled, enableNativePush, disableNativePush } from '../nativePush';
 import { useFamily } from '../FamilyContext';
 import AlertDialog from './AlertDialog';
-
-// 알림을 켜는 화면. 웹에서는 알림이 웹 주소로 온다.
-const WEB_URL = 'https://ceaser501.github.io/our-home-gift/';
 
 // onChange는 켜짐/꺼짐이 바뀐 걸 바깥에도 알려준다. 같은 창의 '알림 테스트' 줄이
 // 이 상태를 함께 보여주는데, 여기서만 알고 있으면 그쪽이 낡은 값을 계속 띄운다.
 //
-// ── 앱(웹뷰)에서는 반쪽만 된다 ──────────────────────────────────────────────
-// 안드로이드 웹뷰에는 웹푸시(PushManager)가 없다. 그래서 앱 안에서는 알림을 "켤" 수가
-// 없다 — 이 줄을 통째로 감췄더니 "켤 방법이 없는데 어떻게 테스트하냐"가 됐다(v0.0.80).
-// 대신 이렇게 한다:
-//   상태  — 계정에 등록된 구독이 있는지로 보여준다. 알림은 같은 폰의 크롬(웹) 구독으로
-//           도착하므로 이게 실제 동작과 맞는 켜짐/꺼짐이다.
-//   끄기  — 계정의 구독을 지우는 일이라 앱에서도 된다.
-//   켜기  — 웹에서만 된다. 누르면 크롬으로 여는 길을 안내한다.
-// 제대로 하려면 네이티브 알림(FCM)을 붙여야 한다 — docs/next.md에 적어뒀다.
+// 알림이 오는 길이 둘이다. 웹은 브라우저 구독(웹푸시), 앱은 파이어베이스(FCM) 토큰.
+// 앱 웹뷰에는 웹푸시가 없어서 한동안 이 줄이 앱에서 통째로 사라져 있었다(v0.0.80) —
+// 켤 방법이 없는데 테스트만 보내라는 화면이 됐다. 이제 앱은 FCM으로 켜고 끈다.
+// 화면이 하는 일은 양쪽이 같다: 켜기, 끄기, 지금 켜져 있는지.
 export default function NotificationToggle({ asRow = false, onChange }) {
   const { user, family } = useFamily();
-  const supported = isPushSupported();
+  const native = isNativePushSupported();
+  const supported = native || isPushSupported();
   const [enabled, setEnabled] = useState(false);
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState(null);
-  // 앱에서 '켜기'를 눌렀을 때의 안내 창.
-  const [guide, setGuide] = useState(false);
 
   useEffect(() => {
-    (supported ? isPushEnabled() : hasMyPushSubscriptions(user.id))
+    (native ? isNativePushEnabled(user.id) : isPushEnabled())
       .then(apply)
       .catch(() => apply(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -41,21 +32,16 @@ export default function NotificationToggle({ asRow = false, onChange }) {
     onChange?.(value);
   }
 
-  // 헤더의 작은 종 버튼은 앱에서 원래부터 없었다. 그대로 둔다.
-  if (!supported && !asRow) return null;
+  if (!supported) return null;
 
   async function handleToggle() {
-    if (!supported && !enabled) {
-      setGuide(true);
-      return;
-    }
     setLoading(true);
     try {
       if (enabled) {
-        await unsubscribeFromPush(user.id);
+        await (native ? disableNativePush(user.id) : unsubscribeFromPush(user.id));
         apply(false);
       } else {
-        await subscribeToPush({ familyId: family.id });
+        await (native ? enableNativePush({ familyId: family.id }) : subscribeToPush({ familyId: family.id }));
         apply(true);
       }
     } catch (err) {
@@ -65,25 +51,7 @@ export default function NotificationToggle({ asRow = false, onChange }) {
     }
   }
 
-  const dialogs = (
-    <>
-      {notice && <AlertDialog {...notice} onClose={() => setNotice(null)} />}
-      {guide && (
-        <AlertDialog
-          tone="info"
-          title="알림은 크롬에서 켜요"
-          description={'앱에서는 아직 알림을 켤 수 없어요.\n크롬으로 모아콘을 열어 켜주세요. 알림은 이 폰으로 와요.'}
-          confirmLabel="크롬으로 열기"
-          cancelLabel="닫기"
-          onConfirm={() => {
-            setGuide(false);
-            window.open(WEB_URL, '_blank');
-          }}
-          onClose={() => setGuide(false)}
-        />
-      )}
-    </>
-  );
+  const dialogs = <>{notice && <AlertDialog {...notice} onClose={() => setNotice(null)} />}</>;
 
   if (asRow) {
     return (

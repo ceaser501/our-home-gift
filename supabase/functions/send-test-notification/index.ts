@@ -19,6 +19,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import webpush from 'npm:web-push@3';
 import { corsFor } from '../_shared/guard.ts';
+import { sendFcm, isFcmConfigured } from '../_shared/fcm.ts';
 
 const SEND_DELAY_MS = 5000;
 
@@ -44,7 +45,8 @@ Deno.serve(async (req) => {
   const vapidPrivateKey = Deno.env.get('VAPID_PRIVATE_KEY');
   const vapidSubject = Deno.env.get('VAPID_SUBJECT') || 'mailto:noreply@ourhomegift.app';
 
-  if (!supabaseUrl || !serviceRoleKey || !vapidPublicKey || !vapidPrivateKey) {
+  const webReady = Boolean(vapidPublicKey && vapidPrivateKey);
+  if (!supabaseUrl || !serviceRoleKey || (!webReady && !isFcmConfigured())) {
     return reply({ error: '알림 서버 설정(VAPID 키 등)이 완료되지 않았어요.' }, 500);
   }
 
@@ -55,14 +57,19 @@ Deno.serve(async (req) => {
   const user = userData?.user;
   if (userError || !user) return reply({ error: '로그인이 필요해요.' }, 401);
 
-  const { data: subscriptions, error: subError } = await admin
-    .from('push_subscriptions')
-    .select('id, endpoint, p256dh, auth')
-    .eq('user_id', user.id);
+  // 보낼 곳은 두 군데다 — 브라우저 구독(웹)과 파이어베이스 토큰(앱).
+  const [{ data: subscriptions, error: subError }, { data: nativeTokens, error: tokenError }] = await Promise.all([
+    admin.from('push_subscriptions').select('id, endpoint, p256dh, auth').eq('user_id', user.id),
+    admin.from('native_push_tokens').select('token').eq('user_id', user.id),
+  ]);
   if (subError) return reply({ error: subError.message }, 500);
+  if (tokenError) return reply({ error: tokenError.message }, 500);
+
+  const subs = subscriptions || [];
+  const tokens = (nativeTokens || []).map((t) => t.token);
 
   // 알림을 꺼둔 상태. 보낼 곳이 없으니 아무것도 안 보낸다.
-  if (!subscriptions || subscriptions.length === 0) {
+  if (subs.length === 0 && tokens.length === 0) {
     return reply({ sent: 0, reason: 'notifications_off' });
   }
 
@@ -98,22 +105,23 @@ Deno.serve(async (req) => {
 
   const dday = daysUntil(target.expires_at, today);
   const [, month, day] = target.expires_at.split('-');
-  const payload = JSON.stringify({
+  const message = {
     title: `${family?.name ? `${family.name} · ` : ''}유효기한이 곧 만료돼요`,
     body: `${target.brand ? `${target.brand} · ` : ''}${target.name}\n${Number(month)}월 ${Number(day)}일까지 · ${
       dday === 0 ? '오늘까지예요' : `${dday}일 남았어요`
     }`,
-  });
+  };
+  const payload = JSON.stringify(message);
 
   // 여기서부터는 답을 돌려준 뒤에 진행한다. 기다렸다 보내는 게 목적이라 응답을
   // 붙들 수가 없다(맨 위 주석 참고).
   const deliver = async () => {
     await new Promise((resolve) => setTimeout(resolve, SEND_DELAY_MS));
 
-    webpush.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey);
+    if (webReady && subs.length > 0) webpush.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey);
 
     const deadSubscriptionIds = [];
-    for (const sub of subscriptions) {
+    for (const sub of webReady ? subs : []) {
       try {
         await webpush.sendNotification(
           { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
@@ -128,6 +136,12 @@ Deno.serve(async (req) => {
     if (deadSubscriptionIds.length > 0) {
       await admin.from('push_subscriptions').delete().in('id', deadSubscriptionIds);
     }
+
+    // 앱 쪽. 앱을 지운 폰의 토큰은 같이 정리한다.
+    const { dead } = await sendFcm(tokens, message);
+    if (dead.length > 0) {
+      await admin.from('native_push_tokens').delete().in('token', dead);
+    }
   };
 
   // waitUntil이 있어야 응답 뒤에도 함수가 살아 있다. 없으면 그냥 띄워만 둔다.
@@ -137,5 +151,5 @@ Deno.serve(async (req) => {
 
   // sent는 "몇 군데로 보내기로 했는지"다. 실제로 도착했는지는 폰에 알림이 뜨는지로
   // 확인한다 — 그걸 기다리려면 다시 응답을 붙들어야 하고, 그게 원래 문제였다.
-  return reply({ sent: subscriptions.length, gifticon: target.name });
+  return reply({ sent: subs.length + tokens.length, gifticon: target.name });
 });
