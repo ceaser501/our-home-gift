@@ -37,7 +37,7 @@ function ShareInviteButton({ family }) {
   }
 
   return (
-    <Button type="button" onClick={handleShare} className="h-9 flex-1 rounded-xl text-sm">
+    <Button type="button" onClick={handleShare} className="mt-2.5 h-9 w-full rounded-xl text-sm">
       <Share2 className="size-4" />
       공유
     </Button>
@@ -88,22 +88,22 @@ export default function FamilyMembersSheet({ onClose }) {
             먼저 읽혀야 한다. */}
         <div className="mx-5 mb-3 rounded-2xl border border-primary/25 bg-primary/5 px-4 py-3.5">
           <p className="m-0 text-xs font-semibold text-primary">가족 초대코드</p>
-          <p className="m-0 mt-1 font-mono text-[26px] leading-tight font-bold tracking-[0.18em] text-foreground">
-            {family.invite_code}
-          </p>
-          {/* 복사만 있으면 붙여넣을 곳을 사용자가 직접 찾아가야 한다. 공유를 옆에 두면
-              누르는 즉시 카카오톡 대화방을 고르는 화면이 뜬다 — 초대는 대개 거기서 끝난다. */}
-          <div className="mt-2.5 flex gap-2">
-            <ShareInviteButton family={family} />
-            {/* CopyButton은 스스로 shrink-0이라 flex-1을 직접 주면 서로 어긋난다. 감싸서 늘린다. */}
-            <div className="flex flex-1">
-              <CopyButton
-                value={family.invite_code}
-                label="복사"
-                className="h-9 w-full justify-center rounded-xl border border-border bg-card text-sm"
-              />
-            </div>
+          {/* 복사는 코드 옆에 둔다. 밑에 두면 무엇을 복사하는 버튼인지 한 번 짚어봐야
+              하는데, 바로 옆에 있으면 그 물음이 아예 생기지 않는다. */}
+          <div className="mt-1 flex items-center gap-3">
+            <p className="m-0 min-w-0 flex-1 font-mono text-[26px] leading-tight font-bold tracking-[0.18em] text-foreground">
+              {family.invite_code}
+            </p>
+            <CopyButton
+              value={family.invite_code}
+              label="복사"
+              copiedLabel="복사됨"
+              className="h-9 shrink-0 rounded-xl border border-border bg-card px-3 text-sm"
+            />
           </div>
+          {/* 복사만 있으면 붙여넣을 곳을 사용자가 직접 찾아가야 한다. 공유를 두면 누르는
+              즉시 카카오톡 대화방을 고르는 화면이 뜬다 — 초대는 대개 거기서 끝난다. */}
+          <ShareInviteButton family={family} />
           <p className="m-0 mt-2.5 text-xs break-keep text-muted-foreground">
             코드를 받은 사람이 참여를 신청하면, 여기서 승인해야 들어와요.
           </p>

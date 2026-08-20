@@ -241,15 +241,13 @@ if (cronSecret && url.searchParams.get('token') !== cronSecret) { ... 401 }
   - [ ] `ANALYZE_DAILY_LIMIT` / `ANALYZE_TOTAL_DAILY_LIMIT`을 출시 값으로 정하기
         (`supabase/functions/analyze-gifticon/index.ts`. 지금은 손대지 않고 30 / 500이다 —
         둘은 성격이 달라서 나란히 놓고 한 번에 정하기로 했다)
-- [ ] **훑기 진단 표시 제거** — 배스킨라빈스 카드 한 장이 왜 안 읽히는지 나흘을 짐작으로
-      고치다 넣은 것들이다. `VITE_TEST_TOOLS`라 위 항목을 지우면 자동으로 꺼진다.
-      (`probeBarcode`와 `막대를 못 읽은 사진` 목록은 쓸 일이 끝나 이미 지웠다. 그 아래
-      **폴더별 안내 문구는 출시 기능이라 남긴다.**)
-  - [ ] `client/src/components/GalleryScanSheet.jsx`의 카드 진단줄 —
-        `서버에 물음 · 프롬프트판 · 읽기 X초 · 확인 Y초 · 상품명 고침`
-  - [ ] 같은 파일의 `훑기 X초 · 읽기까지 Y초 · 정밀 탐색까지 Z초`
+- [x] **훑기 진단 표시 제거** — 배스킨라빈스 카드 한 장이 왜 안 읽히는지 나흘을 짐작으로
+      고치다 넣은 것들이다. 화면에 나오던 것은 모두 지웠다.
+      (`probeBarcode`, `막대를 못 읽은 사진` 목록, 카드 진단줄, 단계별 시간 표시.
+      그 아래 **폴더별 안내 문구는 출시 기능이라 남긴다.**)
   - [ ] `client/src/utils/imageAnalyze.js`의 `meta` — `promptVersion`·`fromCache`·
-        `askMs`/`verifyMs`·`nameChanged`. 위 두 줄과 함께 지운다
+        `askMs`/`verifyMs`·`nameChanged`·`verifyWhy`. 지금은 만들기만 하고 아무도 안 쓴다.
+        다시 짚어볼 일이 있을까 싶어 남겨뒀다 — 출시 전에 지운다
 - [ ] 위 1~11번 조치 완료 확인
 - [ ] Anthropic·카카오·TMAP·Supabase 각각 **일일 사용량 상한과 알림** 설정
 - [ ] 개인정보처리방침·이용약관 URL이 앱과 스토어 양쪽에 연결돼 있는지 확인

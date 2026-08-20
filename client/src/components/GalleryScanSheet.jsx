@@ -489,12 +489,6 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
   // 기기에 실제로 있는 폴더 이름과 장수. 못 찾았을 때 이유를 짚어주기 위한 값이다.
   const [folders, setFolders] = useState([]);
   const [tally, setTally] = useState(null);
-  // 어디에 시간이 갔는지. 테스트 빌드에서만 보여준다.
-  //
-  // 한 번 걷어냈다가 되살렸다. 쓰는 사람에게는 알 일이 아니라서 뺐는데, 속도가 달라졌을
-  // 때 어느 단계가 길어졌는지 알 방법이 함께 사라졌다. 훑기·읽기·정밀 탐색은 값을
-  // 치르는 자리가 서로 달라서, 총 시간만으로는 어디를 손봐야 할지 고를 수 없다.
-  const [timing, setTiming] = useState(null);
   // 지금 보여주고 있는 안내 줄. 계속 커지고, 쓸 때 나머지로 돌린다.
   const [hint, setHint] = useState(0);
   // 읽는 동안의 막대 길이(%).
@@ -524,8 +518,6 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
   const spentRef = useRef(new Set());
   // 읽기 진행률. 훑는 중에 이미 끝난 건이 있어서 0에서 시작하지 않는다.
   const readTallyRef = useRef({ done: 0, total: 0 });
-  // 이번 훑기가 시작된 시각. 아래에서 단계마다 여기서부터 잰다.
-  const startedAtRef = useRef(0);
   // 읽기가 끝난 순번. 목록에 쌓이는 차례가 된다.
   const readSeqRef = useRef(0);
   // 목록이 들어 있는 칸. 여기 높이가 바뀌는 것을 듣고 화면을 따라 내린다.
@@ -595,8 +587,6 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
     setVoucherIds([]);
     setResult(null);
     setDigging(false);
-    setTiming(null);
-    startedAtRef.current = performance.now();
     setReadBar(0);
     setReadBarMs(0);
     found0Ref.current = [];
@@ -684,7 +674,6 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
       setFolders(scan.folders ?? []);
       setTally(scan.tally ?? null);
       setComplete(true);
-      setTiming((prev) => ({ ...prev, scan: performance.now() - startedAtRef.current }));
     } catch (err) {
       setError(err?.message || (picked ? '사진을 읽지 못했어요.' : '갤러리를 훑지 못했어요.'));
       if (!controller.signal.aborted) {
@@ -695,14 +684,12 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
     }
 
     await readAll(found, controller);
-    setTiming((prev) => ({ ...prev, read: performance.now() - startedAtRef.current }));
 
     // 여기서부터는 사용자가 이미 목록을 보고 있다. 못 찾은 사진을 정밀 탐색으로 한 번 더
     // 뒤진다 — 무거운 일이지만 기다리게 하지는 않는다.
     //
     // 받아 온 사진은 처음부터 정밀 탐색으로 읽었으므로 한 번 더 볼 것이 없다.
     if (!picked) await digDeeper(pending, controller);
-    setTiming((prev) => ({ ...prev, total: performance.now() - startedAtRef.current }));
   }
 
   /**
@@ -1304,17 +1291,6 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
       </summary>
 
       <div className="flex flex-col gap-2.5 px-4 pb-3.5">
-        {/* 어디에 시간이 갔는지. 출시 빌드에는 안 나온다(VITE_TEST_TOOLS).
-
-            셋을 따로 적는 이유는 값을 치르는 자리가 달라서다. 훑기는 사진 장수와 판독
-            조건이, 읽기는 서버를 다녀오는 횟수가, 정밀 탐색은 못 읽은 사진 수가 정한다.
-            총 시간만 보면 어느 쪽을 손봐야 할지 고를 수 없다. */}
-        {import.meta.env.VITE_TEST_TOOLS && timing?.total && (
-          <span className="text-sm tabular-nums text-muted-foreground">
-            훑기 {(timing.scan / 1000).toFixed(1)}초 · 읽기까지 {(timing.read / 1000).toFixed(1)}초 ·
-            {' '}정밀 탐색까지 {(timing.total / 1000).toFixed(1)}초
-          </span>
-        )}
         {/* 사진첩 이름과 장수를 한 덩어리로 묶어 보여준다 — 줄글로 늘어놓으면
             '다운로드 1 카카오톡 1'에서 1이 어디에 붙는지 한 번 더 읽어야 한다.
             사진이 없어도 0으로 남긴다. 목록에서 빠지면 "걸러진 건가" 하고 의심하게
@@ -1425,32 +1401,6 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
                     : '유효기한 없음'}
               </span>
 
-              {/* 이 답이 어디서 왔는지. 출시 빌드에는 안 나온다(VITE_TEST_TOOLS).
-                  docs/security.md의 제거 목록에 함께 적어뒀다.
-
-                  "고쳤는데 왜 그대로냐"를 가릴 최소한만 남긴다 — 캐시에서 꺼낸 답인지,
-                  서버의 프롬프트가 몇 판인지. 화면에서는 둘 다 똑같아 보여서 그동안
-                  짐작으로 골랐고 여러 번 틀렸다.
-
-                  사진 장수·크기·모델이 준 이름도 찍어봤는데, 그건 그때 쫓던 증상이
-                  재현되지 않아 걷어냈다. 필요해지면 여기 다시 붙이면 된다. */}
-              {import.meta.env.VITE_TEST_TOOLS && info?.meta && (
-                <span className="mt-1 text-[11px] leading-snug break-all text-muted-foreground/70">
-                  {info.meta.fromCache ? '캐시에서 꺼냄' : '서버에 물음'} ·{' '}
-                  {info.meta.promptVersion || '프롬프트 판 모름(함수가 옛것)'}
-                  {/* 상품명 재확인이 실제로 돌았는지. 이 줄이 없으면 "확인했는데 같았다"와
-                      "확인을 못 했다"가 화면에서 똑같아 보인다 — 그동안 여러 번 그랬다. */}
-                  {/* 두 번 부르는 구조라 한 덩어리로 재면 어느 쪽이 느린지 알 수가 없다. */}
-                  {info.meta.askMs > 0 && ` · 읽기 ${(info.meta.askMs / 1000).toFixed(1)}초`}
-                  {info.meta.verifyMs > 0 && ` · 확인 ${(info.meta.verifyMs / 1000).toFixed(1)}초`}
-                  {info.meta.nameChanged && ` · 상품명 고침(${info.meta.nameBefore} →)`}
-                  {info.meta.nameUnchecked && ` · 상품명 재확인 못 함(${info.meta.verifyWhy || '?'})`}
-                  {!info.meta.nameChanged &&
-                    !info.meta.nameUnchecked &&
-                    !info.meta.fromCache &&
-                    ' · 상품명 확인됨'}
-                </span>
-              )}
             </div>
 
             {/* 오른쪽은 금액과, 이 후보를 치우는 자리. 시안에는 '확인됨' 같은 상태 글자가
