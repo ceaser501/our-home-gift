@@ -173,34 +173,31 @@ export default function ProfileMenu({ onClose }) {
             </button>
           )}
 
-          {/* 실제 발송과 같은 길로 보내보는 테스트.
+          {/* 실제 발송과 같은 길로 보내보는 테스트. 항상 그린다.
 
-              한때 오른쪽에 켜짐/꺼짐을 적었다가 걷어냈다. 위 두 줄과 똑같이 생겨서
-              눌러도 안 켜지는 가짜 스위치가 됐다 — 켜고 끄는 일은 바로 위 한 줄만
-              맡는다. 여기는 누르는 자리라 하는 일을 적는다.
+              한때 isPushSupported()로 감쌌다가 앱에서 통째로 사라졌다(v0.0.79). 앱
+              웹뷰에는 PushManager가 없어서 그 검사가 거짓이다 — 그런데 알림 자체는
+              같은 폰의 브라우저(PWA) 구독으로 도착하므로, 앱에서 눌러도 테스트는 뜻이
+              있다. 보낼 곳이 정말 없으면 서버가 "꺼져 있어요"라고 정확히 답해준다.
 
-              알림이 꺼져 있으면 보낼 곳이 없다. 눌러놓고 "꺼져 있어서 안 왔어요"를
-              읽게 하는 대신 아예 못 누르게 하고, 무엇을 하면 되는지 밑에 적는다.
-
-              알림을 못 쓰는 브라우저에서는 위의 켜기 줄이 통째로 없다. 그 밑에서
-              "위에서 켜라"고 하면 없는 줄을 찾게 되므로 이 줄도 같이 감춘다. */}
-          {isPushSupported() && (
-            <button
-              type="button"
-              onClick={handleTestNotification}
-              disabled={testing || !pushOn}
-              className="flex w-full items-center gap-3 px-1 py-3 text-left text-sm disabled:opacity-50"
-            >
-              <BellRing className="size-4.5 shrink-0 text-muted-foreground" />
-              <span className="flex min-w-0 flex-1 flex-col">
-                <span className="text-foreground">알림 테스트</span>
-                {!pushOn && (
-                  <span className="text-xs break-keep text-muted-foreground">위에서 알림을 켜야 보낼 수 있어요</span>
-                )}
-              </span>
-              <span className="shrink-0 text-xs font-semibold text-primary">{testing ? '보내는 중…' : '보내기'}</span>
-            </button>
-          )}
+              켜기 줄이 있는 환경(웹)에서만 켜짐과 묶는다. 꺼진 걸 알면서 보내게 두면
+              "눌렀는데 안 와요"가 되고, 위에 켜는 줄이 있으니 그리로 보낸다.
+              시험은 test/notifyMenu.test.jsx — 두 환경을 다 그려본다. */}
+          <button
+            type="button"
+            onClick={handleTestNotification}
+            disabled={testing || (isPushSupported() && !pushOn)}
+            className="flex w-full items-center gap-3 px-1 py-3 text-left text-sm disabled:opacity-50"
+          >
+            <BellRing className="size-4.5 shrink-0 text-muted-foreground" />
+            <span className="flex min-w-0 flex-1 flex-col">
+              <span className="text-foreground">알림 테스트</span>
+              {isPushSupported() && !pushOn && (
+                <span className="text-xs break-keep text-muted-foreground">위에서 알림을 켜야 보낼 수 있어요</span>
+              )}
+            </span>
+            <span className="shrink-0 text-xs font-semibold text-primary">{testing ? '보내는 중…' : '보내기'}</span>
+          </button>
 
           {/* 배너를 닫아도 여기서는 늘 다시 볼 수 있어야 한다. 배너에만 있으면
               한 번 닫는 순간 그 공지를 다시 찾을 데가 없어진다. */}
