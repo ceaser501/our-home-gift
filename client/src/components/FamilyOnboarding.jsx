@@ -147,6 +147,10 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
         </button>
       </div>
 
+      {/* 폼과 그 아래 버튼을 한 덩어리로 묶는다. 바깥 간격(gap-5)이 그대로 걸리면
+          '참여하기'와 '다른 계정으로 로그인' 사이만 유독 벌어진다 — 폼 안은 gap-3이라
+          똑같이 생긴 버튼 둘이 다른 간격으로 놓인다. */}
+      <div className="flex flex-col gap-3">
       {mode === 'create' ? (
         <form onSubmit={handleCreate} className="flex flex-col gap-3">
           <div className="flex flex-col gap-1.5">
@@ -219,6 +223,7 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
       >
         다른 계정으로 로그인
       </Button>
+      </div>
     </div>
   );
 }

@@ -148,7 +148,6 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
   const [mismatch, setMismatch] = useState(null);
   const [progress, setProgress] = useState(null);
   // 여러 장을 한 건으로 본 이유. 테스트 빌드에서만 보여준다.
-  const [groupNote, setGroupNote] = useState('');
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -205,7 +204,6 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
     setProgress({ step: 'barcode', current: 1, total: selected.length });
     setAutoFilled(false);
     setSmallBarcode(false);
-    setGroupNote('');
 
     // 여러 장을 골랐는데 서로 다른 기프티콘이면, 한 건짜리인 이 화면으로는 담을 수 없다.
     //
@@ -247,23 +245,8 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
           onBulk(selected);
           return;
         }
-
-        // 한 건으로 본 이유를 적어둔다(테스트 빌드에서만 보인다).
-        //
-        // 여기서 판단이 틀리면 서로 다른 기프티콘이 한 건으로 합쳐지는데, 화면만 봐서는
-        // "왜 안 나뉘었나"를 알 길이 없다. 바코드를 몇 종류 찾았는지, 못 읽은 사진이
-        // 몇 장인지가 그 답이라 그것만 적는다.
-        //
-        // "못 읽은 사진"이라고 적었더니 그 사진이 버려진 것으로 읽혔다. 안 버린다 —
-        // 바코드를 못 찾았을 뿐이고, 사진은 그대로 모델에게 같이 간다. 정보 화면처럼
-        // 바코드가 아예 없는 사진이 여기 걸리는 게 정상이다.
-        setGroupNote(
-          `사진 ${selected.length}장 · 바코드 ${grouped.candidates.length}종류 · ` +
-            `바코드 못 찾은 사진 ${grouped.missed.length}장(버리지 않고 같이 읽어요)`
-        );
-      } catch (err) {
+      } catch {
         // 묶어보지 못했으면 예전 길로 간다. 한 건으로 읽히면 그것대로 맞다.
-        setGroupNote(`묶기 실패: ${err?.message || err}`);
       }
     }
 
@@ -720,12 +703,6 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
             </p>
           )}
           {error && <p className="text-sm text-destructive">{error}</p>}
-
-          {/* 왜 한 건으로 봤는지. 출시 빌드에는 안 나온다(VITE_TEST_TOOLS).
-              docs/security.md의 제거 목록에 함께 적어뒀다. */}
-          {import.meta.env.VITE_TEST_TOOLS && groupNote && (
-            <p className="m-0 rounded-lg bg-muted px-2.5 py-2 text-xs text-muted-foreground">{groupNote}</p>
-          )}
 
           <div className="grid grid-cols-2 gap-3">
             <div className="col-span-2 flex flex-col gap-1.5">

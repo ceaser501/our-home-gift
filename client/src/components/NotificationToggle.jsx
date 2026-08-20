@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Bell, BellOff } from 'lucide-react';
+import { BellRing } from 'lucide-react';
 import { isPushSupported, isPushEnabled, subscribeToPush, unsubscribeFromPush } from '../push';
 import { isNativePushSupported, isNativePushEnabled, enableNativePush, disableNativePush } from '../nativePush';
 import { useFamily } from '../FamilyContext';
@@ -62,9 +62,9 @@ export default function NotificationToggle({ asRow = false, onChange }) {
           disabled={loading}
           className="flex w-full items-center gap-3 px-1 py-3 text-left text-sm disabled:opacity-50"
         >
-          {enabled ? <Bell className="size-4.5 text-muted-foreground" /> : <BellOff className="size-4.5 text-muted-foreground" />}
+          <BellRing className="size-4.5 shrink-0 text-muted-foreground" />
           <span className="flex min-w-0 flex-1 flex-col">
-            <span className="text-foreground">폰으로 알림 받기</span>
+            <span className="text-foreground">푸시 알림 받기</span>
             {/* 무엇이 폰을 울리는지 적어둔다. 이걸 안 적으면 가족이 기프티콘을 쓸 때마다
                 알림이 오는 줄 알고 꺼버린다. 정작 만료 알림까지 같이 꺼지는 셈이다.
                 (사용·사용취소·등록은 폰을 울리지 않고 헤더의 종에만 쌓인다.) */}
@@ -88,7 +88,7 @@ export default function NotificationToggle({ asRow = false, onChange }) {
         aria-label={enabled ? '알림 끄기' : '알림 켜기'}
         className="flex size-8 shrink-0 items-center justify-center rounded-full border border-border bg-card text-muted-foreground disabled:opacity-50"
       >
-        {enabled ? <Bell className="size-4 text-primary" /> : <BellOff className="size-4" />}
+        <BellRing className={enabled ? 'size-4 text-primary' : 'size-4'} />
       </button>
       {dialogs}
     </>

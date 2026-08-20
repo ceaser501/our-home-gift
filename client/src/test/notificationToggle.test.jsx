@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { act, render, screen } from '@testing-library/react';
 
-// 폰으로 알림 받기 줄 — 앱(웹뷰)에서.
+// 푸시 알림 받기 줄 — 앱(웹뷰)에서.
 //
 // 앱 웹뷰에는 웹푸시가 없다. 이 줄을 그걸로 감쌌다가 앱에서 통째로 사라진 적이 있고
 // (v0.0.80), 그다음엔 "크롬으로 여세요"만 안내했다. 이제 앱은 파이어베이스(FCM)로
@@ -31,7 +31,7 @@ vi.mock('../FamilyContext', () => ({
 const { default: NotificationToggle } = await import('../components/NotificationToggle');
 
 function row() {
-  return screen.getByText('폰으로 알림 받기').closest('button');
+  return screen.getByText('푸시 알림 받기').closest('button');
 }
 
 beforeEach(() => {
@@ -40,7 +40,7 @@ beforeEach(() => {
   disableNativePush.mockResolvedValue();
 });
 
-describe('앱에서의 폰으로 알림 받기', () => {
+describe('앱에서의 푸시 알림 받기', () => {
   it('계정에 토큰이 있으면 켜짐으로 보인다', async () => {
     isNativePushEnabled.mockResolvedValue(true);
 

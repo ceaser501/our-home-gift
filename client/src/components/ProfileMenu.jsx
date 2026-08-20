@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BellRing, ChevronRight, DoorOpen, FileText, LogOut, Megaphone, Receipt, Scale, ScanSearch, ShieldCheck, UserRound, UserRoundX } from 'lucide-react';
+import { ChevronRight, DoorOpen, FileText, LogOut, Megaphone, Receipt, Scale, ScanSearch, ShieldCheck, UserRound, UserRoundX } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import ThemeToggle from './ThemeToggle';
 import NotificationToggle from './NotificationToggle';
@@ -7,7 +7,6 @@ import UsageReportSheet from './UsageReportSheet';
 import NoticesSheet from './NoticesSheet';
 import AlertDialog from './AlertDialog';
 import RenameSheet from './RenameSheet';
-import { sendTestNotification } from '../api';
 import { deleteAccount } from '../auth';
 import { useFamily } from '../FamilyContext';
 import { leaveFamily, renameMember } from '../family';
@@ -28,7 +27,6 @@ export default function ProfileMenu({ onClose }) {
   const [noticesOpen, setNoticesOpen] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const [leaveAsking, setLeaveAsking] = useState(false);
-  const [testing, setTesting] = useState(false);
   const [notice, setNotice] = useState(null);
   // 탈퇴는 되돌릴 수 없어서 두 번 묻는다. null → 'what'(무엇이 없어지는지) → 'sure'(정말로).
   const [deleteStep, setDeleteStep] = useState(null);
@@ -36,9 +34,8 @@ export default function ProfileMenu({ onClose }) {
   // 갤러리 자동 스캔은 앱에서만 있다. 브라우저에는 폴더를 볼 방법이 없어서 줄 자체를 감춘다.
   const [scanSupported] = useState(() => isGalleryScanSupported());
   const [autoScan, setAutoScan] = useState(() => isAutoScanOn());
-  // 알림 테스트 줄에 지금 상태를 같이 보여준다. 꺼둔 상태에서 "5초 뒤 도착"이라고
-  // 적혀 있으면 눌러도 아무것도 안 오는 이유를 알 수가 없다.
-  // 값은 바로 위 NotificationToggle이 알려준다 — 같은 걸 두 군데서 물어보면 어긋난다.
+  /* 알림 테스트와 짝인 것들. 줄을 접어둔 동안 함께 접어둔다(아래 블록 참고).
+  const [testing, setTesting] = useState(false);
   const [pushOn, setPushOn] = useState(false);
 
   async function handleTestNotification() {
@@ -70,6 +67,7 @@ export default function ProfileMenu({ onClose }) {
       setTesting(false);
     }
   }
+  */
 
   async function handleLeave() {
     setLeaveAsking(false);
@@ -144,7 +142,7 @@ export default function ProfileMenu({ onClose }) {
 
           <p className="m-0 pt-3 pb-1 text-xs font-semibold text-muted-foreground">설정</p>
           <ThemeToggle asRow />
-          <NotificationToggle asRow onChange={setPushOn} />
+          <NotificationToggle asRow />
 
           {/* 켜두면 앱을 열 때 바로 찾아준다. 받아둔 기프티콘을 넣는 게 이 앱에 들어오는
               이유라, 그걸 매번 눌러서 시작하게 할 이유가 없다. 다만 사진을 보는 일이라
@@ -172,10 +170,14 @@ export default function ProfileMenu({ onClose }) {
             </button>
           )}
 
-          {/* 실제 발송과 같은 길로 보내보는 테스트. 항상 그린다 — 한때 isPushSupported()로
-              감쌌다가 앱에서 통째로 사라졌다(v0.0.80). 켜짐/꺼짐은 위의 켜기 줄이
-              계정 기준으로 알려주므로(NotificationToggle), 꺼져 있으면 잠그고 켜는
-              길을 알려준다. 시험은 test/notifyMenu.test.jsx. */}
+          {/* 알림 테스트 줄은 접어둔다.
+              앱 알림(FCM)이 붙기 전, 알림이 오는지 확인할 방법이 이것뿐이던 시절의
+              물건이다. 이제는 알림을 켜면 실제로 온다 — 확인할 것이 없는 자리에
+              '보내기' 버튼이 있으면 그것부터 눌러보게 된다.
+
+              지우지 않고 남긴다. 발송 경로(send-test-notification)를 손댈 때 다시
+              필요하다. 되살리려면 이 블록의 주석만 걷으면 된다 —
+              handleTestNotification과 pushOn도 그대로 있다.
           <button
             type="button"
             onClick={handleTestNotification}
@@ -189,6 +191,7 @@ export default function ProfileMenu({ onClose }) {
             </span>
             <span className="shrink-0 text-xs font-semibold text-primary">{testing ? '보내는 중…' : '보내기'}</span>
           </button>
+          */}
 
           {/* 배너를 닫아도 여기서는 늘 다시 볼 수 있어야 한다. 배너에만 있으면
               한 번 닫는 순간 그 공지를 다시 찾을 데가 없어진다. */}
