@@ -177,3 +177,39 @@ jobs:
               --title "모아콘 앱 ${{ steps.version.outputs.name }}" \
               --notes-file notes.md
           fi
+
+      # 릴리스가 만들어지면 다운로드 링크를 메일로 보낸다.
+      #
+      # 폰에서 설치할 사람이 매번 저장소 → Releases → 새 태그를 찾아 들어가는 대신,
+      # 지메일함에서 링크 한 번으로 받게 하려는 것이다. Gmail의 SMTP로 보내므로 따로
+      # 드는 돈이 없다. 시크릿 두 개(GMAIL_ADDRESS, GMAIL_APP_PASSWORD)가 없으면
+      # 조용히 건너뛴다 — 메일은 곁가지라, 이것 때문에 빌드가 실패로 보이면 안 된다.
+      - name: Mail download link
+        if: startsWith(github.ref, 'refs/tags/app-v') && secrets.GMAIL_APP_PASSWORD != ''
+        env:
+          GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+        run: |
+          VERSION="${{ steps.version.outputs.name }}"
+          URL="https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/moacon-$VERSION.apk"
+          # 한글 제목은 MIME으로 감싸야 안 깨진다.
+          SUBJECT="=?UTF-8?B?$(printf '모아콘 앱 %s' "$VERSION" | base64 -w0)?="
+          cat > mail.txt <<MAIL
+          From: moacon build <$GMAIL_ADDRESS>
+          To: $GMAIL_ADDRESS
+          Subject: $SUBJECT
+          Content-Type: text/plain; charset=UTF-8
+
+          모아콘 $VERSION 이 나왔어요. 폰에서 아래 링크를 눌러 설치하세요.
+
+          $URL
+          MAIL
+          # 히어독 들여쓰기를 걷어낸다(메일 헤더는 줄 앞 공백을 허용하지 않는다).
+          sed -i 's/^          //' mail.txt
+          curl --silent --show-error --ssl-reqd \
+            --url 'smtps://smtp.gmail.com:465' \
+            --mail-from "$GMAIL_ADDRESS" \
+            --mail-rcpt "$GMAIL_ADDRESS" \
+            --user "$GMAIL_ADDRESS:$GMAIL_APP_PASSWORD" \
+            --upload-file mail.txt \
+            || echo "::warning title=메일을 못 보냈습니다::릴리스는 정상입니다. GMAIL_ADDRESS / GMAIL_APP_PASSWORD 시크릿을 확인해주세요."
