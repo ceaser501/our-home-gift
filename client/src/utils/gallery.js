@@ -215,7 +215,7 @@ const NO_BARCODE_KEY = 'moacon:gallery-no-barcode';
 // 예전에는 못 읽던 사진을 지금은 읽을 수 있게 되는 일이 실제로 있었다(작은 이미지를
 // 키워서 읽도록 고친 뒤). 그런데 "없음"으로 적힌 사진은 다시 읽지 않으니, 고쳐놓고도
 // 그 사진들만 영영 안 나온다. 버전이 다르면 기록을 통째로 버리고 다시 읽는다.
-const DECODER_VERSION = 10;
+const DECODER_VERSION = 11;
 
 function readIdSet(key) {
   try {
@@ -236,7 +236,54 @@ function addIds(key, kept, ids) {
     ids.forEach((id) => kept.add(String(id)));
     // 무한정 쌓이지 않게 최근 것만 남긴다.
     const value = { version: DECODER_VERSION, ids: [...kept].slice(-4000) };
+    // '바코드 없음'에 딸린 막대 기억은 잃지 않는다(아래 rememberNoBarcode 참고).
+    if (key === NO_BARCODE_KEY) value.bars = readBarsRemembered();
     localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // 저장이 막혀 있으면 다음 번에 다시 읽게 될 뿐이다.
+  }
+}
+
+// '바코드 없음'으로 적힌 것 중, 막대로 보이던 사진들({ id, bucket }).
+//
+// 왜 따로 적나: 못 읽은 사진은 다음부터 건너뛰는데(NO_BARCODE_KEY), 그러면 "막대로
+// 보이는데 못 읽은 사진이 카카오톡 사진첩에 1장 있어요" 안내를 만들 재료도 함께
+// 사라진다. 배스킨라빈스 카드가 첫 훑기에는 안내에 나오고 두 번째부터는 안 나오던
+// 것이 이것이다. 건너뛰더라도 안내는 계속 나와야 하므로, 어느 사진첩의 몇 장이
+// 막대로 보였는지를 마커에 같이 둔다.
+export function readBarsRemembered() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(NO_BARCODE_KEY) || 'null');
+    if (!saved || Array.isArray(saved) || saved.version !== DECODER_VERSION) return [];
+    return Array.isArray(saved.bars) ? saved.bars : [];
+  } catch {
+    return [];
+  }
+}
+
+// 정밀 탐색까지 끝난 못 읽은 사진들을 적는다. 막대로 보인 것은 사진첩 이름과 함께.
+export function rememberNoBarcode(missed) {
+  const remembered = readBarsRemembered();
+  const known = new Set(remembered.map((entry) => String(entry.id)));
+  missed.forEach((image) => {
+    if (image.bars && !known.has(String(image.id))) {
+      remembered.push({ id: String(image.id), bucket: image.bucket || null });
+    }
+  });
+  try {
+    const kept = readIdSet(NO_BARCODE_KEY);
+    missed.forEach((image) => kept.add(String(image.id)));
+    const ids = [...kept].slice(-4000);
+    const keptIds = new Set(ids);
+    localStorage.setItem(
+      NO_BARCODE_KEY,
+      JSON.stringify({
+        version: DECODER_VERSION,
+        ids,
+        // id 목록에서 밀려난 것은 막대 기억도 같이 버린다.
+        bars: remembered.filter((entry) => keptIds.has(String(entry.id))).slice(-200),
+      })
+    );
   } catch {
     // 저장이 막혀 있으면 다음 번에 다시 읽게 될 뿐이다.
   }
@@ -397,7 +444,18 @@ async function decodeBarcode(read, pass = SHALLOW) {
   const height = image.naturalHeight;
 
   const scale = scaleTo(width, height, pass.longEdge);
-  const found = await decodeAt(image, width, height, scale, pass.tryHarder);
+  // 키울 상황이면 원본 크기를 먼저 본다.
+  //
+  // "정수배 확대는 경계를 보존한다"는 위 주석은 절반만 맞았다. 카카오 카드의 바코드는
+  // 모듈이 4.5px 같은 비정수 폭이라 경계가 처음부터 회색인데, 확대는 그 회색을 2px
+  // 띠로 복제한다. 판독기 패턴표로 카드를 합성해 재보니 원본 그대로는 전부 읽히고
+  // 2배 확대는 전부 죽었다 — 훑기는 읽는데 정밀만 못 읽던 것("+ 로 올리면 1개만
+  // 잡힌다")이 이것이었다. 확대가 필요한 건 정말 작은 사진뿐이라, 원본을 먼저 보고
+  // 안 될 때만 키운다.
+  // 첫 시도는 정밀 없이 본다. 정밀(tryHarder)은 1차원 판독기를 맨 뒤로 미뤄서, 성공해도
+  // QR·데이터매트릭스 판독기들을 다 거친 뒤에야 읽는다 — 원본이 멀쩡하면 그 값이 아깝다.
+  let found = scale > 1 ? await decodeAt(image, width, height, 1, false) : null;
+  if (!found) found = await decodeAt(image, width, height, scale, pass.tryHarder);
   // 못 읽었으면 막대가 있기라도 한지 본다. 사진을 이미 열어둔 이 자리가 제일 싸다.
   if (!found) return { code: null, bars: looksLikeBarcode(image) };
 
@@ -752,7 +810,11 @@ export async function scanGallery({ isRegistered, onProgress, onCandidate, signa
     tooSmall: candidates.filter((c) => c.tooSmall).length,
   };
 
-  return { ...status, candidates, pending: missed, scanned: fresh.length, since, folders, tally };
+  // 지난 훑기에서 "막대로 보이는데 못 읽음"으로 적힌 사진들. 이번에는 건너뛰었지만
+  // 안내에는 계속 나와야 한다(readBarsRemembered 주석 참고).
+  const barsRemembered = readBarsRemembered().filter((entry) => !dismissed.has(String(entry.id)));
+
+  return { ...status, candidates, pending: missed, scanned: fresh.length, since, folders, tally, barsRemembered };
 }
 
 /**
@@ -776,7 +838,7 @@ export async function deepScan({ pending, isRegistered, skipCodes, onProgress, o
   });
 
   if (!signal?.aborted) {
-    addIds(NO_BARCODE_KEY, readIdSet(NO_BARCODE_KEY), missed.map((image) => image.id));
+    rememberNoBarcode(missed);
   }
 
   return { candidates };

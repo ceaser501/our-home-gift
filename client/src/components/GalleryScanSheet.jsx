@@ -183,6 +183,18 @@ const HINTS = [
   { icon: CalendarClock, text: '앱을 설치한 날 이후에 담긴 사진만 봐요' },
 ];
 
+// 받아 온 사진(수기등록)일 때의 안내. 위 HINTS는 사진첩 훑기의 이야기라(어느 폴더를
+// 보는지, 언제 이후를 보는지) 받아 온 사진에는 거짓이 된다. 여기는 고른 사진에게
+// 무슨 일이 일어나는지만 적는다 — 역시 다 사실이어야 한다.
+const PICKED_HINTS = [
+  // collect() — 같은 바코드 번호끼리 한 후보로 모인다.
+  { icon: Images, text: '같은 기프티콘을 찍은 사진은 한 건으로 모아요' },
+  // 바코드를 못 찾은 사진은 후보가 되지 않고, 뺐다고 알려준다.
+  { icon: EyeOff, text: '바코드를 찾은 사진만 기프티콘으로 넣어요' },
+  // readGifticonInfo — 상품명·금액·기한은 서버가 사진에서 읽어 채운다.
+  { icon: ScanSearch, text: '상품명과 금액, 기한은 사진에서 읽어 채워요' },
+];
+
 // 한 줄이 머무는 시간. 짧으면 읽기 전에 넘어가고, 길면 두 번째 줄을 못 보고 끝난다.
 // 첫 결과까지 4초 안팎이라 이 정도면 두 줄은 읽고 지나간다.
 const HINT_MS = 2600;
@@ -320,7 +332,7 @@ function ScannerArt() {
  * 사라진 뒤에 다음 줄이 들어와서 중간이 비고, 그게 툭툭 끊겨 보인다. 세 줄을 모두
  * 같은 자리에 포개두면 하나가 옅어지는 동안 다른 하나가 짙어져 끊기는 데가 없다.
  */
-function CandidateSlot({ at, hints = true }) {
+function CandidateSlot({ at, hints = HINTS }) {
   return (
     <li className="relative flex items-start gap-3 overflow-hidden rounded-xl border border-border bg-card p-3">
       {/* 들어올 카드의 뼈대. 안내에 자리를 내주느라 옅게 깔아둔다 — 무엇이 들어올
@@ -332,12 +344,10 @@ function CandidateSlot({ at, hints = true }) {
         <span className="h-3 w-2/5 animate-pulse rounded bg-secondary" />
       </div>
 
-      {/* 안내멘트는 사진첩을 훑을 때의 이야기다(어느 폴더를 보는지, 언제 이후를 보는지).
-          받아 온 사진에는 해당이 없어서, 그때는 뼈대만 옅게 둔다. */}
-      <div className={cn('absolute inset-0 flex items-center px-3.5', !hints && 'hidden')}>
-        {HINTS.map((item, i) => {
+      <div className="absolute inset-0 flex items-center px-3.5">
+        {hints.map((item, i) => {
           const Icon = item.icon;
-          const on = i === at % HINTS.length;
+          const on = i === at % hints.length;
           return (
             <span
               key={item.text}
@@ -668,7 +678,10 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
       const keep = new Set(found.map((candidate) => candidate.id));
       setCandidates((prev) => prev.filter((candidate) => keep.has(candidate.id)));
       pending = scan.pending ?? [];
-      setMissedShots(pending);
+      // 지난 훑기에서 "막대로 보이는데 못 읽음"으로 적혀 이번에는 건너뛴 사진들.
+      // 안내 문구는 이번 판의 결과만 보므로, 여기서 합쳐줘야 계속 나온다.
+      const remembered = (scan.barsRemembered ?? []).map((entry) => ({ ...entry, bars: true }));
+      setMissedShots([...pending, ...remembered]);
       setScanned(scan.scanned ?? 0);
       setSince(scan.since ?? 0);
       setFolders(scan.folders ?? []);
@@ -1721,7 +1734,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
                    애니메이션이 다시 돈다. */
                 <ul className="m-0 flex list-none flex-col gap-2 p-0">
                   {arrived.map((candidate) => renderCandidate(candidate, { entering: true }))}
-                  {arrived.length === 0 && <CandidateSlot at={hint} hints={!picked} />}
+                  {arrived.length === 0 && <CandidateSlot at={hint} hints={picked ? PICKED_HINTS : HINTS} />}
                 </ul>
               ) : (
                 <>
