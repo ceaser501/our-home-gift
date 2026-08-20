@@ -47,11 +47,24 @@ function save(map) {
   }
 }
 
+// 여기 들어온 값은 확인을 안 거치고 그대로 화면으로 간다. 그래서 모양이 어긋난 것은
+// 여기서 걸러야 한다.
+//
+// 실제로 그런 일이 있었다. 상품명 재확인이 { name, why }를 주게 바뀌었는데 받는 쪽이
+// 이름만 꺼내지 않아, 그 덩어리가 통째로 name에 앉은 채로 저장됐다. 받는 쪽을 고쳐도
+// 이미 저장된 값은 그대로라 다음 판에도 객체가 글자 자리로 갔고 화면이 하얘졌다.
+// 앱을 새로 깔아도 localStorage는 남아서 "고쳤는데 그대로"로 보였다.
+function looksSane(info) {
+  if (!info || typeof info !== 'object') return false;
+  return ['name', 'brand', 'expiresAt'].every((key) => info[key] == null || typeof info[key] === 'string');
+}
+
 /** 저장해둔 읽기 결과. 없으면 null. */
 export function readCachedInfo(code) {
   if (!isScanCacheEnabled() || !code) return null;
   const entry = load()[code];
-  return entry?.info || null;
+  const info = entry?.info || null;
+  return looksSane(info) ? info : null;
 }
 
 /** 읽어낸 결과를 번호에 매달아 둔다. */

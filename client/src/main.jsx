@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
 import AuthGate from './components/AuthGate.jsx'
+import ErrorBoundary from './components/ErrorBoundary.jsx'
 import { watchForUpdates } from './utils/appUpdate.js'
 import { registerServiceWorker } from './utils/serviceWorker.js'
 import { watchLoginRedirects } from './utils/deepLink.js'
@@ -34,8 +35,10 @@ watchLoginRedirects({
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <AuthGate>
-      <App />
-    </AuthGate>
+    <ErrorBoundary>
+      <AuthGate>
+        <App />
+      </AuthGate>
+    </ErrorBoundary>
   </StrictMode>,
 )
