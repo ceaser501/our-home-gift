@@ -503,9 +503,15 @@ async function decodeAt(image, width, height, scale, tryHarder) {
 //   바코드만 크게 띄운 캡처     0.031
 //   같은 것, 다크 모드          0.136
 //
-// 경계는 0.25. 원본 최저(0.350)와 다크 캡처(0.136) 사이 한가운데다.
+//   선물하기 화면 스크린샷      0.344          ← 상품명·바코드가 있으니 통과해야 한다
+//
+// 경계는 0.25. 통과해야 하는 것의 최저(0.344)와 걸러야 하는 것의 최고(0.136) 사이다.
 // 이 숫자를 바꾸려면 위 실측부터 다시 해야 한다 — 재던 스크립트는 scratchpad/repro다.
 const MIN_INFO_INK = 0.25;
+
+// 잉크가 이만큼도 차이 안 나면 같은 종류의 사진으로 보고 순서를 coverage에 넘긴다.
+// 실측에서 갈라야 했던 두 장은 0.243 벌어져 있었다(원본 0.587 ↔ 스크린샷 0.344).
+const INK_TIE = 0.05;
 const INK_WIDTH = 240;
 
 function infoInk(image) {
@@ -835,7 +841,20 @@ async function collect({ images, read: readImage, pass, isRegistered, skipCodes,
     const originals = readable.filter((shot) => isOriginal(shot.bucket));
     const pool = originals.length > 0 ? originals : readable;
 
-    const sorted = [...pool].sort((a, b) => b.coverage - a.coverage);
+    // 순서도 그림이 얼마나 차 있는지로 정한다.
+    //
+    // 거름망만으로는 모자랐다. 태수님이 올린 스타벅스 두 장을 재보니 —
+    //   원본 카드(800x1670)        잉크 0.587, coverage 0.477
+    //   선물하기 스크린샷(1032x2000) 잉크 0.344, coverage 0.512
+    // 둘 다 거름망은 통과하는데 coverage로 줄을 세우면 스크린샷이 앞선다. 그런데 유효기간
+    // (2027년 2월 25일)은 원본에만 적혀 있다. "원본을 놔두고 스크린샷을 잡는다"가 이 줄이었다.
+    //
+    // 잉크가 엇비슷하면 예전처럼 coverage로 가른다. 같은 종류의 사진 둘 중에서는 바코드가
+    // 크게 찍힌 쪽이 낫다.
+    const sorted = [...pool].sort((a, b) => {
+      if (a.ink != null && b.ink != null && Math.abs(b.ink - a.ink) > INK_TIE) return b.ink - a.ink;
+      return b.coverage - a.coverage;
+    });
     // 위에서 붙인 '바코드 없는 사진'은 자리를 먼저 받는다. 금액이나 기한이 적힌 사진이라
     // 붙인 것이고, 바코드가 찍힌 사진은 어차피 하나면 족하다.
     const extras = candidate.extras || [];

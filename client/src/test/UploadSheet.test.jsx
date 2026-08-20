@@ -133,6 +133,34 @@ describe('여러 장을 올렸을 때 한 건인지 가르는 기준', () => {
     expect(prepareImages.mock.calls[0][0]).toHaveLength(3);
   });
 
+  // 배스킨 카드처럼 막대가 뭉개져 끝까지 못 읽는 사진이 있다. 번호를 모를 뿐 기프티콘이다.
+  // 한 건으로 안 세면 스타벅스 하나에 배스킨 사진이 얹혀서 저장된다.
+  it('막대는 보이는데 못 읽은 사진도 한 건으로 세어 다건으로 넘긴다', async () => {
+    groupImages
+      .mockResolvedValueOnce({
+        candidates: [{ id: 'pick-0', code: '111' }],
+        missed: [{ id: 'pick-1', bars: true, file: new File(['x'], 'baskin.jpg', { type: 'image/jpeg' }) }],
+        scanned: 2,
+        tally: {},
+      })
+      // 정밀하게 다시 봐도 못 읽는다. 그래도 막대는 보인다.
+      .mockResolvedValueOnce({ candidates: [], missed: [{ id: 'pick-1', bars: true }], scanned: 1, tally: {} });
+
+    const onBulk = vi.fn();
+    open({ onBulk });
+    fireEvent.change(document.querySelector('#gifticon-image'), {
+      target: {
+        files: [
+          new File(['x'], 'starbucks.jpg', { type: 'image/jpeg' }),
+          new File(['x'], 'baskin.jpg', { type: 'image/jpeg' }),
+        ],
+      },
+    });
+
+    await waitFor(() => expect(onBulk).toHaveBeenCalled());
+    expect(prepareImages).not.toHaveBeenCalled();
+  });
+
   it('바코드가 두 종류면 다건 화면으로 넘긴다', async () => {
     groupImages.mockResolvedValue({
       candidates: [{ id: 'pick-0', code: '111' }, { id: 'pick-1', code: '222' }],

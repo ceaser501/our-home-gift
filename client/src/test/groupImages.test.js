@@ -244,6 +244,20 @@ describe('groupImages — 고른 사진을 묶는다', () => {
     expect(candidates[0].images[0]).toBe(btoa('original.jpg'));
   });
 
+  // 태수님이 올린 스타벅스 두 장을 그대로 옮긴 값이다. 둘 다 상품명과 바코드가 있어
+  // 거름망은 통과하는데, 유효기간은 원본에만 적혀 있다. 예전에는 coverage로 줄을 세워서
+  // 스크린샷이 앞섰다 — "원본을 놔두고 스크린샷을 잡는다"가 이 줄이었다.
+  it('둘 다 읽을 것이 있으면 더 꽉 찬 쪽을 먼저 보낸다', async () => {
+    barcodes.set('original.jpg', { code: '111', coverage: 0.477 });
+    barcodes.set('screenshot.jpg', { code: '111', coverage: 0.512 });
+    pixels.set('original.jpg', { ink: 0.587 });
+    pixels.set('screenshot.jpg', { ink: 0.344 });
+
+    const { candidates } = await groupImages([pick('screenshot.jpg'), pick('original.jpg')]);
+
+    expect(candidates[0].images[0]).toBe(btoa('original.jpg'));
+  });
+
   it('한 건뿐이면 후보도 하나다 — 등록 창이 이걸 보고 넘길지 정한다', async () => {
     barcodes.set('a.jpg', { code: '111', coverage: 0.6 });
     barcodes.set('b.jpg', { code: '111', coverage: 0.6 });

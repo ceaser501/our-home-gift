@@ -236,10 +236,20 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
             grouped.missed.map((image) => image.file),
             { skipCodes: new Set(grouped.candidates.map((c) => c.code)) }
           );
-          grouped = { ...grouped, candidates: [...grouped.candidates, ...again.candidates] };
+          grouped = { ...grouped, candidates: [...grouped.candidates, ...again.candidates], missed: again.missed };
         }
 
-        if (grouped.candidates.length > 1) {
+        // 끝까지 못 읽었지만 막대는 보이는 사진도 한 건으로 센다.
+        //
+        // 번호를 모를 뿐 기프티콘이다. 한 건으로 안 세면 읽힌 것 옆에 사진만 얹혀서,
+        // 서로 다른 기프티콘 둘이 한 건으로 저장된다 — 배스킨 카드를 스타벅스와 함께
+        // 올리면 스타벅스 하나에 배스킨 사진이 붙는 식이다.
+        //
+        // 다건으로 넘기면 그쪽에서 저 사진을 따로 세워 서버에 번호를 물어본다
+        // (GalleryScanSheet의 rescued). 한 장씩 올릴 때 되던 것이 거기서 다시 된다.
+        const unread = (grouped.missed || []).filter((image) => image.bars).length;
+
+        if (grouped.candidates.length + unread > 1) {
           setAnalyzing(false);
           setProgress(null);
           onBulk(selected);

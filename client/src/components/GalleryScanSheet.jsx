@@ -675,6 +675,38 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
       // 카드는 훑는 동안 이미 하나씩 쌓였으므로 여기서 걷어낸다. 무엇을 왜 뺐는지는
       // 아래 안내로 말해준다.
       found = scan.candidates.filter((candidate) => !candidate.tooSmall);
+
+      // 막대는 보이는데 못 읽은 사진도 후보로 세운다 — 직접 고른 사진일 때만.
+      //
+      // 같은 `+`인데 한 장을 올리면 등록되고 여러 장에 섞어 올리면 통째로 빠지는 일이
+      // 있었다. 읽는 길이 달라서다. 한 장은 서버가 사진을 보고 바코드 아래 인쇄된 숫자를
+      // 눈으로 읽어준다. 여러 장은 브라우저가 막대를 읽고, 못 읽으면 후보가 안 만들어져
+      // 서버에 아예 가지 못한다. 카톡이 404픽셀로 줄여 보낸 배스킨 카드가 정확히 이랬다 —
+      // 막대는 뭉개졌지만 숫자는 멀쩡했다.
+      //
+      // 그래서 번호를 모르는 채로 후보에 세워 서버에 물어본다. 서버가 읽어주면 그 번호로
+      // 등록되고, 서버도 못 읽으면 '바코드 번호'가 빈 칸으로 남아 카드가 그렇게 말한다.
+      // 사진첩 훑기에는 하지 않는다 — 수백 장 중 막대처럼 보이는 것마다 서버에 물으면
+      // 훑기 한 번에 하루 한도가 날아간다.
+      if (picked) {
+        const rescued = (scan.missed ?? [])
+          .filter((image) => image.bars && image.data)
+          .map((image) => ({
+            id: image.id,
+            name: image.name,
+            bucket: image.bucket,
+            addedAt: image.addedAt,
+            code: null,
+            codeType: null,
+            images: [image.data],
+            tooSmall: false,
+          }));
+        if (rescued.length > 0) {
+          found = [...found, ...rescued];
+          setCandidates((prev) => [...prev, ...rescued]);
+        }
+      }
+
       const keep = new Set(found.map((candidate) => candidate.id));
       setCandidates((prev) => prev.filter((candidate) => keep.has(candidate.id)));
       pending = scan.pending ?? [];
@@ -1824,17 +1856,10 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
                 </p>
               )}
 
-              {/* 막대는 보이는데 못 읽은 사진. 사진첩을 훑을 때는 아래 줄이 폴더까지 짚어
-                  주는데, 직접 고른 사진에는 폴더가 없어서 이 말이 통째로 빠져 있었다.
-                  그래서 배스킨 카드를 혼자 올리면 안내가 나오고 여러 장에 섞어 올리면
-                  아무 말도 없었다 — 같은 사진을 같은 길로 올렸는데 결과가 달랐다. */}
-              {picked && tally?.unreadable > 0 && !isWorking && (
-                <p className="m-0 rounded-xl bg-muted px-3.5 py-3 text-sm leading-relaxed break-keep text-muted-foreground">
-                  바코드로 보이는데 못 읽은 사진이{' '}
-                  <b className="font-semibold text-foreground">{tally.unreadable}장</b> 있어요.{' '}
-                  <b className="font-semibold text-foreground">직접 등록</b>으로 올려주세요.
-                </p>
-              )}
+              {/* 막대로 보이는데 못 읽은 사진은 여기서 아무 말도 하지 않는다. 직접 고른
+                  사진일 때는 후보로 세워 서버에 물어보므로(위 rescued), 카드가 이미 목록에
+                  올라와 있다. 서버도 못 읽으면 그 카드가 '바코드 번호'가 없다고 말한다 —
+                  사진을 보면서 읽는 말이라 여기 한 줄보다 낫다. */}
 
               {/* 사진첩을 훑었을 때. 여기는 그동안 아무 말도 안 했다.
                   막대를 못 읽으면 후보가 아예 안 만들어지므로, 사용자 눈에는 그 기프티콘이
