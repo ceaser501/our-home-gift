@@ -142,7 +142,7 @@ export default function ActivitySheet({
 
           {/* 왜 예전 것이 없는지 말해준다. 없어진 게 아니라 지운 것임을 알면 찾아 헤매지 않는다. */}
           {activities.length > 0 && (
-            <p className="m-0 py-4 text-center text-xs text-muted-foreground">60일이 지난 알림은 자동으로 지워져요.</p>
+            <p className="m-0 py-4 text-center text-xs text-muted-foreground">30일이 지난 알림은 자동으로 지워져요.</p>
           )}
         </div>
       </SheetContent>

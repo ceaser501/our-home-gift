@@ -26,7 +26,7 @@ export function subscribeToGifticons(familyId, onChange) {
 
 // 가족이 기프티콘을 쓰거나 올리면 헤더의 종에 숫자가 바로 붙게 한다. 기록은 데이터베이스
 // 트리거가 남기므로, 누가 어느 화면에서 처리했든 이 신호는 똑같이 온다.
-// 지우는 일은 60일 지난 것을 정리할 때뿐이라 받지 않는다(안 읽은 개수와 상관없다).
+// 지우는 일은 30일 지난 것을 정리할 때뿐이라 받지 않는다(안 읽은 개수와 상관없다).
 export function subscribeToActivities(familyId, onChange) {
   const channel = supabase
     .channel(`activities-${familyId}`)

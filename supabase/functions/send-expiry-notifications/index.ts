@@ -56,7 +56,7 @@ Deno.serve(async (req) => {
 
   const admin = createClient(supabaseUrl, serviceRoleKey);
 
-  // 앱 안 알림(activities)에서 60일 지난 것을 지운다. 알림 발송과는 상관없는 일이지만,
+  // 앱 안 알림(activities)에서 30일 지난 것을 지운다. 알림 발송과는 상관없는 일이지만,
   // 하루 두 번 꼬박꼬박 도는 일정이 이것뿐이라 여기에 얹는다. 이걸 위해 크론을 하나 더
   // 만들면 나중에 배포할 때 챙길 것만 늘어난다.
   //

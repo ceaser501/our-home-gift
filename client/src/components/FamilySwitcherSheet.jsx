@@ -77,8 +77,8 @@ export default function FamilySwitcherSheet({ onClose }) {
         {pendingFor ? (
           <div className="flex flex-col items-center gap-3 px-8 py-8 text-center">
             <Clock className="size-7 text-primary" />
-            <p className="m-0 text-sm font-semibold text-foreground">'{pendingFor}'에 참여를 신청했어요</p>
-            <p className="m-0 text-xs leading-relaxed break-keep text-muted-foreground">
+            <p className="m-0 text-base font-semibold text-foreground">'{pendingFor}'에 참여를 신청했어요</p>
+            <p className="m-0 text-sm leading-relaxed break-keep text-muted-foreground">
               그 가족의 구성원이 승인하면 목록에 나타나요. 초대 코드를 알려준 분에게 확인해달라고 말씀해주세요.
             </p>
             <Button className="mt-1 w-full rounded-xl" onClick={onClose}>
@@ -87,7 +87,9 @@ export default function FamilySwitcherSheet({ onClose }) {
           </div>
         ) : mode === 'list' ? (
           <>
-            <p className="m-0 px-5 pb-2 text-xs text-muted-foreground">
+            {/* 이 창을 처음 여는 사람에게는 이 한 줄이 창 전체의 설명이다. 다른 회색
+                글씨와 같은 크기로 두면 그냥 지나친다. 한 단 키워둔다. */}
+            <p className="m-0 px-5 pb-2 text-sm break-keep text-muted-foreground">
               기프티콘은 가족마다 따로 모여요. 보고 싶은 가족을 고르세요.
             </p>
 

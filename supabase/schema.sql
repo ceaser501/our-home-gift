@@ -1112,7 +1112,7 @@ security definer
 set search_path = public
 as $$
   with gone as (
-    delete from public.activities where created_at < now() - interval '60 days' returning 1
+    delete from public.activities where created_at < now() - interval '30 days' returning 1
   )
   select count(*)::integer from gone;
 $$;

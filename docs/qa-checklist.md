@@ -56,7 +56,7 @@
 
 - [x] `supabase/schema.sql` — 공지 읽음(`notice_reads`), 탈퇴 막는 참조 끊기, 나간 사람 이름
 - [x] `supabase/admin-stats.sql` — 관리자 통계·목록, 미아 사진 찾기(`orphan_images`)
-- [x] `supabase/purge-cron.sql` — 60일 지난 알림 자동 삭제
+- [x] `supabase/purge-cron.sql` — 30일 지난 알림 자동 삭제
 - [x] `supabase/push-cron.sql` — 유효기한 임박 푸시
 - [x] `supabase functions deploy admin-stats`
 - [x] `supabase functions deploy delete-account`
