@@ -397,9 +397,9 @@ export async function readGifticonInfo(prepared, { onProgress, knownCode, knownT
   let soloDoneAt = 0;
   const soloVerify =
     !cached && prepared.uploads.length === 1
-      ? verifyGifticonName(prepared.uploads[0]).then((name) => {
+      ? verifyGifticonName(prepared.uploads[0]).then((answer) => {
           soloDoneAt = now();
-          return name;
+          return answer;
         })
       : null;
   const soloAt = now();
@@ -433,7 +433,10 @@ export async function readGifticonInfo(prepared, { onProgress, knownCode, knownT
     // 시간이 얹힌다. 양쪽 끝을 다 제 자리에 둬야 두 값을 나란히 놓고 볼 수 있다.
     const upload = prepared.uploads[info.nameImage - 1] || null;
     const startedAt = soloVerify ? soloAt : now();
-    const checked = soloVerify ? await soloVerify : upload ? await verifyGifticonName(upload) : null;
+    // verifyGifticonName은 { name, why }를 준다. 이름만 꺼내 써야 한다 —
+    // 통째로 info.name에 넣었더니 화면이 객체를 그리려다 하얗게 죽었다.
+    const answer = soloVerify ? await soloVerify : upload ? await verifyGifticonName(upload) : null;
+    const checked = typeof answer?.name === 'string' ? answer.name : null;
     // 나란히 쏜 것은 답이 온 자리에서 찍어둔 시각으로 잰다. 여기서 재면 읽기를 기다린
     // 시간까지 들어간다.
     meta.verifyMs = (soloVerify ? soloDoneAt : now()) - startedAt;
@@ -444,6 +447,7 @@ export async function readGifticonInfo(prepared, { onProgress, knownCode, knownT
     } else if (!checked) {
       // 못 물어본 것과 물어봤는데 같은 것은 다르다. 앞엣것은 확인이 안 된 이름이다.
       meta.nameUnchecked = true;
+      meta.verifyWhy = answer?.why || '이유 모름';
     }
   } else if (!cached && info.name) {
     meta.nameUnchecked = true;

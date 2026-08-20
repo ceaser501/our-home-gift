@@ -64,7 +64,7 @@ describe('상품명 재확인', () => {
   // 보지 않는다 — 그 자를 대면 "또망는 케이크"처럼 크게 틀린 것을 못 고친다.
   it('다시 읽어온 이름으로 갈아끼운다', async () => {
     analyzeGifticonImages.mockResolvedValue(serverSays());
-    verifyGifticonName.mockResolvedValue('떠먹는 스트로베리 케이크');
+    verifyGifticonName.mockResolvedValue({ name: '떠먹는 스트로베리 케이크', why: null });
 
     const info = await readGifticonInfo(prepared);
 
@@ -75,7 +75,7 @@ describe('상품명 재확인', () => {
 
   it('통째로 틀린 것도 고친다', async () => {
     analyzeGifticonImages.mockResolvedValue(serverSays({ name: '또망는 케이크' }));
-    verifyGifticonName.mockResolvedValue('떠먹는 스트로베리 케이크');
+    verifyGifticonName.mockResolvedValue({ name: '떠먹는 스트로베리 케이크', why: null });
 
     const info = await readGifticonInfo(prepared);
 
@@ -86,7 +86,7 @@ describe('상품명 재확인', () => {
   // 두 번째를 보내야 한다 — 첫 장을 보내면 거기엔 이름이 없어서 확인이 헛돈다.
   it('상품명이 있다고 한 사진을 보낸다', async () => {
     analyzeGifticonImages.mockResolvedValue(serverSays({ nameImage: 2 }));
-    verifyGifticonName.mockResolvedValue('떠먹는 스트로베리 케이크');
+    verifyGifticonName.mockResolvedValue({ name: '떠먹는 스트로베리 케이크', why: null });
 
     await readGifticonInfo(prepared);
 
@@ -96,7 +96,7 @@ describe('상품명 재확인', () => {
   // 확인은 이미 나온 답을 낫게 만드는 곁가지다. 여기서 막혔다고 이름이 사라지면 안 된다.
   it('다시 읽지 못하면 앞서 읽은 이름이 남는다', async () => {
     analyzeGifticonImages.mockResolvedValue(serverSays());
-    verifyGifticonName.mockResolvedValue(null);
+    verifyGifticonName.mockResolvedValue({ name: null, why: '서버 오류' });
 
     const info = await readGifticonInfo(prepared);
 
@@ -104,9 +104,31 @@ describe('상품명 재확인', () => {
     expect(info.meta.nameUnchecked).toBe(true);
   });
 
+  // 이 함수는 { name, why }를 준다. 한때 그 덩어리를 통째로 info.name에 넣었고,
+  // 화면이 객체를 글자 자리에 그리려다 자동스캔이 하얗게 죽었다. 목이 문자열을
+  // 돌려주고 있어서 테스트는 멀쩡히 지나갔다 — 그래서 타입까지 본다.
+  it('이름 자리에는 늘 글자만 들어간다', async () => {
+    analyzeGifticonImages.mockResolvedValue(serverSays());
+    verifyGifticonName.mockResolvedValue({ name: '떠먹는 스트로베리 케이크', why: null });
+
+    const info = await readGifticonInfo(prepared);
+
+    expect(typeof info.name).toBe('string');
+  });
+
+  // 왜 확인을 못 했는지는 화면에 적힌다(테스트 빌드). 이유가 안 실려 오면 그 자리가 빈다.
+  it('확인에 실패하면 이유를 남긴다', async () => {
+    analyzeGifticonImages.mockResolvedValue(serverSays());
+    verifyGifticonName.mockResolvedValue({ name: null, why: '답이 잘림' });
+
+    const info = await readGifticonInfo(prepared);
+
+    expect(info.meta.verifyWhy).toBe('답이 잘림');
+  });
+
   it('둘이 같게 읽었으면 아무 표시도 남기지 않는다', async () => {
     analyzeGifticonImages.mockResolvedValue(serverSays({ name: '아이스 아메리카노 T' }));
-    verifyGifticonName.mockResolvedValue('아이스 아메리카노 T');
+    verifyGifticonName.mockResolvedValue({ name: '아이스 아메리카노 T', why: null });
 
     const info = await readGifticonInfo(prepared);
 
