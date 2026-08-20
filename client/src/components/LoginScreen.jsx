@@ -125,15 +125,15 @@ export default function LoginScreen() {
             다만 그것이 "가족이 있어야 쓸 수 있다"는 조건처럼 읽히면 혼자 쓰려던 사람이
             첫 화면에서 나가버리므로, 조건이 아니라 할 수 있는 일로 적는다.
             ("볼 수도 있어요"처럼 흐리지 않는다. 곁다리로 들려서 오히려 중심이 약해진다.) */}
-        <p className="m-0 text-center text-sm break-keep text-muted-foreground">
+        <p className="m-0 text-center text-base break-keep text-muted-foreground">
           기프티콘을 모아두고, 가족과 함께 볼 수 있어요.
         </p>
       </div>
 
       {sent ? (
         <div className="w-full rounded-2xl border border-border bg-card p-5 text-center">
-          <p className="m-0 text-sm text-foreground">{email}로 로그인 링크를 보냈어요.</p>
-          <p className="mt-1.5 mb-0 text-xs text-muted-foreground">메일함에서 링크를 눌러 로그인을 완료해주세요.</p>
+          <p className="m-0 text-base text-foreground">{email}로 로그인 링크를 보냈어요.</p>
+          <p className="mt-1.5 mb-0 text-sm text-muted-foreground">메일함에서 링크를 눌러 로그인을 완료해주세요.</p>
         </div>
       ) : (
         <>
@@ -182,7 +182,7 @@ export default function LoginScreen() {
             </Button>
           </div>
 
-          <div className="flex items-center gap-2.5 text-xs text-muted-foreground">
+          <div className="flex items-center gap-2.5 text-sm text-muted-foreground">
             <span className="h-px flex-1 bg-border" />
             또는
             <span className="h-px flex-1 bg-border" />
@@ -215,7 +215,7 @@ export default function LoginScreen() {
         {/* 수단을 바꾸면 왜 곤란한지 한 줄로 말해준다. 표시만 있고 이유가 없으면
             "그냥 지난번 것"으로 읽혀서, 다른 걸 눌러도 되는 줄 안다. */}
         {lastUsed && (
-          <p className="m-0 -mt-2 text-center text-[11px] leading-relaxed break-keep text-muted-foreground">
+          <p className="m-0 -mt-2 text-center text-[13px] leading-relaxed break-keep text-muted-foreground">
             {/* 사실("새 계정이 만들어져요")과 부탁("같은 것을 눌러주세요")은 다른 말이라
                 줄을 나눈다. 한 줄에 붙이면 뒤엣것이 앞엣것의 꼬리처럼 읽혀서 흘려보낸다. */}
             다른 방법으로 로그인하면 새 계정이 만들어져요.

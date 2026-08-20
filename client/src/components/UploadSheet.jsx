@@ -135,6 +135,8 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
   const [voucherHint, setVoucherHint] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  // 사용기한이 지나 등록을 막았다는 얼럿.
+  const [expiredBlock, setExpiredBlock] = useState(false);
   const [searchingPrice, setSearchingPrice] = useState(false);
   const [priceSearchNote, setPriceSearchNote] = useState('');
   const [duplicateName, setDuplicateName] = useState(null);
@@ -476,7 +478,8 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
     // 수정은 막지 않는다. 이미 들어와 있는 것의 다른 값을 고치려는 것뿐인데 기한 때문에
     // 저장이 안 되면 손댈 방법이 없어진다.
     if (mode !== 'edit' && form.expires_at && form.expires_at < todayStr()) {
-      setError('사용기한이 지난 기프티콘은 등록할 수 없어요.');
+      // 폼 밑의 빨간 줄로 적었더니 저장 버튼만 보고 있던 눈에 안 들어왔다. 얼럿으로 묻는다.
+      setExpiredBlock(true);
       return;
     }
 
@@ -905,6 +908,15 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
               handleSubmit();
             }}
             onClose={() => setLookalike(null)}
+          />
+        )}
+
+        {expiredBlock && (
+          <AlertDialog
+            tone="warning"
+            title="사용기한이 지났어요"
+            description="기한이 지난 기프티콘은 등록할 수 없어요."
+            onClose={() => setExpiredBlock(false)}
           />
         )}
 

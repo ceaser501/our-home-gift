@@ -59,8 +59,8 @@ export default function ConsentScreen({ userId, onDone }) {
     <div className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col justify-center gap-5 bg-background px-6 py-10">
       <div className="flex flex-col items-center gap-1.5">
         <FileCheck2 className="size-9 text-primary" />
-        <h1 className="m-0 text-lg font-bold text-foreground">시작하기 전에 확인해주세요</h1>
-        <p className="m-0 text-center text-sm break-keep text-muted-foreground">
+        <h1 className="m-0 text-xl font-bold text-foreground">시작하기 전에 확인해주세요</h1>
+        <p className="m-0 text-center text-base break-keep text-muted-foreground">
           아래 내용에 동의하셔야 모아콘을 이용하실 수 있어요.
         </p>
       </div>
@@ -109,7 +109,7 @@ export default function ConsentScreen({ userId, onDone }) {
         </div>
       </div>
 
-      <p className="m-0 rounded-xl bg-secondary p-3 text-xs leading-relaxed break-keep text-muted-foreground">
+      <p className="m-0 rounded-xl bg-secondary px-3.5 py-3 text-sm leading-relaxed break-keep text-muted-foreground">
         만 14세 미만은 법정대리인의 동의가 필요해 이용하실 수 없어요. 등록한 기프티콘은 같은 가족의
         다른 구성원에게 보이고, 사진을 자동으로 읽어드릴 때는 이미지가 국외로 전송돼요. 자세한 내용은
         위 문서에 있어요.
@@ -121,9 +121,15 @@ export default function ConsentScreen({ userId, onDone }) {
         {saving ? '저장하는 중…' : '동의하고 시작하기'}
       </Button>
 
-      <button type="button" onClick={() => signOut()} className="text-center text-xs text-muted-foreground underline">
+      <Button
+        type="button"
+        variant="outline"
+        size="lg"
+        className="w-full rounded-xl text-muted-foreground"
+        onClick={() => signOut()}
+      >
         동의하지 않고 나가기
-      </button>
+      </Button>
     </div>
   );
 }

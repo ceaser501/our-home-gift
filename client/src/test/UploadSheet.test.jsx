@@ -234,3 +234,32 @@ describe('얕게 봐서 한 건으로 보일 때', () => {
     expect(groupImages).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('사용기한이 지난 기프티콘', () => {
+  // 폼 밑의 빨간 줄은 저장 버튼만 보던 눈에 안 들어왔다. 얼럿으로 묻는다.
+  it('저장을 막고 얼럿으로 말한다', async () => {
+    readGifticonInfo.mockResolvedValue({
+      code: '111',
+      codeType: 'CODE_128',
+      codeConflict: null,
+      thumbCropBlob: null,
+      category: '카페',
+      brand: '스타벅스',
+      amount: null,
+      expiresAt: '2020-01-01',
+      name: '아메리카노',
+      isVoucher: false,
+    });
+
+    open();
+    fireEvent.change(document.querySelector('#gifticon-image'), {
+      target: { files: [new File(['x'], '원본.jpg', { type: 'image/jpeg' })] },
+    });
+    // 읽어온 값이 폼에 앉을 때까지 기다린다.
+    await waitFor(() => expect(document.querySelector('#f-name').value).toBe('아메리카노'));
+
+    fireEvent.click(screen.getByText('저장하기'));
+
+    expect(await screen.findByText('사용기한이 지났어요')).toBeTruthy();
+  });
+});

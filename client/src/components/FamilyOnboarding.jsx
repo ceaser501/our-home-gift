@@ -57,18 +57,29 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
     return (
       <div className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col items-center justify-center gap-5 bg-background px-6">
         <Clock className="size-10 text-primary" />
-        <h1 className="m-0 text-lg font-bold text-foreground">승인을 기다리는 중이에요</h1>
-        <p className="m-0 text-center text-sm break-keep text-muted-foreground">
-          '{pendingFor}'에 참여를 신청했어요. 그 가족의 구성원이 승인하면 바로 함께 볼 수 있어요.
+        <h1 className="m-0 text-xl font-bold text-foreground">승인을 기다리는 중이에요</h1>
+        <p className="m-0 text-center text-base leading-relaxed break-keep text-muted-foreground">
+          '{pendingFor}'에 참여를 신청했어요.
           <br />
-          초대 코드를 알려준 분에게 확인해달라고 말씀해주세요.
+          가족의 구성원이 승인하면, 참여할 수 있어요.
+          <br />
+          초대 코드를 알려준 분에게 말씀해 주세요.
         </p>
-        <Button size="lg" className="w-full rounded-xl" onClick={onDone}>
-          확인했어요
-        </Button>
-        <button type="button" onClick={() => setPendingFor(null)} className="text-center text-xs text-muted-foreground underline">
-          다른 코드로 다시 신청하기
-        </button>
+        <div className="flex w-full flex-col gap-2">
+          <Button size="lg" className="w-full rounded-xl" onClick={onDone}>
+            확인했어요
+          </Button>
+          {/* 밑줄 글자였는데 버튼으로 바꿨다. 보라 버튼 밑에 놓이는 두 번째 길은 어디서든
+              같은 모양(테두리만 있는 버튼)이어야 한다 — ExtendSheet·SpendSheet와 같다. */}
+          <Button
+            variant="outline"
+            size="lg"
+            className="w-full rounded-xl text-muted-foreground"
+            onClick={() => setPendingFor(null)}
+          >
+            다른 코드로 신청하기
+          </Button>
+        </div>
       </div>
     );
   }
@@ -101,11 +112,11 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
           쓰려는 사람에게 자격 조건처럼 읽혔다. 혼자도 괜찮다는 것을 먼저 말해준다. */}
       <div className="flex flex-col items-center gap-1.5">
         <Users className="size-9 text-primary" />
-        <h1 className="m-0 text-lg font-bold text-foreground">기프티콘을 모아둘 곳을 만들어요</h1>
-        <p className="m-0 text-center text-sm break-keep text-muted-foreground">
+        <h1 className="m-0 text-xl font-bold text-foreground">기프티콘을 모아둘 곳을 만들어요</h1>
+        <p className="m-0 text-center text-base break-keep text-muted-foreground">
           혼자 써도 좋아요. 나중에 가족을 초대할 수 있어요.
         </p>
-        <p className="m-0 text-center text-xs text-muted-foreground">{userEmail}로 로그인했어요.</p>
+        <p className="m-0 text-center text-sm text-muted-foreground">{userEmail}로 로그인했어요.</p>
       </div>
 
       <div className="flex gap-1.5">
@@ -113,7 +124,7 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
           type="button"
           onClick={() => setMode('create')}
           className={cn(
-            'flex-1 rounded-[10px] border py-2 text-[13px] font-semibold transition-colors',
+            'flex-1 rounded-[10px] border py-2.5 text-sm font-semibold transition-colors',
             mode === 'create' ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card text-muted-foreground'
           )}
         >
@@ -123,7 +134,7 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
           type="button"
           onClick={() => setMode('join')}
           className={cn(
-            'flex-1 rounded-[10px] border py-2 text-[13px] font-semibold transition-colors',
+            'flex-1 rounded-[10px] border py-2.5 text-sm font-semibold transition-colors',
             mode === 'join' ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card text-muted-foreground'
           )}
         >
@@ -194,9 +205,15 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
         </form>
       )}
 
-      <button type="button" onClick={() => signOut()} className="text-center text-xs text-muted-foreground underline">
+      <Button
+        type="button"
+        variant="outline"
+        size="lg"
+        className="w-full rounded-xl text-muted-foreground"
+        onClick={() => signOut()}
+      >
         다른 계정으로 로그인
-      </button>
+      </Button>
     </div>
   );
 }
