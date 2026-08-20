@@ -1824,6 +1824,18 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
                 </p>
               )}
 
+              {/* 막대는 보이는데 못 읽은 사진. 사진첩을 훑을 때는 아래 줄이 폴더까지 짚어
+                  주는데, 직접 고른 사진에는 폴더가 없어서 이 말이 통째로 빠져 있었다.
+                  그래서 배스킨 카드를 혼자 올리면 안내가 나오고 여러 장에 섞어 올리면
+                  아무 말도 없었다 — 같은 사진을 같은 길로 올렸는데 결과가 달랐다. */}
+              {picked && tally?.unreadable > 0 && !isWorking && (
+                <p className="m-0 rounded-xl bg-muted px-3.5 py-3 text-sm leading-relaxed break-keep text-muted-foreground">
+                  바코드로 보이는데 못 읽은 사진이{' '}
+                  <b className="font-semibold text-foreground">{tally.unreadable}장</b> 있어요.{' '}
+                  <b className="font-semibold text-foreground">직접 등록</b>으로 올려주세요.
+                </p>
+              )}
+
               {/* 사진첩을 훑었을 때. 여기는 그동안 아무 말도 안 했다.
                   막대를 못 읽으면 후보가 아예 안 만들어지므로, 사용자 눈에는 그 기프티콘이
                   세상에 없었던 것처럼 보인다. 카톡으로 받은 카드가 너무 작게 줄어들어

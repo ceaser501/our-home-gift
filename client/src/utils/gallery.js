@@ -442,13 +442,17 @@ async function decodeBarcode(read, pass = SHALLOW) {
   // 못 읽었으면 막대가 있기라도 한지 본다. 사진을 이미 열어둔 이 자리가 제일 싸다.
   if (!found) return { code: null, bars: looksLikeBarcode(image) };
 
+  // 읽을 것이 있는 사진인지도 같이 재둔다. 어느 사진을 대표로 보낼지 고를 때 쓴다.
+  // 사진을 이미 열어둔 자리라 여기서 재는 게 제일 싸다.
+  const ink = infoInk(image);
+
   // 읽혔다고 바로 믿지 않는다. 배율을 바꿔 한 번 더 읽고, 두 번 다 같은 값일 때만 그대로
   // 쓴다. 갈리면 확인 쪽을 택한다(실제로 한 자리가 틀린 채 등록된 일이 있었다 — 7이 2로.
   // ITF처럼 검산 자리가 없는 형식은 걸러지지도 않는다). 두 번째로는 못 읽었다면 확인은
   // 못 한 것이지만, 읽은 것은 읽은 것이다.
   const again = await decodeAt(image, width, height, usedFactor * 0.85, false);
-  if (!again) return found;
-  return again.code === found.code ? found : again;
+  const chosen = !again || again.code === found.code ? found : again;
+  return { ...chosen, ink };
 }
 
 async function decodeAt(image, width, height, scale, tryHarder) {
@@ -479,6 +483,70 @@ async function decodeAt(image, width, height, scale, tryHarder) {
     canvas.width = 0;
     canvas.height = 0;
   }
+}
+
+// ── 이 사진에 읽을 것이 있는가 ─────────────────────────────────────────────
+//
+// 발행사가 만든 카드에는 상품명·금액·유효기간이 다 적혀 있어 그림이 꽉 찬다.
+// 계산대에서 쓰려고 바코드만 크게 띄워 찍은 캡처에는 그게 없다 — 흰 여백에 막대 하나다.
+// 같은 기프티콘의 사진이 여러 장일 때 어느 것을 모델에게 보낼지가 이 값으로 갈린다.
+//
+// 재는 법: 가장 흔한 밝기(=배경)를 찾아 그 언저리를 빼고 남는 비율.
+// 밝기가 몇 이하인지로 세지 않는 이유는 다크 모드다 — 검은 바탕에 흰 막대인 캡처는
+// "어두운 픽셀"로 세면 온통 잉크로 잡혀서, 정보가 꽉 찬 사진으로 둔갑한다.
+//
+// ── 실측 (2026-08-20, 태수님이 올린 실물) ──
+//   발행사 원본 6종            0.350 ~ 0.576   (교촌 0.390, 스벅 0.350, 라떼 0.560 …)
+//   giftishow 450px 카드       0.472, 0.476
+//   카톡이 줄여 보낸 배스킨    0.490
+//   상세화면을 통째로 찍은 캡처 0.363          ← 정보가 있으니 통과해야 한다
+//   바코드만 크게 띄운 캡처     0.031
+//   같은 것, 다크 모드          0.136
+//
+// 경계는 0.25. 원본 최저(0.350)와 다크 캡처(0.136) 사이 한가운데다.
+// 이 숫자를 바꾸려면 위 실측부터 다시 해야 한다 — 재던 스크립트는 scratchpad/repro다.
+const MIN_INFO_INK = 0.25;
+const INK_WIDTH = 240;
+
+function infoInk(image) {
+  const width = Math.min(INK_WIDTH, image.naturalWidth || INK_WIDTH);
+  const scale = width / (image.naturalWidth || width);
+  const height = Math.max(1, Math.round((image.naturalHeight || width) * scale));
+
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, width);
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  // jsdom에는 2d 컨텍스트가 없다. 시험에서는 재지 않는다 — 값이 없으면 부르는 쪽이
+  // "모른다"로 보고 넘어간다.
+  if (!ctx) return undefined;
+  ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+  let data;
+  try {
+    data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+  } catch {
+    return undefined;
+  } finally {
+    canvas.width = 0;
+    canvas.height = 0;
+  }
+
+  const hist = new Uint32Array(256);
+  const total = data.length / 4;
+  for (let i = 0; i < data.length; i += 4) {
+    // 정수로 내려야 한다. 소수 자리가 남으면 배열이 아니라 이름표로 들어가서 아무 데도
+    // 안 쌓이고, 히스토그램이 통째로 0이 된다.
+    hist[((data[i] * 299 + data[i + 1] * 587 + data[i + 2] * 114) / 1000) | 0] += 1;
+  }
+  let peak = 0;
+  for (let value = 1; value < 256; value += 1) if (hist[value] > hist[peak]) peak = value;
+
+  let background = 0;
+  for (let value = Math.max(0, peak - 12); value <= Math.min(255, peak + 12); value += 1) {
+    background += hist[value];
+  }
+  return 1 - background / total;
 }
 
 // ── 막대가 있는지만 본다 (읽지는 않는다) ──────────────────────────────────
@@ -597,7 +665,7 @@ function readFromGallery(image) {
  *                 묶는 규칙은 같아서, 그 한 걸음만 밖에서 넘겨받는다.
  *                 사진첩은 네이티브에게 묻고, 직접 고른 사진은 브라우저에서 줄인다.
  */
-async function collect({ images, read: readImage, pass, isRegistered, skipCodes, onProgress, onCandidate, signal }) {
+async function collect({ images, read: readImage, pass, isRegistered, skipCodes, onProgress, onCandidate, signal, attachLoners = false }) {
   const candidates = [];
   // 바코드 값 → 그 값을 가진 후보. 같은 기프티콘의 사진 여러 장을 한 후보로 모은다.
   const seenCodes = new Map();
@@ -642,7 +710,9 @@ async function collect({ images, read: readImage, pass, isRegistered, skipCodes,
     }
     if (!found?.code) {
       // 막대로 보이는지를 함께 들고 간다. 화면이 "여기 있을지도 모른다"고 말할 때 쓴다.
-      missed.push(found?.bars ? { ...image, bars: true } : image);
+      // 직접 고른 사진일 때는 읽어둔 그림도 들고 간다 — 아래에서 한 건에 붙일 수 있다.
+      // 사진첩 훑기에서는 안 들고 간다. 수백 장 분의 base64가 그대로 쌓인다.
+      missed.push({ ...image, bars: Boolean(found?.bars), ...(attachLoners ? { data: read.data } : null) });
       continue;
     }
 
@@ -655,7 +725,7 @@ async function collect({ images, read: readImage, pass, isRegistered, skipCodes,
     const already = seenCodes.get(found.code);
     if (already) {
       if (already.shots.length < COLLECT_PER_CODE) {
-        already.shots.push({ data: read.data, bucket: image.bucket, coverage: found.coverage });
+        already.shots.push({ data: read.data, bucket: image.bucket, coverage: found.coverage, ink: found.ink });
       }
       continue;
     }
@@ -677,7 +747,7 @@ async function collect({ images, read: readImage, pass, isRegistered, skipCodes,
       codeType: found.codeType,
       // 고르기 전의 사진 조각들. 같은 번호의 사진이 더 나오면 여기에 붙고,
       // 훑기가 끝나면 아래에서 골라 images로 옮긴다.
-      shots: [{ data: read.data, bucket: image.bucket, coverage: found.coverage }],
+      shots: [{ data: read.data, bucket: image.bucket, coverage: found.coverage, ink: found.ink }],
       // 화면이 곧바로 쓰는 미리보기. 아래에서 고른 결과로 갈아끼워진다.
       //
       // 예전에는 여기에도 위의 조각 객체를 그대로 넣었는데, 화면은 이걸 base64 문자열로
@@ -692,6 +762,31 @@ async function collect({ images, read: readImage, pass, isRegistered, skipCodes,
     // 자리에서 읽기까지 건다 — 다 끝난 뒤에 한꺼번에 보여주면 그동안 아무 일도 안
     // 일어나는 것처럼 보인다.
     onCandidate?.(candidate);
+  }
+
+  // 바코드가 없는 사진을 한 건에 붙인다 — 후보가 하나뿐일 때만.
+  //
+  // 원칙은 빼는 것이다. 여러 기프티콘이 섞여 있으면 바코드 없는 사진이 어느 것 옆에
+  // 붙는지 알 방법이 없고, 짐작해서 붙이면 틀릴 때 남의 금액과 기한이 조용히 박힌다.
+  //
+  // 그런데 후보가 하나뿐이면 헷갈릴 것이 없다. 한 번에 골라 온 사진들이고 붙을 곳이
+  // 하나다. 실제로 흔한 모양이다 — 원본 하나, 계산대용 바코드 캡처 하나, 금액이 적힌
+  // 정보 캡처 하나. 셋이 같은 기프티콘인데 정보 캡처만 "어느 것인지 몰라서 뺐어요"로
+  // 빠지면, 정작 금액이 적힌 사진을 우리 손으로 버리는 셈이다.
+  //
+  // 막대로 보이는 사진은 붙이지 않는다. 그건 우리가 못 읽었을 뿐 다른 기프티콘일 수
+  // 있다(카톡이 404픽셀로 줄여 보낸 카드가 그렇다). 그런 것은 안내로 알린다.
+  let loners = [];
+  if (attachLoners && candidates.length === 1) {
+    loners = missed.filter((image) => !image.bars && image.data);
+    if (loners.length > 0) {
+      candidates[0].extras = loners.map((image) => image.data);
+      // 붙였으면 못 읽은 것이 아니다. 세는 쪽에서도 빠져야 안내가 맞는 말이 된다.
+      const attached = new Set(loners.map((image) => image.id));
+      for (let i = missed.length - 1; i >= 0; i -= 1) {
+        if (attached.has(missed[i].id)) missed.splice(i, 1);
+      }
+    }
   }
 
   // 모아둔 사진 중 등록에 넘길 것을 고른다.
@@ -718,6 +813,17 @@ async function collect({ images, read: readImage, pass, isRegistered, skipCodes,
     // 작게 찍힌 다른 기프티콘이 통째로 옆 건에 합쳐진다.
     candidate.tooSmall = meaningful.length === 0;
 
+    // 읽을 것이 없는 사진은 먼저 물린다.
+    //
+    // 폴더를 알 때는 원본 폴더가 곧 답이었다. 그런데 직접 고른 사진(+)에는 폴더가 없다 —
+    // 아래 원본 우선 규칙이 통째로 꺼지고, 남는 기준이 "바코드가 크게 찍힌 순서" 하나라
+    // 바코드만 큰 캡처가 늘 1등이었다. 상품명도 기한도 없는 사진이 대표로 올라갔다.
+    //
+    // 그래서 그림이 얼마나 차 있는지로 한 번 거른다(infoInk). 폴더를 몰라도 되고,
+    // 상세화면을 통째로 찍은 캡처처럼 정보가 있는 캡처는 그대로 통과한다.
+    const informative = usable.filter((shot) => !(shot.ink < MIN_INFO_INK));
+    const readable = informative.length > 0 ? informative : usable;
+
     // 원본이 하나라도 있으면 캡처는 아예 보내지 않는다.
     //
     // 원본에는 상품명·금액·유효기간이 다 적혀 있어서 캡처가 더해줄 게 없다. 반면 해가 될
@@ -726,13 +832,18 @@ async function collect({ images, read: readImage, pass, isRegistered, skipCodes,
     //
     // 빈칸으로 남는 것보다 틀린 값이 들어가는 쪽이 나쁘다. 기한이 틀리면 알림이 엉뚱한
     // 날에 오고, 정작 만료되는 날에는 아무 말이 없다.
-    const originals = usable.filter((shot) => isOriginal(shot.bucket));
-    const pool = originals.length > 0 ? originals : usable;
+    const originals = readable.filter((shot) => isOriginal(shot.bucket));
+    const pool = originals.length > 0 ? originals : readable;
 
     const sorted = [...pool].sort((a, b) => b.coverage - a.coverage);
-    candidate.images = sorted.slice(0, IMAGES_PER_CODE).map((shot) => shot.data);
+    // 위에서 붙인 '바코드 없는 사진'은 자리를 먼저 받는다. 금액이나 기한이 적힌 사진이라
+    // 붙인 것이고, 바코드가 찍힌 사진은 어차피 하나면 족하다.
+    const extras = candidate.extras || [];
+    const room = Math.max(1, IMAGES_PER_CODE - extras.length);
+    candidate.images = [...sorted.slice(0, room).map((shot) => shot.data), ...extras].slice(0, IMAGES_PER_CODE);
     // 다 골랐으면 나머지 조각은 놓는다. 한 장이 수백 KB라 후보 몇 개만 되어도 쌓인다.
     candidate.shots = null;
+    candidate.extras = null;
   });
 
   onProgress?.({ scanned: images.length, total: images.length, found: candidates.length });
@@ -868,6 +979,8 @@ export async function groupImages(files, { isRegistered, onProgress, onCandidate
     pass: quick ? SHALLOW : DEEP,
     isRegistered,
     skipCodes,
+    // 골라 온 사진 몇 장뿐이라, 바코드 없는 사진을 한 건에 붙일 수 있다(collect 참고).
+    attachLoners: true,
     onProgress,
     onCandidate,
     signal,
@@ -884,8 +997,14 @@ export async function groupImages(files, { isRegistered, onProgress, onCandidate
       readFailed,
       found: candidates.length + knownCodes.size,
       alreadyHave: knownCodes.size,
-      // 바코드가 없어서 어느 기프티콘 것인지 모르는 사진. 화면이 뺐다고 말해줘야 한다.
-      noCode: missed.length,
+      // 뺀 사진을 두 갈래로 나눠 센다. 화면이 하는 말이 달라서다.
+      //   noCode    — 바코드가 아예 없는 사진. 어느 기프티콘 것인지 몰라서 뺐다.
+      //               (후보가 한 건뿐이면 그 건에 붙였으므로 여기서 빠져 있다.)
+      //   unreadable — 막대는 보이는데 못 읽은 사진. 기프티콘일 텐데 우리가 놓친 것이라,
+      //               직접 등록으로 올려달라고 해야 한다. 카톡이 404픽셀로 줄여 보낸
+      //               배스킨 카드가 여기 걸린다.
+      noCode: missed.filter((image) => !image.bars).length,
+      unreadable: missed.filter((image) => image.bars).length,
       tooSmall: candidates.filter((c) => c.tooSmall).length,
     },
   };

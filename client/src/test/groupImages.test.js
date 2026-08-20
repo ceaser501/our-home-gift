@@ -9,6 +9,10 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 
 // 파일 이름 → 그 사진에서 읽힐 바코드. 테스트마다 갈아끼운다.
 let barcodes = new Map();
+// 파일 이름 → 그 사진의 픽셀 모양. { ink } 는 그림이 얼마나 차 있는지(infoInk가 보는 값),
+// { bars: true } 는 세로 줄무늬(looksLikeBarcode가 막대로 보는 것). 안 적으면 못 보는
+// 사진으로 둔다 — 실제 앱에서도 캔버스를 못 읽으면 그렇게 넘어간다.
+let pixels = new Map();
 
 vi.mock('@capacitor/core', () => ({ registerPlugin: () => ({}) }));
 
@@ -43,6 +47,7 @@ const { groupImages } = await import('../utils/gallery');
 beforeEach(() => {
   vi.restoreAllMocks();
   barcodes = new Map();
+  pixels = new Map();
   localStorage.clear();
 
   let loading = null;
@@ -75,6 +80,33 @@ beforeEach(() => {
         },
         set imageSmoothingEnabled(_v) {},
         set imageSmoothingQuality(_v) {},
+        getImageData(_x, _y, width, height) {
+          const spec = pixels.get(el.dataset.name);
+          if (!spec) throw new Error('픽셀을 볼 수 없음');
+          const data = new Uint8ClampedArray(width * height * 4).fill(255);
+          if (spec.bars) {
+            // 줄마다 같은 자리에서 밝기가 뒤집히는 세로 줄무늬. 막대의 조건이다.
+            for (let y = 0; y < height; y += 1) {
+              for (let x = 0; x < width; x += 1) {
+                const value = x % 4 < 2 ? 0 : 255;
+                const i = (y * width + x) * 4;
+                data[i] = value;
+                data[i + 1] = value;
+                data[i + 2] = value;
+              }
+            }
+          } else {
+            // 흰 바탕에 정해준 비율만큼 잉크를 칠한다.
+            const inked = Math.round(width * height * (spec.ink ?? 0));
+            for (let p = 0; p < inked; p += 1) {
+              const i = p * 4;
+              data[i] = 0;
+              data[i + 1] = 0;
+              data[i + 2] = 0;
+            }
+          }
+          return { data };
+        },
       });
       // 줄인 base64. 실제 픽셀은 볼 일이 없다.
       el.toDataURL = () => `data:image/jpeg;base64,${btoa(el.dataset.name || 'x')}`;
@@ -83,6 +115,8 @@ beforeEach(() => {
   });
 });
 
+// 파일 이름은 아스키로 둔다. 아래 가짜 캔버스가 이름을 btoa로 감싸 base64를 흉내내는데,
+// btoa는 한글을 못 받고 통째로 예외를 낸다 — 사진을 못 읽은 것으로 취급되어 후보가 0이 된다.
 function pick(name) {
   return new File(['x'], name, { type: 'image/jpeg' });
 }
@@ -153,17 +187,61 @@ describe('groupImages — 고른 사진을 묶는다', () => {
     expect(tally.alreadyHave).toBe(1);
   });
 
-  it('바코드를 못 읽은 사진은 missed로 돌려준다', async () => {
-    barcodes.set('a.jpg', { code: '111', coverage: 0.6 });
-    // b.jpg는 등록하지 않는다 — 판독기가 못 찾는다.
+  // 원본 하나, 계산대용 바코드 캡처 하나, 금액이 적힌 정보 캡처 하나 — 흔한 모양이다.
+  // 정보 캡처는 바코드가 없지만 붙을 곳이 하나뿐이라 헷갈릴 것이 없다. 예전에는 이것도
+  // "어느 기프티콘 것인지 몰라서 뺐어요"로 빠져서, 금액이 적힌 사진을 우리 손으로 버렸다.
+  it('후보가 하나면 바코드 없는 사진을 그 건에 붙인다', async () => {
+    barcodes.set('original.jpg', { code: '111', coverage: 0.5 });
+    // 정보캡처.jpg는 등록하지 않는다 — 바코드가 없다.
 
-    const { candidates, missed, tally } = await groupImages([pick('a.jpg'), pick('b.jpg')]);
+    const { candidates, missed, tally } = await groupImages([pick('original.jpg'), pick('info-shot.jpg')]);
 
     expect(candidates).toHaveLength(1);
+    expect(candidates[0].images).toContain(btoa('info-shot.jpg'));
+    // 붙였으면 뺀 것이 아니다. 세는 쪽에서도 빠져야 안내가 맞는 말이 된다.
+    expect(missed).toHaveLength(0);
+    expect(tally.noCode).toBe(0);
+  });
+
+  it('후보가 여럿이면 붙이지 않고 뺀다 — 어느 것 옆에 붙는지 알 수 없다', async () => {
+    barcodes.set('a.jpg', { code: '111', coverage: 0.6 });
+    barcodes.set('b.jpg', { code: '222', coverage: 0.6 });
+
+    const { candidates, missed, tally } = await groupImages([pick('a.jpg'), pick('b.jpg'), pick('c.jpg')]);
+
+    expect(candidates).toHaveLength(2);
     expect(missed).toHaveLength(1);
-    // 화면이 "몇 장을 뺐다"고 말해줘야 해서 개수도 같이 돌려준다. 아무 말 없이 빼면
-    // 사용자는 금액이 빈칸인 걸 보고 왜 안 읽혔는지 모른다.
     expect(tally.noCode).toBe(1);
+  });
+
+  // 카톡이 404픽셀로 줄여 보낸 배스킨 카드가 여기 걸린다. 우리가 못 읽었을 뿐 다른
+  // 기프티콘일 수 있으니 옆 건에 붙이지 않는다. 대신 직접 올려달라고 알린다.
+  it('막대로 보이는데 못 읽은 사진은 붙이지 않고 따로 센다', async () => {
+    barcodes.set('original.jpg', { code: '111', coverage: 0.5 });
+    pixels.set('baskin.jpg', { bars: true });
+
+    const { candidates, missed, tally } = await groupImages([pick('original.jpg'), pick('baskin.jpg')]);
+
+    expect(candidates[0].images).not.toContain(btoa('baskin.jpg'));
+    expect(missed).toHaveLength(1);
+    expect(tally.unreadable).toBe(1);
+    expect(tally.noCode).toBe(0);
+  });
+
+  // 폴더를 모르는 사진(직접 고른 것)에서 무엇을 대표로 보낼지.
+  //
+  // 예전에는 "바코드가 크게 찍힌 순서"뿐이라 바코드만 큰 캡처가 늘 1등이었다. 상품명도
+  // 기한도 없는 그림이 모델에게 갔고, 사용자에게는 "원본을 놔두고 스크린샷을 잡는다"로
+  // 보였다. 실측값은 gallery.js의 MIN_INFO_INK 주석에 있다.
+  it('바코드만 큰 캡처보다 글자가 있는 원본을 먼저 보낸다', async () => {
+    barcodes.set('original.jpg', { code: '111', coverage: 0.45 });
+    barcodes.set('barcode-shot.jpg', { code: '111', coverage: 0.9 });
+    pixels.set('original.jpg', { ink: 0.4 });
+    pixels.set('barcode-shot.jpg', { ink: 0.03 });
+
+    const { candidates } = await groupImages([pick('barcode-shot.jpg'), pick('original.jpg')]);
+
+    expect(candidates[0].images[0]).toBe(btoa('original.jpg'));
   });
 
   it('한 건뿐이면 후보도 하나다 — 등록 창이 이걸 보고 넘길지 정한다', async () => {
