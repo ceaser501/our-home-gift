@@ -860,60 +860,47 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
    * 번호가 나온 것은 딴 물건이고(파인트 아이스크림 쿠폰), 안 나온 것은 곁가지 사진이다
    * (금액만 적힌 정보 캡처).
    *
-   * 곁가지는 어느 건에 붙는지 알 수 없는 게 원칙이다. 다만 번호가 있는 후보가 하나뿐이면
-   * 헷갈릴 것이 없다 — 한 번에 골라 온 사진이고 붙을 곳이 하나다. 그때만 접는다.
+   * 곁가지는 어느 건에 붙는지 알 수 없는 게 원칙이라, 번호가 있는 후보가 하나뿐일 때만
+   * 붙인다. 여럿이면 그냥 뺀다 — 카드로 남겨두면 "바코드 번호를 못 읽었어요"가 목록에
+   * 걸려서, 사용자는 앱이 뭔가 실패한 줄 안다. 실은 곁가지를 발라낸 것이다. 말없이 뺀다.
    *
-   * 접는 방법은 빈칸 채우기다. 이미 읽힌 값은 건드리지 않는다 — 예전에 투썸 원본에서
-   * 상품명이 제대로 들어간 상태에서 금액 화면을 더했더니, 거기서 읽은 '16,600원'이
-   * 상품명 자리에 들어앉은 적이 있다.
-   *
-   * 서버에 다시 묻지 않는다. 이미 받아둔 답끼리 합치는 것뿐이다.
+   * 붙일 때는 합쳐서 한 번 더 읽는다. 따로 읽은 답을 이어 붙이는 것으로는 모자랐다 —
+   * 금액이 적힌 정보 캡처를 혼자 보여주면 그게 무엇의 금액인지 몰라서 서버가 비워 온다.
+   * 원본과 나란히 놓고 봐야 채워진다. 원래 한 장으로 올릴 때 되던 것이 그것이다.
    *
    * 'done'으로 넘어가기 전에 불러야 한다. 그 뒤에는 미리 올리기가 시작되는데, 올리는
    * 일은 후보 id로 한 번만 도므로 나중에 붙인 사진이 스토리지에 안 올라간다.
    */
-  function foldRescued() {
+  async function foldRescued(controller) {
     const items = found0Ref.current;
     const hasCode = (item) => Boolean(item.code || item.info?.code);
     const hosts = items.filter((item) => !item.rescued || hasCode(item));
-    const loners = items.filter((item) => item.rescued && !hasCode(item) && item.prepared);
-    if (hosts.length !== 1 || loners.length === 0) return;
-
-    const host = hosts[0];
-    const pick = (field) =>
-      host.info?.[field] || loners.map((loner) => loner.info?.[field]).find(Boolean) || host.info?.[field] || null;
-
-    const info = host.info
-      ? {
-          ...host.info,
-          name: pick('name'),
-          brand: pick('brand'),
-          amount: pick('amount'),
-          expiresAt: pick('expiresAt'),
-          category: pick('category'),
-        }
-      : host.info;
-
-    const folded = {
-      ...host,
-      info,
-      missing: info ? missingFields(info, host.code) : host.missing,
-      images: [...(host.images || []), ...loners.flatMap((loner) => loner.images || [])],
-      prepared: host.prepared
-        ? {
-            ...host.prepared,
-            storageFiles: [
-              ...host.prepared.storageFiles,
-              ...loners.flatMap((loner) => loner.prepared?.storageFiles || []),
-            ],
-          }
-        : host.prepared,
-    };
+    const loners = items.filter((item) => item.rescued && !hasCode(item));
+    if (loners.length === 0) return;
 
     const dropped = new Set(loners.map((loner) => loner.id));
-    const next = items
-      .filter((item) => !dropped.has(item.id))
-      .map((item) => (item.id === host.id ? folded : item));
+    let next = items.filter((item) => !dropped.has(item.id));
+
+    // 붙일 곳이 하나뿐일 때만 합친다.
+    const host = hosts.length === 1 ? hosts[0] : null;
+    if (host?.prepared) {
+      const files = [
+        ...host.prepared.storageFiles,
+        ...loners.flatMap((loner) => loner.prepared?.storageFiles || []),
+      ];
+      const read = await readOne(host, files);
+      if (controller.signal.aborted) return;
+      // 다시 읽다가 막혔으면 먼저 읽은 답을 지키고 사진만 붙인다. 빈칸이 남는 것이
+      // 이미 읽어둔 상품명을 잃는 것보다 낫다.
+      const folded = {
+        ...host,
+        ...(read.info ? read : {}),
+        images: [...(host.images || []), ...loners.flatMap((loner) => loner.images || [])],
+        prepared: read.info ? read.prepared : { ...host.prepared, storageFiles: files },
+      };
+      next = next.map((item) => (item.id === host.id ? folded : item));
+    }
+
     found0Ref.current = next;
     setCandidates(next);
   }
@@ -964,7 +951,8 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
     if (append) return;
 
     // 곁가지로 밝혀진 카드를 접는다. 'done' 전에 해야 한다(foldRescued 주석 참고).
-    if (picked) foldRescued();
+    if (picked) await foldRescued(controller);
+    if (controller.signal.aborted) return;
     // 진행률 그리기를 멈춘다. 여기서부터 늦게 돌아오는 것은 정밀 탐색 몫이라,
     // 계속 세면 끝난 막대가 다시 움직인다.
     readTallyRef.current = { done: 0, total: 0 };

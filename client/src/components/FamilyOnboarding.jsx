@@ -160,9 +160,8 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
               적는 곳인지 눈으로 잡히지 않는다. */}
           <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-4">
             <div className="flex flex-col gap-1.5">
-              {/* '이름'만 적으면 무엇의 이름인지 묻게 된다. 바로 아래가 '내 이름'이라
-                  더 그렇다. '가족 이름'도 아니다 — 혼자 쓰는 사람에게는 맞지 않는 말이다. */}
-              <Label htmlFor="fam-name">공간 이름</Label>
+              {/* '이름'만 적으면 무엇의 이름인지 묻게 된다. 바로 아래가 '내 이름'이라 더 그렇다. */}
+              <Label htmlFor="fam-name">가족 이름</Label>
               {/* autoComplete="off": 예전에 적었던 값이 아래로 뜨지 않게 한다. */}
               <Input
                 id="fam-name"
@@ -179,7 +178,7 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
                 id="fam-my-name"
                 value={memberName}
                 onChange={(e) => setMemberName(e.target.value)}
-                placeholder="아들"
+                placeholder="아빠, 엄마, 아들, 딸"
                 autoComplete="off"
                 required
               />
@@ -212,7 +211,7 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
                 id="fam-join-name"
                 value={memberName}
                 onChange={(e) => setMemberName(e.target.value)}
-                placeholder="아들"
+                placeholder="아빠, 엄마, 아들, 딸"
                 autoComplete="off"
                 required
               />

@@ -33,13 +33,18 @@ vi.mock('../utils/gallery', async () => {
 
 vi.mock('../utils/imageAnalyze', () => ({
   // 캔버스와 zxing이 도는 자리. jsdom에는 캔버스가 없다.
-  prepareImages: vi.fn(async () => ({
-    code: null,
-    codeType: null,
-    barcodeCropBlob: null,
-    storageFiles: [new File(['x'], 'a.jpg', { type: 'image/jpeg' })],
-    uploads: [{ mediaType: 'image/jpeg', data: 'AAAA' }],
-  })),
+  // 넘겨받은 사진 수를 그대로 들고 나간다. 몇 장을 함께 보고 읽었는지가 답을 가르는
+  // 자리가 있어서다 — 금액만 적힌 캡처는 혼자 보면 무엇의 금액인지 알 수 없다.
+  prepareImages: vi.fn(async (files) => {
+    const shots = files?.length ? files : [new File(['x'], 'a.jpg', { type: 'image/jpeg' })];
+    return {
+      code: null,
+      codeType: null,
+      barcodeCropBlob: null,
+      storageFiles: shots,
+      uploads: shots.map(() => ({ mediaType: 'image/jpeg', data: 'AAAA' })),
+    };
+  }),
   readGifticonInfo: (...args) => readGifticonInfo(...args),
 }));
 
@@ -243,11 +248,12 @@ describe('GalleryScanSheet', () => {
       scanned: 2,
       tally: { readFailed: 0, found: 1, alreadyHave: 0, noCode: 1 },
     });
-    readGifticonInfo.mockImplementation(async (_prepared, opts) =>
-      opts?.knownCode === '111'
-        ? { ...info('111', '아이스 아메리카노'), amount: null }
-        : { ...info(null, ''), code: null, name: '', amount: '5000' }
-    );
+    // 원본만 혼자 보면 금액이 없고, 정보 캡처와 나란히 놓고 봐야 채워진다.
+    readGifticonInfo.mockImplementation(async (prepared, opts) => {
+      if (opts?.knownCode !== '111') return { ...info(null, ''), code: null, name: '', amount: '5000' };
+      const together = prepared.uploads.length > 1;
+      return { ...info('111', '아이스 아메리카노'), amount: together ? '5000' : null };
+    });
 
     const files = [new File(['x'], '1.jpg'), new File(['x'], '2.jpg')];
     render(<GalleryScanSheet files={files} onRegistered={() => {}} onClose={() => {}} />);
@@ -281,6 +287,28 @@ describe('GalleryScanSheet', () => {
     expect(await screen.findByText('파인트 아이스크림', {}, { timeout: 3000 })).toBeTruthy();
     (await screen.findByRole('button', { name: /2개 등록/ }, { timeout: 3000 })).click();
     await waitFor(() => expect(createGifticon).toHaveBeenCalledTimes(2), { timeout: 3000 });
+  });
+
+  // 붙일 곳이 둘이면 곁가지는 말없이 뺀다.
+  //
+  // 카드로 남겨두면 "바코드 번호를 못 읽었어요"가 목록에 걸려서, 사용자는 앱이 뭔가
+  // 실패한 줄 안다. 실은 곁가지를 발라낸 것이다.
+  it('붙일 곳이 여럿이면 곁가지 카드를 남기지 않는다', async () => {
+    groupImages.mockResolvedValue({
+      candidates: [candidate('a', '111'), candidate('b', '222')],
+      missed: [{ id: 'm1', name: 'info.jpg', bucket: null, addedAt: 1, bars: false, data: 'BBBB' }],
+      scanned: 3,
+      tally: { readFailed: 0, found: 2, alreadyHave: 0, noCode: 1 },
+    });
+    readGifticonInfo.mockImplementation(async (_prepared, opts) =>
+      opts?.knownCode ? info(opts.knownCode, `상품 ${opts.knownCode}`) : { ...info(null, ''), code: null, name: '' }
+    );
+
+    const files = [new File(['x'], '1.jpg'), new File(['x'], '2.jpg'), new File(['x'], '3.jpg')];
+    render(<GalleryScanSheet files={files} onRegistered={() => {}} onClose={() => {}} />);
+
+    expect(await screen.findByRole('button', { name: /2개 등록/ }, { timeout: 3000 })).toBeTruthy();
+    expect(screen.queryByText(/바코드 번호/)).toBeNull();
   });
 
   // 이미 있는 번호는 넣지 않는다.
