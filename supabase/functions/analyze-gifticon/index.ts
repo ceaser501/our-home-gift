@@ -183,12 +183,25 @@ function buildSchema(categories: string[]) {
   return {
     type: 'object',
     properties: {
-      name: { type: 'string', description: '상품명. 못 찾으면 빈 문자열' },
+      name: {
+        type: 'string',
+        // 카드가 스스로 이름표를 달아둔 경우가 있다. 그 값을 그대로 쓰라고 못 박는다.
+        //
+        // AddCON 상품권에서 상품명이 통째로 비어 등록이 막힌 적이 있다. 카드에는
+        // '상품명 : 벤슨'이라고 적혀 있었는데, 벤슨이 브랜드처럼 생겨서 상호 자리로
+        // 갔고 상품명은 빈칸으로 남았다. 상품명이 비면 등록 자체가 안 된다.
+        description:
+          '상품명. 카드에 "상품명"이라고 적힌 값이 있으면 그것을 그대로 쓴다. 못 찾으면 빈 문자열',
+      },
       nameImage: {
         type: 'integer',
         description: '상품명이 인쇄된 이미지가 몇 번째인지(1부터). 못 찾으면 0',
       },
-      brand: { type: 'string', description: '상호(브랜드). 못 찾으면 빈 문자열' },
+      brand: {
+        type: 'string',
+        description:
+          '상호(브랜드). 카드에 "교환처"나 "사용처"가 적혀 있으면 그 값. 없으면 이 상품을 파는 곳의 이름. 상품명과 같은 값을 넣지 않는다. 못 찾으면 빈 문자열',
+      },
       amount: { type: 'string', description: '금액. 숫자만(쉼표 없이). 인쇄돼 있지 않으면 빈 문자열' },
       expiresAt: {
         type: 'string',

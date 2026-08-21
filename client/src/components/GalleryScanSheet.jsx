@@ -1716,7 +1716,8 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
                   {/* 다음에도 올라온다는 걸 못 박아둔다. 여기서 사라졌다고 생각하면
                       그 기프티콘은 영영 안 들어간다. */}
                   <p className="m-0 border-t border-warning/30 pt-2.5 text-sm break-keep text-muted-foreground">
-                    다음에 찾을 때 다시 보여드려요. + 로 직접 올려도 돼요.
+                    다음에 찾을 때 다시 보여드려요.
+                    <br />+ 로 직접 올려도 돼요.
                   </p>
                 </div>
               )}

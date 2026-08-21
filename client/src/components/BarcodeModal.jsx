@@ -21,6 +21,21 @@ const ZXING_TO_JSBARCODE = {
   CODABAR: 'codabar',
 };
 
+// 사람에게 불러줄 번호.
+//
+// QR에는 값만 들어 있지 않다. 편의점 쿠폰은 이런 모양이다 — IX;1;9816401685019;;
+// 그림을 다시 그릴 때는 이 껍데기까지 그대로여야 리더기가 원본과 같게 읽는다. 그런데
+// 점원이 "번호 불러주세요" 할 때 읽어야 하는 것은 그 안의 9816401685019다.
+//
+// 숫자 덩어리가 하나일 때만 벗긴다. 둘 이상이면 어느 쪽이 번호인지 알 수 없어서
+// 원래 값을 그대로 보여준다 — 잘못된 번호를 자신 있게 보여주는 것이 제일 나쁘다.
+export function readableCode(code) {
+  const value = String(code || '');
+  if (!value || /^[0-9]+$/.test(value)) return value;
+  const runs = value.match(/[0-9]{6,}/g);
+  return runs && runs.length === 1 ? runs[0] : value;
+}
+
 export default function BarcodeModal({ gifticon, onClose, onUsed, onSpend }) {
   // 뒤로가기로 이 창을 닫는다. 안 그러면 설치해서 쓸 때 앱이 통째로 꺼진다.
   useBackClose(onClose);
@@ -86,6 +101,8 @@ export default function BarcodeModal({ gifticon, onClose, onUsed, onSpend }) {
   }, [gifticon, canvas]);
 
   if (!gifticon) return null;
+
+  const humanCode = readableCode(gifticon.code);
 
   // 원본 사진은 이 창 안에서 갈아끼운다. 창을 하나 더 띄우면 목록 → 바코드 → 사진으로
   // 세 겹이 쌓여서, 닫기를 몇 번 눌러야 하는지 헷갈린다.
@@ -174,9 +191,9 @@ export default function BarcodeModal({ gifticon, onClose, onUsed, onSpend }) {
             <div className="flex flex-col items-center gap-1">
               <div className="flex items-center gap-1">
                 <p className="m-0 text-center font-mono text-sm tracking-wide break-all text-muted-foreground">
-                  바코드정보: {gifticon.code}
+                  바코드정보: {humanCode}
                 </p>
-                <CopyButton value={gifticon.code} label="복사" />
+                <CopyButton value={humanCode} label="복사" />
               </div>
               {renderError && !gifticon.barcode_image_url && (
                 <p className="m-0 text-center text-xs break-keep text-muted-foreground">
