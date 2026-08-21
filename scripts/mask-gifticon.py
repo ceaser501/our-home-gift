@@ -21,6 +21,34 @@ def overlap(a,b):
     if not a or not b: return 0
     s=set(b); return sum(1 for x in a if x in s)/len(a)
 
+def dark_band(im,w=360):
+    """어두운 픽셀이 몰려 있는 가로 구간. QR처럼 네모난 코드를 잡는다.
+
+    막대는 줄 하나가 가늘어서 뒤집힘으로 찾지만(band), QR은 네모라 그 방식으로는
+    가운데 몇 줄만 걸린다 — 실제로 QR의 위아래가 그대로 드러났다. 여기서는 잉크가
+    얼마나 몰려 있는지로 본다."""
+    h=max(1,round(im.height*w/im.width))
+    g=im.convert('L').resize((w,h)); px=g.load()
+    # 좌우 끝은 여백이라 가운데만 본다.
+    x0,x1=round(w*0.25),round(w*0.75)
+    ratio=[sum(1 for x in range(x0,x1) if px[x,y]<128)/(x1-x0) for y in range(h)]
+    runs=[]; start=None
+    for y,r in enumerate(ratio):
+        if r>=0.20:
+            if start is None: start=y
+        elif start is not None:
+            runs.append((start,y-1)); start=None
+    if start is not None: runs.append((start,h-1))
+    # QR은 줄마다 잉크 양이 들쭉날쭉해서 중간에 끊긴다. 가까운 구간은 이어 붙인다.
+    merged=[]
+    for r in runs:
+        if merged and r[0]-merged[-1][1] <= round(h*0.03): merged[-1]=(merged[-1][0], r[1])
+        else: merged.append(r)
+    runs=[r for r in merged if r[1]-r[0]>=round(h*0.02)]
+    if not runs: return None
+    top,bottom=max(runs,key=lambda r:r[1]-r[0])
+    return top,bottom,h
+
 def band(im,w=360):
     h=max(1,round(im.height*w/im.width))
     g=im.convert('L').resize((w,h)); px=g.load()
@@ -38,6 +66,12 @@ def band(im,w=360):
     runs=[r for r in runs if r[1]-r[0]>=4]
     if not runs: return None
     top,bottom=max(runs,key=lambda r:r[1]-r[0])
+
+    # 잉크가 몰린 구간과 겹치면 그쪽까지 넓힌다. QR은 이 손질이 없으면 위아래가 드러난다.
+    dark=dark_band(im,w)
+    if dark and not (dark[1]<top or dark[0]>bottom):
+        top=min(top,dark[0]); bottom=max(bottom,dark[1])
+
     bottom=min(h-1,bottom+round(h*0.10)); top=max(0,top-round(h*0.012))
     return round(top*im.height/h), round((bottom+1)*im.height/h), (bottom-top)/h
 

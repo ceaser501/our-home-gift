@@ -19,11 +19,12 @@
 
 | | | | |
 | --- | --- | --- | --- |
-| <img src="images/kakao-original.png" width="180"><br>**1. 카카오톡 원본** 800×1670<br>줄여서 읽음 | <img src="images/giftishow-square.png" width="180"><br>**2. 기프티쇼** 450×450<br>원본 크기로 읽음 | <img src="images/baskin-shrunk.png" width="180"><br>**6. 카톡이 줄인 배스킨** 404×677<br>못 읽음 → 서버가 숫자를 읽음 | <img src="images/gift-screenshot.png" width="180"><br>**10. 선물하기 캡처**<br>읽음. 대표는 원본에 양보 |
+| <img src="images/kakao-original.png" width="150"><br>**1. 카카오톡 원본**<br>800×1670 · 줄여서 읽음 | <img src="images/giftishow-square.png" width="150"><br>**2. 기프티쇼 정사각**<br>450×450 · 원본 크기로 | <img src="images/giftishow-emart.png" width="150"><br>**3. 기프티쇼 (이마트·GS칼텍스)**<br>450×450 · 금액권 | <img src="images/gsn-coupon.png" width="150"><br>**4. GS&쿠폰**<br>폰 캡처 · 위아래 검은 여백 |
+| <img src="images/starbucks-egift.png" width="150"><br>**5. 스타벅스 카드 e-Gift**<br>기한이 "5년"이라 빈칸 | <img src="images/baskin-shrunk.png" width="150"><br>**6. 카톡이 줄인 배스킨**<br>404×677 · **못 읽음** → 서버가 숫자를 | <img src="images/convenience-qr.png" width="150"><br>**7. 편의점 QR**<br>`IX;1;…;;` 껍데기째 다시 그림 | <img src="images/addcon.png" width="150"><br>**9. AddCON 상품권**<br>상품명이 상호로 새던 카드 |
+| <img src="images/gift-screenshot.png" width="150"><br>**10. 선물하기 캡처**<br>읽힘. 대표는 원본에 양보 | <img src="images/giftishow-biz.png" width="150"><br>**기프티쇼 biz**<br>3번과 같은 갈래 | | |
 
-나머지 유형은 그림이 없다. 채팅으로 받은 사진이 디스크에 안 남아서다 —
-**QR(파인트 편의점), 글자만 있는 쿠폰(파인트), AddCON 상품권, GS&쿠폰, 스타벅스 e-Gift,
-기프티쇼 가로형, 목록 화면 캡처.** 다시 올려주시면 같은 방식으로 붙인다.
+**8. 글자만 있는 쿠폰(파인트)**과 **12. 목록 화면 캡처**는 그림이 없다. 채팅으로 받은
+사진이 디스크에 안 남았다. 8번은 이번 작업(2-5)의 이유가 된 유형이라 있으면 좋다.
 
 | # | 유형 | 크기 | 브라우저가 바코드를 | 실제 결과 |
 | --- | --- | --- | --- | --- |
