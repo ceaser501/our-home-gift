@@ -191,20 +191,24 @@ describe('groupImages — 고른 사진을 묶는다', () => {
     expect(tally.alreadyHave).toBe(1);
   });
 
-  // 원본 하나, 계산대용 바코드 캡처 하나, 금액이 적힌 정보 캡처 하나 — 흔한 모양이다.
-  // 정보 캡처는 바코드가 없지만 붙을 곳이 하나뿐이라 헷갈릴 것이 없다. 예전에는 이것도
-  // "어느 기프티콘 것인지 몰라서 뺐어요"로 빠져서, 금액이 적힌 사진을 우리 손으로 버렸다.
-  it('후보가 하나면 바코드 없는 사진을 그 건에 붙인다', async () => {
+  // 바코드가 없는 사진을 여기서 아무 데도 붙이지 않는다.
+  //
+  // 한때 후보가 하나뿐이면 그 건에 붙였다. 그런데 바코드 없이 번호만 인쇄된 기프티콘이
+  // 있어서(파인트 아이스크림 쿠폰) 그것까지 곁가지로 빨려 들어갔다. 곁가지인지 딴
+  // 물건인지는 서버가 읽어야 아는 것이라, 그림을 들려 missed로 돌려보내고 판단은
+  // 화면에 맡긴다(GalleryScanSheet의 rescued·foldRescued).
+  it('바코드 없는 사진은 그림을 들려 missed로 돌려준다', async () => {
     barcodes.set('original.jpg', { code: '111', coverage: 0.5 });
-    // 정보캡처.jpg는 등록하지 않는다 — 바코드가 없다.
+    // info-shot.jpg는 등록하지 않는다 — 바코드가 없다.
 
     const { candidates, missed, tally } = await groupImages([pick('original.jpg'), pick('info-shot.jpg')]);
 
     expect(candidates).toHaveLength(1);
-    expect(candidates[0].images).toContain(btoa('info-shot.jpg'));
-    // 붙였으면 뺀 것이 아니다. 세는 쪽에서도 빠져야 안내가 맞는 말이 된다.
-    expect(missed).toHaveLength(0);
-    expect(tally.noCode).toBe(0);
+    expect(candidates[0].images).not.toContain(btoa('info-shot.jpg'));
+    expect(missed).toHaveLength(1);
+    // 그림이 없으면 화면이 서버에 물어볼 수가 없다.
+    expect(missed[0].data).toBe(btoa('info-shot.jpg'));
+    expect(tally.noCode).toBe(1);
   });
 
   it('후보가 여럿이면 붙이지 않고 뺀다 — 어느 것 옆에 붙는지 알 수 없다', async () => {

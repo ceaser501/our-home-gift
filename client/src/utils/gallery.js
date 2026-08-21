@@ -711,7 +711,7 @@ function readFromGallery(image) {
  *                 묶는 규칙은 같아서, 그 한 걸음만 밖에서 넘겨받는다.
  *                 사진첩은 네이티브에게 묻고, 직접 고른 사진은 브라우저에서 줄인다.
  */
-async function collect({ images, read: readImage, pass, isRegistered, skipCodes, onProgress, onCandidate, signal, attachLoners = false }) {
+async function collect({ images, read: readImage, pass, isRegistered, skipCodes, onProgress, onCandidate, signal, rescueMissed = false }) {
   const candidates = [];
   // 바코드 값 → 그 값을 가진 후보. 같은 기프티콘의 사진 여러 장을 한 후보로 모은다.
   const seenCodes = new Map();
@@ -756,9 +756,9 @@ async function collect({ images, read: readImage, pass, isRegistered, skipCodes,
     }
     if (!found?.code) {
       // 막대로 보이는지를 함께 들고 간다. 화면이 "여기 있을지도 모른다"고 말할 때 쓴다.
-      // 직접 고른 사진일 때는 읽어둔 그림도 들고 간다 — 아래에서 한 건에 붙일 수 있다.
+      // 직접 고른 사진일 때는 읽어둔 그림도 들고 간다 — 화면이 이걸 서버에 물어본다.
       // 사진첩 훑기에서는 안 들고 간다. 수백 장 분의 base64가 그대로 쌓인다.
-      missed.push({ ...image, bars: Boolean(found?.bars), ...(attachLoners ? { data: read.data } : null) });
+      missed.push({ ...image, bars: Boolean(found?.bars), ...(rescueMissed ? { data: read.data } : null) });
       continue;
     }
 
@@ -810,30 +810,18 @@ async function collect({ images, read: readImage, pass, isRegistered, skipCodes,
     onCandidate?.(candidate);
   }
 
-  // 바코드가 없는 사진을 한 건에 붙인다 — 후보가 하나뿐일 때만.
+  // 바코드가 없는 사진은 여기서 아무 데도 붙이지 않는다.
   //
-  // 원칙은 빼는 것이다. 여러 기프티콘이 섞여 있으면 바코드 없는 사진이 어느 것 옆에
-  // 붙는지 알 방법이 없고, 짐작해서 붙이면 틀릴 때 남의 금액과 기한이 조용히 박힌다.
+  // 한때 후보가 하나뿐이면 그 건에 붙였다. 원본 하나에 금액이 적힌 정보 캡처 하나 —
+  // 흔한 모양이고 대개 맞았다. 그런데 그 전제가 틀렸다. 바코드 없이 번호만 인쇄된
+  // 기프티콘이 있다(파인트 아이스크림 쿠폰). 그것도 "후보가 하나뿐"인 자리에 걸려서,
+  // 서로 다른 기프티콘 둘이 한 건으로 저장됐다 — 파인트의 상품명과 기한이 스타벅스
+  // 것으로 들어가고 파인트는 아예 없던 것이 됐다.
   //
-  // 그런데 후보가 하나뿐이면 헷갈릴 것이 없다. 한 번에 골라 온 사진들이고 붙을 곳이
-  // 하나다. 실제로 흔한 모양이다 — 원본 하나, 계산대용 바코드 캡처 하나, 금액이 적힌
-  // 정보 캡처 하나. 셋이 같은 기프티콘인데 정보 캡처만 "어느 것인지 몰라서 뺐어요"로
-  // 빠지면, 정작 금액이 적힌 사진을 우리 손으로 버리는 셈이다.
-  //
-  // 막대로 보이는 사진은 붙이지 않는다. 그건 우리가 못 읽었을 뿐 다른 기프티콘일 수
-  // 있다(카톡이 404픽셀로 줄여 보낸 카드가 그렇다). 그런 것은 안내로 알린다.
-  let loners = [];
-  if (attachLoners && candidates.length === 1) {
-    loners = missed.filter((image) => !image.bars && image.data);
-    if (loners.length > 0) {
-      candidates[0].extras = loners.map((image) => image.data);
-      // 붙였으면 못 읽은 것이 아니다. 세는 쪽에서도 빠져야 안내가 맞는 말이 된다.
-      const attached = new Set(loners.map((image) => image.id));
-      for (let i = missed.length - 1; i >= 0; i -= 1) {
-        if (attached.has(missed[i].id)) missed.splice(i, 1);
-      }
-    }
-  }
+  // 곁가지인지 딴 물건인지는 그림만 봐서는 못 가른다. 번호가 인쇄돼 있는지를 봐야 하고,
+  // 그건 서버가 사진을 읽어야 안다. 그래서 붙이는 판단을 서버가 답한 뒤로 미룬다 —
+  // 화면(GalleryScanSheet)이 못 읽은 사진을 후보로 세워 물어보고, 번호가 없는 것으로
+  // 밝혀지면 그때 접는다.
 
   // 모아둔 사진 중 등록에 넘길 것을 고른다.
   //
@@ -886,7 +874,7 @@ async function collect({ images, read: readImage, pass, isRegistered, skipCodes,
     //
     // 이래도 되는 이유는 위 coverage 거름망이다. 목록 화면을 통째로 찍은 캡처처럼 다른
     // 기프티콘이 같이 찍힌 그림은 바코드가 작게 나와서 이미 빠져 있다.
-    const pool = originals.length > 0 ? originals : attachLoners ? usable : readable;
+    const pool = originals.length > 0 ? originals : rescueMissed ? usable : readable;
 
     // 순서도 그림이 얼마나 차 있는지로 정한다.
     //
@@ -902,14 +890,9 @@ async function collect({ images, read: readImage, pass, isRegistered, skipCodes,
       if (a.rich != null && b.rich != null && Math.abs(b.rich - a.rich) > RICHNESS_TIE) return b.rich - a.rich;
       return b.coverage - a.coverage;
     });
-    // 위에서 붙인 '바코드 없는 사진'은 자리를 먼저 받는다. 금액이나 기한이 적힌 사진이라
-    // 붙인 것이고, 바코드가 찍힌 사진은 어차피 하나면 족하다.
-    const extras = candidate.extras || [];
-    const room = Math.max(1, IMAGES_PER_CODE - extras.length);
-    candidate.images = [...sorted.slice(0, room).map((shot) => shot.data), ...extras].slice(0, IMAGES_PER_CODE);
+    candidate.images = sorted.slice(0, IMAGES_PER_CODE).map((shot) => shot.data);
     // 다 골랐으면 나머지 조각은 놓는다. 한 장이 수백 KB라 후보 몇 개만 되어도 쌓인다.
     candidate.shots = null;
-    candidate.extras = null;
   });
 
   onProgress?.({ scanned: images.length, total: images.length, found: candidates.length });
@@ -1045,8 +1028,8 @@ export async function groupImages(files, { isRegistered, onProgress, onCandidate
     pass: quick ? SHALLOW : DEEP,
     isRegistered,
     skipCodes,
-    // 골라 온 사진 몇 장뿐이라, 바코드 없는 사진을 한 건에 붙일 수 있다(collect 참고).
-    attachLoners: true,
+    // 골라 온 사진 몇 장뿐이라, 못 읽은 것도 그림을 들고 온다. 화면이 서버에 물어본다.
+    rescueMissed: true,
     onProgress,
     onCandidate,
     signal,

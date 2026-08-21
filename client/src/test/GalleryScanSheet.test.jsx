@@ -232,6 +232,57 @@ describe('GalleryScanSheet', () => {
     await waitFor(() => expect(createGifticon).toHaveBeenCalledTimes(2), { timeout: 3000 });
   });
 
+  // 못 읽은 사진은 일단 다 후보로 세워 서버에 물어본다. 답이 오면 둘로 갈린다.
+  //
+  // 여기는 곁가지인 쪽. 번호가 없으니 딴 물건이 아니고, 번호가 있는 후보가 하나뿐이라
+  // 붙을 곳도 하나다. 그 카드에 빈칸을 채우고 사진을 옮긴 뒤 접는다.
+  it('번호가 없는 사진은 하나뿐인 후보에 접어 넣는다', async () => {
+    groupImages.mockResolvedValue({
+      candidates: [candidate('a', '111')],
+      missed: [{ id: 'm1', name: 'info.jpg', bucket: null, addedAt: 1, bars: false, data: 'BBBB' }],
+      scanned: 2,
+      tally: { readFailed: 0, found: 1, alreadyHave: 0, noCode: 1 },
+    });
+    readGifticonInfo.mockImplementation(async (_prepared, opts) =>
+      opts?.knownCode === '111'
+        ? { ...info('111', '아이스 아메리카노'), amount: null }
+        : { ...info(null, ''), code: null, name: '', amount: '5000' }
+    );
+
+    const files = [new File(['x'], '1.jpg'), new File(['x'], '2.jpg')];
+    render(<GalleryScanSheet files={files} onRegistered={() => {}} onClose={() => {}} />);
+
+    // 카드는 하나로 접힌다.
+    (await screen.findByRole('button', { name: /1개 등록/ }, { timeout: 3000 })).click();
+
+    await waitFor(() => expect(createGifticon).toHaveBeenCalledTimes(1), { timeout: 3000 });
+    const saved = createGifticon.mock.calls[0][1];
+    expect(saved.name).toBe('아이스 아메리카노');
+    // 곁가지에만 있던 금액이 채워진다. 이미 읽힌 상품명은 그대로다.
+    expect(saved.amount).toBe('5000');
+  });
+
+  // 같은 자리에서 갈리는 다른 쪽. 바코드 없이 번호만 인쇄된 기프티콘이 있다
+  // (파인트 아이스크림 쿠폰). 서버가 번호를 읽어내면 곁가지가 아니라 딴 물건이다.
+  it('번호가 나오면 별도 기프티콘으로 세운다', async () => {
+    groupImages.mockResolvedValue({
+      candidates: [candidate('a', '111')],
+      missed: [{ id: 'm1', name: 'pint.jpg', bucket: null, addedAt: 1, bars: false, data: 'BBBB' }],
+      scanned: 2,
+      tally: { readFailed: 0, found: 1, alreadyHave: 0, noCode: 1 },
+    });
+    readGifticonInfo.mockImplementation(async (_prepared, opts) =>
+      opts?.knownCode === '111' ? info('111', '아이스 아메리카노') : info('92009951402228', '파인트 아이스크림')
+    );
+
+    const files = [new File(['x'], '1.jpg'), new File(['x'], '2.jpg')];
+    render(<GalleryScanSheet files={files} onRegistered={() => {}} onClose={() => {}} />);
+
+    expect(await screen.findByText('파인트 아이스크림', {}, { timeout: 3000 })).toBeTruthy();
+    (await screen.findByRole('button', { name: /2개 등록/ }, { timeout: 3000 })).click();
+    await waitFor(() => expect(createGifticon).toHaveBeenCalledTimes(2), { timeout: 3000 });
+  });
+
   // 이미 있는 번호는 넣지 않는다.
   it('이미 등록된 번호는 넣지 않는다', async () => {
     findGifticonByCode.mockImplementation(async (_family, code) => (code === '111' ? { id: 'old' } : null));
@@ -271,12 +322,14 @@ describe('번호가 갈렸을 때', () => {
 describe('바코드 없는 사진을 뺐을 때', () => {
   const FILES = [new File(['x'], 'a.jpg', { type: 'image/jpeg' })];
 
-  function grouped(noCode) {
+  // tooSmall로 센다. 바코드가 없는 사진은 이제 안내에 안 적힌다 — 후보로 세워 서버에
+  // 물어보고 카드가 스스로 말하기 때문이다(foldRescued).
+  function grouped(tooSmall) {
     return {
       candidates: [candidate('a', '111'), candidate('b', '222')],
       missed: [],
       scanned: 3,
-      tally: { readFailed: 0, found: 2, alreadyHave: 0, noCode },
+      tally: { readFailed: 0, found: 2, alreadyHave: 0, noCode: 0, tooSmall },
     };
   }
 
@@ -286,7 +339,7 @@ describe('바코드 없는 사진을 뺐을 때', () => {
     render(<GalleryScanSheet files={FILES} onRegistered={() => {}} onClose={() => {}} />);
 
     expect(await screen.findByText('못 넣은 사진이 있어요', {}, { timeout: 3000 })).toBeTruthy();
-    expect(screen.getByText(/바코드가 없는 사진 1장/)).toBeTruthy();
+    expect(screen.getByText(/바코드가 너무 작게 찍힌 사진 1장/)).toBeTruthy();
   });
 
   it('뺀 게 없으면 아무 말도 안 한다', async () => {

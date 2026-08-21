@@ -239,15 +239,20 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
           grouped = { ...grouped, candidates: [...grouped.candidates, ...again.candidates], missed: again.missed };
         }
 
-        // 끝까지 못 읽었지만 막대는 보이는 사진도 한 건으로 센다.
+        // 끝까지 못 읽은 사진도 한 건으로 센다. 막대가 보이는지는 가리지 않는다.
         //
-        // 번호를 모를 뿐 기프티콘이다. 한 건으로 안 세면 읽힌 것 옆에 사진만 얹혀서,
-        // 서로 다른 기프티콘 둘이 한 건으로 저장된다 — 배스킨 카드를 스타벅스와 함께
-        // 올리면 스타벅스 하나에 배스킨 사진이 붙는 식이다.
+        // 번호를 모를 뿐 기프티콘일 수 있다. 한 건으로 안 세면 읽힌 것 옆에 사진만
+        // 얹혀서, 서로 다른 기프티콘 둘이 한 건으로 저장된다 — 파인트 아이스크림 쿠폰을
+        // 스타벅스와 함께 올리면 파인트의 상품명과 기한이 스타벅스 것으로 들어가고
+        // 파인트는 아예 없던 것이 된다.
         //
-        // 다건으로 넘기면 그쪽에서 저 사진을 따로 세워 서버에 번호를 물어본다
-        // (GalleryScanSheet의 rescued). 한 장씩 올릴 때 되던 것이 거기서 다시 된다.
-        const unread = (grouped.missed || []).filter((image) => image.bars).length;
+        // 막대로 가르려 했다가 파인트를 놓쳤다. 거기엔 막대가 없다 — 글자뿐이다.
+        // 곁가지인지 딴 물건인지는 서버가 읽어야 아는 것이라 여기서 가르지 않는다.
+        //
+        // 다건으로 넘기면 그쪽이 저 사진들을 따로 세워 서버에 물어보고, 곁가지로
+        // 밝혀지면 도로 접는다(GalleryScanSheet의 rescued·foldRescued). 그래서
+        // "원본 + 정보 캡처" 한 건짜리도 결과는 여전히 한 건이다.
+        const unread = (grouped.missed || []).length;
 
         if (grouped.candidates.length + unread > 1) {
           setAnalyzing(false);
