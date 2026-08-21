@@ -285,9 +285,8 @@ describe('바코드 없는 사진을 뺐을 때', () => {
 
     render(<GalleryScanSheet files={FILES} onRegistered={() => {}} onClose={() => {}} />);
 
-    expect(
-      await screen.findByText(/어느[\s\S]*기프티콘 것인지 몰라서 뺐어요/, {}, { timeout: 3000 })
-    ).toBeTruthy();
+    expect(await screen.findByText('못 넣은 사진이 있어요', {}, { timeout: 3000 })).toBeTruthy();
+    expect(screen.getByText(/바코드가 없는 사진 1장/)).toBeTruthy();
   });
 
   it('뺀 게 없으면 아무 말도 안 한다', async () => {
@@ -296,6 +295,6 @@ describe('바코드 없는 사진을 뺐을 때', () => {
     render(<GalleryScanSheet files={FILES} onRegistered={() => {}} onClose={() => {}} />);
     await screen.findAllByText(/상품 /, {}, { timeout: 3000 });
 
-    expect(screen.queryByText(/몰라서 뺐어요/)).toBeNull();
+    expect(screen.queryByText('못 넣은 사진이 있어요')).toBeNull();
   });
 });

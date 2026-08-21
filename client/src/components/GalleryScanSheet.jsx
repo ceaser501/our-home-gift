@@ -1170,6 +1170,29 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
       .sort((a, b) => b.count - a.count);
   }, [missedShots]);
 
+  // 못 넣은 사진을 한 줄씩. 아래에서 한 상자에 모아 보여준다.
+  //
+  // 예전에는 사연마다 회색 상자를 하나씩 띄웠다. 세 가지가 겹치는 날에는 목록 아래로
+  // 상자가 셋 내리 붙어서, 무엇이 담겼는지보다 무엇이 빠졌는지가 화면을 채웠다.
+  // 사연이 다른 것은 맞지만 사용자가 할 일은 하나다 — 기프티콘이면 + 로 올리는 것.
+  // 그래서 사연은 줄로 나누고 할 일은 한 번만 적는다.
+  const skippedNotes = useMemo(() => {
+    const notes = [];
+    if (picked && tally?.noCode > 0) {
+      notes.push(`바코드가 없는 사진 ${tally.noCode}장`);
+    }
+    // 사진첩을 훑었을 때만. 폴더를 적어야 어디를 열어볼지 정해진다 — 스물몇 장이
+    // 스크린샷이면 대개 밥 사진이고, 기프티콘은 카카오톡이나 다운로드에 있다.
+    if (!picked && missedByFolder.length > 0) {
+      const where = missedByFolder.map((folder) => `${folder.label} 사진첩 ${folder.count}장`).join(', ');
+      notes.push(`바코드로 보이는데 못 읽은 사진 — ${where}`);
+    }
+    if (tally?.tooSmall > 0) {
+      notes.push(`바코드가 너무 작게 찍힌 사진 ${tally.tooSmall}장`);
+    }
+    return notes;
+  }, [picked, tally, missedByFolder]);
+
   // 훑거나 읽는 중. 위에 막대가 뜨고, 아래로 카드가 쌓인다.
   const isWorking = stage === 'scanning' || stage === 'reading';
 
@@ -1835,69 +1858,24 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
                 </p>
               )}
 
-              {/* 바코드 없이 정보만 있는 사진(금액·기한이 적힌 캡처)을 뺐다고 알린다.
-                  아무 말 없이 빼면 사용자는 금액이 빈칸인 걸 보고 "왜 안 읽혔지" 하는데,
-                  사실은 읽을 사진을 우리가 뺀 것이다.
-
-                  왜 빼는가 — 여기 온 사진들은 여러 기프티콘이 섞여 있고, 바코드가 없는
-                  사진은 그중 어느 것 옆에 붙는지 알 방법이 없다. 짐작해서 붙이면 맞을
-                  때는 아무도 모르고 틀릴 때는 엉뚱한 기프티콘에 남의 금액과 기한이
-                  박힌다. 조용히 틀리는 쪽이 훨씬 나쁘다.
-
-                  되살리는 길은 적지 않는다. 그 기프티콘 사진만 다시 올리면 한 건으로
-                  잡혀 정보성 캡처까지 같이 읽힌다 — 앞문이 이미 열려 있다.
+              {/* 못 넣은 사진 안내. 사연은 여럿이라도 상자는 하나다.
+                  (무엇이 여기 걸리는지는 위 skippedNotes에 적어뒀다.)
 
                   자리는 목록 아래, 상세내역 바로 위다. 한때 맨 위에 뒀는데 "N개를 넣을
                   수 있어요"보다 먼저 읽혀서, 정작 무엇이 담겼는지 보기 전에 빠진 것부터
                   세게 됐다. 결과를 먼저 보여주고 덧붙이는 말은 뒤에 둔다. */}
-              {picked && tally?.noCode > 0 && !isWorking && (
-                <p className="m-0 rounded-xl bg-muted px-3.5 py-3 text-sm leading-relaxed break-keep text-muted-foreground">
-                  바코드가 없는 사진 <b className="font-semibold text-foreground">{tally.noCode}장</b>은 어느
-                  기프티콘 것인지 몰라서 뺐어요.
-                </p>
-              )}
-
-              {/* 막대로 보이는데 못 읽은 사진은 여기서 아무 말도 하지 않는다. 직접 고른
-                  사진일 때는 후보로 세워 서버에 물어보므로(위 rescued), 카드가 이미 목록에
-                  올라와 있다. 서버도 못 읽으면 그 카드가 '바코드 번호'가 없다고 말한다 —
-                  사진을 보면서 읽는 말이라 여기 한 줄보다 낫다. */}
-
-              {/* 사진첩을 훑었을 때. 여기는 그동안 아무 말도 안 했다.
-                  막대를 못 읽으면 후보가 아예 안 만들어지므로, 사용자 눈에는 그 기프티콘이
-                  세상에 없었던 것처럼 보인다. 카톡으로 받은 카드가 너무 작게 줄어들어
-                  막대가 뭉개진 경우가 실제로 있었고(404x677), 그건 어떤 배율로도 못 읽는다.
-                  못 읽었다는 사실과 어디를 뒤져야 하는지는 알려줘야 한다.
-
-                  폴더를 적는 이유: 스물몇 장이 스크린샷이면 대개 밥 사진이고, 기프티콘은
-                  카카오톡이나 다운로드에 있다. 어디를 열어볼지가 그 한 줄로 정해진다.
-                  "바코드가 있는 사진"이라고는 못 쓴다 — 우리는 못 읽었을 뿐이지 있는지
-                  없는지를 모른다. */}
-              {!picked && missedByFolder.length > 0 && !isWorking && (
-                <p className="m-0 rounded-xl bg-muted px-3.5 py-3 text-sm leading-relaxed break-keep text-muted-foreground">
-                  바코드로 보이는데 못 읽은 사진이{' '}
-                  {missedByFolder.map((folder, index) => (
-                    <span key={folder.label}>
-                      {index > 0 && ', '}
-                      {/* 폴더 이름만 적으면 "카카오톡 1장"이 되어 그게 무엇을 가리키는지
-                          읽히지 않는다. 열어볼 곳이라는 걸 말로 붙여준다. */}
-                      {folder.label} 사진첩에 <b className="font-semibold text-foreground">{folder.count}장</b>
-                    </span>
-                  ))}{' '}
-                  있어요. 기프티콘이면 <b className="font-semibold text-foreground">+</b> 로 올려주세요.
-                </p>
-              )}
-
-              {/* 바코드는 읽혔는데 너무 작게 찍힌 것. 앱 화면이나 목록을 통째로 찍은 캡처가
-                  여기 걸린다. 번호는 맞지만 그 그림에는 다른 기프티콘이 같이 찍혀 있어서,
-                  옆칸의 금액과 기한이 이 기프티콘 것으로 들어온다.
-
-                  왜 뺐는지를 적는다. "바코드를 찾았다"까지는 사용자도 짐작할 수 있어서,
-                  이유 없이 빠지면 앱이 놓친 것으로 보인다. */}
-              {tally?.tooSmall > 0 && !isWorking && (
-                <p className="m-0 rounded-xl bg-muted px-3.5 py-3 text-sm leading-relaxed break-keep text-muted-foreground">
-                  바코드가 너무 작게 찍힌 사진 <b className="font-semibold text-foreground">{tally.tooSmall}장</b>은
-                  뺐어요. <b className="font-semibold text-foreground">직접 등록</b>으로 올려주세요.
-                </p>
+              {skippedNotes.length > 0 && !isWorking && (
+                <div className="flex flex-col gap-1.5 rounded-xl bg-muted px-3.5 py-3 text-sm leading-relaxed break-keep text-muted-foreground">
+                  <p className="m-0 font-semibold text-foreground">못 넣은 사진이 있어요</p>
+                  {skippedNotes.map((note) => (
+                    <p key={note} className="m-0">
+                      · {note}
+                    </p>
+                  ))}
+                  <p className="m-0">
+                    기프티콘이면 <b className="font-semibold text-foreground">+</b> 로 올려주세요.
+                  </p>
+                </div>
               )}
 
               {stage === 'done' && panelBody}
