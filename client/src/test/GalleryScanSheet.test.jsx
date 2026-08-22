@@ -176,7 +176,9 @@ describe('GalleryScanSheet', () => {
     // 못 읽은 카드는 처음에는 등록에서 빠져 있다.
     expect(await screen.findByRole('button', { name: /1개 등록/ }, { timeout: 3000 })).toBeTruthy();
 
-    (await screen.findByRole('button', { name: /직접 채우기/ })).click();
+    // 넣을 수 없는 것은 접혀 있다. 펼쳐야 채우는 자리가 나온다.
+    fireEvent.click(await screen.findByText(/정보를 못 읽었어요/));
+    (await screen.findByRole('button', { name: /채우기/ })).click();
     fireEvent.change(await screen.findByPlaceholderText('예: 아이스 아메리카노 T'), {
       target: { value: '손으로 적은 상품' },
     });
@@ -187,6 +189,24 @@ describe('GalleryScanSheet', () => {
 
     const saved = createGifticon.mock.calls.map(([, f]) => f.name);
     expect(saved).toContain('손으로 적은 상품');
+  });
+
+  // 제목이 내용과 다른 말을 하면 안 된다. 기한이 지난 셋을 놓고 '정보를 못 읽었어요'라고
+  // 적어두면, 읽기가 잘못된 줄 알고 사진을 다시 찍으러 간다.
+  it('기한이 지난 것만 남으면 제목도 기한을 말한다', async () => {
+    readGifticonInfo.mockImplementation(async (_prepared, opts) => ({
+      ...info(opts?.knownCode, `상품 ${opts?.knownCode}`),
+      expiresAt: '2020-01-01',
+    }));
+
+    render(<GalleryScanSheet onRegistered={() => {}} onClose={() => {}} />);
+    (await screen.findByRole('button', { name: /사진 허용하고 찾기/ })).click();
+
+    // 접은 제목에 한 번, 줄마다 한 번씩 — 셋 다 같은 사연이라 같은 말이 나온다.
+    expect(await screen.findAllByText(/사용기한이 지났어요/, {}, { timeout: 3000 })).toHaveLength(3);
+    expect(screen.queryByText(/정보를 못 읽었어요/)).toBeNull();
+    // 채워봐야 그대로 막힌다. 채우라고 하지 않는다.
+    expect(screen.queryByRole('button', { name: /채우기/ })).toBeNull();
   });
 
   // 하루 한도나 인터넷이 끊긴 것은 조금 뒤에 풀린다. 창을 닫고 처음부터 다시 하게

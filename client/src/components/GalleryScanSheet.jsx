@@ -270,6 +270,28 @@ function reasonOf(candidate) {
   return '아직 읽지 않았어요';
 }
 
+/**
+ * 못 넣는 이유를 네 갈래로 나눈다.
+ *
+ * 갈래마다 사람이 할 일이 다르다 — 기한이 지난 것은 손댈 데가 없고, 빠진 칸은 채우면
+ * 되고, 막힌 것은 다시 해보면 되고, 치운 것은 되돌릴 수 있다. 한 갈래뿐이면 제목에
+ * 그 이유를 그대로 적는다. '3개는 정보를 못 읽었어요' 아래에 '사용기한이 지났어요'가
+ * 셋 나란히 있던 적이 있는데, 제목과 내용이 서로 다른 말을 했다.
+ */
+const BLOCK_TITLES = {
+  dismissed: '치웠어요',
+  expired: '사용기한이 지났어요',
+  error: '읽다가 막혔어요',
+  missing: '정보를 못 읽었어요',
+};
+
+function blockKind(candidate, isDismissed) {
+  if (isDismissed) return 'dismissed';
+  if (candidate.readError) return 'error';
+  if (isExpired(candidate)) return 'expired';
+  return 'missing';
+}
+
 // 이미 지난 기한은 넣지 않는다.
 //
 // 넣어봐야 목록에서 처음부터 빨간 배지를 달고 앉아 있고, 알림은 이미 지나간 날에 대해
@@ -1375,8 +1397,12 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
   // 매번 찾아내야 한다. 나눠 두면 위는 그냥 넘기고 아래만 보면 된다.
   const vouchers = alive.filter((c) => isPickable(c) && voucherIds.includes(c.id));
   const plains = alive.filter((c) => isPickable(c) && !voucherIds.includes(c.id));
-  // 넣을 수 없는 것. 빠진 칸이 있거나, 읽다가 막혔거나, 중간에 그만둬서 못 읽었다.
-  const unreadable = alive.filter((c) => !isPickable(c));
+  // 넣을 수 없는 것. 빠진 칸이 있거나, 기한이 지났거나, 읽다가 막혔거나, 치운 것이다.
+  //
+  // 치운 것까지 여기 함께 담는다. 예전에는 목록 맨 아래에 따로 큰 카드로 세워뒀는데,
+  // 그러면 X를 누른 순간 한 줄이던 것이 카드로 부풀어 화면이 도로 길어졌다.
+  // 넣지 않는다는 점에서 하는 일이 같으니 한자리에 접어둔다.
+  const blocked = candidates.filter((c) => !isPickable(c));
   // 읽기가 끝난 순서대로. 훑는 중에는 이 차례로 카드가 한 장씩 쌓인다.
   const arrived = alive
     .filter((c) => c.info || c.readError)
@@ -1395,14 +1421,17 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
     return () => clearInterval(timer);
   }, [isWorking, arrived.length]);
 
-  const dismissed = candidates.filter((candidate) => dismissedIds.includes(candidate.id));
   const keptCount = alive.filter(isPickable).length;
   // 못 읽은 것들이 같은 이유로 막혔으면 한 번만 적는다. 하루 한도를 다 썼을 때가
   // 그런데, 그 긴 문장을 카드마다 되풀이하면 읽지 않게 된다.
-  const blockedReasons = [...new Set(unreadable.map((c) => c.readError).filter(Boolean))];
-  const commonBlock = unreadable.length > 0 && blockedReasons.length === 1 && unreadable.every((c) => c.readError)
+  const blockedReasons = [...new Set(blocked.map((c) => c.readError).filter(Boolean))];
+  const commonBlock = blocked.length > 0 && blockedReasons.length === 1 && blocked.every((c) => c.readError)
     ? blockedReasons[0]
     : null;
+  // 접어둔 채로도 무슨 일인지는 알아야 한다. 갈래가 하나면 그 이유를 그대로 적고,
+  // 섞여 있을 때만 '등록할 수 없어요'로 뭉친다.
+  const blockKinds = [...new Set(blocked.map((c) => blockKind(c, dismissedIds.includes(c.id))))];
+  const blockedTitle = blockKinds.length === 1 ? BLOCK_TITLES[blockKinds[0]] : '등록할 수 없어요';
 
   // 훑기 결과. 접어둔다 — 찾은 것이 여러 개면 위쪽 목록만으로 화면이 꽉 차는데, 그 아래
   // 표까지 펼쳐져 있으면 정작 눌러야 할 등록 버튼이 밀린다. 궁금할 때 여는 자리다.
@@ -1577,8 +1606,10 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
           )}
 
           {/* 빠진 칸이 있는 카드에만 나온다. 다 읽힌 카드에까지 붙이면, 고칠 것이 없는데도
-              뭔가 확인해야 할 것처럼 보인다 — 대부분의 날은 다 읽힌다. */}
-          {broken && !isDismissed && candidate.prepared && (
+              뭔가 확인해야 할 것처럼 보인다 — 대부분의 날은 다 읽힌다.
+              기한이 지난 것에도 붙이지 않는다. 채워도 그대로 막히는데 채우라고 하면,
+              시키는 대로 다 적고 나서 여전히 안 되는 것을 보게 된다. */}
+          {broken && !isDismissed && candidate.prepared && candidate.missing?.length > 0 && (
             <button
               type="button"
               onClick={() => setEditingId(editing ? null : candidate.id)}
@@ -1607,32 +1638,130 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
             </button>
           )}
 
-          {/* 빠진 칸만 묻는다. 다 보여주면 이미 제대로 읽힌 값까지 훑어보게 되고, 그러다
-              멀쩡한 값을 건드린다. 모르는 것만 물어보는 쪽이 손도 덜 가고 안전하다. */}
-          {editing && (
-            <div className="flex flex-col gap-2 rounded-lg bg-muted px-2.5 py-2.5">
-              {candidate.missing?.map((field) => {
-                const key = FIELD_KEYS[field];
-                if (!key) return null;
-                return (
-                  <label key={field} className="flex flex-col gap-1">
-                    <span className="text-xs font-semibold text-muted-foreground">{field}</span>
-                    <Input
-                      value={candidate.info?.[key] || ''}
-                      onChange={(e) => patchInfo(candidate, { [key]: e.target.value })}
-                      placeholder={FIELD_HINTS[field]}
-                      inputMode={key === 'code' ? 'numeric' : undefined}
-                      className="bg-card"
-                    />
-                  </label>
-                );
-              })}
-              <p className="m-0 text-xs break-keep text-muted-foreground">
-                채우면 아래 등록에 함께 들어가요. 나머지는 등록한 뒤에 카드에서 고칠 수 있어요.
-              </p>
-            </div>
+          {editing && renderFillForm(candidate)}
+        </div>
+      </li>
+    );
+  }
+
+  /**
+   * 빠진 칸만 묻는다.
+   *
+   * 다 보여주면 이미 제대로 읽힌 값까지 훑어보게 되고, 그러다 멀쩡한 값을 건드린다.
+   * 모르는 것만 물어보는 쪽이 손도 덜 가고 안전하다.
+   */
+  function renderFillForm(candidate) {
+    return (
+      <div className="flex flex-col gap-2 rounded-lg bg-muted px-2.5 py-2.5">
+        {candidate.missing?.map((field) => {
+          const key = FIELD_KEYS[field];
+          if (!key) return null;
+          return (
+            <label key={field} className="flex flex-col gap-1">
+              <span className="text-xs font-semibold text-muted-foreground">{field}</span>
+              <Input
+                value={candidate.info?.[key] || ''}
+                onChange={(e) => patchInfo(candidate, { [key]: e.target.value })}
+                placeholder={FIELD_HINTS[field]}
+                inputMode={key === 'code' ? 'numeric' : undefined}
+                className="bg-card"
+              />
+            </label>
+          );
+        })}
+        <p className="m-0 text-xs break-keep text-muted-foreground">
+          채우면 아래 등록에 함께 들어가요.
+        </p>
+      </div>
+    );
+  }
+
+  /**
+   * 넣을 수 없는 것 한 줄.
+   *
+   * 위의 후보 카드와 달리 한 줄이다. 이 줄들은 볼 것이 아니라 확인만 하고 넘길
+   * 것이라, 카드로 세워두면 정작 넣을 것들을 화면 밖으로 밀어낸다. 실제로 기한이
+   * 지난 셋이 화면 하나를 통째로 차지한 적이 있다.
+   *
+   * 이유를 상품명 위에 작게 올린다. 아래에 두면 상품명과 같은 크기로 읽혀서 무엇이
+   * 이름이고 무엇이 사연인지 가려지지 않는다.
+   */
+  function renderBlockedRow(candidate) {
+    const isDismissed = dismissedIds.includes(candidate.id);
+    const kind = blockKind(candidate, isDismissed);
+    const editing = editingId === candidate.id;
+    // 채워서 살릴 수 있는 것은 빠진 칸이 있는 경우뿐이다. 기한이 지난 것은 상품명을
+    // 채워도 그대로 막히고, 치운 것은 되돌리는 게 먼저다.
+    const fillable = kind === 'missing' && candidate.prepared;
+
+    return (
+      <li key={candidate.id} className="list-none border-t border-border first:border-t-0">
+        <div className="flex items-center gap-2.5 py-2">
+          <img
+            src={`data:image/jpeg;base64,${candidate.images[0]}`}
+            alt=""
+            className="size-9 shrink-0 rounded-md bg-secondary object-cover opacity-70"
+          />
+          {/* 둘 다 14px이다. 이유를 12px로 줄여봤는데 이 앱은 60대도 쓴다 — 작게 만든
+              쪽이 하필 정작 읽어야 할 줄이었다. 크기 대신 굵기와 색으로 가른다. */}
+          <div className="flex min-w-0 flex-1 flex-col">
+            <span className="truncate text-sm text-muted-foreground">
+              {isDismissed ? '기프티콘이 아니라고 하셨어요' : reasonOf(candidate)}
+            </span>
+            <span className="truncate text-sm font-semibold text-foreground">
+              {candidate.info?.name || candidate.info?.brand || candidate.code || '상품명 없음'}
+            </span>
+          </div>
+
+          {isDismissed ? (
+            <button
+              type="button"
+              onClick={() => handleUndismiss(candidate)}
+              className="shrink-0 px-1.5 py-1 text-sm font-semibold text-primary underline"
+            >
+              되돌리기
+            </button>
+          ) : (
+            <>
+              {fillable && (
+                <button
+                  type="button"
+                  onClick={() => setEditingId(editing ? null : candidate.id)}
+                  className="shrink-0 rounded-lg bg-muted px-2.5 py-1.5 text-sm font-semibold text-foreground"
+                >
+                  {editing ? '접기' : '채우기'}
+                </button>
+              )}
+              {/* 읽다가 막힌 것은 채울 일이 아니라 다시 해볼 일이다. 하루 한도를 다
+                  썼거나 인터넷이 끊긴 경우라, 조금 뒤에는 그냥 읽힌다. */}
+              {kind === 'error' && (
+                <button
+                  type="button"
+                  disabled={retryingId === candidate.id}
+                  onClick={() => retryRead(candidate)}
+                  aria-label="다시 읽기"
+                  className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-foreground disabled:opacity-60"
+                >
+                  {retryingId === candidate.id ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <RotateCcw className="size-4" />
+                  )}
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => handleDismiss(candidate)}
+                aria-label="기프티콘 아님"
+                className="flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground"
+              >
+                <X className="size-4.5" />
+              </button>
+            </>
           )}
         </div>
+
+        {editing && <div className="pb-2">{renderFillForm(candidate)}</div>}
       </li>
     );
   }
@@ -1652,11 +1781,12 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
           <div className="mx-5 mt-2 flex gap-2 rounded-xl bg-muted/60 px-3.5 py-2.5">
             <Info className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
             <p className="m-0 flex-1 text-sm leading-relaxed break-keep text-muted-foreground">
+              {/* 기한 이야기는 여기서 하지 않는다. 지난 것이 있으면 아래 접힌 줄이
+                  '3개는 사용기한이 지났어요'라고 그 자리에서 말한다 — 없는 날에도 미리
+                  겁주는 문장이 한 줄 더 붙어 있을 이유가 없다. */}
               <b className="font-semibold text-foreground">{formatDay(since)} 0시</b> 이후 사진만 봐요.
               <br />
               이전 사진은 + 로 올려주세요.
-              <br />
-              사용기한이 지난 기프티콘은 등록할 수 없어요.
             </p>
           </div>
         )}
@@ -1879,30 +2009,34 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
                     </div>
                   )}
 
-                  {/* 못 읽은 것. 등록할 수 없으니 체크도 없다. 목록에서 미리 보여주는 건
-                      등록을 눌러봐야 아는 것보다 낫기 때문이다. */}
-                  {unreadable.length > 0 && (
-                    <div className="flex flex-col gap-2 border-t border-border pt-4">
-                      {commonBlock ? (
-                        <p className="m-0 rounded-xl bg-warning/10 px-3.5 py-3 text-base leading-relaxed break-keep text-foreground">
+                  {/* 넣을 수 없는 것. 접어둔다.
+                      등록을 눌러봐야 아는 것보다는 미리 보이는 편이 낫지만, 이것들이
+                      화면을 차지할 이유는 없다 — 대개는 손댈 데가 없고, 손댈 데가 있어도
+                      지금 할 일은 아니다. 제목 한 줄로 무슨 일인지 말하고, 궁금하면 연다.
+                      넣을 것이 하나도 없을 때만 펼친 채로 시작한다. 그때는 이 목록이
+                      화면에서 볼 수 있는 전부다. */}
+                  {blocked.length > 0 && (
+                    <details open={keptCount === 0} className="group border-t border-border pt-2">
+                      {/* 글자는 한 덩어리로 묶어둔다. 낱개로 두면 flex가 '3개'와 '는'
+                          사이까지 벌려서 '3개 는 사용기한이 지났어요'가 된다. */}
+                      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 py-2 text-base break-keep text-foreground">
+                        <span>
+                          <b className="font-semibold">{blocked.length}개</b>는 {blockedTitle}
+                        </span>
+                        <ChevronDown className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
+                      </summary>
+
+                      {/* 하루 한도처럼 다 같은 이유로 막혔을 때만. 그 사연은 줄마다
+                          되풀이하기에는 길어서 위에 한 번만 적는다. */}
+                      {commonBlock && (
+                        <p className="m-0 mb-1 rounded-xl bg-warning/10 px-3.5 py-3 text-sm leading-relaxed break-keep text-foreground">
                           {commonBlock}
                         </p>
-                      ) : (
-                        <p className="m-0 text-base break-keep text-foreground">
-                          <b className="font-semibold">{unreadable.length}개</b>는 정보를 못 읽었어요. + 로 직접
-                          올려주세요.
-                        </p>
                       )}
-                      <ul className="m-0 flex list-none flex-col gap-2 p-0">
-                        {unreadable.map((candidate) => renderCandidate(candidate))}
+                      <ul className="m-0 flex list-none flex-col p-0">
+                        {blocked.map((candidate) => renderBlockedRow(candidate))}
                       </ul>
-                    </div>
-                  )}
-
-                  {dismissed.length > 0 && (
-                    <ul className="m-0 flex list-none flex-col gap-2 p-0">
-                      {dismissed.map((candidate) => renderCandidate(candidate))}
-                    </ul>
+                    </details>
                   )}
                 </>
               )}
