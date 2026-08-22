@@ -26,7 +26,10 @@ vi.mock('../api', () => ({
 vi.mock('../FamilyContext', () => ({
   useFamily: () => ({
     family: { id: 'fam-1', name: '우리가족' },
-    members: [{ user_id: 'me', display_name: '아들', created_at: '2026-01-01T00:00:00Z' }],
+    members: [
+      { user_id: 'mom', display_name: '엄마', created_at: '2026-01-01T00:00:00Z' },
+      { user_id: 'me', display_name: '아들', created_at: '2026-01-02T00:00:00Z' },
+    ],
     user: { id: 'me' },
   }),
 }));
@@ -62,6 +65,21 @@ beforeEach(() => {
     expiresAt: '2026-12-31',
     name: '아메리카노',
     isVoucher: false,
+  });
+});
+
+// 받은 사람은 고르는 목록이 아니라 단추다. 가족은 서넛이라 열어 고를 만큼 많지 않은데,
+// 열기 전에는 누가 있는지가 아예 안 보였다.
+describe('받은 사람', () => {
+  it('로그인한 사람이 처음부터 골라져 있고, 나머지 가족도 함께 보인다', () => {
+    open();
+
+    const me = screen.getByRole('button', { name: '아들' });
+    const mom = screen.getByRole('button', { name: '엄마' });
+    // 골라진 것만 테두리가 진하다. 색 이름 대신 클래스로 본다 — 화면에서 갈리는 것이
+    // 그것이라서다.
+    expect(me.className).toContain('border-primary');
+    expect(mom.className).not.toContain('border-primary');
   });
 });
 

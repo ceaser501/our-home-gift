@@ -89,6 +89,28 @@ function formatAmount(value) {
   return digits ? Number(digits).toLocaleString('ko-KR') : '';
 }
 
+// 칸 묶음의 머리. 이름 한 마디와 오른쪽으로 뻗는 선.
+//
+// 물음말로 적는다("무엇인가요"). '상품 정보'처럼 명사로 적으면 무엇을 적으라는
+// 것인지 한 번 더 생각해야 하는데, 물어보면 답을 적으면 된다.
+function FieldGroup({ title, children }) {
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center gap-2.5">
+        <span className="shrink-0 text-xs font-semibold text-muted-foreground">{title}</span>
+        <span className="h-px flex-1 bg-border" />
+      </div>
+      {children}
+    </div>
+  );
+}
+
+// 안 적어도 되는 칸에만 붙는다. 반대로 별표를 붙이면 일곱 칸 중 넷에 별이 생겨서,
+// 별이 규칙이 아니라 무늬가 된다.
+function Optional() {
+  return <span className="font-normal text-muted-foreground">선택</span>;
+}
+
 // 내가 받은 기프티콘을 올리는 경우가 가장 많아서 내 이름을 맨 위에 둔다.
 // 다만 가족 것을 대신 올릴 수도 있으니 나머지 구성원도 그대로 아래에 나열한다.
 function membersWithMeFirst(members, myName) {
@@ -623,13 +645,9 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
         </SheetHeader>
 
         <form className="flex flex-col gap-4 px-5" onSubmit={handleSubmit}>
-          {/* 가족이 함께 쓰는 앱이라 나이 드신 분도 읽을 수 있어야 한다. 길게 설명하는
-              것보다 짧고 큰 글씨가 낫다 — 자세한 규칙은 실제로 해보면 알게 된다. */}
-          <p className="m-0 text-sm leading-relaxed break-keep text-muted-foreground">
-사진을 올리면 정보를 자동으로 채워드려요.
-            <br />
-            사진 없이 직접 적어도 돼요.
-          </p>
+          {/* 안내는 사진 상자 안으로 들어갔다. 상자 위에 따로 한 문단으로 두면 화면을
+              여는 순간 읽어야 할 글부터 나오는데, 그 말이 가리키는 것은 바로 아래
+              상자다. 상자 안에 두면 무엇에 대한 말인지 짚어줄 것이 없다. */}
 
           {/* 아직 아무 사진도 없는 등록 화면에서는 사진 자리를 세 칸으로 벌려 둔다.
               여러 장을 골라도 알아서 나눠 담는 기능이 이미 있는데, 그 사실이 화면
@@ -662,7 +680,12 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
                   </div>
                 ))}
               </div>
+              {/* 두 줄이 하는 말이 다르다. 앞은 사진을 올리면 무슨 일이 생기는지,
+                  뒤는 여러 장을 골라도 된다는 것. 뒤엣것만 있을 때는 "그래서 사진을
+                  왜 올리나"가 화면 어디에도 없었다. */}
               <p className="m-0 text-center text-xs leading-relaxed break-keep text-muted-foreground">
+                사진을 올리면 <b className="font-semibold text-foreground">정보를 자동으로 채워요</b>
+                <br />
                 여러 장을 고르면 <b className="font-semibold text-foreground">기프티콘별로 나눠 담아요</b>
               </p>
             </div>
@@ -741,39 +764,56 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
           )}
           {error && <p className="text-sm text-destructive">{error}</p>}
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="col-span-2 flex flex-col gap-1.5">
-              <Label htmlFor="f-name">상품명 *</Label>
+          {/* 칸을 성격별로 묶는다. 예전에는 일곱 칸이 줄줄이 이어져서, 어디까지 적어야
+              끝인지가 스크롤을 내려봐야 보였다. 묶어두면 덩어리가 셋이라 한눈에 잡힌다.
+
+              별표(*)는 걷어냈다. 일곱 칸 중 넷에 별이 붙어 있으면 별이 규칙이 아니라
+              무늬가 된다. 안 적어도 되는 것에만 '선택'이라고 적는 편이 짧고, 읽는 사람이
+              세어야 할 것도 적다. */}
+          <FieldGroup title="무엇인가요">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="f-name">상품명</Label>
               <Input id="f-name" value={form.name} onChange={(e) => updateField('name', e.target.value)} required />
             </div>
 
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="f-brand">상호 *</Label>
-              <Input id="f-brand" value={form.brand} onChange={(e) => updateField('brand', e.target.value)} />
-            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="f-brand">상호</Label>
+                <Input id="f-brand" value={form.brand} onChange={(e) => updateField('brand', e.target.value)} />
+              </div>
 
-            <div className="flex flex-col gap-1.5">
-              <Label>카테고리 *</Label>
-              <Select value={form.category} onValueChange={(v) => updateField('category', v)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {CATEGORIES.map((c) => (
-                    <SelectItem key={c.key} value={c.key}>
-                      {c.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex flex-col gap-1.5">
+                <Label>카테고리</Label>
+                <Select value={form.category} onValueChange={(v) => updateField('category', v)}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CATEGORIES.map((c) => (
+                      <SelectItem key={c.key} value={c.key}>
+                        {c.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
+          </FieldGroup>
 
-            {/* 금액은 길어야 여섯 자리라 한 줄을 통째로 쓸 이유가 없다. 위 상호 칸만큼만
-                쓰고, 남은 오른쪽은 그때그때 필요한 것에 내준다 — 금액이 없으면 가격 검색,
-                있으면 금액권 여부. 둘은 동시에 필요한 적이 없어서 한 자리를 나눠 쓸 수 있다. */}
-            <div className="col-span-2 flex flex-col gap-1.5">
-              <Label htmlFor="f-amount">금액(원)</Label>
-              <div className="flex items-center gap-2">
+          <FieldGroup title="언제까지 쓰나요">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="f-expires">
+                  유효기한 <Optional />
+                </Label>
+                <Input id="f-expires" type="date" value={form.expires_at} onChange={(e) => updateField('expires_at', e.target.value)} />
+              </div>
+
+              {/* 금액은 길어야 여섯 자리라 한 줄을 통째로 쓸 이유가 없다. */}
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="f-amount">
+                  금액 <Optional />
+                </Label>
                 <Input
                   id="f-amount"
                   type="text"
@@ -783,85 +823,83 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
                     updateField('amount', onlyDigits(e.target.value));
                     setPriceSearchNote('');
                   }}
-                  className="w-1/2 min-w-20 shrink-0"
+                  placeholder="원"
                 />
-
-                {SHOW_PRICE_SEARCH && !form.amount && form.name.trim() && (
-                  <Button type="button" variant="outline" size="sm" onClick={handleSearchPrice} disabled={searchingPrice} className="shrink-0">
-                    <Search className="size-3.5" />
-                    {searchingPrice ? '검색 중…' : '가격 검색'}
-                  </Button>
-                )}
-
-                {/* 금액권은 한 번에 다 쓰지 않고 쓴 만큼 깎아 나간다. 켜두면 사용할 때
-                    "얼마 썼어요?"를 묻고 잔액을 남긴다. 금액이 없으면 깎아 나갈 값이
-                    없으므로 이 스위치도 보이지 않는다. */}
-                {onlyDigits(form.amount) && (
-                  <label className="flex min-w-0 cursor-pointer items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={Boolean(form.is_voucher)}
-                      onChange={(e) => updateField('is_voucher', e.target.checked)}
-                      className="size-4.5 shrink-0 accent-primary"
-                    />
-                    <span className="truncate text-sm font-semibold text-foreground">금액권이에요</span>
-                  </label>
-                )}
               </div>
-
-              {priceSearchNote && <p className="text-xs text-muted-foreground">{priceSearchNote}</p>}
-
-              {/* 무엇을 켠 건지는 켠 다음에 알려준다. 늘 띄워두면 안 쓸 사람에게도 한 줄을
-                  차지하는데, 금액권은 열 건 중 한둘이다. */}
-              {Boolean(form.is_voucher) && onlyDigits(form.amount) && (
-                <p className="m-0 text-sm break-keep text-muted-foreground">쓴 만큼 깎여요.</p>
-              )}
-
-              {/* 켜주지 않고 물어만 본다. 잘못 켜두면 쓸 때마다 금액을 묻고 잔액이 남아
-                  목록에서 사라지지 않아서, 사람이 확인하고 켜는 쪽이 안전하다. */}
-              {voucherHint && !form.is_voucher && onlyDigits(form.amount) && (
-                <p className="m-0 text-sm break-keep text-muted-foreground">
-금액권 같아 보여요. 맞으면 켜주세요.
-                </p>
-              )}
             </div>
 
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="f-expires">유효기한</Label>
-              <Input id="f-expires" type="date" value={form.expires_at} onChange={(e) => updateField('expires_at', e.target.value)} />
-            </div>
+            {SHOW_PRICE_SEARCH && !form.amount && form.name.trim() && (
+              <Button type="button" variant="outline" size="sm" onClick={handleSearchPrice} disabled={searchingPrice} className="self-start">
+                <Search className="size-3.5" />
+                {searchingPrice ? '검색 중…' : '가격 검색'}
+              </Button>
+            )}
+            {priceSearchNote && <p className="m-0 text-xs text-muted-foreground">{priceSearchNote}</p>}
+
+            {/* 금액권은 한 번에 다 쓰지 않고 쓴 만큼 깎아 나간다. 켜두면 사용할 때
+                "얼마 썼어요?"를 묻고 잔액을 남긴다. 금액이 없으면 깎아 나갈 값이
+                없으므로 이 스위치도 보이지 않는다.
+                무엇을 켜는 건지는 스위치 옆에 붙여 적는다 — 켠 뒤에 한 줄을 더
+                띄우면 같은 말을 두 번 하는 셈이고, 그만큼 화면이 길어진다. */}
+            {onlyDigits(form.amount) && (
+              <label className="flex cursor-pointer items-center gap-2 rounded-xl bg-muted px-3 py-2.5">
+                <input
+                  type="checkbox"
+                  checked={Boolean(form.is_voucher)}
+                  onChange={(e) => updateField('is_voucher', e.target.checked)}
+                  className="size-4.5 shrink-0 accent-primary"
+                />
+                <span className="text-sm break-keep text-foreground">금액권 — 쓴 만큼 깎여요</span>
+              </label>
+            )}
+
+            {/* 켜주지 않고 물어만 본다. 잘못 켜두면 쓸 때마다 금액을 묻고 잔액이 남아
+                목록에서 사라지지 않아서, 사람이 확인하고 켜는 쪽이 안전하다. */}
+            {voucherHint && !form.is_voucher && onlyDigits(form.amount) && (
+              <p className="m-0 text-sm break-keep text-muted-foreground">금액권 같아 보여요. 맞으면 켜주세요.</p>
+            )}
 
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="f-code">바코드/QR 값 *</Label>
+              <Label htmlFor="f-code">바코드 번호</Label>
               <Input
                 id="f-code"
                 value={form.code}
                 onChange={(e) => updateField('code', e.target.value)}
-                placeholder="자동 인식 또는 직접 입력"
+                placeholder="사진에서 읽거나 직접 입력"
               />
             </div>
+          </FieldGroup>
 
-            <div className="col-span-2 flex flex-col gap-1.5">
-              <Label>받은 사람 *</Label>
-              <Select value={form.owner} onValueChange={(v) => updateField('owner', v)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {membersWithMeFirst(members, myName).map((m) => (
-                    <SelectItem key={m.user_id} value={m.display_name}>
-                      {m.display_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          <FieldGroup title="누구 것인가요">
+            {/* 고르는 목록이었는데 단추로 바꿨다. 가족은 서넛이라 목록을 열어 고를 만큼
+                많지 않은데, 열기 전에는 누가 골라져 있는지 말고는 아무것도 안 보였다.
+                단추로 두면 누구누구가 있는지가 함께 보이고, 바꾸는 데 한 번이면 된다.
+                지금 로그인한 사람이 처음부터 골라져 있다(buildEmptyForm의 myName). */}
+            <div className="grid grid-cols-3 gap-2">
+              {membersWithMeFirst(members, myName).map((m) => (
+                <button
+                  key={m.user_id}
+                  type="button"
+                  onClick={() => updateField('owner', m.display_name)}
+                  className={cn(
+                    'truncate rounded-xl border py-2.5 text-sm font-semibold transition-colors',
+                    form.owner === m.display_name
+                      ? 'border-primary bg-primary/5 text-primary'
+                      : 'border-border text-muted-foreground'
+                  )}
+                >
+                  {m.display_name}
+                </button>
+              ))}
             </div>
 
-            <div className="col-span-2 flex flex-col gap-1.5">
-              <Label htmlFor="f-memo">메모</Label>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="f-memo">
+                메모 <Optional />
+              </Label>
               <Textarea id="f-memo" value={form.memo} onChange={(e) => updateField('memo', e.target.value)} rows={2} />
             </div>
-          </div>
+          </FieldGroup>
 
           <Button type="submit" size="lg" className={cn('w-full rounded-xl')} disabled={submitting || analyzing}>
             {submitting ? '저장 중…' : '저장하기'}
