@@ -190,11 +190,25 @@ export default function GifticonCard({
 
         <div className="pointer-events-none relative flex min-w-0 flex-1 flex-col">
           {/* 받은 사람은 진한 이름표 대신 이름 앞 작은 점으로. 색은 그대로라 누구 건지는 그대로 구분된다.
-              분류는 썸네일에서 빼기로 했으므로 이 줄이 유일한 분류 표시다. */}
+              분류는 썸네일에서 빼기로 했으므로 이 줄이 유일한 분류 표시다.
+
+              상호도 여기 같이 적는다. 지금까지 이 카드에는 없었는데, 사람은 기프티콘을
+              '스타벅스 그거'로 기억한다 — '카페 아메리카노 T 2잔 + 딸기…'만 있으면 어느
+              가게 것인지 상품명 안에 적혀 있을 때만 알 수 있다.
+
+              상호가 상품명과 같으면 적지 않는다. 상호가 어디에도 안 적힌 기프티콘은
+              상품명으로 상호를 메우는데(imageAnalyze), 그것까지 적으면 같은 글자가
+              한 줄 사이로 두 번 나온다. */}
           <span className="flex items-center gap-1.5 pr-7 text-[11px] text-muted-foreground">
             {gifticon.owner && <i className={cn('size-1.5 shrink-0 rounded-full', ownerDotClass)} />}
             <span className="truncate">
-              {[gifticon.owner, categoryLabel(gifticon.category)].filter(Boolean).join(' · ')}
+              {[
+                gifticon.owner,
+                gifticon.brand === gifticon.name ? null : gifticon.brand,
+                categoryLabel(gifticon.category),
+              ]
+                .filter(Boolean)
+                .join(' · ')}
             </span>
           </span>
 

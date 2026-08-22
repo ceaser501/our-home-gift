@@ -1,0 +1,80 @@
+import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import ExtendSheet from '../components/ExtendSheet';
+import { addDays, formatDate, todayStr } from '../utils/date';
+
+// 기한 늘리기 창. 두 화면으로 갈라져 있다.
+//
+// 갈라둔 이유가 이 파일이 지키는 것이다. 안내와 날짜 바꾸기가 한 화면에 있으면,
+// 발행처에 다녀오기도 전에 날짜부터 눌러서 실제로는 안 늘어난 기한이 앱에만 늘어난다.
+// '연장했어요'를 눌러야 두 번째로 넘어가고, 거기서만 날짜가 바뀐다.
+
+function gifticonDue(days) {
+  return {
+    id: 'g1',
+    name: '썬키스트)애사비제로스파클링500',
+    expires_at: addDays(todayStr(), days),
+    thumb_image_url: null,
+    image_url: null,
+  };
+}
+
+let onExtend;
+let onClose;
+
+beforeEach(() => {
+  onExtend = vi.fn(async () => {});
+  onClose = vi.fn();
+});
+
+describe('기한 늘리기 — 두 화면', () => {
+  it('1단계에는 날짜를 바꾸는 버튼이 없다', () => {
+    render(<ExtendSheet gifticon={gifticonDue(1)} onExtend={onExtend} onClose={onClose} />);
+
+    expect(screen.getByText('1 / 2')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /까지로 바꾸기/ })).toBeNull();
+  });
+
+  it("'연장했어요'를 눌러야 날짜를 고를 수 있고, 기본은 90일이다", async () => {
+    const gifticon = gifticonDue(1);
+    render(<ExtendSheet gifticon={gifticon} onExtend={onExtend} onClose={onClose} />);
+
+    fireEvent.click(screen.getByRole('button', { name: '연장했어요' }));
+
+    expect(screen.getByText('2 / 2')).toBeTruthy();
+    const expected = formatDate(addDays(gifticon.expires_at, 90));
+    fireEvent.click(screen.getByRole('button', { name: `${expected}까지로 바꾸기` }));
+
+    expect(onExtend).toHaveBeenCalledWith(gifticon, addDays(gifticon.expires_at, 90));
+  });
+
+  // 두 번 연장한 사람을 위한 자리. 더하는 기준은 오늘이 아니라 원래 만료일이다.
+  it('+180일을 고르면 그만큼 더해진다', () => {
+    const gifticon = gifticonDue(1);
+    render(<ExtendSheet gifticon={gifticon} onExtend={onExtend} onClose={onClose} />);
+
+    fireEvent.click(screen.getByRole('button', { name: '연장했어요' }));
+    fireEvent.click(screen.getByRole('button', { name: '+180일' }));
+
+    const expected = formatDate(addDays(gifticon.expires_at, 180));
+    expect(screen.getByRole('button', { name: `${expected}까지로 바꾸기` })).toBeTruthy();
+  });
+
+  it("'나중에 할게요'는 창을 닫고 아무것도 바꾸지 않는다", () => {
+    render(<ExtendSheet gifticon={gifticonDue(1)} onExtend={onExtend} onClose={onClose} />);
+
+    fireEvent.click(screen.getByRole('button', { name: '나중에 할게요' }));
+
+    expect(onClose).toHaveBeenCalled();
+    expect(onExtend).not.toHaveBeenCalled();
+  });
+
+  // 만료된 것에 연장을 권하면 헛걸음이다. 대신 환불받는 길을 알려준다.
+  it('기한이 지난 것은 단계 없이 환불 안내만 보여준다', () => {
+    render(<ExtendSheet gifticon={gifticonDue(-3)} onExtend={onExtend} onClose={onClose} />);
+
+    expect(screen.getByText(/90% 환불/)).toBeTruthy();
+    expect(screen.queryByText('1 / 2')).toBeNull();
+    expect(screen.queryByRole('button', { name: '연장했어요' })).toBeNull();
+  });
+});
