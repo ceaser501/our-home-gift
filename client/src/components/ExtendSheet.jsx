@@ -122,7 +122,7 @@ export default function ExtendSheet({ gifticon, onExtend, onClose }) {
               </>
             ) : (
               <>
-                늘어난 기한을
+                새 기한을
                 <br />
                 앱에도 반영할게요
               </>
@@ -165,9 +165,7 @@ export default function ExtendSheet({ gifticon, onExtend, onClose }) {
                   예전 문구는 "선물함에서 늘릴 수 있어요"라고 적어, 카카오톡이 아닌
                   사람에게는 그냥 틀린 말이 됐다. 어디서 받았든 같은 사실만 적는다. */}
               <p className="m-0 text-[15px] leading-relaxed break-keep text-muted-foreground">
-                받은 문자나 발행처 앱에서 연장할 수 있어요.
-                <br />
-                보통 90일씩, 최대 5년까지요.
+                받으신 문자나 발행처 앱에서 연장할 수 있어요. 보통 90일씩, 최대 5년까지요.
               </p>
 
               {target}
