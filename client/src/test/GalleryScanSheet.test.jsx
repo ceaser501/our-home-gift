@@ -161,6 +161,25 @@ describe('GalleryScanSheet', () => {
     expect(asked).toContain('222');
   });
 
+  // 결과 화면에서 같은 이유를 되풀이해 적던 자리. 다섯 번 읽어도 새로 아는 것이 없고,
+  // 그 다섯 줄이 정작 '몇 개를 넣었다'는 소식을 화면 밖으로 밀어냈다.
+  it('못 넣은 것은 이유별로 한 번만 적고, 넣은 개수가 먼저 온다', async () => {
+    // 하나는 들어가고 하나는 기한이 지났다.
+    readGifticonInfo.mockImplementation(async (_prepared, opts) => ({
+      ...info(opts?.knownCode, `상품 ${opts?.knownCode}`),
+      expiresAt: opts?.knownCode === '222' ? '2020-01-01' : '2026-12-31',
+    }));
+
+    render(<GalleryScanSheet onRegistered={() => {}} onClose={() => {}} />);
+    (await screen.findByRole('button', { name: /사진 허용하고 찾기/ })).click();
+    (await screen.findByRole('button', { name: /1개 등록/ }, { timeout: 3000 })).click();
+
+    expect(await screen.findByText('1개를 등록했어요', {}, { timeout: 3000 })).toBeTruthy();
+    expect(screen.getByText('1개는 등록하지 못했어요')).toBeTruthy();
+    // 접혀 있을 때는 이유가 요약 한 줄로만 있다.
+    expect(screen.getByText('모두 사용기한이 지났어요')).toBeTruthy();
+  });
+
   // 빠진 칸이 하나 있다고 그 건만 따로 처음부터 다시 하게 할 이유가 없다.
   // 여덟 장을 한 번에 넣으러 온 사람에게는 그게 일이 늘어난 것이다.
   it('못 읽은 칸을 직접 채우면 그 카드도 등록에 낀다', async () => {

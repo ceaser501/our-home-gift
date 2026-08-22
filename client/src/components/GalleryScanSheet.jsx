@@ -2,8 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   CalendarClock,
   Check,
-  CheckCircle2,
   ChevronDown,
+  ChevronRight,
   EyeOff,
   ImageOff,
   ImagePlus,
@@ -13,6 +13,7 @@ import {
   Pencil,
   RotateCcw,
   ScanSearch,
+  TriangleAlert,
   X,
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -1139,7 +1140,9 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
       while (queue.length > 0) {
         const candidate = queue.shift();
         try {
-          done.push(await save(candidate));
+          await save(candidate);
+          // 줄이 아니라 후보를 담는다. 결과 화면이 무엇을 넣었는지 그림으로 보여준다.
+          done.push(candidate);
         } catch (err) {
           // 하나가 실패해도 나머지는 계속 넣는다. 여기서 멈추면 넣은 것과 못 넣은 것이
           // 섞인 채로 화면만 사라진다.
@@ -1164,7 +1167,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
     const unreadable = candidates
       .filter((c) => !dismissedIds.includes(c.id) && !isPickable(c))
       .map((c) => ({ candidate: c, reason: reasonOf(c), expired: isExpired(c) }));
-    setResult({ done: done.length, failed: [...unreadable, ...failed], noExpiry });
+    setResult({ done, failed: [...unreadable, ...failed], noExpiry });
     setStage('registered');
     // 목록을 다시 읽게 한다. 방금 넣은 것이 뒤에 보여야 한다.
     if (done.length > 0) onRegistered?.();
@@ -1450,6 +1453,23 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
   // 섞여 있을 때만 '등록할 수 없어요'로 뭉친다.
   const blockKinds = [...new Set(blocked.map((c) => blockKind(c, dismissedIds.includes(c.id))))];
   const blockedTitle = blockKinds.length === 1 ? BLOCK_TITLES[blockKinds[0]] : '등록할 수 없어요';
+
+  // 결과 화면에서 못 넣은 것을 이유별로 묶는다.
+  //
+  // 같은 이유를 다섯 번 되풀이해 적던 자리다. 다섯 번 읽어도 새로 아는 것이 없고,
+  // 그 다섯 줄이 정작 '넷을 넣었다'는 소식을 화면 밖으로 밀어냈다. 많은 것부터 둔다.
+  const registered = result?.done ?? [];
+  const failGroups = useMemo(() => {
+    const byReason = new Map();
+    (result?.failed ?? []).forEach((item) => {
+      const list = byReason.get(item.reason) || [];
+      list.push(item);
+      byReason.set(item.reason, list);
+    });
+    return [...byReason.entries()]
+      .map(([reason, items]) => ({ reason, items }))
+      .sort((a, b) => b.items.length - a.items.length);
+  }, [result]);
 
   // 훑기 결과. 접어둔다 — 찾은 것이 여러 개면 위쪽 목록만으로 화면이 꽉 차는데, 그 아래
   // 표까지 펼쳐져 있으면 정작 눌러야 할 등록 버튼이 밀린다. 궁금할 때 여는 자리다.
@@ -1906,64 +1926,151 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
             </div>
           )}
 
+          {/* ── 결과 화면 ────────────────────────────────────────────────────
+              성공이 주인공이다.
+
+              예전에는 못 넣은 다섯 건이 베이지 상자로 화면을 다 채워서, 넷을 넣은 일이
+              부록처럼 보였다. 같은 이유("사용기한이 지났어요")가 다섯 번 되풀이되기도
+              했다 — 다섯 번 읽어도 새로 아는 것이 없는 말이다.
+
+              이제 넣은 것이 위에 크게 서고, 못 넣은 것은 이유별로 묶여 한 줄로 접힌다.
+              펼치면 이유마다 몇 개인지와 그림이 나온다. */}
           {stage === 'registered' && result && (
             <>
-              <div className="flex flex-col items-center gap-2 pt-4 pb-2 text-center">
-                <CheckCircle2 className="size-8 text-success" />
-                <p className="m-0 text-lg font-semibold text-foreground">
-                  {result.done > 0 ? `${result.done}개 등록했어요` : '등록한 게 없어요'}
-                </p>
-                {/* 유효기한은 없어도 넣는다. 대신 비었다는 걸 알려준다 — 말해주지 않으면
-                    빠진 줄 모르고 지나가고, 그러면 만료 전에 알려줄 수가 없다. */}
-                {result.noExpiry > 0 && (
-                  <p className="m-0 text-base leading-relaxed break-keep text-muted-foreground">
-                    유효기한이 빈 게 {result.noExpiry}개 있어요.
-                    <br />
-                    목록에서 수정으로 채워주세요.
-                  </p>
+              <div className="flex flex-col items-center gap-3.5 pt-2 pb-1 text-center">
+                {/* 아무것도 못 넣었을 때는 초록 동그라미가 거짓말이 된다. */}
+                {registered.length > 0 ? (
+                  <span className="flex size-16 items-center justify-center rounded-full bg-success/12">
+                    <Check className="size-8 text-success" strokeWidth={3} />
+                  </span>
+                ) : (
+                  <span className="flex size-16 items-center justify-center rounded-full bg-warning/15">
+                    <TriangleAlert className="size-7 text-warning" />
+                  </span>
                 )}
+                <div className="flex flex-col gap-1.5">
+                  <p className="m-0 text-2xl font-bold break-keep text-foreground">
+                    {registered.length > 0 ? `${registered.length}개를 등록했어요` : '등록할 게 없었어요'}
+                  </p>
+                  {/* 줄바꿈을 글자에 담아 넘긴다(whitespace-pre-line). '찾은 5개는 모두 /
+                      사용기한이 지났어요'는 그 자리에서 끊어야 한 문장으로 읽힌다. */}
+                  <p className="m-0 text-[15px] leading-relaxed break-keep whitespace-pre-line text-muted-foreground">
+                    {registered.length === 0
+                      ? failGroups.length === 1
+                        ? `찾은 ${result.failed.length}개는 모두\n${failGroups[0].reason}`
+                        : `찾은 ${result.failed.length}개를 넣지 못했어요`
+                      : result.failed.length === 0
+                        ? '모두 문제없이 등록했어요'
+                        : `${myName || '내'} 이름으로 저장했어요`}
+                  </p>
+                </div>
               </div>
 
-              {/* 못 넣은 것을 하나씩 적는다. 개수만 적으면 어느 것이 빠졌는지 알 수 없고,
-                  아예 말하지 않으면 다 들어간 줄 안다. 이 앱은 기프티콘을 놓치지 않겠다는
-                  약속으로 서 있다. */}
-              {result.failed.length > 0 && (
-                <div className="flex flex-col gap-2 rounded-xl border border-warning/40 bg-warning/10 px-3.5 py-3">
-                  {/* 전부 기한이 지난 것이면 제목에 그렇게 적는다. '등록하지 못했어요'는
-                      뭔가 잘못됐다는 말로 읽히는데, 기한이 지난 것은 잘못된 게 아니다. */}
-                  <p className="m-0 text-base font-semibold text-foreground">
-                    {result.failed.every((item) => item.expired)
-                      ? `${result.failed.length}개는 사용기한이 지났어요`
-                      : `${result.failed.length}개는 등록하지 못했어요`}
-                  </p>
-                  <ul className="m-0 flex list-none flex-col gap-2 p-0">
-                    {result.failed.map(({ candidate, reason }) => (
-                      <li key={candidate.id} className="flex items-center gap-2.5">
-                        <img
-                          src={`data:image/jpeg;base64,${candidate.images[0]}`}
-                          alt=""
-                          className="size-10 shrink-0 rounded-lg bg-black object-cover"
-                        />
-                        <span className="flex-1 text-sm break-keep text-foreground">{reason}</span>
-                      </li>
+              {/* 넣은 것은 그림 몇 장과 개수 한 줄이면 된다. 카드로 하나씩 세우면 아홉
+                  개를 넣은 날에 화면이 아홉 칸이 되는데, 정작 다음에 할 일은 목록으로
+                  가는 것이다. 이 줄이 그 문이기도 하다. */}
+              {registered.length > 0 && (
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="flex items-center gap-3 rounded-2xl bg-muted px-3.5 py-3 text-left"
+                >
+                  <span className="flex shrink-0 items-center">
+                    {registered.slice(0, 3).map((candidate, at) => (
+                      <img
+                        key={candidate.id}
+                        src={`data:image/jpeg;base64,${candidate.images[0]}`}
+                        alt=""
+                        className={cn(
+                          'size-10 rounded-lg border-2 border-card bg-secondary object-cover',
+                          at > 0 && '-ml-3.5'
+                        )}
+                      />
                     ))}
-                  </ul>
-                  {/* 다음에도 올라온다는 걸 못 박아둔다. 여기서 사라졌다고 생각하면
-                      그 기프티콘은 영영 안 들어간다.
-
-                      기한이 지난 것에는 이 말을 붙이지 않는다. + 로 올려도 똑같이
-                      막히는데 올려보라고 하면, 시키는 대로 하고 나서 같은 자리에서
-                      또 막힌다. 살릴 수 있는 것이 하나라도 있을 때만 적는다. */}
-                  {result.failed.some((item) => !item.expired) && (
-                    <p className="m-0 border-t border-warning/30 pt-2.5 text-sm break-keep text-muted-foreground">
-                      다음에 찾을 때 다시 보여드려요.
-                      <br />+ 로 직접 올려도 돼요.
-                    </p>
-                  )}
-                </div>
+                  </span>
+                  <span className="min-w-0 flex-1 text-[15px] font-semibold text-foreground">
+                    등록한 기프티콘 {registered.length}개
+                  </span>
+                  <ChevronRight className="size-4.5 shrink-0 text-muted-foreground" />
+                </button>
               )}
 
-              <div className="flex flex-col gap-2">
+              {/* 유효기한은 없어도 넣는다. 대신 비었다는 걸 알려준다 — 말해주지 않으면
+                  빠진 줄 모르고 지나가고, 그러면 만료 전에 알려줄 수가 없다. */}
+              {result.noExpiry > 0 && (
+                <p className="m-0 text-sm leading-relaxed break-keep text-muted-foreground">
+                  유효기한이 빈 게 {result.noExpiry}개 있어요. 목록에서 수정으로 채워주세요.
+                </p>
+              )}
+
+              {/* 못 넣은 것. 개수만 적으면 어느 것이 빠졌는지 알 수 없고, 아예 말하지
+                  않으면 다 들어간 줄 안다. 이 앱은 기프티콘을 놓치지 않겠다는 약속으로
+                  서 있다. 그래서 접되, 없애지는 않는다.
+
+                  하나도 못 넣은 날에는 펼친 채로 시작한다. 그때는 이 상자가 화면에서
+                  볼 수 있는 전부다. */}
+              {result.failed.length > 0 && (
+                <details
+                  open={registered.length === 0}
+                  className="group rounded-2xl border border-border px-3.5 py-3"
+                >
+                  <summary className="flex cursor-pointer list-none items-center gap-3">
+                    <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-warning/15">
+                      <TriangleAlert className="size-4.5 text-warning" />
+                    </span>
+                    <span className="flex min-w-0 flex-1 flex-col">
+                      <span className="text-[15px] font-semibold break-keep text-foreground">
+                        {result.failed.length}개는 등록하지 못했어요
+                      </span>
+                      {/* 접혀 있을 때도 무슨 일인지는 알아야 한다. 이유가 하나뿐인 날이
+                          대부분이라, 그 한 줄이면 펼칠 일도 없다. */}
+                      <span className="text-[13px] break-keep text-muted-foreground group-open:hidden">
+                        {failGroups.length === 1
+                          ? `모두 ${failGroups[0].reason}`
+                          : `${failGroups[0].reason} 외 ${failGroups.length - 1}가지`}
+                      </span>
+                    </span>
+                    <ChevronDown className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
+                  </summary>
+
+                  <div className="mt-3 flex flex-col gap-3 border-t border-border pt-3">
+                    {failGroups.map((group) => (
+                      <div key={group.reason} className="flex flex-col gap-2">
+                        <p className="m-0 flex items-baseline gap-1.5 break-keep">
+                          <span className="text-sm font-bold text-foreground">{group.reason}</span>
+                          <span className="text-[13px] font-semibold tabular-nums text-muted-foreground">
+                            {group.items.length}개
+                          </span>
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {group.items.map(({ candidate }) => (
+                            <img
+                              key={candidate.id}
+                              src={`data:image/jpeg;base64,${candidate.images[0]}`}
+                              alt=""
+                              className="size-13 rounded-lg bg-secondary object-cover"
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+
+                    {/* 다음에도 올라온다는 걸 못 박아둔다. 여기서 사라졌다고 생각하면
+                        그 기프티콘은 영영 안 들어간다.
+
+                        기한이 지난 것에는 이 말을 붙이지 않는다. + 로 올려도 똑같이
+                        막히는데 올려보라고 하면, 시키는 대로 하고 나서 같은 자리에서
+                        또 막힌다. 살릴 수 있는 것이 하나라도 있을 때만 적는다. */}
+                    {result.failed.some((item) => !item.expired) && (
+                      <p className="m-0 text-[13px] break-keep text-muted-foreground">
+                        다음에 찾을 때 다시 보여드려요. + 로 직접 올려도 돼요.
+                      </p>
+                    )}
+                  </div>
+                </details>
+              )}
+
+              <div className="flex flex-col gap-2 pt-1">
                 <Button type="button" size="lg" className="w-full rounded-xl" onClick={onClose}>
                   목록으로
                 </Button>
