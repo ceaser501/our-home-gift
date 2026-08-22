@@ -798,9 +798,24 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
                 </Select>
               </div>
             </div>
+
+            {/* 번호도 '무엇인가요'다. 한때 기한·금액과 한 묶음에 뒀는데, 그 묶음의 이름이
+                무엇이 되든 번호는 거기 속하지 않는다 — 이 번호가 이 기프티콘을 가리키는
+                이름이고, 계산대에서 실제로 내미는 것도 이것이다. */}
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="f-code">바코드 번호</Label>
+              <Input
+                id="f-code"
+                value={form.code}
+                onChange={(e) => updateField('code', e.target.value)}
+                placeholder="사진에서 읽거나 직접 입력"
+              />
+            </div>
           </FieldGroup>
 
-          <FieldGroup title="언제까지 쓰나요">
+          {/* 둘 다 카드에 적힌 숫자이되 안 적혀 있을 수도 있는 것들이다. '언제까지
+              쓰나요'로는 금액이 덮이지 않았다. */}
+          <FieldGroup title="언제까지, 얼마인가요">
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="f-expires">
@@ -858,16 +873,6 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
             {voucherHint && !form.is_voucher && onlyDigits(form.amount) && (
               <p className="m-0 text-sm break-keep text-muted-foreground">금액권 같아 보여요. 맞으면 켜주세요.</p>
             )}
-
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="f-code">바코드 번호</Label>
-              <Input
-                id="f-code"
-                value={form.code}
-                onChange={(e) => updateField('code', e.target.value)}
-                placeholder="사진에서 읽거나 직접 입력"
-              />
-            </div>
           </FieldGroup>
 
           <FieldGroup title="누구 것인가요">
