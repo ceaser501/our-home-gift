@@ -23,6 +23,8 @@ vi.mock('@zxing/browser', () => ({
     async decodeFromCanvas(canvas) {
       const found = barcodes.get(canvas.dataset.name);
       if (!found) throw new Error('not found');
+      // 가장자리까지 꽉 찬 바코드. 여백을 둘러 그린 판에서만 읽힌다(quiet zone).
+      if (found.needsQuiet && !(Number(canvas.dataset.pad) > 0)) throw new Error('quiet zone 없음');
       return {
         getText: () => found.code,
         getBarcodeFormat: () => 1,
@@ -77,11 +79,17 @@ beforeEach(() => {
     const el = realCreate(tag);
     if (tag === 'canvas') {
       el.getContext = () => ({
-        drawImage(image) {
+        drawImage(image, dx) {
           el.dataset.name = image._name;
+          // 여백을 두고 그렸는지. 두 번째 인자가 그 여백이다.
+          el.dataset.pad = String(dx || 0);
         },
         set imageSmoothingEnabled(_v) {},
         set imageSmoothingQuality(_v) {},
+        // 여백을 둘러 그릴 때 쓴다(quiet zone). 없으면 그 사진이 통째로 버려진다 —
+        // decodeAt이 여기서 터지고, collect가 '못 연 사진'으로 세고 넘어간다.
+        set fillStyle(_v) {},
+        fillRect() {},
         getImageData(_x, _y, width, height) {
           const spec = pixels.get(el.dataset.name);
           if (!spec) throw new Error('픽셀을 볼 수 없음');
@@ -234,6 +242,32 @@ describe('groupImages — 고른 사진을 묶는다', () => {
     expect(missed).toHaveLength(1);
     expect(tally.unreadable).toBe(1);
     expect(tally.noCode).toBe(0);
+  });
+
+  // 실물 진단에서 나온 자리. 못 읽은 두 건이 다 막대폭 92~93%였다 — 바코드가 사진
+  // 가장자리까지 꽉 차서, 규격이 요구하는 빈 자리(quiet zone)가 없었다. 굵기는
+  // 충분했는데(막대 간격 6~12픽셀) 판독기가 막대의 시작을 못 잡은 것이다.
+  it('가장자리까지 꽉 찬 바코드는 여백을 둘러 다시 읽는다', async () => {
+    barcodes.set('edge.jpg', { code: '777', coverage: 0.9, needsQuiet: true });
+    pixels.set('edge.jpg', { bars: true });
+
+    const { candidates, missed } = await groupImages([pick('edge.jpg')]);
+
+    expect(candidates).toHaveLength(1);
+    expect(candidates[0].code).toBe('777');
+    expect(missed).toHaveLength(0);
+  });
+
+  // 여백 두르기는 막대로 보이는 사진에만 붙는다. 밥 사진까지 한 판 더 돌리면 훑기가
+  // 그만큼 느려지는데, 거기서 나올 것은 없다.
+  it('막대로 안 보이는 사진에는 여백 판을 돌리지 않는다', async () => {
+    barcodes.set('lunch.jpg', { code: '888', coverage: 0.9, needsQuiet: true });
+    // pixels에 안 적으면 막대가 안 보이는 사진이다.
+
+    const { candidates, missed } = await groupImages([pick('lunch.jpg')]);
+
+    expect(candidates).toHaveLength(0);
+    expect(missed).toHaveLength(1);
   });
 
   // 폴더를 모르는 사진(직접 고른 것)에서 무엇을 대표로 보낼지.

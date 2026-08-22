@@ -228,7 +228,7 @@ const NO_BARCODE_KEY = 'moacon:gallery-no-barcode';
 // 예전에는 못 읽던 사진을 지금은 읽을 수 있게 되는 일이 실제로 있었다(작은 이미지를
 // 키워서 읽도록 고친 뒤). 그런데 "없음"으로 적힌 사진은 다시 읽지 않으니, 고쳐놓고도
 // 그 사진들만 영영 안 나온다. 버전이 다르면 기록을 통째로 버리고 다시 읽는다.
-const DECODER_VERSION = 12;
+const DECODER_VERSION = 13;
 
 function readIdSet(key) {
   try {
@@ -454,11 +454,36 @@ async function decodeBarcode(read, pass = SHALLOW) {
     usedFactor = factor;
   }
   // 못 읽었으면 막대가 있기라도 한지 본다. 사진을 이미 열어둔 이 자리가 제일 싸다.
+  let usedQuiet = false;
+  let bars = false;
+  let hint = null;
   if (!found) {
-    // hint는 진단용이다. 출시 때는 아래 세 줄을 예전 한 줄로 되돌린다.
+    hint = { size: `${width}×${height}` };
+    bars = looksLikeBarcode(image, hint);
+
+    // ── 여백을 둘러 한 번 더 ────────────────────────────────────────────────
+    // 막대는 보이는데 못 읽은 사진에만 한다. 실물로 재보니 두 건이 다 막대폭 92~93%,
+    // 곧 바코드가 사진 가장자리까지 꽉 찬 것이었다. 규격이 요구하는 빈 자리가 없어서
+    // 판독기가 막대의 시작을 못 잡는다 — 굵기는 충분한데(막대 간격 6~12픽셀) 안 읽히던
+    // 이유가 이것이다.
+    //
+    // 여기까지 오는 사진은 얼마 안 된다. 쉰여덟 장을 훑어 넷이었다. 밥 사진은 막대가
+    // 안 보여서 이 줄을 지나가지 않으므로, 값은 그 넷에만 붙는다.
+    if (bars) {
+      for (const factor of barcodeScaleLadder(longEdge, pass.deep)) {
+        found = await decodeAt(image, width, height, factor, false, true);
+        if (found) {
+          usedFactor = factor;
+          usedQuiet = true;
+          break;
+        }
+      }
+    }
+  }
+
+  if (!found) {
+    // hint는 진단용이다. 출시 때는 이 return을 예전 한 줄로 되돌린다.
     //   return { code: null, bars: looksLikeBarcode(image) };
-    const hint = { size: `${width}×${height}` };
-    const bars = looksLikeBarcode(image, hint);
     return { code: null, bars, hint: bars ? hint : null };
   }
 
@@ -470,22 +495,41 @@ async function decodeBarcode(read, pass = SHALLOW) {
   // 쓴다. 갈리면 확인 쪽을 택한다(실제로 한 자리가 틀린 채 등록된 일이 있었다 — 7이 2로.
   // ITF처럼 검산 자리가 없는 형식은 걸러지지도 않는다). 두 번째로는 못 읽었다면 확인은
   // 못 한 것이지만, 읽은 것은 읽은 것이다.
-  const again = await decodeAt(image, width, height, usedFactor * 0.85, false);
+  // 여백을 둘러서 읽힌 건은 확인도 여백을 두르고 해야 한다. 안 그러면 확인 쪽이 늘
+  // 실패해서, 확인을 못 한 채로 넘어간다.
+  const again = await decodeAt(image, width, height, usedFactor * 0.85, false, usedQuiet);
   const chosen = !again || again.code === found.code ? found : again;
   return { ...chosen, rich };
 }
 
-async function decodeAt(image, width, height, scale, tryHarder) {
+// 여백을 둘러 그릴 때 한쪽에 두는 폭. 그림 가로의 이만큼.
+//
+// 규격이 요구하는 여백은 막대 열 칸이다. 막대 한 칸이 가로의 1%쯤 되므로 10%면 넉넉하고,
+// 캔버스가 20% 커지는 값이라 부담도 없다.
+const QUIET_RATIO = 0.1;
+
+async function decodeAt(image, width, height, scale, tryHarder, quiet = false) {
+  const drawW = Math.max(1, Math.round(width * scale));
+  const drawH = Math.max(1, Math.round(height * scale));
+  // 바코드 규격은 막대 양옆에 빈 자리(quiet zone)를 요구한다. 판독기는 그 빈 자리를
+  // 보고 "여기서 막대가 시작한다"를 잡는데, 바코드가 사진 가장자리까지 꽉 차 있으면
+  // 그게 없다. 그때는 흰 여백을 둘러 그려주면 그대로 읽힌다.
+  const pad = quiet ? Math.max(16, Math.round(drawW * QUIET_RATIO)) : 0;
+
   const canvas = document.createElement('canvas');
-  canvas.width = Math.max(1, Math.round(width * scale));
-  canvas.height = Math.max(1, Math.round(height * scale));
+  canvas.width = drawW + pad * 2;
+  canvas.height = drawH + pad * 2;
   const ctx = canvas.getContext('2d');
+  if (pad > 0) {
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
   // 키울 때는 보간을 끈다. 정수배로 키우므로 원본 픽셀이 그대로 복제되고, 검정과 흰색
   // 사이에 없던 회색이 끼지 않는다. 줄일 때는 반대다 — 여러 픽셀을 하나로 모아야 하니
   // 보간이 있어야 막대가 통째로 사라지지 않는다.
   ctx.imageSmoothingEnabled = scale <= 1;
   ctx.imageSmoothingQuality = 'high';
-  ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+  ctx.drawImage(image, pad, pad, drawW, drawH);
 
   try {
     const reader = new BrowserMultiFormatReader(tryHarder ? HARD_HINTS : undefined);
@@ -708,10 +752,15 @@ export function looksLikeBarcode(image, out = null) {
         if (out) {
           // 이 캔버스는 240픽셀로 줄인 것이라, 원본 픽셀로 되돌려 재야 뜻이 있다.
           const back = image.naturalWidth / width;
-          const span = edges[edges.length - 1] - edges[0];
-          out.span = Math.round((span / width) * 100);
-          // 뒤집히는 자리 하나가 막대 하나의 경계다. 폭을 그 수로 나누면 평균 굵기다.
-          out.module = Math.round((span / edges.length) * back * 10) / 10;
+          const first = edges[0];
+          const last = edges[edges.length - 1];
+          out.span = Math.round(((last - first) / width) * 100);
+          // 뒤집히는 자리 사이가 막대(또는 빈칸) 하나다. '모듈'이라고 적었었는데 그건
+          // 틀린 말이다 — 막대 하나는 모듈 한 칸일 수도 네 칸일 수도 있다.
+          out.gap = Math.round(((last - first) / edges.length) * back * 10) / 10;
+          // 막대 양옆에 남은 빈 자리. 규격은 막대 열 칸을 요구하는데, 이게 좁으면
+          // 굵기가 충분해도 판독기가 시작을 못 잡는다.
+          out.quiet = Math.round((Math.min(first, width - last) / width) * 100);
         }
         return true;
       }

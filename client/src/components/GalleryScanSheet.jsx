@@ -1800,14 +1800,21 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
                   )}
                 </button>
               )}
-              <button
-                type="button"
-                onClick={() => handleDismiss(candidate)}
-                aria-label="기프티콘 아님"
-                className="flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground"
-              >
-                <X className="size-4.5" />
-              </button>
+              {/* ✕는 '이건 기프티콘이 아니에요'라는 뜻이다. 택배 송장이나 영수증이
+                  후보로 잡혔을 때 누르는 자리라, 다음부터 안 묻게 된다.
+
+                  기한이 지난 것에는 붙이지 않는다. 그건 기프티콘이 맞는데 못 쓰는
+                  것뿐이라, 아니라고 표시할 일이 없다. */}
+              {kind !== 'expired' && (
+                <button
+                  type="button"
+                  onClick={() => handleDismiss(candidate)}
+                  aria-label="기프티콘 아님"
+                  className="flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground"
+                >
+                  <X className="size-4.5" />
+                </button>
+              )}
             </>
           )}
         </div>
@@ -2302,13 +2309,13 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
                                   ? '지난 훑기에서 못 읽어 이번엔 건너뜀'
                                   : '막대는 보이는데 번호를 못 읽음'}
                               </span>
-                              {/* 왜 못 읽었는지는 이 줄이 말한다. 막대 하나가 2픽셀
-                                  아래면 굵기 탓이고(카톡이 줄여 보낸 카드), 3픽셀쯤
-                                  나오는데도 못 읽었으면 다른 원인이다. */}
+                              {/* 왜 못 읽었는지는 이 줄이 말한다. 여백이 좁으면(5%
+                                  아래) 바코드가 가장자리까지 꽉 찬 것이고, 막대 간격이
+                                  좁으면(3픽셀 아래) 굵기가 모자란 것이다. */}
                               {shot.hint && (
                                 <span className="truncate text-xs tabular-nums text-muted-foreground/70">
-                                  {shot.hint.size} · 막대폭 {shot.hint.span}% · 모듈{' '}
-                                  {shot.hint.module}px
+                                  {shot.hint.size} · 막대폭 {shot.hint.span}% · 여백 {shot.hint.quiet}% · 간격{' '}
+                                  {shot.hint.gap}px
                                 </span>
                               )}
                             </div>
