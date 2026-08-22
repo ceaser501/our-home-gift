@@ -30,21 +30,18 @@ const DEFAULT_DAYS = 90;
 // 홈으로 보낸다 — 한 번 더 눌러야 하지만 오류 화면을 보는 것보다 낫다.
 const GIFT_BOX_URL = 'https://gift.kakao.com/';
 
-// 고를 수 있는 기간. 90일이 발행사 표준이고, 두 번 연장한 사람을 위해 180일을 둔다.
-const PRESETS = [90, 180];
-
 export default function ExtendSheet({ gifticon, onExtend, onClose }) {
   // 뒤로가기는 단계와 상관없이 창을 닫는다. 다른 창들과 같은 규칙이어야 한다 —
   // 여기만 한 단계씩 물러나면, 뒤로가기를 몇 번 눌러야 나가는지 알 수 없어진다.
   useBackClose(onClose);
   const [step, setStep] = useState(1);
-  // 고른 기간. null이면 직접 고른 날짜를 쓴다.
-  const [days, setDays] = useState(DEFAULT_DAYS);
+  // 날짜를 직접 적는 중인가. 평소에는 90일이 미리 계산돼 있다.
+  const [custom, setCustom] = useState(false);
   const [date, setDate] = useState('');
   const [saving, setSaving] = useState(false);
 
   const expired = gifticon.expires_at < todayStr();
-  const next = days === null ? date : addDays(gifticon.expires_at, days);
+  const next = custom ? date : addDays(gifticon.expires_at, DEFAULT_DAYS);
 
   async function apply() {
     if (!next) return;
@@ -214,9 +211,7 @@ export default function ExtendSheet({ gifticon, onExtend, onClose }) {
           ) : (
             <>
               <p className="m-0 text-[15px] leading-relaxed break-keep text-muted-foreground">
-                앱에 보이는 날짜만 바뀌어요.
-                <br />
-                실제 기한은 발행처 기준이에요.
+                앱 안의 날짜만 바뀌어요. 실제 기프티콘은 발행처 기준입니다.
               </p>
 
               {/* 바뀌기 전과 후를 나란히 둔다. 새 날짜만 보여주면 얼마나 늘어나는지가
@@ -237,50 +232,40 @@ export default function ExtendSheet({ gifticon, onExtend, onClose }) {
                 </div>
               </div>
 
-              <div className="flex gap-2">
-                {PRESETS.map((preset) => (
-                  <button
-                    key={preset}
-                    type="button"
-                    onClick={() => setDays(preset)}
-                    className={cn(
-                      'flex-1 rounded-xl border py-2.5 text-sm font-semibold transition-colors',
-                      days === preset
-                        ? 'border-primary text-primary'
-                        : 'border-border text-muted-foreground'
-                    )}
-                  >
-                    +{preset}일
-                  </button>
-                ))}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setDays(null);
-                    if (!date) setDate(addDays(gifticon.expires_at, DEFAULT_DAYS));
-                  }}
-                  className={cn(
-                    'flex-1 rounded-xl border py-2.5 text-sm font-semibold transition-colors',
-                    days === null ? 'border-primary text-primary' : 'border-border text-muted-foreground'
-                  )}
-                >
-                  직접 선택
-                </button>
-              </div>
-
-              {days === null && (
+              {/* 기본은 90일 한 번으로 끝내는 길이다. 기간을 고르는 칩(+90 / +180)을
+                  뒀다가 걷어냈다 — 발행처에서 얼마를 늘려줬는지는 이미 정해져서 돌아온
+                  값이라, 여기서 고를 일이 아니다. 90일이 아니면 그때만 날짜를 적는다. */}
+              {custom && (
                 <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full" />
               )}
 
-              <Button
-                type="button"
-                size="lg"
-                className="mt-1 w-full rounded-xl"
-                onClick={apply}
-                disabled={saving || !next}
-              >
-                {next ? `${formatDate(next)}까지로 바꾸기` : '날짜를 골라주세요'}
-              </Button>
+              <div className="flex flex-col gap-2 pt-1">
+                <Button
+                  type="button"
+                  size="lg"
+                  className="w-full rounded-xl"
+                  onClick={apply}
+                  disabled={saving || !next}
+                >
+                  {next ? `${formatDate(next)}까지로 바꾸기` : '날짜를 골라주세요'}
+                </Button>
+                {/* 위 버튼과 같은 모양이되 색을 뺀다. 나란히 놓였을 때 어느 쪽이
+                    기본인지 한눈에 갈려야 한다. */}
+                {!custom && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="lg"
+                    className="w-full rounded-xl"
+                    onClick={() => {
+                      setDate(addDays(gifticon.expires_at, DEFAULT_DAYS));
+                      setCustom(true);
+                    }}
+                  >
+                    직접 날짜 선택
+                  </Button>
+                )}
+              </div>
             </>
           )}
         </div>

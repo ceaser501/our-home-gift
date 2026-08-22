@@ -48,16 +48,19 @@ describe('기한 늘리기 — 두 화면', () => {
     expect(onExtend).toHaveBeenCalledWith(gifticon, addDays(gifticon.expires_at, 90));
   });
 
-  // 두 번 연장한 사람을 위한 자리. 더하는 기준은 오늘이 아니라 원래 만료일이다.
-  it('+180일을 고르면 그만큼 더해진다', () => {
+  // 90일이 아닌 날짜를 받아 온 경우. 적은 날짜가 그대로 나가야 한다.
+  it('직접 날짜 선택으로 적은 날짜가 그대로 저장된다', () => {
     const gifticon = gifticonDue(1);
     render(<ExtendSheet gifticon={gifticon} onExtend={onExtend} onClose={onClose} />);
 
     fireEvent.click(screen.getByRole('button', { name: '연장했어요' }));
-    fireEvent.click(screen.getByRole('button', { name: '+180일' }));
+    fireEvent.click(screen.getByRole('button', { name: '직접 날짜 선택' }));
 
-    const expected = formatDate(addDays(gifticon.expires_at, 180));
-    expect(screen.getByRole('button', { name: `${expected}까지로 바꾸기` })).toBeTruthy();
+    const picked = addDays(gifticon.expires_at, 45);
+    fireEvent.change(document.querySelector('input[type="date"]'), { target: { value: picked } });
+    fireEvent.click(screen.getByRole('button', { name: `${formatDate(picked)}까지로 바꾸기` }));
+
+    expect(onExtend).toHaveBeenCalledWith(gifticon, picked);
   });
 
   it("'나중에 할게요'는 창을 닫고 아무것도 바꾸지 않는다", () => {
