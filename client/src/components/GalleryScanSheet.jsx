@@ -1158,9 +1158,12 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
     setSaving(null);
     // 못 읽어서 애초에 넣을 수 없던 것도 함께 적는다. 목록에서 이미 보여줬지만,
     // 결과 화면만 보고 닫는 사람에게는 여기가 마지막 기회다.
+    //
+    // 기한이 지난 것은 따로 표시해둔다. 아래 결과 화면이 "+ 로 직접 올려도 돼요"를
+    // 붙일지 말지를 이걸로 가른다 — 기한이 지난 것은 어떻게 올려도 안 들어간다.
     const unreadable = candidates
       .filter((c) => !dismissedIds.includes(c.id) && !isPickable(c))
-      .map((c) => ({ candidate: c, reason: reasonOf(c) }));
+      .map((c) => ({ candidate: c, reason: reasonOf(c), expired: isExpired(c) }));
     setResult({ done: done.length, failed: [...unreadable, ...failed], noExpiry });
     setStage('registered');
     // 목록을 다시 읽게 한다. 방금 넣은 것이 뒤에 보여야 한다.
@@ -1926,8 +1929,12 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
                   약속으로 서 있다. */}
               {result.failed.length > 0 && (
                 <div className="flex flex-col gap-2 rounded-xl border border-warning/40 bg-warning/10 px-3.5 py-3">
+                  {/* 전부 기한이 지난 것이면 제목에 그렇게 적는다. '등록하지 못했어요'는
+                      뭔가 잘못됐다는 말로 읽히는데, 기한이 지난 것은 잘못된 게 아니다. */}
                   <p className="m-0 text-base font-semibold text-foreground">
-                    {result.failed.length}개는 등록하지 못했어요
+                    {result.failed.every((item) => item.expired)
+                      ? `${result.failed.length}개는 사용기한이 지났어요`
+                      : `${result.failed.length}개는 등록하지 못했어요`}
                   </p>
                   <ul className="m-0 flex list-none flex-col gap-2 p-0">
                     {result.failed.map(({ candidate, reason }) => (
@@ -1942,11 +1949,17 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
                     ))}
                   </ul>
                   {/* 다음에도 올라온다는 걸 못 박아둔다. 여기서 사라졌다고 생각하면
-                      그 기프티콘은 영영 안 들어간다. */}
-                  <p className="m-0 border-t border-warning/30 pt-2.5 text-sm break-keep text-muted-foreground">
-                    다음에 찾을 때 다시 보여드려요.
-                    <br />+ 로 직접 올려도 돼요.
-                  </p>
+                      그 기프티콘은 영영 안 들어간다.
+
+                      기한이 지난 것에는 이 말을 붙이지 않는다. + 로 올려도 똑같이
+                      막히는데 올려보라고 하면, 시키는 대로 하고 나서 같은 자리에서
+                      또 막힌다. 살릴 수 있는 것이 하나라도 있을 때만 적는다. */}
+                  {result.failed.some((item) => !item.expired) && (
+                    <p className="m-0 border-t border-warning/30 pt-2.5 text-sm break-keep text-muted-foreground">
+                      다음에 찾을 때 다시 보여드려요.
+                      <br />+ 로 직접 올려도 돼요.
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -2121,6 +2134,15 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
                                   ? '지난 훑기에서 못 읽어 이번엔 건너뜀'
                                   : '막대는 보이는데 번호를 못 읽음'}
                               </span>
+                              {/* 왜 못 읽었는지는 이 줄이 말한다. 막대 하나가 2픽셀
+                                  아래면 굵기 탓이고(카톡이 줄여 보낸 카드), 3픽셀쯤
+                                  나오는데도 못 읽었으면 다른 원인이다. */}
+                              {shot.hint && (
+                                <span className="truncate text-xs tabular-nums text-muted-foreground/70">
+                                  {shot.hint.size} · 막대폭 {shot.hint.span}% · 모듈{' '}
+                                  {shot.hint.module}px
+                                </span>
+                              )}
                             </div>
                           </li>
                         ))}

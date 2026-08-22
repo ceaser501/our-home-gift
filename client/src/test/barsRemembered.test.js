@@ -20,8 +20,9 @@ describe('막대로 보인 사진 기억하기', () => {
     ]);
 
     // 이름까지 남긴다. 건너뛴 사진을 갤러리에서 찾아 열려면 이름이 있어야 한다.
+    // (hint는 진단용이라 출시 때 이 줄과 함께 빠진다.)
     expect(readBarsRemembered()).toEqual([
-      { id: '101', bucket: 'KakaoTalk', name: 'KakaoTalk_1.jpg' },
+      { id: '101', bucket: 'KakaoTalk', name: 'KakaoTalk_1.jpg', hint: null },
     ]);
   });
 

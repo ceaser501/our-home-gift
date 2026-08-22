@@ -282,7 +282,13 @@ export function rememberNoBarcode(missed) {
     if (image.bars && !known.has(String(image.id))) {
       // 파일 이름도 같이 남긴다. 건너뛴 사진은 다음 훑기에서 읽지 않으므로 이름을 알
       // 방법이 여기밖에 없는데, 갤러리에서 그 사진을 찾으려면 이름이 있어야 한다.
-      remembered.push({ id: String(image.id), bucket: image.bucket || null, name: image.name || null });
+      remembered.push({
+        id: String(image.id),
+        bucket: image.bucket || null,
+        name: image.name || null,
+        // 진단용. 다음 훑기에는 이 사진을 읽지 않으므로 치수도 여기서만 남는다.
+        hint: image.hint || null,
+      });
     }
   });
   try {
@@ -448,7 +454,13 @@ async function decodeBarcode(read, pass = SHALLOW) {
     usedFactor = factor;
   }
   // 못 읽었으면 막대가 있기라도 한지 본다. 사진을 이미 열어둔 이 자리가 제일 싸다.
-  if (!found) return { code: null, bars: looksLikeBarcode(image) };
+  if (!found) {
+    // hint는 진단용이다. 출시 때는 아래 세 줄을 예전 한 줄로 되돌린다.
+    //   return { code: null, bars: looksLikeBarcode(image) };
+    const hint = { size: `${width}×${height}` };
+    const bars = looksLikeBarcode(image, hint);
+    return { code: null, bars, hint: bars ? hint : null };
+  }
 
   // 읽을 것이 있는 사진인지도 같이 재둔다. 어느 사진을 대표로 보낼지 고를 때 쓴다.
   // 사진을 이미 열어둔 자리라 여기서 재는 게 제일 싸다.
@@ -662,7 +674,14 @@ function overlapRatio(a, b) {
   return matched / a.length;
 }
 
-export function looksLikeBarcode(image) {
+/**
+ * out을 주면 막대를 찾은 자리의 치수를 채워 넣는다(진단용. 출시 전에 뺀다).
+ *
+ * 왜 못 읽었는지는 막대 굵기 하나가 거의 다 말해준다. 카톡이 404픽셀로 줄여 보낸
+ * 카드는 막대 하나가 1.4픽셀이라 어떤 배율로도 못 읽고, 3픽셀쯤 나오는데도 못 읽었다면
+ * 굵기 말고 다른 데 원인이 있다는 뜻이다. 화면에서 그 둘을 갈라 보려고 재둔다.
+ */
+export function looksLikeBarcode(image, out = null) {
   try {
     const scale = Math.min(1, BARS_WIDTH / image.naturalWidth);
     const width = Math.max(1, Math.round(image.naturalWidth * scale));
@@ -684,7 +703,18 @@ export function looksLikeBarcode(image) {
       const dense = edges.length >= BARS_MIN_EDGES;
       const aligned = dense && previous && overlapRatio(edges, previous) >= BARS_MATCH;
       run = aligned ? run + 1 : dense ? 1 : 0;
-      if (run >= BARS_MIN_ROWS) return true;
+      if (run >= BARS_MIN_ROWS) {
+        // 진단용. 여기 이 if 안쪽만 빼면 예전으로 돌아간다.
+        if (out) {
+          // 이 캔버스는 240픽셀로 줄인 것이라, 원본 픽셀로 되돌려 재야 뜻이 있다.
+          const back = image.naturalWidth / width;
+          const span = edges[edges.length - 1] - edges[0];
+          out.span = Math.round((span / width) * 100);
+          // 뒤집히는 자리 하나가 막대 하나의 경계다. 폭을 그 수로 나누면 평균 굵기다.
+          out.module = Math.round((span / edges.length) * back * 10) / 10;
+        }
+        return true;
+      }
       previous = dense ? edges : null;
     }
     return false;
@@ -774,7 +804,8 @@ async function collect({ images, read: readImage, pass, isRegistered, skipCodes,
       const bars = Boolean(found?.bars);
       const withShot = rescueMissed || (bars && diagShots < DIAG_SHOTS);
       if (withShot && !rescueMissed) diagShots += 1;
-      missed.push({ ...image, bars, ...(withShot ? { data: read.data } : null) });
+      // hint는 진단용이다(왜 못 읽었는지 재둔 치수). 출시 때 함께 뺀다.
+      missed.push({ ...image, bars, hint: found?.hint || null, ...(withShot ? { data: read.data } : null) });
       continue;
     }
 
