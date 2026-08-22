@@ -543,15 +543,32 @@ export async function readGifticonInfo(prepared, { onProgress, knownCode, knownT
   // 계산대에서 못 쓰는 기프티콘이 되는 셈이라, 번호와 같이 넘겨받는다.
   const codeType = scanned ? prepared.codeType || knownType || null : printed ? 'CODE_128' : null;
 
+  // 상호와 상품명 중 하나만 읽혔으면, 그 하나로 둘 다 채운다.
+  //
+  // 파는 곳이 어디에도 안 적힌 기프티콘이 있다. 편의점 증정품 QR이 그렇다 —
+  // '썬키스트)애사비제로스파클링500'만 크게 박혀 있고, 어느 편의점에서 쓰는지는
+  // 화면 어디에도 없다. 실제로 못 읽은 게 아니라 애초에 없는 것이라, 다시 찍어도
+  // 다시 읽혀도 영영 안 나온다. 그것 때문에 등록을 막으면 멀쩡히 쓸 수 있는
+  // 기프티콘이 목록에 못 들어간다.
+  //
+  // 상호 칸에 상품명이 들어가면 정확하지는 않다. 그래도 목록에서 그 이름으로 찾을 수
+  // 있고, 주변 매장 찾기는 원래도 상호가 비면 상품명으로 찾는다(NearbyStoresSheet).
+  // 잃는 것보다 얻는 것이 크다.
+  //
+  // 둘 다 비었을 때는 채우지 않는다. 이름도 파는 곳도 모르는 것이라, 넣어봐야 나중에
+  // 목록에서 그게 무엇인지 알아볼 수가 없다. 그건 그대로 막힌다.
+  const readBrand = info.brand || '';
+  const readName = info.name || '';
+
   return {
     code,
     codeType,
     thumbCropBlob,
     category: info.category || '기타',
-    brand: info.brand || null,
+    brand: readBrand || readName || null,
     amount: info.amount ?? null,
     expiresAt: info.expiresAt || null,
-    name: info.name || '',
+    name: readName || readBrand || '',
     isVoucher: Boolean(info.isVoucher),
     // 이 답이 어디서 왔는지. 테스트 빌드 화면에만 찍힌다.
     meta,

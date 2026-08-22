@@ -89,6 +89,43 @@ describe('readGifticonInfo — 어느 번호를 쓰나', () => {
   });
 });
 
+// 파는 곳이 어디에도 안 적힌 기프티콘이 있다. 편의점 증정품 QR이 그렇다 — 상품명만
+// 크게 박혀 있고 어느 편의점에서 쓰는지는 화면 어디에도 없다. 못 읽은 게 아니라 없는
+// 것이라, 다시 찍어도 영영 안 나온다. 그것 때문에 등록을 막을 이유가 없다.
+describe('상호와 상품명 중 하나만 읽혔을 때', () => {
+  it('상호가 없으면 상품명으로 채운다', async () => {
+    analyzeGifticonImages.mockResolvedValue({
+      ...modelSays('9816401685019'),
+      brand: '',
+      name: '썬키스트)애사비제로스파클링500',
+    });
+
+    const info = await readGifticonInfo(prepared(null));
+
+    expect(info.name).toBe('썬키스트)애사비제로스파클링500');
+    expect(info.brand).toBe('썬키스트)애사비제로스파클링500');
+  });
+
+  it('상품명이 없으면 상호로 채운다', async () => {
+    analyzeGifticonImages.mockResolvedValue({ ...modelSays('111'), name: '', brand: '스타벅스' });
+
+    const info = await readGifticonInfo(prepared(null));
+
+    expect(info.name).toBe('스타벅스');
+    expect(info.brand).toBe('스타벅스');
+  });
+
+  // 이름도 파는 곳도 모르면 넣어봐야 목록에서 그게 무엇인지 알아볼 수가 없다.
+  it('둘 다 없으면 채우지 않는다', async () => {
+    analyzeGifticonImages.mockResolvedValue({ ...modelSays('111'), name: '', brand: '' });
+
+    const info = await readGifticonInfo(prepared(null));
+
+    expect(info.name).toBe('');
+    expect(info.brand).toBeNull();
+  });
+});
+
 // 훑기는 막대를 읽어 번호와 형식을 둘 다 들고 온다. 그런데 등록에 넘길 때 여기서 다시
 // 읽다가 실패하면, 번호는 넘겨받은 것으로 살아남고 형식만 비어버렸다. 그러면 화면이
 // 막대를 그릴 규격을 몰라 바코드를 아예 못 보여준다 — 계산대에서 못 쓰는 기프티콘이 된다.

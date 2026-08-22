@@ -138,13 +138,15 @@ describe('상품명 재확인', () => {
   });
 
   // 이름을 아예 못 읽은 건은 확인할 것이 없다. 빈칸을 물어봐야 값만 나간다.
+  // (나가는 값은 상호로 메워진다. 그건 확인을 거친 이름이 아니라 베껴 온 값이라,
+  //  여기서 물어볼 것이 없다는 사실은 그대로다.)
   it('이름이 비어 있으면 물어보지 않는다', async () => {
     analyzeGifticonImages.mockResolvedValue(serverSays({ name: '', nameImage: null }));
 
     const info = await readGifticonInfo(prepared);
 
-    expect(info.name).toBe('');
     expect(verifyGifticonName).not.toHaveBeenCalled();
+    expect(info.name).toBe('투썸플레이스');
   });
 
   // 함수가 아직 옛것이면 nameImage가 안 온다. 그때 이름이 사라지면 안 된다.

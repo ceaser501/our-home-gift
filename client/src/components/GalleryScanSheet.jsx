@@ -737,7 +737,12 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
       pending = scan.pending ?? [];
       // 지난 훑기에서 "막대로 보이는데 못 읽음"으로 적혀 이번에는 건너뛴 사진들.
       // 안내 문구는 이번 판의 결과만 보므로, 여기서 합쳐줘야 계속 나온다.
-      const remembered = (scan.barsRemembered ?? []).map((entry) => ({ ...entry, bars: true }));
+      const remembered = (scan.barsRemembered ?? []).map((entry) => ({
+        ...entry,
+        bars: true,
+        // 이번 판에서 읽어본 것이 아니라 지난 기록이다. 아래 진단 목록이 사연을 가른다.
+        remembered: true,
+      }));
       setMissedShots([...pending, ...remembered]);
       setScanned(scan.scanned ?? 0);
       setSince(scan.since ?? 0);
@@ -1274,6 +1279,16 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
     return notes;
   }, [picked, tally, missedByFolder]);
 
+  // ── 진단용. 출시 전에 이 블록과 아래 화면 조각을 함께 뺀다 ──────────────────
+  //
+  // "바코드로 보이는데 못 읽은 사진 4장"까지는 알려주는데, 정작 그게 어느 사진인지는
+  // 알 방법이 없었다. 판독을 고치려면 그 사진을 열어봐야 하고, 열려면 이름을 알아야 한다.
+  // 그림·이름·사진첩·사연을 한 줄씩 적는다.
+  const missedDetails = useMemo(
+    () => (picked ? [] : missedShots.filter((shot) => shot.bars)),
+    [picked, missedShots]
+  );
+
   // 훑거나 읽는 중. 위에 막대가 뜨고, 아래로 카드가 쌓인다.
   const isWorking = stage === 'scanning' || stage === 'reading';
 
@@ -1702,13 +1717,14 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
             alt=""
             className="size-9 shrink-0 rounded-md bg-secondary object-cover opacity-70"
           />
-          {/* 둘 다 14px이다. 이유를 12px로 줄여봤는데 이 앱은 60대도 쓴다 — 작게 만든
-              쪽이 하필 정작 읽어야 할 줄이었다. 크기 대신 굵기와 색으로 가른다. */}
+          {/* 이유가 14px, 상품명이 13px이다. 위아래가 뒤집힌 것 같지만 맞다 — 이 줄들은
+              넣을 수 없는 것들이라, 여기서 읽어야 할 것은 무엇이 못 들어갔는지가 아니라
+              왜 못 들어갔는지다. 이유를 12px로 줄여봤다가 되돌렸다. 이 앱은 60대도 쓴다. */}
           <div className="flex min-w-0 flex-1 flex-col">
             <span className="truncate text-sm text-muted-foreground">
               {isDismissed ? '기프티콘이 아니라고 하셨어요' : reasonOf(candidate)}
             </span>
-            <span className="truncate text-sm font-semibold text-foreground">
+            <span className="truncate text-[13px] font-semibold text-foreground">
               {candidate.info?.name || candidate.info?.brand || candidate.code || '상품명 없음'}
             </span>
           </div>
@@ -2068,6 +2084,49 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
                   <p className="m-0">
                     기프티콘이면 <b className="font-semibold text-foreground">+</b> 로 올려주세요.
                   </p>
+
+                  {/* ── 진단용. 출시 전에 이 details 하나를 통째로 뺀다 ──────────
+                      어느 사진이 못 읽혔는지 눈으로 찾기 위한 자리다. 그림이 있으면
+                      바로 알아보고, 없으면 이름과 사진첩으로 갤러리에서 찾는다. */}
+                  {missedDetails.length > 0 && (
+                    <details className="group -mx-1 mt-1 rounded-lg bg-card/70 px-2.5 py-1.5">
+                      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 py-1 text-xs font-semibold text-foreground">
+                        어느 사진인지 보기 ({missedDetails.length})
+                        <ChevronDown className="size-3.5 shrink-0 transition-transform group-open:rotate-180" />
+                      </summary>
+                      <ul className="m-0 flex list-none flex-col p-0">
+                        {missedDetails.map((shot) => (
+                          <li
+                            key={shot.id}
+                            className="flex items-center gap-2 border-t border-border py-1.5 first:border-t-0"
+                          >
+                            {shot.data ? (
+                              <img
+                                src={`data:image/jpeg;base64,${shot.data}`}
+                                alt=""
+                                className="size-10 shrink-0 rounded-md bg-secondary object-cover"
+                              />
+                            ) : (
+                              <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-secondary text-xs text-muted-foreground">
+                                ?
+                              </span>
+                            )}
+                            <div className="flex min-w-0 flex-1 flex-col">
+                              <span className="truncate text-xs text-foreground">
+                                {shot.name || `id ${shot.id}`}
+                              </span>
+                              <span className="truncate text-xs text-muted-foreground">
+                                {folderLabel(shot.bucket) || shot.bucket || '다른'} ·{' '}
+                                {shot.remembered
+                                  ? '지난 훑기에서 못 읽어 이번엔 건너뜀'
+                                  : '막대는 보이는데 번호를 못 읽음'}
+                              </span>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </details>
+                  )}
                 </div>
               )}
 

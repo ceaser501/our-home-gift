@@ -15,11 +15,14 @@ beforeEach(() => {
 describe('막대로 보인 사진 기억하기', () => {
   it('막대로 보인 것만 사진첩 이름과 함께 남는다', () => {
     rememberNoBarcode([
-      { id: 101, bucket: 'KakaoTalk', bars: true },
+      { id: 101, bucket: 'KakaoTalk', name: 'KakaoTalk_1.jpg', bars: true },
       { id: 102, bucket: 'Screenshots' }, // 막대로 안 보임 — 기억할 필요 없다
     ]);
 
-    expect(readBarsRemembered()).toEqual([{ id: '101', bucket: 'KakaoTalk' }]);
+    // 이름까지 남긴다. 건너뛴 사진을 갤러리에서 찾아 열려면 이름이 있어야 한다.
+    expect(readBarsRemembered()).toEqual([
+      { id: '101', bucket: 'KakaoTalk', name: 'KakaoTalk_1.jpg' },
+    ]);
   });
 
   it('여러 번 훑어도 같은 사진이 두 번 쌓이지 않는다', () => {

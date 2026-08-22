@@ -280,7 +280,9 @@ export function rememberNoBarcode(missed) {
   const known = new Set(remembered.map((entry) => String(entry.id)));
   missed.forEach((image) => {
     if (image.bars && !known.has(String(image.id))) {
-      remembered.push({ id: String(image.id), bucket: image.bucket || null });
+      // 파일 이름도 같이 남긴다. 건너뛴 사진은 다음 훑기에서 읽지 않으므로 이름을 알
+      // 방법이 여기밖에 없는데, 갤러리에서 그 사진을 찾으려면 이름이 있어야 한다.
+      remembered.push({ id: String(image.id), bucket: image.bucket || null, name: image.name || null });
     }
   });
   try {
@@ -697,6 +699,9 @@ export function looksLikeBarcode(image) {
 // 한때 판마다 화질을 달리 줬다. 정밀 탐색만 95로 올려 얇은 막대를 살려보려던 것인데,
 // 그 카드는 어떤 화질로도 안 읽혀서 되돌렸다. 이제 세 판이 다 같은 값이라 네이티브
 // 기본값(85)에 맡긴다.
+// 진단용으로 그림까지 들고 갈 사진 수. 출시 전에 이 상수와 쓰는 자리를 함께 뺀다.
+const DIAG_SHOTS = 12;
+
 function readFromGallery(image) {
   return MoaconGallery.readImage({ id: String(image.id), maxEdge: READ_EDGE });
 }
@@ -728,6 +733,11 @@ async function collect({ images, read: readImage, pass, isRegistered, skipCodes,
   // '바코드 없음'으로 적어 다음부터 건너뛴다.
   const missed = [];
   let readFailed = 0;
+  // ── 진단용. 출시 전에 뺀다 ────────────────────────────────────────────────
+  // 못 읽은 사진이 어느 것인지 화면에서 눈으로 보려고, 막대처럼 보인 것만 읽어둔 그림을
+  // 함께 들고 간다. 이름과 사진첩만으로는 갤러리에서 찾아 열기까지가 멀다.
+  // 전부 들고 가지 않는 이유는 아래 push 자리에 적어뒀다.
+  let diagShots = 0;
 
   for (const [index, image] of images.entries()) {
     if (signal?.aborted) break;
@@ -757,8 +767,14 @@ async function collect({ images, read: readImage, pass, isRegistered, skipCodes,
     if (!found?.code) {
       // 막대로 보이는지를 함께 들고 간다. 화면이 "여기 있을지도 모른다"고 말할 때 쓴다.
       // 직접 고른 사진일 때는 읽어둔 그림도 들고 간다 — 화면이 이걸 서버에 물어본다.
-      // 사진첩 훑기에서는 안 들고 간다. 수백 장 분의 base64가 그대로 쌓인다.
-      missed.push({ ...image, bars: Boolean(found?.bars), ...(rescueMissed ? { data: read.data } : null) });
+      //
+      // 사진첩 훑기에서는 못 읽은 것 전부를 들고 갈 수 없다. 서른 장을 훑으면 스물몇 장이
+      // 밥 사진이라, 그 base64가 그대로 쌓인다. 막대처럼 보인 것만, 그것도 앞에서부터
+      // 몇 장까지만 들고 간다(진단용. 출시 전에 뺀다).
+      const bars = Boolean(found?.bars);
+      const withShot = rescueMissed || (bars && diagShots < DIAG_SHOTS);
+      if (withShot && !rescueMissed) diagShots += 1;
+      missed.push({ ...image, bars, ...(withShot ? { data: read.data } : null) });
       continue;
     }
 
