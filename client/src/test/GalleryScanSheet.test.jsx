@@ -408,16 +408,20 @@ describe('바코드 없는 사진을 뺐을 때', () => {
     };
   }
 
-  it('몇 장을 왜 뺐는지 말해준다', async () => {
+  // 지금은 이 상자를 꺼뒀다(SHOW_SKIPPED_NOTES). 알려줄 자리가 여기가 아니어서다 —
+  // 아직 등록도 안 한 목록 아래에서 못 넣은 것부터 읽게 되는데, 정작 할 일은 등록을
+  // 누른 뒤에 생긴다. 스위치를 다시 올릴 때를 위해 문구를 만드는 쪽은 그대로 둔다.
+  it('빼둔 동안에는 목록에서 아무 말도 안 한다', async () => {
     groupImages.mockResolvedValue(grouped(1));
 
     render(<GalleryScanSheet files={FILES} onRegistered={() => {}} onClose={() => {}} />);
+    await screen.findAllByText(/상품 /, {}, { timeout: 3000 });
 
-    expect(await screen.findByText('못 넣은 사진이 있어요', {}, { timeout: 3000 })).toBeTruthy();
-    expect(screen.getByText(/바코드가 너무 작게 찍힌 사진 1장/)).toBeTruthy();
+    expect(screen.queryByText('못 넣은 사진이 있어요')).toBeNull();
+    expect(screen.queryByText(/어느 사진인지 보기/)).toBeNull();
   });
 
-  it('뺀 게 없으면 아무 말도 안 한다', async () => {
+  it('뺀 게 없을 때도 마찬가지다', async () => {
     groupImages.mockResolvedValue(grouped(0));
 
     render(<GalleryScanSheet files={FILES} onRegistered={() => {}} onClose={() => {}} />);

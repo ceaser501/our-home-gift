@@ -264,6 +264,16 @@ const FIELD_HINTS = {
   '바코드 번호': '사진에 인쇄된 숫자',
 };
 
+// 훑기 목록 아래의 '못 넣은 사진이 있어요' 상자. 지우지 않고 스위치만 내려둔다.
+//
+// 알려줄 자리가 거기가 아니었다. 아직 등록도 안 한 목록 아래에서 못 넣은 것부터 읽게
+// 되는데, 정작 할 일은 등록을 누른 뒤에 생긴다. 그 말은 결과 화면에서 한다.
+const SHOW_SKIPPED_NOTES = false;
+
+// 그 상자 안의 '어느 사진인지 보기'. 판독을 고치려고 뒀던 진단 자리다.
+// 여기서 나온 숫자로 zxing-wasm을 붙였고, 그 뒤로 볼 것이 없어졌다.
+const SHOW_MISSED_DETAILS = false;
+
 // 결과 화면에서 카드로 세워 보여줄 등록 건수. 나머지는 'N개 더 보기'로 접는다.
 //
 // 둘이면 "무엇이 들어갔는지"는 충분히 보이고, 아래 버튼도 화면 안에 남는다.
@@ -2260,8 +2270,13 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
 
                   자리는 목록 아래, 상세내역 바로 위다. 한때 맨 위에 뒀는데 "N개를 넣을
                   수 있어요"보다 먼저 읽혀서, 정작 무엇이 담겼는지 보기 전에 빠진 것부터
-                  세게 됐다. 결과를 먼저 보여주고 덧붙이는 말은 뒤에 둔다. */}
-              {skippedNotes.length > 0 && !isWorking && (
+                  세게 됐다. 결과를 먼저 보여주고 덧붙이는 말은 뒤에 둔다.
+
+                  ── 지금은 꺼져 있다(SHOW_SKIPPED_NOTES) ────────────────────
+                  알려줄 자리가 여기가 아니었다. 아직 등록도 안 한 목록 아래에서 "못 넣은
+                  사진이 있어요"부터 읽게 되는데, 정작 할 일은 등록을 누른 뒤에 생긴다.
+                  그 말은 결과 화면의 '등록하지 못했어요' 쪽에서 한다. */}
+              {SHOW_SKIPPED_NOTES && skippedNotes.length > 0 && !isWorking && (
                 <div className="flex flex-col gap-1.5 rounded-xl bg-muted px-3.5 py-3 text-sm leading-relaxed break-keep text-muted-foreground">
                   <p className="m-0 font-semibold text-foreground">못 넣은 사진이 있어요</p>
                   {skippedNotes.map((note) => (
@@ -2273,10 +2288,12 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
                     기프티콘이면 <b className="font-semibold text-foreground">+</b> 로 올려주세요.
                   </p>
 
-                  {/* ── 진단용. 출시 전에 이 details 하나를 통째로 뺀다 ──────────
-                      어느 사진이 못 읽혔는지 눈으로 찾기 위한 자리다. 그림이 있으면
-                      바로 알아보고, 없으면 이름과 사진첩으로 갤러리에서 찾는다. */}
-                  {missedDetails.length > 0 && (
+                  {/* ── 진단용. 지금은 꺼져 있다(SHOW_MISSED_DETAILS) ────────────
+                      어느 사진이 못 읽혔는지 눈으로 찾기 위해 뒀다. 여기서 나온 숫자가
+                      zxing-wasm을 붙이는 근거가 됐고(docs/read-pipeline.md), 그 뒤로
+                      두 건이 다 읽혀서 볼 것이 없어졌다. 판독이 또 막히면 이 스위치와
+                      위의 missedDetails를 같이 올린다. */}
+                  {SHOW_MISSED_DETAILS && missedDetails.length > 0 && (
                     <details className="group -mx-1 mt-1 rounded-lg bg-card/70 px-2.5 py-1.5">
                       <summary className="flex cursor-pointer list-none items-center justify-between gap-2 py-1 text-xs font-semibold text-foreground">
                         어느 사진인지 보기 ({missedDetails.length})
