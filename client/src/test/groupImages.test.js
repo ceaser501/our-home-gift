@@ -23,8 +23,6 @@ vi.mock('@zxing/browser', () => ({
     async decodeFromCanvas(canvas) {
       const found = barcodes.get(canvas.dataset.name);
       if (!found) throw new Error('not found');
-      // 가장자리까지 꽉 찬 바코드. 여백을 둘러 그린 판에서만 읽힌다(quiet zone).
-      if (found.needsQuiet && !(Number(canvas.dataset.pad) > 0)) throw new Error('quiet zone 없음');
       return {
         getText: () => found.code,
         getBarcodeFormat: () => 1,
@@ -44,6 +42,23 @@ vi.mock('@zxing/library', () => ({
   DecodeHintType: { TRY_HARDER: 'TRY_HARDER' },
 }));
 
+// 마지막 판. 1MB짜리 wasm을 시험마다 받아올 이유가 없어서, 파일 이름으로 답을 정한다.
+// 진짜 판독기가 무엇을 읽는지는 실물로 확인했고(docs/read-pipeline.md), 여기서 보는
+// 것은 "언제 이 길로 넘어가는가"다.
+let wasmCodes = new Map();
+let wasmCalls = 0;
+
+vi.mock('zxing-wasm/reader', () => ({
+  prepareZXingModule: () => {},
+  readBarcodes: (pixels) => {
+    wasmCalls += 1;
+    const found = wasmCodes.get(pixels.name);
+    return Promise.resolve(found ? [{ ...found, position: null }] : []);
+  },
+}));
+
+vi.mock('zxing-wasm/reader/zxing_reader.wasm?url', () => ({ default: 'zxing_reader.wasm' }));
+
 const { groupImages } = await import('../utils/gallery');
 
 // 캔버스도 이미지 로딩도 jsdom에는 없다. 사진 한 장이 그림 한 장으로 이어지도록,
@@ -52,6 +67,8 @@ beforeEach(() => {
   vi.restoreAllMocks();
   barcodes = new Map();
   pixels = new Map();
+  wasmCodes = new Map();
+  wasmCalls = 0;
   localStorage.clear();
 
   let loading = null;
@@ -79,17 +96,11 @@ beforeEach(() => {
     const el = realCreate(tag);
     if (tag === 'canvas') {
       el.getContext = () => ({
-        drawImage(image, dx) {
+        drawImage(image) {
           el.dataset.name = image._name;
-          // 여백을 두고 그렸는지. 두 번째 인자가 그 여백이다.
-          el.dataset.pad = String(dx || 0);
         },
         set imageSmoothingEnabled(_v) {},
         set imageSmoothingQuality(_v) {},
-        // 여백을 둘러 그릴 때 쓴다(quiet zone). 없으면 그 사진이 통째로 버려진다 —
-        // decodeAt이 여기서 터지고, collect가 '못 연 사진'으로 세고 넘어간다.
-        set fillStyle(_v) {},
-        fillRect() {},
         getImageData(_x, _y, width, height) {
           const spec = pixels.get(el.dataset.name);
           if (!spec) throw new Error('픽셀을 볼 수 없음');
@@ -117,7 +128,9 @@ beforeEach(() => {
               data[i + 2] = 0;
             }
           }
-          return { data };
+          // 이름을 같이 들려 보낸다. 마지막 판(wasm)은 캔버스가 아니라 이 픽셀 덩어리를
+          // 받으므로, 가짜 판독기가 어느 사진인지 알 길이 여기밖에 없다.
+          return { data, width, height, name: el.dataset.name };
         },
       });
       // 줄인 base64. 실제 픽셀은 볼 일이 없다.
@@ -244,30 +257,34 @@ describe('groupImages — 고른 사진을 묶는다', () => {
     expect(tally.noCode).toBe(0);
   });
 
-  // 실물 진단에서 나온 자리. 못 읽은 두 건이 다 막대폭 92~93%였다 — 바코드가 사진
-  // 가장자리까지 꽉 차서, 규격이 요구하는 빈 자리(quiet zone)가 없었다. 굵기는
-  // 충분했는데(막대 간격 6~12픽셀) 판독기가 막대의 시작을 못 잡은 것이다.
-  it('가장자리까지 꽉 찬 바코드는 여백을 둘러 다시 읽는다', async () => {
-    barcodes.set('edge.jpg', { code: '777', coverage: 0.9, needsQuiet: true });
+  // zxing-js가 못 읽는 카드가 실제로 있다. 스타벅스(662×1440)와 스마일콘 배스킨
+  // (404×677)을 배율 사다리 전부·이진화 둘·띠만 잘라 키운 스물넷·Code128Reader 직접
+  // 호출까지 다 돌려봐도 빈손이었고, 같은 파일을 zxing-cpp는 원본 그대로 읽는다.
+  // 그래서 못 읽은 사진에만 무거운 판독기를 한 번 더 부른다.
+  it('막대는 보이는데 못 읽은 사진은 wasm 판독기로 넘긴다', async () => {
+    // barcodes에 안 적으면 zxing-js가 못 읽는 사진이다.
     pixels.set('edge.jpg', { bars: true });
+    wasmCodes.set('edge.jpg', { text: '777', format: 'Code128' });
 
     const { candidates, missed } = await groupImages([pick('edge.jpg')]);
 
     expect(candidates).toHaveLength(1);
     expect(candidates[0].code).toBe('777');
+    expect(candidates[0].codeType).toBe('CODE_128');
     expect(missed).toHaveLength(0);
   });
 
-  // 여백 두르기는 막대로 보이는 사진에만 붙는다. 밥 사진까지 한 판 더 돌리면 훑기가
+  // 이 길은 막대로 보이는 사진에만 열린다. 밥 사진까지 무거운 판독기를 부르면 훑기가
   // 그만큼 느려지는데, 거기서 나올 것은 없다.
-  it('막대로 안 보이는 사진에는 여백 판을 돌리지 않는다', async () => {
-    barcodes.set('lunch.jpg', { code: '888', coverage: 0.9, needsQuiet: true });
+  it('막대로 안 보이는 사진은 wasm까지 가지 않는다', async () => {
+    wasmCodes.set('lunch.jpg', { text: '888', format: 'Code128' });
     // pixels에 안 적으면 막대가 안 보이는 사진이다.
 
     const { candidates, missed } = await groupImages([pick('lunch.jpg')]);
 
     expect(candidates).toHaveLength(0);
     expect(missed).toHaveLength(1);
+    expect(wasmCalls).toBe(0);
   });
 
   // 폴더를 모르는 사진(직접 고른 것)에서 무엇을 대표로 보낼지.

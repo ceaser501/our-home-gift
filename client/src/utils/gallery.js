@@ -454,31 +454,13 @@ async function decodeBarcode(read, pass = SHALLOW) {
     usedFactor = factor;
   }
   // 못 읽었으면 막대가 있기라도 한지 본다. 사진을 이미 열어둔 이 자리가 제일 싸다.
-  let usedQuiet = false;
   let bars = false;
   let hint = null;
   if (!found) {
     hint = { size: `${width}×${height}` };
     bars = looksLikeBarcode(image, hint);
-
-    // ── 여백을 둘러 한 번 더 ────────────────────────────────────────────────
-    // 막대는 보이는데 못 읽은 사진에만 한다. 실물로 재보니 두 건이 다 막대폭 92~93%,
-    // 곧 바코드가 사진 가장자리까지 꽉 찬 것이었다. 규격이 요구하는 빈 자리가 없어서
-    // 판독기가 막대의 시작을 못 잡는다 — 굵기는 충분한데(막대 간격 6~12픽셀) 안 읽히던
-    // 이유가 이것이다.
-    //
-    // 여기까지 오는 사진은 얼마 안 된다. 쉰여덟 장을 훑어 넷이었다. 밥 사진은 막대가
-    // 안 보여서 이 줄을 지나가지 않으므로, 값은 그 넷에만 붙는다.
-    if (bars) {
-      for (const factor of barcodeScaleLadder(longEdge, pass.deep)) {
-        found = await decodeAt(image, width, height, factor, false, true);
-        if (found) {
-          usedFactor = factor;
-          usedQuiet = true;
-          break;
-        }
-      }
-    }
+    // 막대가 보이는데 못 읽었으면 무거운 판독기를 한 번 부른다.
+    if (bars) found = await decodeWithWasm(image, width, height);
   }
 
   if (!found) {
@@ -495,41 +477,128 @@ async function decodeBarcode(read, pass = SHALLOW) {
   // 쓴다. 갈리면 확인 쪽을 택한다(실제로 한 자리가 틀린 채 등록된 일이 있었다 — 7이 2로.
   // ITF처럼 검산 자리가 없는 형식은 걸러지지도 않는다). 두 번째로는 못 읽었다면 확인은
   // 못 한 것이지만, 읽은 것은 읽은 것이다.
-  // 여백을 둘러서 읽힌 건은 확인도 여백을 두르고 해야 한다. 안 그러면 확인 쪽이 늘
-  // 실패해서, 확인을 못 한 채로 넘어간다.
-  const again = await decodeAt(image, width, height, usedFactor * 0.85, false, usedQuiet);
+  // 마지막 판(wasm)이 읽어낸 건은 여기서 다시 확인하지 않는다. 이 확인은 zxing-js가
+  // 한 자리를 잘못 읽는 것을 잡으려고 둔 것인데, 저쪽은 애초에 zxing-js가 못 읽은
+  // 사진이라 배율만 바꿔 다시 물어봐도 늘 빈손으로 돌아온다.
+  if (found.viaWasm) return { ...found, rich };
+
+  // 읽혔다고 바로 믿지 않는다. 배율을 바꿔 한 번 더 읽고, 두 번 다 같은 값일 때만 그대로
+  // 쓴다. 갈리면 확인 쪽을 택한다(실제로 한 자리가 틀린 채 등록된 일이 있었다 — 7이 2로.
+  // ITF처럼 검산 자리가 없는 형식은 걸러지지도 않는다). 두 번째로는 못 읽었다면 확인은
+  // 못 한 것이지만, 읽은 것은 읽은 것이다.
+  const again = await decodeAt(image, width, height, usedFactor * 0.85, false);
   const chosen = !again || again.code === found.code ? found : again;
   return { ...chosen, rich };
 }
 
-// 여백을 둘러 그릴 때 한쪽에 두는 폭. 그림 가로의 이만큼.
-//
-// 규격이 요구하는 여백은 막대 열 칸이다. 막대 한 칸이 가로의 1%쯤 되므로 10%면 넉넉하고,
-// 캔버스가 20% 커지는 값이라 부담도 없다.
-const QUIET_RATIO = 0.1;
+// zxing-wasm이 쓰는 형식 이름을 우리(zxing-js) 이름으로 옮긴다. 화면이 바코드를 다시
+// 그릴 때 이 이름으로 규격을 고르므로(BarcodeModal), 갈리면 계산대에서 못 쓴다.
+const WASM_FORMATS = {
+  Code128: 'CODE_128',
+  Code39: 'CODE_39',
+  Code93: 'CODE_93',
+  Codabar: 'CODABAR',
+  'EAN-13': 'EAN_13',
+  'EAN-8': 'EAN_8',
+  'UPC-A': 'UPC_A',
+  'UPC-E': 'UPC_E',
+  ITF: 'ITF',
+  QRCode: 'QR_CODE',
+  DataMatrix: 'DATA_MATRIX',
+  PDF417: 'PDF_417',
+  Aztec: 'AZTEC',
+};
 
-async function decodeAt(image, width, height, scale, tryHarder, quiet = false) {
-  const drawW = Math.max(1, Math.round(width * scale));
-  const drawH = Math.max(1, Math.round(height * scale));
-  // 바코드 규격은 막대 양옆에 빈 자리(quiet zone)를 요구한다. 판독기는 그 빈 자리를
-  // 보고 "여기서 막대가 시작한다"를 잡는데, 바코드가 사진 가장자리까지 꽉 차 있으면
-  // 그게 없다. 그때는 흰 여백을 둘러 그려주면 그대로 읽힌다.
-  const pad = quiet ? Math.max(16, Math.round(drawW * QUIET_RATIO)) : 0;
+// wasm에 넘길 그림의 긴 변. 원본 그대로 넘겨도 되지만 큰 사진은 값만 커진다.
+const WASM_EDGE = 1600;
 
-  const canvas = document.createElement('canvas');
-  canvas.width = drawW + pad * 2;
-  canvas.height = drawH + pad * 2;
-  const ctx = canvas.getContext('2d');
-  if (pad > 0) {
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+let wasmRead = null;
+
+/**
+ * 마지막 판. zxing-cpp를 WebAssembly로 부른다.
+ *
+ * ── 왜 판독기가 둘인가 ────────────────────────────────────────────────────
+ * 실물 두 장으로 확인했다. 스타벅스 카드(662×1440)와 스마일콘 배스킨(404×677)은
+ * zxing-js로는 어떤 배율·어떤 이진화·바코드만 잘라내도 안 읽힌다. 배율 사다리 전부,
+ * HybridBinarizer와 GlobalHistogramBinarizer 둘 다, 띠만 잘라 1·2·3배로 키운 스물넷,
+ * 형식을 CODE_128로 못박고 Code128Reader를 직접 부른 것까지 — 전부 빈손이었다.
+ * 같은 파일을 zxing-cpp는 원본 크기 그대로 40밀리초에 읽는다. 배율이나 여백 문제가
+ * 아니라 판독기의 한계다.
+ *
+ * 그렇다고 zxing-js를 걷어내지는 않는다. 지금 잘 읽히는 수백 장이 그것으로 읽힌 것이고,
+ * 갈아치우면 그 수백 장이 다시 시험 대상이 된다. 못 읽은 사진에만 이쪽을 부른다.
+ *
+ * ── 값 ────────────────────────────────────────────────────────────────
+ * 여기까지 오는 사진은 막대가 보이는데 못 읽은 것뿐이다. 실물 훑기에서 쉰여덟 장 중
+ * 넷이었다. 밥 사진은 막대가 안 보여서 이 줄을 아예 지나가지 않는다.
+ * 판독 자체는 장당 40~50밀리초로 오히려 사다리(200~600밀리초)보다 싸다.
+ *
+ * 판독기는 1MB짜리 wasm이라 여기서 처음 필요할 때만 받아온다. 앱을 열기만 하고
+ * 훑지 않는 사람은 이걸 내려받지 않는다.
+ */
+async function decodeWithWasm(image, width, height) {
+  try {
+    if (!wasmRead) {
+      const [reader, wasmUrl] = await Promise.all([
+        import('zxing-wasm/reader'),
+        import('zxing-wasm/reader/zxing_reader.wasm?url').then((m) => m.default),
+      ]);
+      // 기본값은 CDN에서 받아온다. 앱은 인터넷 없이도 돌아야 하므로 같이 넣은 파일을 쓴다.
+      reader.prepareZXingModule({ overrides: { locateFile: () => wasmUrl } });
+      wasmRead = reader.readBarcodes;
+    }
+
+    const scale = Math.min(1, WASM_EDGE / Math.max(width, height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(width * scale));
+    canvas.height = Math.max(1, Math.round(height * scale));
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+    const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    canvas.width = 0;
+    canvas.height = 0;
+
+    // 기본값 그대로 쓴다. 스마일콘은 tryHarder·tryInvert·tryDownscale을 다 켠 판에서만
+    // 읽혔다 — 빠른 판으로는 여기서도 못 읽는다. 어차피 드물게 오는 길이라 값을 아낄
+    // 자리가 아니다.
+    const found = await wasmRead(pixels, { maxNumberOfSymbols: 1 });
+    const hit = found?.[0];
+    if (!hit?.text) return null;
+
+    const xs = [
+      hit.position?.topLeft?.x,
+      hit.position?.topRight?.x,
+      hit.position?.bottomLeft?.x,
+      hit.position?.bottomRight?.x,
+    ].filter((x) => typeof x === 'number');
+
+    return {
+      code: hit.text,
+      codeType: WASM_FORMATS[hit.format] || null,
+      coverage: xs.length ? (Math.max(...xs) - Math.min(...xs)) / canvas.width : 0,
+      // 확인 판독을 건너뛰라는 표시. 위에서 쓴다.
+      viaWasm: true,
+    };
+  } catch {
+    // 못 받아왔거나(인터넷·용량) 여기서 터졌으면 못 읽은 것으로 둔다. 이 길은 덤이라
+    // 실패해도 앞의 결과가 달라지지 않는다.
+    return null;
   }
+}
+
+async function decodeAt(image, width, height, scale, tryHarder) {
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, Math.round(width * scale));
+  canvas.height = Math.max(1, Math.round(height * scale));
+  const ctx = canvas.getContext('2d');
   // 키울 때는 보간을 끈다. 정수배로 키우므로 원본 픽셀이 그대로 복제되고, 검정과 흰색
   // 사이에 없던 회색이 끼지 않는다. 줄일 때는 반대다 — 여러 픽셀을 하나로 모아야 하니
   // 보간이 있어야 막대가 통째로 사라지지 않는다.
   ctx.imageSmoothingEnabled = scale <= 1;
   ctx.imageSmoothingQuality = 'high';
-  ctx.drawImage(image, pad, pad, drawW, drawH);
+  ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
 
   try {
     const reader = new BrowserMultiFormatReader(tryHarder ? HARD_HINTS : undefined);
