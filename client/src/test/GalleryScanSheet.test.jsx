@@ -176,8 +176,16 @@ describe('GalleryScanSheet', () => {
 
     expect(await screen.findByText('1개를 등록했어요', {}, { timeout: 3000 })).toBeTruthy();
     expect(screen.getByText('1개는 등록하지 못했어요')).toBeTruthy();
-    // 접혀 있을 때는 이유가 요약 한 줄로만 있다.
+    // 접혀 있을 때는 이유가 요약 한 줄로만 있고, 넣은 것은 카드로 서 있다.
     expect(screen.getByText('모두 사용기한이 지났어요')).toBeTruthy();
+    expect(screen.getByText('상품 111')).toBeTruthy();
+
+    // 못 넣은 쪽을 펼치면 넣은 쪽은 한 줄로 접힌다. 둘 다 펼쳐두면 아래 버튼까지
+    // 스크롤을 두 번 내려야 한다.
+    fireEvent.click(screen.getByText('1개는 등록하지 못했어요'));
+    expect(screen.getByText('등록한 기프티콘 1개')).toBeTruthy();
+    expect(screen.queryByText('상품 111')).toBeNull();
+    expect(screen.getByText('사용기한이 지났어요')).toBeTruthy();
   });
 
   // 빠진 칸이 하나 있다고 그 건만 따로 처음부터 다시 하게 할 이유가 없다.

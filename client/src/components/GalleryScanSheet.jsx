@@ -264,6 +264,11 @@ const FIELD_HINTS = {
   '바코드 번호': '사진에 인쇄된 숫자',
 };
 
+// 결과 화면에서 카드로 세워 보여줄 등록 건수. 나머지는 'N개 더 보기'로 접는다.
+//
+// 둘이면 "무엇이 들어갔는지"는 충분히 보이고, 아래 버튼도 화면 안에 남는다.
+const DONE_PREVIEW = 2;
+
 function reasonOf(candidate) {
   if (candidate.readError) return candidate.readError;
   if (isExpired(candidate)) return '사용기한이 지났어요';
@@ -540,6 +545,10 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
   // 등록해 넣는 중일 때의 진행 상황과, 다 넣은 뒤의 결과.
   const [saving, setSaving] = useState(null);
   const [result, setResult] = useState(null);
+  // 결과 화면의 두 접힘. 서로 반대로 움직인다 — 못 넣은 것을 펼치면 넣은 것이 접힌다.
+  // 한 화면에 둘 다 펼쳐두면 스크롤을 두 번 내려야 버튼에 닿는다.
+  const [showAllDone, setShowAllDone] = useState(false);
+  const [failOpen, setFailOpen] = useState(false);
   const abortRef = useRef(null);
   // 얕은 판에서 잡은 후보. 깊은 판이 같은 번호를 또 만들지 않게 넘겨준다.
   const found0Ref = useRef([]);
@@ -1168,6 +1177,9 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
       .filter((c) => !dismissedIds.includes(c.id) && !isPickable(c))
       .map((c) => ({ candidate: c, reason: reasonOf(c), expired: isExpired(c) }));
     setResult({ done, failed: [...unreadable, ...failed], noExpiry });
+    setShowAllDone(false);
+    // 하나도 못 넣은 날에는 못 넣은 쪽을 펼친 채로 시작한다. 그때는 그게 전부다.
+    setFailOpen(done.length === 0);
     setStage('registered');
     // 목록을 다시 읽게 한다. 방금 넣은 것이 뒤에 보여야 한다.
     if (done.length > 0) onRegistered?.();
@@ -1966,10 +1978,14 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
                 </div>
               </div>
 
-              {/* 넣은 것은 그림 몇 장과 개수 한 줄이면 된다. 카드로 하나씩 세우면 아홉
-                  개를 넣은 날에 화면이 아홉 칸이 되는데, 정작 다음에 할 일은 목록으로
-                  가는 것이다. 이 줄이 그 문이기도 하다. */}
-              {registered.length > 0 && (
+              {/* 넣은 것을 카드로 하나씩 세운다. 무엇이 들어갔는지는 이 화면에서 봐야
+                  하는 것이고, 그림 몇 장을 겹쳐 개수만 적으면 "9개 들어갔다"는 말만
+                  남는다. 대신 두 장까지만 세우고 나머지는 접는다 — 아홉 개를 넣은 날에
+                  화면이 아홉 칸이 될 이유는 없다. */}
+              {/* 못 넣은 쪽을 펼치면 넣은 쪽은 한 줄로 접힌다. 지금 보려는 것은 아래
+                  이고, 위는 "넷은 잘 들어갔다"는 사실만 남으면 된다. 이 줄을 누르면
+                  목록으로 간다. */}
+              {registered.length > 0 && failOpen && (
                 <button
                   type="button"
                   onClick={onClose}
@@ -1995,6 +2011,40 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
                 </button>
               )}
 
+              {registered.length > 0 && !failOpen && (
+                <div className="flex flex-col gap-2">
+                  {(showAllDone ? registered : registered.slice(0, DONE_PREVIEW)).map((candidate) => (
+                    <div key={candidate.id} className="flex items-center gap-3 rounded-2xl bg-muted px-3.5 py-3">
+                      <img
+                        src={`data:image/jpeg;base64,${candidate.images[0]}`}
+                        alt=""
+                        className="size-11 shrink-0 rounded-lg bg-secondary object-cover"
+                      />
+                      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                        <span className="truncate text-[15px] font-semibold text-foreground">
+                          {candidate.info?.name}
+                        </span>
+                        <span className="truncate text-[13px] text-muted-foreground">
+                          {[candidate.info?.brand, formatDate(candidate.info?.expiresAt) && `${formatDate(candidate.info.expiresAt)}까지`]
+                            .filter(Boolean)
+                            .join(' · ') || '유효기한 없음'}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                  {registered.length > DONE_PREVIEW && !showAllDone && (
+                    <button
+                      type="button"
+                      onClick={() => setShowAllDone(true)}
+                      className="flex items-center justify-center gap-1.5 py-2 text-sm font-semibold text-muted-foreground"
+                    >
+                      {registered.length - DONE_PREVIEW}개 더 보기
+                      <ChevronDown className="size-4" />
+                    </button>
+                  )}
+                </div>
+              )}
+
               {/* 유효기한은 없어도 넣는다. 대신 비었다는 걸 알려준다 — 말해주지 않으면
                   빠진 줄 모르고 지나가고, 그러면 만료 전에 알려줄 수가 없다. */}
               {result.noExpiry > 0 && (
@@ -2010,11 +2060,13 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
                   하나도 못 넣은 날에는 펼친 채로 시작한다. 그때는 이 상자가 화면에서
                   볼 수 있는 전부다. */}
               {result.failed.length > 0 && (
-                <details
-                  open={registered.length === 0}
-                  className="group rounded-2xl border border-border px-3.5 py-3"
-                >
-                  <summary className="flex cursor-pointer list-none items-center gap-3">
+                <div className="rounded-2xl border border-border px-3.5 py-3">
+                  <button
+                    type="button"
+                    onClick={() => setFailOpen((open) => !open)}
+                    aria-expanded={failOpen}
+                    className="flex w-full items-center gap-3 text-left"
+                  >
                     <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-warning/15">
                       <TriangleAlert className="size-4.5 text-warning" />
                     </span>
@@ -2024,15 +2076,23 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
                       </span>
                       {/* 접혀 있을 때도 무슨 일인지는 알아야 한다. 이유가 하나뿐인 날이
                           대부분이라, 그 한 줄이면 펼칠 일도 없다. */}
-                      <span className="text-[13px] break-keep text-muted-foreground group-open:hidden">
-                        {failGroups.length === 1
-                          ? `모두 ${failGroups[0].reason}`
-                          : `${failGroups[0].reason} 외 ${failGroups.length - 1}가지`}
-                      </span>
+                      {!failOpen && (
+                        <span className="text-[13px] break-keep text-muted-foreground">
+                          {failGroups.length === 1
+                            ? `모두 ${failGroups[0].reason}`
+                            : `${failGroups[0].reason} 외 ${failGroups.length - 1}가지`}
+                        </span>
+                      )}
                     </span>
-                    <ChevronDown className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
-                  </summary>
+                    <ChevronDown
+                      className={cn(
+                        'size-4 shrink-0 text-muted-foreground transition-transform',
+                        failOpen && 'rotate-180'
+                      )}
+                    />
+                  </button>
 
+                  {failOpen && (
                   <div className="mt-3 flex flex-col gap-3 border-t border-border pt-3">
                     {failGroups.map((group) => (
                       <div key={group.reason} className="flex flex-col gap-2">
@@ -2067,7 +2127,8 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
                       </p>
                     )}
                   </div>
-                </details>
+                  )}
+                </div>
               )}
 
               <div className="flex flex-col gap-2 pt-1">
