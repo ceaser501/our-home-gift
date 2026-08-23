@@ -154,11 +154,8 @@ export default function LoginScreen() {
     {
       key: 'kakao',
       label: kakaoLoading ? '연결 중…' : '카카오로 로그인',
-      // 노란 버튼 위에서는 글자색(#191919)을 따라가면 되고, 흰 버튼으로 내려오면
-      // 제 색을 스스로 챙겨야 한다. 다크 모드에서는 검정이 배경에 묻히므로 노랑으로.
-      icon: (plain) => (
-        <MessageCircle className={cn('size-[19px]', plain ? 'fill-[#191919] dark:fill-[#FEE500]' : 'fill-current')} />
-      ),
+      // 노란 바탕 위 글자색(#191919)을 그대로 따라간다.
+      icon: <MessageCircle className="size-[19px] fill-current" />,
       onClick: handleKakaoLogin,
       loading: kakaoLoading,
       brand: 'bg-[#FEE500] text-[#191919] hover:bg-[#FEE500]/90',
@@ -167,7 +164,7 @@ export default function LoginScreen() {
       key: 'naver',
       label: naverLoading ? '연결 중…' : '네이버로 로그인',
       // 마크가 꽉 찬 도형이라 옆의 둘(말풍선·G)보다 무겁게 읽힌다. 그만큼 작게 그린다.
-      icon: (plain) => <NaverIcon className={cn('size-[14px]', plain && 'text-[#03C75A]')} />,
+      icon: <NaverIcon className="size-[14px]" />,
       onClick: handleNaverLogin,
       loading: naverLoading,
       brand: 'bg-[#03C75A] text-white hover:bg-[#03C75A]/90',
@@ -175,17 +172,23 @@ export default function LoginScreen() {
     {
       key: 'google',
       label: googleLoading ? '연결 중…' : '구글로 로그인',
-      // 구글 마크는 색이 SVG 안에 박혀 있다. 어디에 놓든 그대로다.
-      icon: () => <GoogleIcon className="size-[19px]" />,
+      // 구글은 흰 버튼에 색 있는 G가 제 모양이다(구글이 정해둔 것). 그래서 brand가 없다.
+      icon: <GoogleIcon className="size-[19px]" />,
       onClick: handleGoogleLogin,
       loading: googleLoading,
       brand: null,
     },
   ];
 
-  // plain은 '다른 방법' 자리에 놓일 때다. 버튼의 브랜드 색을 빼서 지난번에 쓴 것
-  // 하나만 눈에 들어오게 한다 — 다만 마크는 제 색을 지킨다. 회색 마크 셋이 나란히
-  // 놓이면 어느 것이 어느 것인지 모양만으로 가려내야 한다.
+  // plain은 '다른 방법' 자리에 놓일 때다. 여기서도 브랜드 색은 그대로 간다.
+  //
+  // 한때 이 자리에서 색을 빼 흰 버튼으로 눕혔다. 지난번에 쓴 것 하나만 눈에 들어오게
+  // 하려던 것인데, 그러면 카카오 노랑과 네이버 초록이 사라진다. 그 색은 강조하려고
+  // 있는 게 아니라 알아보라고 있는 것이다 — 노란 것을 찾는 사람에게 흰 줄 세 개는
+  // 다 읽어야 하는 목록이 된다.
+  //
+  // 무게는 색 말고 다른 것으로 가른다: 위에 붙은 '최근 로그인' 표시, 그 아래 한 줄
+  // 경고, 그리고 높이(52 → 48px).
   function renderSocial(method, plain) {
     return (
       <Button
@@ -194,14 +197,16 @@ export default function LoginScreen() {
         size="lg"
         onClick={method.onClick}
         disabled={method.loading}
-        variant={plain || !method.brand ? 'outline' : 'default'}
+        variant={method.brand ? 'default' : 'outline'}
         className={cn(
           'w-full rounded-[13px] font-semibold',
-          plain ? 'h-12 text-[15px] text-muted-foreground' : 'h-[52px] text-[15.5px]',
-          !plain && method.brand
+          plain ? 'h-12 text-[15px]' : 'h-[52px] text-[15.5px]',
+          // 브랜드 색이 없는 것(구글)만 '다른 방법'에서 한 단 눕는다.
+          plain && !method.brand && 'text-muted-foreground',
+          method.brand
         )}
       >
-        {method.icon(plain)}
+        {method.icon}
         {method.label}
       </Button>
     );
