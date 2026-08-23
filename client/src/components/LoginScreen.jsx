@@ -154,7 +154,11 @@ export default function LoginScreen() {
     {
       key: 'kakao',
       label: kakaoLoading ? '연결 중…' : '카카오로 로그인',
-      icon: <MessageCircle className="size-[19px] fill-current" />,
+      // 노란 버튼 위에서는 글자색(#191919)을 따라가면 되고, 흰 버튼으로 내려오면
+      // 제 색을 스스로 챙겨야 한다. 다크 모드에서는 검정이 배경에 묻히므로 노랑으로.
+      icon: (plain) => (
+        <MessageCircle className={cn('size-[19px]', plain ? 'fill-[#191919] dark:fill-[#FEE500]' : 'fill-current')} />
+      ),
       onClick: handleKakaoLogin,
       loading: kakaoLoading,
       brand: 'bg-[#FEE500] text-[#191919] hover:bg-[#FEE500]/90',
@@ -163,7 +167,7 @@ export default function LoginScreen() {
       key: 'naver',
       label: naverLoading ? '연결 중…' : '네이버로 로그인',
       // 마크가 꽉 찬 도형이라 옆의 둘(말풍선·G)보다 무겁게 읽힌다. 그만큼 작게 그린다.
-      icon: <NaverIcon className="size-[14px]" />,
+      icon: (plain) => <NaverIcon className={cn('size-[14px]', plain && 'text-[#03C75A]')} />,
       onClick: handleNaverLogin,
       loading: naverLoading,
       brand: 'bg-[#03C75A] text-white hover:bg-[#03C75A]/90',
@@ -171,15 +175,17 @@ export default function LoginScreen() {
     {
       key: 'google',
       label: googleLoading ? '연결 중…' : '구글로 로그인',
-      icon: <GoogleIcon className="size-[19px]" />,
+      // 구글 마크는 색이 SVG 안에 박혀 있다. 어디에 놓든 그대로다.
+      icon: () => <GoogleIcon className="size-[19px]" />,
       onClick: handleGoogleLogin,
       loading: googleLoading,
       brand: null,
     },
   ];
 
-  // plain은 '다른 방법' 자리에 놓일 때다. 브랜드 색을 빼서, 지난번에 쓴 것 하나만
-  // 눈에 들어오게 한다.
+  // plain은 '다른 방법' 자리에 놓일 때다. 버튼의 브랜드 색을 빼서 지난번에 쓴 것
+  // 하나만 눈에 들어오게 한다 — 다만 마크는 제 색을 지킨다. 회색 마크 셋이 나란히
+  // 놓이면 어느 것이 어느 것인지 모양만으로 가려내야 한다.
   function renderSocial(method, plain) {
     return (
       <Button
@@ -195,7 +201,7 @@ export default function LoginScreen() {
           !plain && method.brand
         )}
       >
-        {method.icon}
+        {method.icon(plain)}
         {method.label}
       </Button>
     );
