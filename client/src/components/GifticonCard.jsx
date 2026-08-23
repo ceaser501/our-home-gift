@@ -7,13 +7,14 @@ import { cn } from '@/lib/utils';
 import { useFamily } from '../FamilyContext';
 import useBackClose from '../utils/useBackClose';
 
-// 카드 아래 버튼들. 폭을 똑같이 나눠 가져서 누르기 쉽다.
+// 카드 아래 한 줄로 붙는 버튼들. 폭을 똑같이 나눠 가져서 누르기 쉽다.
 //
-// 예전에는 칸을 구분선으로만 나눠 눌리는 면이 없었다. 이제 각각이 테두리를 가진
-// 버튼이다 — 이 앱에서 테두리는 '누르거나 적는 것'을 가리킨다(01에서 정한 규칙).
-const BAR_BUTTON =
-  'flex h-9 flex-1 items-center justify-center gap-1.5 rounded-[10px] border text-[13px] font-semibold';
-const BAR_OFF = 'border-input bg-card text-foreground';
+// 한 번 각각에 테두리를 둘러 알약 모양으로 바꿔봤다. 테두리가 '누르는 것'을 가리킨다는
+// 규칙(01)을 따른 것인데, 셋을 나란히 놓으니 안쪽 여백만큼 눌리는 면이 줄어 오히려 작아
+// 보였다. 원래대로 칸을 구분선으로만 나눈다 — 카드 폭을 끝까지 쓰는 쪽이 넓다.
+//
+// 대신 높이를 44px로 올렸다. 손가락 하나가 온전히 들어가는 크기다.
+const BAR_BUTTON = 'flex h-11 flex-1 items-center justify-center gap-1.5 text-[13px] font-semibold';
 
 // 카드의 ⋮ 메뉴. 따로 떼어낸 이유가 둘 있다.
 //
@@ -340,7 +341,7 @@ export default function GifticonCard({
       {/* 왼쪽부터 알아보는 것 → 가볍게 정하는 것 → 되돌리기 번거로운 것.
           "어디서 쓰지 → 내가 쓸게 → 다 썼다"라는 실제 순서와 같고,
           제일 무거운 동작이 끝에 있어 잘못 누를 일이 줄어든다. */}
-      <div className="flex gap-1.5 px-[13px] pb-[13px]">
+      <div className="flex border-t border-border">
         {codeLocked ? (
           /* 상태를 말하던 왼쪽 이름표를 걷었다. 버튼 자리에 눌리지 않는 글자가 앉아
              있으면 눌러보게 되고, '며칠 지났는지'는 이미 위 기한 줄이 말한다.
@@ -348,7 +349,7 @@ export default function GifticonCard({
              적이 없어서 되돌릴 것이 없고, 대신 반대쪽 길이 필요하다 — 실제로는 썼는데
              표시를 안 해둔 것. 결산에서 "이미 쓰셨다면 사용완료로 바꿔주세요"라고
              안내하는 그 동작이 여기다. */
-          <button type="button" onClick={() => onToggleUsed(gifticon)} className={cn(BAR_BUTTON, BAR_OFF)}>
+          <button type="button" onClick={() => onToggleUsed(gifticon)} className={cn(BAR_BUTTON, 'text-foreground')}>
             {isUsed ? (
               <RotateCcw className="size-4 text-muted-foreground" />
             ) : (
@@ -358,7 +359,7 @@ export default function GifticonCard({
           </button>
         ) : (
           <>
-            <button type="button" onClick={() => onFindStores(gifticon)} className={cn(BAR_BUTTON, BAR_OFF)}>
+            <button type="button" onClick={() => onFindStores(gifticon)} className={cn(BAR_BUTTON, 'text-foreground')}>
               <MapPin className="size-4 text-muted-foreground" />
               매장
             </button>
@@ -371,8 +372,8 @@ export default function GifticonCard({
               onClick={() => onToggleClaim(gifticon)}
               className={cn(
                 BAR_BUTTON,
-                'min-w-0',
-                claimed ? 'border-primary bg-primary/8 font-bold text-primary' : BAR_OFF
+                'min-w-0 border-l border-border',
+                claimed ? 'font-bold text-primary' : 'text-foreground'
               )}
             >
               {/* 찜한 것은 하트를 채운다. 색만 바꾸면 작은 아이콘에서 구분이 잘 안 된다. */}
@@ -389,7 +390,7 @@ export default function GifticonCard({
             <button
               type="button"
               onClick={() => (isVoucher ? onSpend(gifticon) : onToggleUsed(gifticon))}
-              className={cn(BAR_BUTTON, BAR_OFF)}
+              className={cn(BAR_BUTTON, 'border-l border-border text-foreground')}
             >
               <CheckCircle2 className="size-4 text-muted-foreground" />
               {isVoucher ? '잔액입력' : '사용완료'}
