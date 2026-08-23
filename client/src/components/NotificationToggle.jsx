@@ -4,6 +4,7 @@ import { isPushSupported, isPushEnabled, subscribeToPush, unsubscribeFromPush } 
 import { isNativePushSupported, isNativePushEnabled, enableNativePush, disableNativePush } from '../nativePush';
 import { useFamily } from '../FamilyContext';
 import AlertDialog from './AlertDialog';
+import { cn } from '@/lib/utils';
 
 // onChange는 켜짐/꺼짐이 바뀐 걸 바깥에도 알려준다. 같은 창의 '알림 테스트' 줄이
 // 이 상태를 함께 보여주는데, 여기서만 알고 있으면 그쪽이 낡은 값을 계속 띄운다.
@@ -56,22 +57,40 @@ export default function NotificationToggle({ asRow = false, onChange }) {
   if (asRow) {
     return (
       <>
+        {/* 값이 '켜짐'/'꺼짐' 글자였다. 글자만 있으면 지금 상태를 알려주는 표시인지
+            눌러서 바꾸는 것인지 알 수 없다. 스위치는 그 둘을 한 모양으로 말한다.
+
+            줄 전체가 버튼이라 스위치를 정확히 조준하지 않아도 된다. 대신 스위치 쪽은
+            그림이라 aria-hidden으로 두고, 상태는 바깥 버튼이 role="switch"로 알린다 —
+            버튼 안에 버튼을 넣을 수는 없다. */}
         <button
           type="button"
+          role="switch"
+          aria-checked={enabled}
           onClick={handleToggle}
           disabled={loading}
-          className="flex w-full items-center gap-3 px-1 py-3 text-left text-sm disabled:opacity-50"
+          className="flex w-full items-center gap-[11px] py-1.5 text-left disabled:opacity-50"
         >
-          <BellRing className="size-4.5 shrink-0 text-muted-foreground" />
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent">
+            <BellRing className="size-[18px] text-primary" strokeWidth={2.2} />
+          </span>
           <span className="flex min-w-0 flex-1 flex-col">
-            <span className="text-foreground">푸시 알림 받기</span>
+            <span className="text-[15px] font-semibold tracking-[-0.015em] text-foreground">푸시 알림 받기</span>
             {/* 무엇이 폰을 울리는지 적어둔다. 이걸 안 적으면 가족이 기프티콘을 쓸 때마다
                 알림이 오는 줄 알고 꺼버린다. 정작 만료 알림까지 같이 꺼지는 셈이다.
                 (사용·사용취소·등록은 폰을 울리지 않고 헤더의 종에만 쌓인다.) */}
-            <span className="text-xs break-keep text-muted-foreground">사용기한 임박, 가족 참여 신청</span>
+            <span className="mt-0.5 text-[13px] font-medium break-keep text-muted-foreground">
+              사용기한 임박, 가족 참여 신청
+            </span>
           </span>
-          <span className={enabled ? 'shrink-0 text-xs font-semibold text-primary' : 'shrink-0 text-xs text-muted-foreground'}>
-            {enabled ? '켜짐' : '꺼짐'}
+          <span
+            aria-hidden="true"
+            className={cn(
+              'flex h-[30px] w-12 shrink-0 items-center rounded-full px-[3px] transition-colors',
+              enabled ? 'justify-end bg-primary' : 'justify-start bg-input'
+            )}
+          >
+            <span className="size-6 rounded-full bg-card shadow-sm" />
           </span>
         </button>
         {dialogs}

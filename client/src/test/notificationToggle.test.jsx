@@ -34,6 +34,12 @@ function row() {
   return screen.getByText('푸시 알림 받기').closest('button');
 }
 
+// 켜짐/꺼짐이 글자에서 스위치가 됐다. 상태는 이제 aria-checked가 알린다 —
+// 화면을 읽어주는 기기가 보는 값이고, 이 줄에서 지켜야 하는 것도 그것이다.
+function isOn() {
+  return row().getAttribute('aria-checked') === 'true';
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   enableNativePush.mockResolvedValue('tok-1');
@@ -41,12 +47,12 @@ beforeEach(() => {
 });
 
 describe('앱에서의 푸시 알림 받기', () => {
-  it('계정에 토큰이 있으면 켜짐으로 보인다', async () => {
+  it('계정에 토큰이 있으면 스위치가 켜져 있다', async () => {
     isNativePushEnabled.mockResolvedValue(true);
 
     await act(async () => render(<NotificationToggle asRow />));
 
-    expect(screen.getByText('켜짐')).toBeTruthy();
+    expect(isOn()).toBe(true);
   });
 
   // 앱에서 켜지는지가 이 화면의 핵심이다. 웹푸시 쪽으로 새면 앱에서는 아무 일도 안 난다.
@@ -58,7 +64,7 @@ describe('앱에서의 푸시 알림 받기', () => {
 
     expect(enableNativePush).toHaveBeenCalledWith({ familyId: 'fam-1' });
     expect(subscribeToPush).not.toHaveBeenCalled();
-    expect(screen.getByText('켜짐')).toBeTruthy();
+    expect(isOn()).toBe(true);
   });
 
   it('켜진 상태에서 누르면 끈다', async () => {
@@ -68,18 +74,18 @@ describe('앱에서의 푸시 알림 받기', () => {
     await act(async () => row().click());
 
     expect(disableNativePush).toHaveBeenCalledWith('me');
-    expect(screen.getByText('꺼짐')).toBeTruthy();
+    expect(isOn()).toBe(false);
   });
 
-  // 권한을 거절하면 알림 하나로 끝나야 한다 — 켜짐으로 바뀌면 안 된다.
-  it('권한을 거절하면 켜짐으로 바뀌지 않는다', async () => {
+  // 권한을 거절하면 알림 하나로 끝나야 한다 — 스위치가 켜지면 안 된다.
+  it('권한을 거절하면 스위치가 켜지지 않는다', async () => {
     isNativePushEnabled.mockResolvedValue(false);
     enableNativePush.mockRejectedValue(new Error('알림 권한을 허용해주셔야 켤 수 있어요.'));
 
     await act(async () => render(<NotificationToggle asRow />));
     await act(async () => row().click());
 
-    expect(screen.getByText('꺼짐')).toBeTruthy();
+    expect(isOn()).toBe(false);
     expect(screen.getByText('알림 설정에 실패했어요')).toBeTruthy();
   });
 });
