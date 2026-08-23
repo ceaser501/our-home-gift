@@ -322,12 +322,16 @@ export default function GifticonCard({
         {/* 수정·삭제는 자주 쓰지 않아서 평소엔 접어둔다.
             absolute를 걷고 형제로 뒀다. 본문에 pr-7을 주지 않아도 되고, 누를 자리가
             24 → 32px이 된다. 만료·사용완료 카드에도 그대로 둔다 — 수정·삭제는 모든
-            카드에서 되는 일이다. */}
+            카드에서 되는 일이다.
+
+            relative가 꼭 있어야 한다. 위에 카드 전체를 덮는 바코드 판(absolute inset-0)이
+            깔려 있는데, 브라우저는 자리를 잡은 요소를 그렇지 않은 요소보다 항상 위에
+            그린다. 이 relative가 빠지면 ⋮ 이 그 판 아래로 내려가서, 눌러도 바코드가 열린다. */}
         <button
           type="button"
           onClick={() => setMenuOpen(true)}
           aria-label="더 보기"
-          className="-mt-[3px] -mr-[3px] flex size-8 shrink-0 items-center justify-center rounded-[10px] text-muted-foreground/60"
+          className="relative -mt-[3px] -mr-[3px] flex size-8 shrink-0 items-center justify-center rounded-[10px] text-muted-foreground/60"
         >
           <MoreVertical className="size-[17px]" />
         </button>
