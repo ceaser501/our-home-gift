@@ -272,10 +272,18 @@ export default function GifticonCard({
             </span>
           </div>
 
-          {/* 2줄 — 상품명. 찜은 아래 버튼이 직접 "○○ 찜"으로 말해주므로 여기 또 적지 않는다. */}
+          {/* 2줄 — 상품명. 찜은 아래 버튼이 직접 "○○ 찜"으로 말해주므로 여기 또 적지 않는다.
+              두 줄까지 내려온다. 이 자리가 196px이라 한 줄에는 한글 12자밖에 안 들어가는데,
+              기프티콘 이름은 뒤에 붙은 것이 물건을 가른다 — '아메리카노 T'와 '아메리카노
+              Grande', '콜라 1.25L'와 '콜라 500ml'. 앞 12자는 둘이 같아서 한 줄로 자르면
+              목록에서 구분이 안 된다.
+
+              그렇다고 무제한으로 두지는 않는다. 이름 끝에 홍보 문구가 붙어 네 줄이 되는
+              것이 섞이면 그 카드만 두 배로 커지고 나머지가 아래로 밀린다. 두 줄이면 24자라
+              실제 이름은 거의 다 들어온다. */}
           <span
             className={cn(
-              'truncate text-[15.5px] tracking-[-0.018em]',
+              'line-clamp-2 text-[15.5px] leading-snug tracking-[-0.018em] break-keep',
               codeLocked ? 'font-medium text-muted-foreground' : 'font-semibold text-foreground'
             )}
           >
