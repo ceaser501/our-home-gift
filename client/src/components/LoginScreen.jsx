@@ -147,6 +147,9 @@ export default function LoginScreen() {
   }
 
   // 세 수단을 한 줄씩. 지난번에 쓴 것과 나머지가 같은 모양을 쓰되 무게만 다르다.
+  //
+  // 차례는 쓰는 사람이 많을 순서다 — 카카오 · 네이버 · 구글. 기프티콘을 주고받는 곳이
+  // 카카오톡이라 그쪽이 맨 위고, 나머지 둘은 국내에서 쓰는 비중을 따랐다.
   const socials = [
     {
       key: 'kakao',
@@ -157,14 +160,6 @@ export default function LoginScreen() {
       brand: 'bg-[#FEE500] text-[#191919] hover:bg-[#FEE500]/90',
     },
     {
-      key: 'google',
-      label: googleLoading ? '연결 중…' : '구글로 로그인',
-      icon: <GoogleIcon className="size-[19px]" />,
-      onClick: handleGoogleLogin,
-      loading: googleLoading,
-      brand: null,
-    },
-    {
       key: 'naver',
       label: naverLoading ? '연결 중…' : '네이버로 로그인',
       // 마크가 꽉 찬 도형이라 옆의 둘(말풍선·G)보다 무겁게 읽힌다. 그만큼 작게 그린다.
@@ -172,6 +167,14 @@ export default function LoginScreen() {
       onClick: handleNaverLogin,
       loading: naverLoading,
       brand: 'bg-[#03C75A] text-white hover:bg-[#03C75A]/90',
+    },
+    {
+      key: 'google',
+      label: googleLoading ? '연결 중…' : '구글로 로그인',
+      icon: <GoogleIcon className="size-[19px]" />,
+      onClick: handleGoogleLogin,
+      loading: googleLoading,
+      brand: null,
     },
   ];
 
@@ -198,8 +201,24 @@ export default function LoginScreen() {
     );
   }
 
-  // 이메일 폼. 라벨은 뒀던 것을 걷었다 — 라벨·플레이스홀더·버튼이 같은 말을 세 번 했다.
+  // 이메일은 평소에 접어둔다. 소셜 셋은 한 번만 누르면 끝인데 이쪽만 칸을 적어야 해서,
+  // 펼쳐두면 네 번째 자리가 혼자 두 칸을 먹는다. 필요한 사람만 펼친다.
+  //
+  // 라벨은 뒤에 걷었다 — 라벨·플레이스홀더·버튼이 같은 말을 세 번 했다.
   // 화면을 읽어주는 기기에는 aria-label로 남는다.
+  const emailToggle = (
+    <Button
+      type="button"
+      variant="outline"
+      size="lg"
+      onClick={() => setEmailOpen(true)}
+      className="h-12 w-full rounded-[13px] text-[15px] font-semibold text-muted-foreground"
+    >
+      이메일로 로그인 링크 받기
+      <ChevronDown className="size-4" />
+    </Button>
+  );
+
   const emailForm = (
     <form onSubmit={handleSubmit} className="flex w-full flex-col gap-2.5">
       <Input
@@ -267,23 +286,7 @@ export default function LoginScreen() {
           <div className="flex flex-col gap-2.5">
             <p className="m-0 text-[13px] font-semibold text-muted-foreground">다른 방법</p>
             {socials.filter((m) => m.key !== lastUsed).map((m) => renderSocial(m, true))}
-            {/* 이메일은 칸을 적어야 해서 자리를 많이 먹는다. 지난번에 쓴 것이 따로 있는
-                날에는 접어두고, 필요한 사람만 펼친다. */}
-            {lastUsed !== 'email' &&
-              (emailOpen ? (
-                emailForm
-              ) : (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="lg"
-                  onClick={() => setEmailOpen(true)}
-                  className="h-12 w-full rounded-[13px] text-[15px] font-semibold text-muted-foreground"
-                >
-                  이메일로 로그인 링크 받기
-                  <ChevronDown className="size-4" />
-                </Button>
-              ))}
+            {lastUsed !== 'email' && (emailOpen ? emailForm : emailToggle)}
           </div>
         </div>
       ) : (
@@ -298,7 +301,7 @@ export default function LoginScreen() {
           </div>
 
           {error && <p className="m-0 text-sm text-destructive">{error}</p>}
-          {emailForm}
+          {emailOpen ? emailForm : emailToggle}
         </div>
       )}
 
