@@ -7,6 +7,20 @@ import { cn } from '@/lib/utils';
 import Logo from './Logo';
 import InstallPrompt from './InstallPrompt';
 
+// 네이버 마크. 글자 N을 그냥 적어뒀더니 앞뒤 두 가지가 어긋났다 — 다른 둘은 그림인데
+// 이것만 글자라 획 굵기가 따로 놀고, 19px 네모 안에 작은 글자가 들어앉아 오른쪽에
+// 빈자리가 남아 이름과의 간격만 벌어졌다. 마크를 그대로 그린다.
+function NaverIcon({ className }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
+      <path
+        fill="currentColor"
+        d="M16.273 12.845 7.376 0H0v24h7.727V11.155L16.624 24H24V0h-7.727v12.845z"
+      />
+    </svg>
+  );
+}
+
 function GoogleIcon({ className }) {
   return (
     <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
@@ -153,7 +167,8 @@ export default function LoginScreen() {
     {
       key: 'naver',
       label: naverLoading ? '연결 중…' : '네이버로 로그인',
-      icon: <span className="flex size-[19px] items-center justify-center text-[15px] leading-none font-bold">N</span>,
+      // 마크가 꽉 찬 도형이라 옆의 둘(말풍선·G)보다 무겁게 읽힌다. 그만큼 작게 그린다.
+      icon: <NaverIcon className="size-[14px]" />,
       onClick: handleNaverLogin,
       loading: naverLoading,
       brand: 'bg-[#03C75A] text-white hover:bg-[#03C75A]/90',

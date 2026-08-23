@@ -91,10 +91,8 @@ export default function ConsentScreen({ userId, onDone }) {
         <span className="flex size-12 items-center justify-center rounded-full bg-accent">
           <FileCheck2 className="size-6 text-primary" />
         </span>
-        <h1 className="m-0 text-center text-[21px] font-bold tracking-[-0.028em] text-foreground">
-          시작하기 전에
-          <br />
-          확인해주세요
+        <h1 className="m-0 text-center text-[21px] font-bold tracking-[-0.028em] break-keep text-foreground">
+          시작하기 전에 확인해주세요
         </h1>
         <p className="m-0 text-center text-[14.5px] font-medium text-muted-foreground">
           세 가지 모두 동의가 필요해요
@@ -168,26 +166,30 @@ export default function ConsentScreen({ userId, onDone }) {
 
       {error && <p className="m-0 text-sm text-destructive">{error}</p>}
 
-      <Button
-        size="lg"
-        className="h-[52px] w-full rounded-[13px] text-[15.5px] font-bold"
-        disabled={!allAgreed || saving}
-        onClick={handleSubmit}
-      >
-        {saving ? '저장하는 중…' : '동의하고 시작하기'}
-      </Button>
+      {/* 버튼 둘은 한 덩어리로 묶는다. 바깥 간격(gap-5)이 그대로 걸리면 나란히 놓인
+          단추 사이만 유독 벌어져서, 두 번째가 딴 무리로 보인다. */}
+      <div className="flex flex-col gap-2">
+        <Button
+          size="lg"
+          className="h-[52px] w-full rounded-[13px] text-[15.5px] font-bold"
+          disabled={!allAgreed || saving}
+          onClick={handleSubmit}
+        >
+          {saving ? '저장하는 중…' : '동의하고 시작하기'}
+        </Button>
 
-      {/* 나가는 길의 테두리는 지킨다. 위 버튼이 체크 전까지 흐릿하게 죽어 있어서,
-          아래까지 글자만 있으면 누를 수 있는 것이 하나도 없는 화면이 된다. */}
-      <Button
-        type="button"
-        variant="outline"
-        size="lg"
-        className="h-12 w-full rounded-xl text-[14.5px] font-semibold text-foreground/70"
-        onClick={() => signOut()}
-      >
-        동의하지 않고 나가기
-      </Button>
+        {/* 나가는 길의 테두리는 지킨다. 위 버튼이 체크 전까지 흐릿하게 죽어 있어서,
+            아래까지 글자만 있으면 누를 수 있는 것이 하나도 없는 화면이 된다. */}
+        <Button
+          type="button"
+          variant="outline"
+          size="lg"
+          className="h-12 w-full rounded-xl text-[14.5px] font-semibold text-foreground/70"
+          onClick={() => signOut()}
+        >
+          동의하지 않고 나가기
+        </Button>
+      </div>
       </div>
     </div>
   );
