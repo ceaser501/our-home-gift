@@ -120,13 +120,14 @@ export default function GifticonCard({
   // 자리를 못 찾은 것은 예전처럼 첫 사진 그대로 보여준다.
   const thumbUrl = gifticon.thumb_image_url || gifticon.image_url;
 
-  // 기한 줄은 D-day와 날짜 둘로 나눠 적는다. 예전에는 하나로 붙여 칩 안에 넣었는데,
-  // 칩 배경이 목록을 시끄럽게 하고 두 값의 무게도 갈리지 않았다. D-day가 반 단 크고
-  // 날짜가 그 뒤를 받친다.
+  // D-day는 썸네일 왼쪽 위 모서리에 뱃지로 붙는다.
   //
-  // 못 쓰는 것(만료·사용완료)에는 D-day를 안 적는다. 썸네일이 이미 '기한만료'/'사용완료'라고
-  // 덮고 있어서 며칠이 남았는지 세는 것이 뜻이 없고, 사용완료는 아래에 '언제 누가 썼는지'가
-  // 따로 적힌다. 남는 건 날짜 하나 — 언제까지였는지는 그래도 알아야 한다.
+  // 글자로만 적어 기한 줄에 뒀을 때는 눈에 안 들어왔다. 상품명과 무게가 비슷해서 그냥 한
+  // 줄로 지나갔고, 급하지 않은 것(D-25)은 색도 없어서 더 그랬다. 모서리로 빼면 목록을
+  // 내릴 때 왼쪽 한 줄에 D-day가 세로로 정렬돼 훑기가 빠르다.
+  //
+  // 사진을 가리는 것이 이 자리의 값인데, 겹칠 뻔한 둘은 이미 비켜 있다 — 사진 장수는
+  // 오른쪽 위고, 만료·사용완료를 덮는 판은 D-day가 없는 카드에만 깔린다.
   const ddayLabel = codeLocked ? null : formatDday(gifticon.expires_at);
   // 급한 것만 붉은색을 가진다. 목록에 색이 하나뿐이라야 급한 게 눈에 바로 들어온다.
   const urgent = urgency === 'soon' || urgency === 'urgent';
@@ -139,24 +140,13 @@ export default function GifticonCard({
   const claimed = Boolean(gifticon.claimed_by);
   const claimedByMe = gifticon.claimed_by === user.id;
 
-  // 기한 줄. D-day와 날짜 두 조각인데, 만료·사용완료 카드에는 D-day가 없어 날짜만 남는다.
+  // 기한 줄에는 이제 날짜만 남는다(D-day는 썸네일 모서리로 갔다).
   //
-  // 누를 자리는 D-day 한 낱말이 아니라 줄 전체다. 'D-1' 네 글자를 조준하는 건 작고,
-  // 어차피 D-day와 날짜는 한 가지를 두 가지로 적은 것이다. 만료된 카드에는 날짜밖에
-  // 안 남는데 그것도 눌려야 해서, 줄을 통째로 버튼으로 두는 편이 맞다.
+  // 누를 자리는 줄 전체다. 예전에는 'D-1' 네 글자만 눌렸는데 그건 작았고, 지금은 그
+  // 글자가 여기 없다.
   //
   // pointer-events는 위 칸 전체가 꺼져 있어서(카드 어디를 눌러도 바코드가 열린다)
   // 여기서만 다시 켠다.
-  const ddayNode = ddayLabel && (
-    <span
-      className={cn(
-        'shrink-0 text-sm font-bold tracking-[-0.015em] tabular-nums',
-        urgent ? 'text-destructive' : 'text-foreground/80'
-      )}
-    >
-      {ddayLabel}
-    </span>
-  );
   const dateNode = (
     <span
       className={cn(
@@ -173,17 +163,13 @@ export default function GifticonCard({
     <button
       type="button"
       onClick={() => onExtend(gifticon)}
-      className="pointer-events-auto flex min-w-0 items-baseline gap-1.5"
+      className="pointer-events-auto flex min-w-0 items-center gap-1"
     >
-      {ddayNode}
       {dateNode}
-      <Info className="size-3.5 shrink-0 self-center text-muted-foreground" />
+      <Info className="size-3.5 shrink-0 text-muted-foreground" />
     </button>
   ) : (
-    <>
-      {ddayNode}
-      {dateNode}
-    </>
+    dateNode
   );
 
   // 그림자를 걷었다. 테두리 하나로 "이건 한 장"이 충분히 말해지고, 카드가 열 장 스무 장
@@ -225,20 +211,37 @@ export default function GifticonCard({
             무슨 상품인지 알아볼 수 없다. 못 잘라낸 것은 예전처럼 첫 사진을 그대로 쓴다. */}
         {/* 테두리를 걷었다. 사진이 들어가면 사진의 가장자리와 테두리가 겹쳐 두 겹이 되고,
             사진이 없을 때는 아래 배경(bg-accent)이 이미 자리를 그린다. */}
-        <span className="pointer-events-none relative flex size-[62px] shrink-0 items-center justify-center overflow-hidden rounded-xl bg-accent">
-          {thumbUrl ? (
-            <img src={thumbUrl} alt={gifticon.name} className="h-full w-full object-cover" />
-          ) : (
-            <Ticket className="size-6 text-primary/60" />
-          )}
-          {codeLocked && (
-            <span className="absolute inset-0 flex items-center justify-center bg-black/45 text-[11px] font-bold text-white">
-              {isUsed ? '사용완료' : '기한만료'}
-            </span>
-          )}
-          {photoCount > 1 && (
-            <span className="absolute top-1 right-1 rounded-full bg-black/60 px-1.5 py-px text-[10px] font-bold text-white">
-              {photoCount}
+        {/* D-day 뱃지는 사진 바깥으로 반쯤 걸쳐야 해서, 사진을 자르는 칸(overflow-hidden)
+            안에 둘 수 없다. 한 겹 감싸고 그 위에 얹는다. */}
+        <span className="pointer-events-none relative shrink-0">
+          <span className="relative flex size-[62px] items-center justify-center overflow-hidden rounded-xl bg-accent">
+            {thumbUrl ? (
+              <img src={thumbUrl} alt={gifticon.name} className="h-full w-full object-cover" />
+            ) : (
+              <Ticket className="size-6 text-primary/60" />
+            )}
+            {codeLocked && (
+              <span className="absolute inset-0 flex items-center justify-center bg-black/45 text-[11px] font-bold text-white">
+                {isUsed ? '사용완료' : '기한만료'}
+              </span>
+            )}
+            {photoCount > 1 && (
+              <span className="absolute top-1 right-1 rounded-full bg-black/60 px-1.5 py-px text-[10px] font-bold text-white">
+                {photoCount}
+              </span>
+            )}
+          </span>
+
+          {/* 왼쪽 위 모서리. 사진 장수는 오른쪽 위라 자리를 다투지 않는다.
+              카드 색 테두리를 둘러서 사진이 어떻든 뱃지가 뜯겨 보인다. */}
+          {ddayLabel && (
+            <span
+              className={cn(
+                'absolute -top-1.5 -left-1.5 rounded-full px-[7px] py-[1px] text-[11px] font-bold tabular-nums ring-2 ring-card',
+                urgent ? 'bg-destructive text-white' : 'bg-foreground/80 text-background'
+              )}
+            >
+              {ddayLabel}
             </span>
           )}
         </span>

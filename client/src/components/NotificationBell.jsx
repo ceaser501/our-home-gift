@@ -220,10 +220,16 @@ export default function NotificationBell() {
             type="button"
             onClick={handleOpen}
             aria-live="polite"
-            className="animate-in fade-in slide-in-from-top-1 absolute top-full right-0 z-30 mt-2 rounded-lg bg-primary px-2.5 py-1.5 text-[11px] font-semibold whitespace-nowrap text-primary-foreground shadow-md"
+            className="animate-in fade-in slide-in-from-top-1 absolute top-full right-0 z-30 mt-0.5 rounded-lg bg-primary px-2.5 py-1.5 text-[11px] font-semibold whitespace-nowrap text-primary-foreground shadow-md"
           >
-            {/* 꼬리. 이것 하나로 "허공에 뜬 상자"가 "종에 대한 말"이 된다. */}
-            <span aria-hidden="true" className="absolute -top-1 right-3 size-2 rotate-45 rounded-[1px] bg-primary" />
+            {/* 꼬리. 이것 하나로 "허공에 뜬 상자"가 "종에 대한 말"이 된다.
+                꼭지가 종의 한가운데를 가리켜야 한다. 누를 자리가 42px이라 종은 오른쪽
+                끝에서 21px 안쪽에 있고, 꼭지는 8px짜리라 오른쪽에서 17px에 두면 그
+                한가운데(17+4)가 종과 맞는다. 예전에는 12px에 있어서 9px 어긋나 있었다.
+
+                위아래도 붙였다. 종 아이콘(20px)이 42px 칸 가운데에 있어서 아이콘 아래로
+                11px이 비는데, 거기에 8px을 더 띄우니 종과 말풍선이 남남으로 보였다. */}
+            <span aria-hidden="true" className="absolute -top-1 right-[17px] size-2 rotate-45 rounded-[1px] bg-primary" />
             중요 안내가 있어요
           </button>
         )}

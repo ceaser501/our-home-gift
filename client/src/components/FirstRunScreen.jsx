@@ -34,7 +34,10 @@ export default function FirstRunScreen({ notice, onOpenNotices, onUpload, onScan
         </div>
       )}
 
-      <div className="flex flex-1 flex-col items-center justify-center gap-[22px] px-[30px] pt-6 pb-[70px]">
+      {/* 위아래 여백을 같게 뒀다. 예전에는 아래를 70px 더 줘서 내용이 가운데보다 23px쯤
+          위에 섰는데, 공지 한 줄이 위에 들어오면 그만큼 더 눌린다 — 위는 빽빽하고 아래는
+          비는 화면이 됐다. 남은 자리의 한가운데에 두면 공지가 있든 없든 같은 규칙이다. */}
+      <div className="flex flex-1 flex-col items-center justify-center gap-[22px] px-[30px] py-8">
         <div className="flex size-20 items-center justify-center rounded-[22px] bg-accent">
           <Ticket className="size-10 text-primary" strokeWidth={1.7} />
         </div>

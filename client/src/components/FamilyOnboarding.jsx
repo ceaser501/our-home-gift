@@ -158,14 +158,17 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col overflow-y-auto bg-background px-6">
-      <div className="my-auto flex flex-col gap-5 py-7">
+      {/* 한 칸(16px)으로 통일한다. 예전에는 바깥이 20px인데 폼 위에 4px이 더 붙고 버튼
+          위에는 12+4px이 붙어서, 같은 화면 안에 24px과 16px 두 간격이 섞여 있었다.
+          '가족 이름' 위와 마지막 칸 아래가 서로 달라 보이던 것이 이것이다. */}
+      <div className="my-auto flex flex-col gap-4 py-7">
       {/* 이 화면이 "이 앱이 내 앱인가"를 정한다. 예전 문구("가족 그룹이 필요해요")는 혼자
           쓰려는 사람에게 자격 조건처럼 읽혔다. 혼자도 괜찮다는 것을 먼저 말해준다. */}
       <div className="flex flex-col items-center gap-1.5">
-        <span className="flex size-12 items-center justify-center rounded-full bg-accent">
-          <Users className="size-6 text-primary" />
+        <span className="flex size-11 items-center justify-center rounded-full bg-accent">
+          <Users className="size-[22px] text-primary" />
         </span>
-        <h1 className="m-0 text-center text-[21px] font-bold tracking-[-0.028em] text-foreground">
+        <h1 className="m-0 text-center text-[20px] font-bold tracking-[-0.028em] text-foreground">
           기프티콘을 모아둘
           <br />
           곳을 만들어요
@@ -179,7 +182,7 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
 
       {/* 어느 계정으로 만드는지와 계정을 바꾸는 길을 한 자리에 둔다. 예전에는 이메일이
           화면 위, 버튼이 화면 맨 아래에 떨어져 있어 같은 이야기를 두 곳에서 했다. */}
-      <div className="flex h-[52px] items-center gap-3 rounded-[13px] border border-border bg-card pr-3.5 pl-4">
+      <div className="flex h-12 items-center gap-3 rounded-[13px] border border-border bg-card pr-2.5 pl-3.5">
         <div className="flex min-w-0 flex-1 items-center gap-2">
           <Mail className="size-[17px] shrink-0 text-muted-foreground" />
           <p className="m-0 truncate text-[14.5px] font-medium text-foreground">{userEmail}</p>
@@ -188,7 +191,7 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
           type="button"
           variant="outline"
           size="sm"
-          className="h-[38px] shrink-0 rounded-[10px] text-[13.5px] font-semibold text-foreground/70"
+          className="h-9 shrink-0 rounded-[10px] text-[13.5px] font-semibold text-foreground/70"
           onClick={() => signOut()}
         >
           계정 바꾸기
@@ -208,7 +211,7 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
             type="button"
             onClick={() => setMode(value)}
             className={cn(
-              'flex-1 rounded-[10px] py-2.5 text-[15px] font-semibold tracking-[-0.015em] transition-colors',
+              'flex-1 rounded-[10px] py-2 text-[15px] font-semibold tracking-[-0.015em] transition-colors',
               mode === value ? 'bg-card text-foreground shadow-xs' : 'text-muted-foreground'
             )}
           >
@@ -217,14 +220,13 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
         ))}
       </div>
 
-      {/* 폼과 그 아래 버튼을 한 덩어리로 묶는다. 바깥 간격이 그대로 걸리면 버튼만
-          유독 멀리 떨어진다. */}
-      <div className="flex flex-col gap-3 pt-1">
       {mode === 'create' ? (
-        <form onSubmit={handleCreate} className="flex flex-col gap-3">
+        // 폼 안 간격도 바깥과 같은 16px. 그래야 '가족 이름' 위와 마지막 칸 아래가 같다.
+        <form onSubmit={handleCreate} className="flex flex-col gap-4">
           {/* 적는 칸을 테두리 카드로 또 감싸지 않는다. 칸마다 테두리가 있으므로 두 겹이
-              된다 — 이 앱에서 테두리는 '누르거나 적는 것' 하나만 가리켜야 한다. */}
-          <div className="flex flex-col gap-3.5">
+              된다 — 이 앱에서 테두리는 '누르거나 적는 것' 하나만 가리켜야 한다.
+              칸끼리는 한 단 좁게(12px) 붙여서 둘이 한 묶음으로 읽히게 한다. */}
+          <div className="flex flex-col gap-3">
             <div className="flex flex-col gap-1.5">
               {/* '이름'만 적으면 무엇의 이름인지 묻게 된다. 바로 아래가 '내 이름'이라 더 그렇다. */}
               <Label htmlFor="fam-name" className="text-[14px] font-semibold">가족 이름</Label>
@@ -234,7 +236,7 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
                 value={familyName}
                 onChange={(e) => setFamilyName(e.target.value)}
                 placeholder="우리집"
-                className="h-[52px] rounded-[13px] text-[15.5px]"
+                className="h-12 rounded-[13px] text-[15.5px]"
                 autoComplete="off"
                 required
               />
@@ -251,7 +253,7 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
                 value={memberName}
                 onChange={(e) => setMemberName(e.target.value)}
                 placeholder="아빠, 엄마, 아들, 딸"
-                className="h-[52px] rounded-[13px] text-[15.5px]"
+                className="h-12 rounded-[13px] text-[15.5px]"
                 autoComplete="off"
                 required
               />
@@ -261,15 +263,15 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
           <Button
             type="submit"
             size="lg"
-            className="mt-1 h-[52px] w-full rounded-[13px] text-[15.5px] font-bold"
+            className="h-[52px] w-full rounded-[13px] text-[15.5px] font-bold"
             disabled={submitting}
           >
             {submitting ? '만드는 중…' : '만들기'}
           </Button>
         </form>
       ) : (
-        <form onSubmit={handleJoin} className="flex flex-col gap-3">
-          <div className="flex flex-col gap-3.5">
+        <form onSubmit={handleJoin} className="flex flex-col gap-4">
+          <div className="flex flex-col gap-3">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="fam-code" className="text-[14px] font-semibold">초대 코드</Label>
               <Input
@@ -277,7 +279,7 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
                 value={code}
                 onChange={(e) => setCode(e.target.value.toUpperCase())}
                 placeholder="6자리 코드"
-                className="h-[52px] rounded-[13px] text-[15.5px] tracking-[0.2em] uppercase"
+                className="h-12 rounded-[13px] text-[15.5px] tracking-[0.2em] uppercase"
                 maxLength={6}
                 autoComplete="off"
                 required
@@ -293,7 +295,7 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
                 value={memberName}
                 onChange={(e) => setMemberName(e.target.value)}
                 placeholder="아빠, 엄마, 아들, 딸"
-                className="h-[52px] rounded-[13px] text-[15.5px]"
+                className="h-12 rounded-[13px] text-[15.5px]"
                 autoComplete="off"
                 required
               />
@@ -303,14 +305,13 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
           <Button
             type="submit"
             size="lg"
-            className="mt-1 h-[52px] w-full rounded-[13px] text-[15.5px] font-bold"
+            className="h-[52px] w-full rounded-[13px] text-[15.5px] font-bold"
             disabled={submitting}
           >
             {submitting ? '참여하는 중…' : '참여하기'}
           </Button>
         </form>
       )}
-      </div>
       </div>
     </div>
   );
