@@ -81,23 +81,27 @@ describe('새 소식 / 지난 소식', () => {
 });
 
 describe('고정 공지 카드', () => {
-  // 남은 시간이 제목 아래 별도 줄이면 카드가 세 줄이 된다. 제목 줄 오른쪽에 붙여 두 줄로 끝낸다.
-  it('남은 시간이 제목과 같은 줄에 있다', () => {
+  // 남은 시간이 제목 아래 별도 줄이면 카드가 세 줄이 된다. 제목 옆에 붙여 두 줄로 끝낸다.
+  //
+  // 다만 제목이 밀려서 잘리면 안 된다. 무슨 공지인지를 말하는 유일한 줄이다. 그래서
+  // flex로 칸을 나누지 않고 글자 흐름에 맡긴다 — 제목이 길면 남은 시간이 다음 줄로 넘어가고,
+  // 제목은 어느 쪽에서도 온전하다.
+  it('긴 제목도 안 잘리고, 남은 시간이 같은 문단에 흐른다', () => {
     const soon = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString();
+    const long = '가족 참여 승인 기능이 생겼어요';
     render(
       <ActivitySheet
         activities={[]}
-        pinnedNotices={[{ id: 'n1', title: '서버 점검 안내', body: '등록이 잠시 안 돼요', ends_at: soon }]}
+        pinnedNotices={[{ id: 'n1', title: long, body: '등록이 잠시 안 돼요', ends_at: soon }]}
         lastReadAt={READ_AT}
         onClose={vi.fn()}
       />
     );
 
-    const title = screen.getByText('서버 점검 안내');
     // remainingLabel은 '오늘 15시까지'처럼 적는다(utils/notices.js).
-    const remaining = screen.getByText(/까지$/);
-    // 같은 부모 안에 나란히 있으면 한 줄이다.
-    expect(title.parentElement).toBe(remaining.parentElement);
+    const line = screen.getByText(/까지$/).closest('p');
+    expect(line.textContent).toContain(long);
+    expect(line.className).not.toContain('truncate');
   });
 
   it('확성기 대신 공지 뱃지가 붙는다', () => {

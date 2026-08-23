@@ -67,6 +67,24 @@ describe('NearbyBanner', () => {
     expect(await screen.findByText(/스타벅스 서울숲점/, {}, { timeout: 3000 })).toBeTruthy();
   });
 
+  // 한 줄로 줄이면서 무엇이 먼저 잘리는지를 정해야 했다. 매장 이름이 아무리 길어도
+  // 거리와 개수는 남아야 한다 — 갈까 말까를 정하는 값이 그 둘이다.
+  it('매장 이름이 길어도 거리와 개수는 안 잘린다', async () => {
+    searchNearbyStores.mockResolvedValue([
+      { name: '스타벅스 서울숲카페거리점 드라이브스루 2호점', distance: 120 },
+    ]);
+
+    render(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
+    const name = await screen.findByText(/드라이브스루 2호점/, {}, { timeout: 3000 });
+
+    // 이름만 줄어든다.
+    expect(name.className).toContain('truncate');
+    expect(name.className).toContain('min-w-0');
+    // 거리와 개수는 자리를 지킨다.
+    expect(screen.getByText('120m').className).toContain('shrink-0');
+    expect(screen.getByText(/사용가능 2개/).className).toContain('shrink-0');
+  });
+
   // 이게 이 기능의 핵심이다. 사람들은 앱을 잘 안 끈다 — 홈을 누르고 주머니에 넣는다.
   // 그러고 걸어가서 앱을 다시 봤을 때 아까 그 내용이 그대로면, 정작 이 기능이 필요한
   // 순간에 아무 일도 안 일어나는 것이다.

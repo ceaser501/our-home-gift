@@ -217,7 +217,11 @@ describe('NotificationBell', () => {
     // 셋 다 보이기는 한다. 위 두 개가 고정 자리에 있고, 나머지는 아래 목록에 섞인다.
     const sheet = document.querySelector('[role="dialog"]');
     const pinned = sheet.querySelector('.sticky');
-    expect([...pinned.querySelectorAll('p')].map((el) => el.textContent)).toEqual(['공지 1', '공지 2']);
+    // 제목 줄 안에 '공지' 뱃지가 같이 흐르므로 요소 하나의 글자를 통째로 비교하지 않고
+    // 고정 자리에 무엇이 있는지만 본다.
+    expect(pinned.textContent).toContain('공지 1');
+    expect(pinned.textContent).toContain('공지 2');
+    expect(pinned.textContent).not.toContain('공지 3');
     expect(sheet.textContent).toContain('공지 3');
   });
 });

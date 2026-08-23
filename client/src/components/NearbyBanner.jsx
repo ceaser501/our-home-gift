@@ -326,11 +326,15 @@ export default function NearbyBanner({ gifticons, onPick, yielded = false }) {
   // 바뀔 때 아래 목록이 튀지 않는다.
   if (needsPermission && hasUsable && !refused) {
     return (
-      <div className="flex w-full items-center gap-2.5 bg-accent py-2.5 pr-3 pl-3.5">
+      // 이 띠만 두 줄이다. 최초 한 번만 뜨는 질문이라 무게가 있어도 되고, 위치 권한은
+      // 한 번 거절되면 되돌리기 어려워서 무엇을 허락하는지가 흐려지면 안 된다.
+      // 아이콘 원도 그대로 둔다 — 두 줄이라 원이 높이를 정하지 않는다.
+      // 대신 위아래 여백을 10 → 13px로 넓혔다. 두 줄 문장이 꽉 차서 아래 필터와 붙어 보였다.
+      <div className="flex w-full items-center gap-[11px] bg-accent py-[13px] pr-3 pl-3.5">
         <span className="flex size-8 shrink-0 items-center justify-center rounded-[10px] bg-primary/12">
           <MapPin className="size-[17px] text-primary" strokeWidth={2.1} />
         </span>
-        <span className="min-w-0 flex-1 text-[13.5px] leading-snug font-medium break-keep text-foreground/80">
+        <span className="min-w-0 flex-1 text-[13.5px] leading-normal font-medium break-keep text-foreground/80">
           내 주변에서 쓸 수 있는 기프티콘을 알려드릴까요?
         </span>
         <button
@@ -404,30 +408,37 @@ export default function NearbyBanner({ gifticons, onPick, yielded = false }) {
   // 평소의 매장 안내. 위 갈래에서 골라 부른다.
   function renderStore() {
     return (
-    <div className="flex w-full items-center gap-2.5 bg-accent py-2.5 pr-3 pl-3.5">
-      <span className="flex size-8 shrink-0 items-center justify-center rounded-[10px] bg-primary/12">
-        <MapPin className="size-[17px] text-primary" strokeWidth={2.1} />
-      </span>
+    // 아이콘을 감싸던 32px 타일을 걷었다. 한 줄 띠에서는 그 원이 높이를 정해버린다 —
+    // 17px 아이콘만 두면 띠가 50px에 들어온다. 안내 띠는 지나가는 말이라, 두 줄이 되면
+    // 목록을 밀어내고 무게가 카드만큼 커진다.
+    <div className="flex w-full items-center gap-2.5 bg-accent py-[9px] pr-2.5 pl-[13px]">
+      <MapPin className="size-[17px] shrink-0 text-primary" strokeWidth={2.1} />
       {/* 누르면 그 브랜드로 목록을 걸러 보여준다. 여기서 새 창을 열면 목록·바코드·매장까지
           겹겹이 쌓이는데, 어차피 하려는 일은 "그 기프티콘 찾기"라 목록을 걸러주는 것으로 충분하다. */}
       <button
         type="button"
         onClick={() => onPick(best.brand)}
-        className="flex min-w-0 flex-1 flex-col gap-px text-left"
+        className="flex min-w-0 flex-1 items-baseline gap-[5px] overflow-hidden text-left whitespace-nowrap"
       >
-        {/* 두 줄로 나눈다. 한 줄에 다 넣으면 좁은 화면에서 뒤가 잘리는데, 정작 잘려선
-            안 되는 것이 "몇 개"다. 줄을 나누면 문장을 줄이지 않아도 된다.
+        {/* 두 줄로 나눴다가 한 줄로 되돌렸다. 두 줄로 간 이유는 "몇 개"가 잘릴까 봐였는데,
+            잘리는 순서를 정하면 그 걱정이 없어진다 — 매장 이름만 min-w-0으로 줄어들고
+            거리와 개수는 shrink-0이라 이름이 아무리 길어도 끝까지 남는다.
             거리를 보라로 — 이 띠에서 갈까 말까를 정하는 값이다. */}
-        <span className="truncate text-[13.5px] font-bold tracking-[-0.01em] text-foreground">
-          {best.store} <span className="font-semibold text-primary">{formatDistance(best.distance)}</span>
+        <span className="min-w-0 truncate text-[13.5px] font-bold tracking-[-0.01em] text-foreground">
+          {best.store}
         </span>
-        <span className="text-[12.5px] font-medium text-muted-foreground">쓸 수 있는 기프티콘 {liveCount}개</span>
+        <span className="shrink-0 text-[13px] font-bold tabular-nums text-primary">
+          {formatDistance(best.distance)}
+        </span>
+        {/* '쓸 수 있는 기프티콘 1개' → '사용가능 1개'. 이 띠가 뜨는 이유가 곧 '쓸 수 있는
+            것이 있다'라서 그 말을 다시 적지 않아도 된다. */}
+        <span className="shrink-0 text-[12.5px] font-medium text-muted-foreground">· 사용가능 {liveCount}개</span>
       </button>
       <button
         type="button"
         onClick={dismiss}
         aria-label="주변 매장 안내 닫기"
-        className="flex size-[34px] shrink-0 items-center justify-center rounded-full text-muted-foreground"
+        className="flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground"
       >
         <X className="size-4" />
       </button>

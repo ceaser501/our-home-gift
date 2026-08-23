@@ -50,7 +50,10 @@ export default function FilterBar({
   // 목록과 맞닿는 경계에 가는 선을 둔다. 선이 없으면 필터와 첫 카드가 한 덩어리처럼 붙어 보이고,
   // 화면을 올릴 때 카드가 필터 밑으로 지나가는 것도 눈에 잘 안 띈다.
   return (
-    <div className="sticky top-0 z-10 flex flex-col gap-2.5 border-b border-border bg-background pt-0 pb-2.5">
+    // 위쪽 여백 11px. 안내 띠가 전체 폭 배경이고 아래 테두리도 없어서, 여백이 없으면
+    // 띠와 필터가 한 덩어리로 읽힌다. 띠가 없는 날에도 같은 값이라 헤더와의 간격이
+    // 들쭉날쭉해지지 않는다.
+    <div className="sticky top-0 z-10 flex flex-col gap-2.5 border-b border-border bg-background pt-[11px] pb-2.5">
       <div className="flex gap-[7px] px-4">
         {/* 검색 앞에 두어 "무엇 안에서 찾을지"를 먼저 정하는 순서로 읽히게 한다.
             알약이 아니라 각진 모서리를 쓴다 — 아래 카드와 각을 맞추기 위해서다.

@@ -43,9 +43,13 @@ export default function GifticonList({ gifticons, onViewCode, onViewImage, onTog
       {missingExpiry > 0 && !noticeDismissed && (
         <div className="mb-3 flex items-start gap-2 rounded-xl border border-border bg-muted/40 px-3.5 py-2.5 text-[13px] leading-relaxed font-medium break-keep text-muted-foreground">
           <CalendarOff className="mt-0.5 size-4 shrink-0" />
+          {/* 뒷문장을 조건 그대로 적는다. '사용기한을 적어야 만료 전에 알려드릴 수
+              있어요'는 길고, 앞 문장이 이미 '없다'고 말했으므로 '적어야'를 다시 말할
+              필요가 없다. 있어야 알려줄 수 있다 — 그게 전부다. */}
           <span className="flex-1">
-            사용기한이 없는 기프티콘 <b className="font-bold text-foreground">{missingExpiry}개</b>. 사용기한을 적어야 만료
-            전에 알려드릴 수 있어요.
+            사용기한이 없는 기프티콘 <b className="font-bold text-foreground">{missingExpiry}개</b>.
+            <br />
+            사용기한이 있어야 알려드릴 수 있어요.
           </span>
           <button
             type="button"

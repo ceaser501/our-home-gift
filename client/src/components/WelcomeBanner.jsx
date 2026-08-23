@@ -49,21 +49,23 @@ export default function WelcomeBanner({ onShownChange }) {
   if (!show) return null;
 
   return (
-    // "＋를 누르세요"는 적지 않는다. 기프티콘이 없는 목록이 이미 그 말을 하고 있고
-    // (client/src/components/GifticonList.jsx:18), 같은 말이 두 줄이면 둘 다 안 읽힌다.
-    // 대신 눌러보기 전에는 알 수 없는 것을 적는다 — 이게 나 혼자 쓰는 앱이 아니라는 것.
-    <div className="flex w-full items-start gap-2.5 border-b border-border bg-accent/60 px-5 py-3">
-      <PartyPopper className="mt-0.5 size-4 shrink-0 text-primary" />
-      <p className="m-0 min-w-0 flex-1 text-xs leading-relaxed break-keep text-muted-foreground">
-        <b className="font-semibold text-foreground">모아콘에 오신 걸 환영해요.</b>
-        <br />
-        여기 올린 기프티콘은 가족 모두가 함께 봐요. 사진만 올리면 상품명과 기한은 알아서 채워드려요.
+    // 세 문장이던 것을 한 마디로 줄였다. 뒤 두 문장은 이미 다른 데서 말하고 있다 —
+    // "가족 모두가 함께 봐요"와 "사진만 올리면 알아서 채워드려요"는 기프티콘이 하나도
+    // 없는 사람이 보는 첫 화면(FirstRunScreen)의 본문이고, 이미 쌓아둔 사람에게는
+    // 지난 이야기다. 인사는 인사만 하면 된다.
+    //
+    // 아래 테두리를 걷고 배경을 매장 안내 띠와 같은 bg-accent로 맞췄다. 같은 자리에
+    // 번갈아 서는 띠라 모양이 달라야 할 이유가 없다.
+    <div className="flex w-full items-center gap-2.5 bg-accent py-[9px] pr-2.5 pl-[13px]">
+      <PartyPopper className="size-[17px] shrink-0 text-primary" />
+      <p className="m-0 min-w-0 flex-1 truncate text-[13.5px] font-semibold tracking-[-0.01em] text-foreground">
+        모아콘에 오신 걸 환영해요
       </p>
       <button
         type="button"
         onClick={() => setShow(false)}
         aria-label="환영 인사 닫기"
-        className="shrink-0 text-muted-foreground"
+        className="flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground"
       >
         <X className="size-4" />
       </button>

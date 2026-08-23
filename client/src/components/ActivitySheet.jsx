@@ -67,28 +67,31 @@ function SectionTitle({ label, count, accent }) {
 // 확성기 아이콘을 '공지' 뱃지로 바꿨다. 아이콘은 무슨 뜻인지 한 번 배워야 알고, 글자는
 // 바로 안다. 자리도 덜 쓴다.
 //
-// 남은 시간("2시간 뒤 끝나요")을 제목 아래 별도 줄에서 제목 줄 오른쪽으로 옮겼다.
-// 무슨 공지인가와 언제까지인가는 한눈에 같이 봐야 하는 값이고, 줄을 따로 쓰면 이 카드가
-// 세 줄이 된다 — 목록 맨 위를 차지하는 카드라 한 줄이 곧 목록 한 줄이다.
+// 남은 시간("오늘 15시까지")을 제목 아래 별도 줄에서 제목 옆으로 옮겼다. 무슨 공지인가와
+// 언제까지인가는 한눈에 같이 봐야 하는 값이고, 줄을 따로 쓰면 이 카드가 세 줄이 된다 —
+// 목록 맨 위를 차지하는 카드라 한 줄이 곧 목록 한 줄이다.
 //
-// 제목은 한 줄로 자른다. 남은 시간까지 놓이면 제목 자리가 좁아지는데, 잘려도 바로 아래
-// 본문이 같은 이야기를 이어서 한다.
+// 셋을 flex로 나란히 놓았다가 되돌렸다. 그러면 제목이 남은 시간에 밀려 잘리는데, 제목은
+// 무슨 공지인지를 말하는 유일한 줄이라 잘리면 안 된다. 지금은 글자 흐름 그대로다 —
+// 뱃지도 남은 시간도 제목과 같은 문단 안에 흘러서, 짧은 제목이면 한 줄에 다 들어오고
+// 길면 남은 시간이 다음 줄로 넘어간다. 제목은 어느 쪽에서도 온전하다.
 function PinnedNotice({ notice }) {
   const remaining = remainingLabel(notice);
   return (
     <div className="flex flex-col gap-1.5 rounded-[14px] border-[1.5px] border-primary bg-primary/4 px-3.5 py-[13px]">
-      <div className="flex items-center gap-[7px]">
-        <span className="shrink-0 rounded-[5px] bg-primary px-[7px] py-0.5 text-[11px] font-bold text-primary-foreground">
+      <p className="m-0 text-[15px] leading-snug font-bold tracking-[-0.015em] break-keep text-foreground">
+        <span className="mr-[7px] inline-block rounded-[5px] bg-primary px-[7px] py-0.5 align-[1px] text-[11px] font-bold text-primary-foreground">
           공지
         </span>
-        <p className="m-0 min-w-0 flex-1 truncate text-[15px] font-bold tracking-[-0.015em] text-foreground">
-          {notice.title}
-        </p>
+        {notice.title}
         {/* 게시일자는 적지 않는다. 노출기한이 하루 안쪽일 때만 남은 시간을 적는다 —
             점검이 언제 끝나는지가 곧 언제부터 다시 등록할 수 있는지라서다.
-            자세한 이유는 client/src/utils/notices.js의 remainingLabel 참고. */}
-        {remaining && <span className="shrink-0 text-[12.5px] font-bold text-primary">{remaining}</span>}
-      </div>
+            자세한 이유는 client/src/utils/notices.js의 remainingLabel 참고.
+            줄이 넘어갈 때 '오늘 15시'와 '까지'가 갈리지 않게 통째로 묶는다. */}
+        {remaining && (
+          <span className="ml-[7px] text-[12.5px] font-bold whitespace-nowrap text-primary">{remaining}</span>
+        )}
+      </p>
       {/* 줄바꿈을 그대로 살린다. 공지는 문단으로 쓰는 글이라 한 덩어리로 뭉치면 읽기 어렵다. */}
       {notice.body && (
         <p className="m-0 text-[13px] leading-relaxed font-medium break-keep whitespace-pre-line text-muted-foreground">
