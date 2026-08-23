@@ -67,24 +67,35 @@ export default function InstallPrompt() {
 
   const message = inApp
     ? `${IN_APP_LABEL[inApp] || '이 앱'}에서는 설치가 안 돼요. 브라우저로 열어주세요.`
-    : '홈 화면에 추가하면 앱처럼 바로 열 수 있어요.';
+    : '홈 화면에 추가하면 앱처럼 열려요';
 
   // 한글은 기본값(break-word)이면 "브라우저"처럼 단어 중간에서 잘리므로 단어 단위로 끊는다.
 
-  // 화면 좌우 끝까지 꽉 채우는 상단 알림 바. 안쪽 여백은 본문(px-5)과 맞춘다.
+  // 화면 좌우 끝까지 꽉 채우는 상단 알림 바.
+  //
+  // 아래 테두리는 걷었다. 배경색만으로 이미 갈리는데 선까지 그으면 본문과 두 겹으로
+  // 나뉘어 보인다. 아이콘은 네모 배경에 담아 글자와 떼어놓고, 닫기 ✕에는 손가락이
+  // 닿을 자리를 준다 — 지금은 16픽셀짜리 아이콘 자체가 과녁이었다.
   return (
-    <div className="flex w-full flex-col gap-2 border-b border-border bg-accent/60 px-5 py-3">
+    <div className="flex w-full flex-col gap-2 bg-accent/60 px-4 py-2.5">
       <div className="flex items-center gap-2.5">
-        {inApp ? (
-          <ExternalLink className="size-4 shrink-0 text-primary" />
-        ) : (
-          <Download className="size-4 shrink-0 text-primary" />
-        )}
-        <p className="m-0 flex-1 text-xs break-keep text-foreground">{message}</p>
-        <Button type="button" size="sm" onClick={handleAction} className="shrink-0">
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-[10px] bg-primary/12">
+          {inApp ? (
+            <ExternalLink className="size-4 text-primary" />
+          ) : (
+            <Download className="size-4 text-primary" />
+          )}
+        </span>
+        <p className="m-0 flex-1 text-[13.5px] font-medium break-keep text-foreground">{message}</p>
+        <Button type="button" size="sm" onClick={handleAction} className="shrink-0 text-[13.5px] font-bold">
           {inApp ? '열기' : canPrompt ? '설치' : '설치방법'}
         </Button>
-        <button type="button" onClick={handleDismiss} aria-label="안내 닫기" className="shrink-0 text-muted-foreground">
+        <button
+          type="button"
+          onClick={handleDismiss}
+          aria-label="안내 닫기"
+          className="flex size-[34px] shrink-0 items-center justify-center rounded-full text-muted-foreground"
+        >
           <X className="size-4" />
         </button>
       </div>

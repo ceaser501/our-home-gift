@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { MessageCircle } from 'lucide-react';
+import { ChevronDown, MessageCircle } from 'lucide-react';
 import { lastLoginMethod, sendMagicLink, signInWithGoogle, signInWithKakao, signInWithNaver } from '../auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
 import Logo from './Logo';
 import InstallPrompt from './InstallPrompt';
 
@@ -27,16 +27,28 @@ function GoogleIcon({ className }) {
   );
 }
 
-// 지난번에 쓴 수단 위에 붙는 말풍선.
+// 지난번에 쓴 수단을 감싸는 카드.
 //
 // 로그인 수단마다 이메일이 달라서(구글은 gmail, 네이버는 naver.com) 다른 걸 누르면
 // 아예 다른 계정이 된다 — 같은 사람이 가족 구성원 두 명으로 늘어난다. 앱은 그 둘이
 // 같은 사람인지 알 수 없으니, 애초에 헷갈리지 않게 하는 것이 유일한 방법이다.
-function LastUsedBadge() {
+//
+// 예전에는 버튼 위에 '최근 로그인' 말풍선을 얹고 경고는 화면 맨 아래에 뒀다. 그러면
+// 경고를 버튼 누른 뒤에 읽는다. 카드로 묶어 안에 넣으면 누르기 전에 눈에 들어온다.
+function LastUsedGroup({ children }) {
   return (
-    <span className="pointer-events-none absolute -top-2 right-3 z-10 rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold text-primary-foreground shadow-sm">
-      최근 로그인
-    </span>
+    <div className="flex w-full flex-col gap-2.5 rounded-2xl border-[1.5px] border-primary bg-primary/4 p-4">
+      <p className="m-0 text-[12.5px] font-bold text-primary">지난번에 쓰신 방법</p>
+      {children}
+      <div className="flex items-start gap-2">
+        <span className="mt-px flex size-[17px] shrink-0 items-center justify-center rounded-full bg-primary/15 text-[11px] font-bold text-primary">
+          !
+        </span>
+        <p className="m-0 flex-1 text-[13px] leading-relaxed break-keep text-primary/80">
+          다른 방법으로 로그인하면 새 계정이 만들어져요
+        </p>
+      </div>
+    </div>
   );
 }
 
@@ -50,6 +62,8 @@ export default function LoginScreen() {
   const [kakaoLoading, setKakaoLoading] = useState(false);
   // 화면이 그려질 때 한 번만 읽는다. 이 화면에 머무는 동안 바뀔 값이 아니다.
   const [lastUsed] = useState(() => lastLoginMethod());
+  // 지난번에 쓴 것이 따로 있는 날, 이메일 칸을 펼쳤는가.
+  const [emailOpen, setEmailOpen] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -110,23 +124,104 @@ export default function LoginScreen() {
     }
   }
 
+  // 세 수단을 한 줄씩. 지난번에 쓴 것과 나머지가 같은 모양을 쓰되 무게만 다르다.
+  const socials = [
+    {
+      key: 'kakao',
+      label: kakaoLoading ? '연결 중…' : '카카오로 로그인',
+      icon: <MessageCircle className="size-[19px] fill-current" />,
+      onClick: handleKakaoLogin,
+      loading: kakaoLoading,
+      brand: 'bg-[#FEE500] text-[#191919] hover:bg-[#FEE500]/90',
+    },
+    {
+      key: 'google',
+      label: googleLoading ? '연결 중…' : '구글로 로그인',
+      icon: <GoogleIcon className="size-[19px]" />,
+      onClick: handleGoogleLogin,
+      loading: googleLoading,
+      brand: null,
+    },
+    {
+      key: 'naver',
+      label: naverLoading ? '연결 중…' : '네이버로 로그인',
+      icon: <span className="flex size-[19px] items-center justify-center text-[15px] leading-none font-bold">N</span>,
+      onClick: handleNaverLogin,
+      loading: naverLoading,
+      brand: 'bg-[#03C75A] text-white hover:bg-[#03C75A]/90',
+    },
+  ];
+
+  // plain은 '다른 방법' 자리에 놓일 때다. 브랜드 색을 빼서, 지난번에 쓴 것 하나만
+  // 눈에 들어오게 한다.
+  function renderSocial(method, plain) {
+    return (
+      <Button
+        key={method.key}
+        type="button"
+        size="lg"
+        onClick={method.onClick}
+        disabled={method.loading}
+        variant={plain || !method.brand ? 'outline' : 'default'}
+        className={cn(
+          'w-full rounded-[13px] font-semibold',
+          plain ? 'h-12 text-[15px] text-muted-foreground' : 'h-[52px] text-[15.5px]',
+          !plain && method.brand
+        )}
+      >
+        {method.icon}
+        {method.label}
+      </Button>
+    );
+  }
+
+  // 이메일 폼. 라벨은 뒀던 것을 걷었다 — 라벨·플레이스홀더·버튼이 같은 말을 세 번 했다.
+  // 화면을 읽어주는 기기에는 aria-label로 남는다.
+  const emailForm = (
+    <form onSubmit={handleSubmit} className="flex w-full flex-col gap-2.5">
+      <Input
+        id="login-email"
+        aria-label="이메일"
+        type="email"
+        inputMode="email"
+        autoComplete="email"
+        placeholder="you@example.com"
+        className="h-[52px] rounded-[13px] text-[15px]"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        required
+      />
+      <Button
+        type="submit"
+        size="lg"
+        variant="outline"
+        className="h-[52px] w-full rounded-[13px] text-[15.5px] font-semibold"
+        disabled={sending}
+      >
+        {sending ? '전송 중…' : '이메일로 로그인 링크 받기'}
+      </Button>
+    </form>
+  );
+
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col bg-background">
       <div className="pt-[var(--safe-top)]">
         <InstallPrompt />
       </div>
 
-      <div className="flex flex-1 flex-col items-center justify-center gap-6 px-6 py-8">
-      <div className="flex flex-col items-center gap-3">
-        <Logo className="size-12" />
-        <h1 className="m-0 text-xl font-bold text-foreground">모아콘</h1>
+      <div className="flex flex-1 flex-col items-center justify-center gap-8 px-6 py-7">
+      <div className="flex flex-col items-center gap-4">
+        <Logo className="size-14 rounded-2xl shadow-[0_6px_18px_rgba(138,92,255,0.26)]" />
+        <h1 className="m-0 text-[22px] font-bold tracking-[-0.03em] text-foreground">모아콘</h1>
         {/* 이 앱의 중심은 가족과 함께 보는 것이다. 개인용으로 방향을 틀면 카카오톡 선물함과
             겨루는 싸움이 되고, 유일한 차별점을 잃는다. 그래서 문구에서 가족을 빼지 않는다.
             다만 그것이 "가족이 있어야 쓸 수 있다"는 조건처럼 읽히면 혼자 쓰려던 사람이
             첫 화면에서 나가버리므로, 조건이 아니라 할 수 있는 일로 적는다.
             ("볼 수도 있어요"처럼 흐리지 않는다. 곁다리로 들려서 오히려 중심이 약해진다.) */}
-        <p className="m-0 text-center text-base break-keep text-muted-foreground">
-          기프티콘을 모아두고, 가족과 함께 볼 수 있어요.
+        <p className="m-0 text-center text-[15px] leading-relaxed break-keep text-muted-foreground">
+          기프티콘을 모아두고,
+          <br />
+          가족과 함께 볼 수 있어요
         </p>
       </div>
 
@@ -135,95 +230,53 @@ export default function LoginScreen() {
           <p className="m-0 text-base text-foreground">{email}로 로그인 링크를 보냈어요.</p>
           <p className="mt-1.5 mb-0 text-sm text-muted-foreground">메일함에서 링크를 눌러 로그인을 완료해주세요.</p>
         </div>
+      ) : lastUsed ? (
+        /* 두 번째부터. 지난번에 쓴 것 하나를 카드로 올려두고 나머지는 아래로 내린다. */
+        <div className="flex w-full flex-col gap-4">
+          <LastUsedGroup>
+            {lastUsed === 'email'
+              ? emailForm
+              : renderSocial(socials.find((m) => m.key === lastUsed) || socials[0], false)}
+          </LastUsedGroup>
+
+          {error && <p className="m-0 text-sm text-destructive">{error}</p>}
+
+          <div className="flex flex-col gap-2.5">
+            <p className="m-0 text-[13px] font-semibold text-muted-foreground">다른 방법</p>
+            {socials.filter((m) => m.key !== lastUsed).map((m) => renderSocial(m, true))}
+            {/* 이메일은 칸을 적어야 해서 자리를 많이 먹는다. 지난번에 쓴 것이 따로 있는
+                날에는 접어두고, 필요한 사람만 펼친다. */}
+            {lastUsed !== 'email' &&
+              (emailOpen ? (
+                emailForm
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="lg"
+                  onClick={() => setEmailOpen(true)}
+                  className="h-12 w-full rounded-[13px] text-[15px] font-semibold text-muted-foreground"
+                >
+                  이메일로 로그인 링크 받기
+                  <ChevronDown className="size-4" />
+                </Button>
+              ))}
+          </div>
+        </div>
       ) : (
-        <>
-        <div className="flex w-full flex-col gap-3">
-          {/* 말풍선이 버튼 위로 튀어나오므로 relative가 필요하다. */}
-          <div className="relative">
-            {lastUsed === 'kakao' && <LastUsedBadge />}
-            <Button
-              type="button"
-              size="lg"
-              onClick={handleKakaoLogin}
-              disabled={kakaoLoading}
-              className="w-full rounded-xl bg-[#FEE500] text-[#191919] hover:bg-[#FEE500]/90"
-            >
-              <MessageCircle className="size-4 fill-[#191919]" />
-              {kakaoLoading ? '연결 중…' : '카카오로 로그인'}
-            </Button>
-          </div>
+        /* 처음 오는 사람. 네 수단을 같은 무게로 나열한다. */
+        <div className="flex w-full flex-col gap-2.5">
+          {socials.map((m) => renderSocial(m, false))}
 
-          <div className="relative">
-            {lastUsed === 'google' && <LastUsedBadge />}
-            <Button
-              type="button"
-              size="lg"
-              onClick={handleGoogleLogin}
-              disabled={googleLoading}
-              variant="outline"
-              className="w-full rounded-xl"
-            >
-              <GoogleIcon className="size-4" />
-              {googleLoading ? '연결 중…' : '구글로 로그인'}
-            </Button>
-          </div>
-
-          <div className="relative">
-            {lastUsed === 'naver' && <LastUsedBadge />}
-            <Button
-              type="button"
-              size="lg"
-              onClick={handleNaverLogin}
-              disabled={naverLoading}
-              className="w-full rounded-xl bg-[#03C75A] text-white hover:bg-[#03C75A]/90"
-            >
-              <span className="flex size-4 items-center justify-center text-[13px] leading-none font-bold">N</span>
-              {naverLoading ? '연결 중…' : '네이버로 로그인'}
-            </Button>
-          </div>
-
-          <div className="flex items-center gap-2.5 text-sm text-muted-foreground">
+          <div className="flex items-center gap-2.5 py-0.5 text-[13.5px] text-muted-foreground">
             <span className="h-px flex-1 bg-border" />
             또는
             <span className="h-px flex-1 bg-border" />
           </div>
 
-          <form onSubmit={handleSubmit} className="flex w-full flex-col gap-3">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="login-email">이메일</Label>
-              <Input
-                id="login-email"
-                type="email"
-                inputMode="email"
-                autoComplete="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-            {error && <p className="text-sm text-destructive">{error}</p>}
-            <div className="relative">
-              {lastUsed === 'email' && <LastUsedBadge />}
-              <Button type="submit" size="lg" variant="outline" className="w-full rounded-xl" disabled={sending}>
-                {sending ? '전송 중…' : '이메일로 로그인 링크 받기'}
-              </Button>
-            </div>
-          </form>
+          {error && <p className="m-0 text-sm text-destructive">{error}</p>}
+          {emailForm}
         </div>
-
-        {/* 수단을 바꾸면 왜 곤란한지 한 줄로 말해준다. 표시만 있고 이유가 없으면
-            "그냥 지난번 것"으로 읽혀서, 다른 걸 눌러도 되는 줄 안다. */}
-        {lastUsed && (
-          <p className="m-0 -mt-2 text-center text-[13px] leading-relaxed break-keep text-muted-foreground">
-            {/* 사실("새 계정이 만들어져요")과 부탁("같은 것을 눌러주세요")은 다른 말이라
-                줄을 나눈다. 한 줄에 붙이면 뒤엣것이 앞엣것의 꼬리처럼 읽혀서 흘려보낸다. */}
-            다른 방법으로 로그인하면 새 계정이 만들어져요.
-            <br />
-            지난번과 같은 것을 눌러주세요.
-          </p>
-        )}
-        </>
       )}
 
       </div>
