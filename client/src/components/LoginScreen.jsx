@@ -27,24 +27,32 @@ function GoogleIcon({ className }) {
   );
 }
 
-// 지난번에 쓴 수단을 감싸는 카드.
+// 지난번에 쓴 수단.
 //
 // 로그인 수단마다 이메일이 달라서(구글은 gmail, 네이버는 naver.com) 다른 걸 누르면
 // 아예 다른 계정이 된다 — 같은 사람이 가족 구성원 두 명으로 늘어난다. 앱은 그 둘이
 // 같은 사람인지 알 수 없으니, 애초에 헷갈리지 않게 하는 것이 유일한 방법이다.
 //
-// 예전에는 버튼 위에 '최근 로그인' 말풍선을 얹고 경고는 화면 맨 아래에 뒀다. 그러면
-// 경고를 버튼 누른 뒤에 읽는다. 카드로 묶어 안에 넣으면 누르기 전에 눈에 들어온다.
-function LastUsedGroup({ children }) {
+// 한때 이 자리를 테두리 카드로 감쌌다. 그러면 안쪽 여백만큼 이 버튼만 좁아져서, 아래
+// '다른 방법'의 버튼들과 폭이 어긋난다 — 같은 일을 하는 단추 넷이 두 가지 폭으로 놓인다.
+// 그래서 표시는 버튼 위에 얹고 이유는 버튼 아래에 적는다. 폭은 넷 다 같다.
+//
+// 경고를 아래에 붙이는 것은 지킨다. 예전에는 화면 맨 아래에 뒀는데, 그러면 버튼을 누른
+// 뒤에 읽는다. 바로 밑에 있어야 누르기 전에 눈에 들어온다.
+function LastUsed({ children }) {
   return (
-    <div className="flex w-full flex-col gap-2.5 rounded-2xl border-[1.5px] border-primary bg-primary/4 p-4">
-      <p className="m-0 text-[12.5px] font-bold text-primary">지난번에 쓰신 방법</p>
-      {children}
-      <div className="flex items-start gap-2">
+    <div className="flex w-full flex-col gap-2">
+      <div className="relative">
+        <span className="pointer-events-none absolute -top-2 right-3 z-10 rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold text-primary-foreground shadow-sm">
+          최근 로그인
+        </span>
+        {children}
+      </div>
+      <div className="flex items-start gap-2 px-0.5">
         <span className="mt-px flex size-[17px] shrink-0 items-center justify-center rounded-full bg-primary/15 text-[11px] font-bold text-primary">
           !
         </span>
-        <p className="m-0 flex-1 text-[13px] leading-relaxed break-keep text-primary/80">
+        <p className="m-0 flex-1 text-[13px] leading-relaxed break-keep text-muted-foreground">
           다른 방법으로 로그인하면 새 계정이 만들어져요
         </p>
       </div>
@@ -232,12 +240,12 @@ export default function LoginScreen() {
         </div>
       ) : lastUsed ? (
         /* 두 번째부터. 지난번에 쓴 것 하나를 카드로 올려두고 나머지는 아래로 내린다. */
-        <div className="flex w-full flex-col gap-4">
-          <LastUsedGroup>
+        <div className="flex w-full flex-col gap-5">
+          <LastUsed>
             {lastUsed === 'email'
               ? emailForm
               : renderSocial(socials.find((m) => m.key === lastUsed) || socials[0], false)}
-          </LastUsedGroup>
+          </LastUsed>
 
           {error && <p className="m-0 text-sm text-destructive">{error}</p>}
 

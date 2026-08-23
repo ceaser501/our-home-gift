@@ -57,7 +57,8 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
 
   if (pendingFor) {
     return (
-      <div className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col items-center justify-center gap-5 bg-background px-6">
+      <div className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col overflow-y-auto bg-background px-6">
+        <div className="my-auto flex flex-col items-center gap-5 py-7">
         <span className="flex size-14 items-center justify-center rounded-full bg-warning/12">
           <Clock className="size-7 text-warning" />
         </span>
@@ -107,13 +108,15 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
             다른 코드로 신청하기
           </Button>
         </div>
+        </div>
       </div>
     );
   }
 
   if (created) {
     return (
-      <div className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col items-center justify-center gap-5 bg-background px-6">
+      <div className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col overflow-y-auto bg-background px-6">
+        <div className="my-auto flex flex-col items-center gap-5 py-7">
         <span className="flex size-14 items-center justify-center rounded-full bg-success/12">
           <Check className="size-7 text-success" strokeWidth={2.5} />
         </span>
@@ -146,14 +149,16 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
           className="h-[52px] w-full rounded-[13px] text-[15.5px] font-bold"
           onClick={onDone}
         >
-          혼자 먼저 시작하기
+          시작하기
         </Button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col justify-center gap-5 bg-background px-6">
+    <div className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col overflow-y-auto bg-background px-6">
+      <div className="my-auto flex flex-col gap-5 py-7">
       {/* 이 화면이 "이 앱이 내 앱인가"를 정한다. 예전 문구("가족 그룹이 필요해요")는 혼자
           쓰려는 사람에게 자격 조건처럼 읽혔다. 혼자도 괜찮다는 것을 먼저 말해준다. */}
       <div className="flex flex-col items-center gap-1.5">
@@ -305,6 +310,7 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
           </Button>
         </form>
       )}
+      </div>
       </div>
     </div>
   );

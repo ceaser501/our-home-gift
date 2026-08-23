@@ -19,10 +19,14 @@ const ITEMS = [
 
 // 미리 알려주는 것들. 한 문단에 붙여뒀더니 다섯 줄로 흘러서 아무도 안 읽었다.
 // 사실이 셋이면 줄도 셋이어야 한다.
+//
+// 한 줄에 하나씩 들어가는 길이로 맞춰뒀다. 넘치면 그 항목만 두 줄이 되어 목록의
+// 리듬이 깨지고, 셋인지 다섯인지가 한눈에 안 잡힌다. 여기 글자를 늘릴 때는 폭
+// 360px(작은 폰)에서 안 넘치는지 보고 늘려야 한다.
 const NOTICES = [
-  '등록한 기프티콘은 같은 가족의 다른 구성원에게 보여요',
-  '사진을 자동으로 읽어드릴 때 이미지가 국외로 전송돼요',
-  '만 14세 미만은 이용하실 수 없어요',
+  '등록한 기프티콘은 가족에게 보여요',
+  '사진을 읽을 때 이미지가 국외로 전송돼요',
+  '만 14세 미만은 이용할 수 없어요',
 ];
 
 // 안 누른 자리에는 아무것도 그리지 않는다. 예전에는 회색 체크가 보여서, 이미 동의한
@@ -69,7 +73,12 @@ export default function ConsentScreen({ userId, onDone }) {
   }
 
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col justify-center gap-6 bg-background px-6 py-9">
+    /* 세로로 넘치면 잘리던 자리다. justify-center만 두면 내용이 화면보다 길어졌을 때
+       위아래가 화면 밖으로 밀려나고, 넘친 만큼은 스크롤해도 안 나온다(작은 폰에서
+       '동의하지 않고 나가기'가 통째로 잘렸다). 바깥은 스크롤만 맡고, 가운데 맞추기는
+       안쪽의 my-auto가 한다 — 짧으면 가운데, 길면 위에서부터. */
+    <div className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col overflow-y-auto bg-background px-6">
+      <div className="my-auto flex flex-col gap-5 py-7">
       <div className="flex flex-col items-center gap-2.5">
         <span className="flex size-12 items-center justify-center rounded-full bg-accent">
           <FileCheck2 className="size-6 text-primary" />
@@ -140,7 +149,9 @@ export default function ConsentScreen({ userId, onDone }) {
               key={line}
               className="flex gap-2 text-[13.5px] leading-relaxed font-medium break-keep text-muted-foreground"
             >
-              <span className="text-border">·</span>
+              {/* 점은 글자로 찍으면 거의 안 보인다(text-border는 선 색이라 더 그렇다).
+                  작은 동그라미로 그리고 글자 첫 줄 높이에 맞춰 내린다. */}
+              <span className="mt-[7px] size-1 shrink-0 rounded-full bg-muted-foreground/50" />
               <span>{line}</span>
             </li>
           ))}
@@ -169,6 +180,7 @@ export default function ConsentScreen({ userId, onDone }) {
       >
         동의하지 않고 나가기
       </Button>
+      </div>
     </div>
   );
 }
