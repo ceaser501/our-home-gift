@@ -124,9 +124,10 @@ export default function GifticonCard({
   // 칩 배경이 목록을 시끄럽게 하고 두 값의 무게도 갈리지 않았다. D-day가 반 단 크고
   // 날짜가 그 뒤를 받친다.
   //
-  // 기한이 지난 것은 D-day 자리에 '기한 만료 (6일 지남)'이 통째로 들어와 줄이 접혔다.
-  // 그 말은 아래 버튼 자리에서 하고 여기서는 '지남'만 짧게 적는다.
-  const ddayLabel = isExpired ? '기한 지남' : formatDday(gifticon.expires_at);
+  // 못 쓰는 것(만료·사용완료)에는 D-day를 안 적는다. 썸네일이 이미 '기한만료'/'사용완료'라고
+  // 덮고 있어서 며칠이 남았는지 세는 것이 뜻이 없고, 사용완료는 아래에 '언제 누가 썼는지'가
+  // 따로 적힌다. 남는 건 날짜 하나 — 언제까지였는지는 그래도 알아야 한다.
+  const ddayLabel = codeLocked ? null : formatDday(gifticon.expires_at);
   // 급한 것만 붉은색을 가진다. 목록에 색이 하나뿐이라야 급한 게 눈에 바로 들어온다.
   const urgent = urgency === 'soon' || urgency === 'urgent';
 
@@ -137,6 +138,53 @@ export default function GifticonCard({
   // "이건 내가 쓸게" 표시. 잠금이 아니라 표시라, 남이 찜해뒀어도 바코드는 그대로 열린다.
   const claimed = Boolean(gifticon.claimed_by);
   const claimedByMe = gifticon.claimed_by === user.id;
+
+  // 기한 줄. D-day와 날짜 두 조각인데, 만료·사용완료 카드에는 D-day가 없어 날짜만 남는다.
+  //
+  // 누를 자리는 D-day 한 낱말이 아니라 줄 전체다. 'D-1' 네 글자를 조준하는 건 작고,
+  // 어차피 D-day와 날짜는 한 가지를 두 가지로 적은 것이다. 만료된 카드에는 날짜밖에
+  // 안 남는데 그것도 눌려야 해서, 줄을 통째로 버튼으로 두는 편이 맞다.
+  //
+  // pointer-events는 위 칸 전체가 꺼져 있어서(카드 어디를 눌러도 바코드가 열린다)
+  // 여기서만 다시 켠다.
+  const ddayNode = ddayLabel && (
+    <span
+      className={cn(
+        'shrink-0 text-sm font-bold tracking-[-0.015em] tabular-nums',
+        urgent ? 'text-destructive' : 'text-foreground/80'
+      )}
+    >
+      {ddayLabel}
+    </span>
+  );
+  const dateNode = (
+    <span
+      className={cn(
+        'truncate text-[13px] font-semibold tabular-nums',
+        urgent ? 'text-destructive' : 'text-muted-foreground'
+      )}
+    >
+      {formatDate(gifticon.expires_at)}까지
+    </span>
+  );
+  // 기한이 급한 것과 이미 지난 것만 눌러서 연장 안내를 연다. 넉넉한 것은 안 누르게 둔다 —
+  // 아직 할 일이 없는데 눌리면 헛걸음이다.
+  const expiryLine = canExtend ? (
+    <button
+      type="button"
+      onClick={() => onExtend(gifticon)}
+      className="pointer-events-auto flex min-w-0 items-baseline gap-1.5"
+    >
+      {ddayNode}
+      {dateNode}
+      <Info className="size-3.5 shrink-0 self-center text-muted-foreground" />
+    </button>
+  ) : (
+    <>
+      {ddayNode}
+      {dateNode}
+    </>
+  );
 
   // 그림자를 걷었다. 테두리 하나로 "이건 한 장"이 충분히 말해지고, 카드가 열 장 스무 장
   // 쌓이면 그림자가 목록 전체를 뿌옇게 만든다.
@@ -240,41 +288,7 @@ export default function GifticonCard({
           <div className="flex items-center gap-2">
             <div className="flex min-w-0 items-baseline gap-1.5">
               {gifticon.expires_at ? (
-                <>
-                  {/* 기한이 급한 것만 눌러서 연장 안내를 연다. 넉넉한 것은 안 누르게 둔다 —
-                      아직 할 일이 없는데 눌리면 헛걸음이다. pointer-events는 위 칸 전체가
-                      꺼져 있어서(카드 어디를 눌러도 바코드가 열린다) 여기서만 다시 켠다. */}
-                  {canExtend ? (
-                    <button
-                      type="button"
-                      onClick={() => onExtend(gifticon)}
-                      className={cn(
-                        'pointer-events-auto flex shrink-0 items-center gap-1 text-sm font-bold tracking-[-0.015em] tabular-nums',
-                        urgent ? 'text-destructive' : 'text-foreground/80'
-                      )}
-                    >
-                      {ddayLabel}
-                      <Info className="size-3.5" />
-                    </button>
-                  ) : (
-                    <span
-                      className={cn(
-                        'shrink-0 text-sm font-bold tracking-[-0.015em] tabular-nums',
-                        urgent ? 'text-destructive' : 'text-foreground/80'
-                      )}
-                    >
-                      {ddayLabel}
-                    </span>
-                  )}
-                  <span
-                    className={cn(
-                      'truncate text-[13px] font-semibold tabular-nums',
-                      urgent ? 'text-destructive' : 'text-muted-foreground'
-                    )}
-                  >
-                    {formatDate(gifticon.expires_at)}까지
-                  </span>
-                </>
+                expiryLine
               ) : (
                 // 기한을 안 적으면 이 자리가 통째로 비어서, 기한이 넉넉한 것과 구분이 안 됐다.
                 // 빈칸 대신 "안 적혔다"고 말해준다. 급한 일은 아니므로 붉은색은 쓰지 않는다
