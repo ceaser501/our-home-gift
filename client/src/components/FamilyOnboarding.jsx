@@ -162,16 +162,20 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
           위에는 12+4px이 붙어서, 같은 화면 안에 24px과 16px 두 간격이 섞여 있었다.
           '가족 이름' 위와 마지막 칸 아래가 서로 달라 보이던 것이 이것이다. */}
       <div className="my-auto flex flex-col gap-4 py-7">
-      {/* 이 화면이 "이 앱이 내 앱인가"를 정한다. 예전 문구("가족 그룹이 필요해요")는 혼자
-          쓰려는 사람에게 자격 조건처럼 읽혔다. 혼자도 괜찮다는 것을 먼저 말해준다. */}
+      {/* 이 화면이 "이 앱이 내 앱인가"를 정한다.
+          이 화면이 실제로 만드는 것은 가족 공간이고 기프티콘은 그 안에 들어가는 것이라,
+          제목도 그렇게 적는다. '기프티콘을 모아둘 곳'은 만드는 것이 무엇인지를 한 겹
+          돌려 말한 것이었고, 두 줄로 접히기까지 했다.
+
+          예전 문구("가족 그룹이 필요해요")가 혼자 쓰려는 사람에게 자격 조건처럼 읽혔던
+          것은 그대로 조심한다. 그건 제목이 아니라 바로 아래 줄이 푼다 — 혼자 써도
+          좋다는 말이 먼저 오고, 가족은 나중에 부를 수 있는 것으로 온다. */}
       <div className="flex flex-col items-center gap-1.5">
         <span className="flex size-11 items-center justify-center rounded-full bg-accent">
           <Users className="size-[22px] text-primary" />
         </span>
         <h1 className="m-0 text-center text-[20px] font-bold tracking-[-0.028em] text-foreground">
-          기프티콘을 모아둘
-          <br />
-          곳을 만들어요
+          가족 공간을 만들어요
         </h1>
         <p className="m-0 text-center text-[14.5px] leading-relaxed font-medium break-keep text-muted-foreground">
           혼자 써도 좋아요.

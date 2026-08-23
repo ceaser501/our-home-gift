@@ -27,7 +27,10 @@ export default function Header() {
         {/* ⚠️ 테스트 전용. 로고를 0.8초 길게 누르면 테스트 도구가 열린다.
             출시 전에 이 감싸개를 풀고 Logo만 남긴다. */}
         <TestDataMenu familyId={family.id} ownerName={myName} userId={user.id}>
-          <Logo className="size-7 shrink-0 rounded-lg" />
+          {/* 모서리를 여기서 깎지 않는다. 로고가 이미 제 모서리를 굴려서 갖고 있고
+              (Logo.jsx의 rx=114 — 28px에서 6px), 그 위에 또 깎으면 굴린 자리가 잘려
+              오히려 각져 보인다. */}
+          <Logo className="size-7 shrink-0" />
         </TestDataMenu>
 
         {/* 가족 이름을 누르면 보는 가족을 바꾼다(여러 가족에 속할 수 있다). */}
