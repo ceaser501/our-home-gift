@@ -68,7 +68,7 @@ export default function NotificationToggle({ asRow = false, onChange }) {
             {/* 무엇이 폰을 울리는지 적어둔다. 이걸 안 적으면 가족이 기프티콘을 쓸 때마다
                 알림이 오는 줄 알고 꺼버린다. 정작 만료 알림까지 같이 꺼지는 셈이다.
                 (사용·사용취소·등록은 폰을 울리지 않고 헤더의 종에만 쌓인다.) */}
-            <span className="text-xs break-keep text-muted-foreground">유효기한 임박, 가족 참여 신청</span>
+            <span className="text-xs break-keep text-muted-foreground">사용기한 임박, 가족 참여 신청</span>
           </span>
           <span className={enabled ? 'shrink-0 text-xs font-semibold text-primary' : 'shrink-0 text-xs text-muted-foreground'}>
             {enabled ? '켜짐' : '꺼짐'}

@@ -1614,7 +1614,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
                   ? reasonOf(candidate)
                   : formatDate(info?.expiresAt)
                     ? `${formatDate(info.expiresAt)} 까지`
-                    : '유효기한 없음'}
+                    : '사용기한 없음'}
               </span>
 
             </div>
@@ -2044,7 +2044,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
                         <span className="truncate text-[13px] text-muted-foreground">
                           {[candidate.info?.brand, formatDate(candidate.info?.expiresAt) && `${formatDate(candidate.info.expiresAt)}까지`]
                             .filter(Boolean)
-                            .join(' · ') || '유효기한 없음'}
+                            .join(' · ') || '사용기한 없음'}
                         </span>
                       </div>
                     </div>
@@ -2066,7 +2066,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
                   빠진 줄 모르고 지나가고, 그러면 만료 전에 알려줄 수가 없다. */}
               {result.noExpiry > 0 && (
                 <p className="m-0 text-sm leading-relaxed break-keep text-muted-foreground">
-                  유효기한이 빈 게 {result.noExpiry}개 있어요. 목록에서 수정으로 채워주세요.
+                  사용기한이 빈 게 {result.noExpiry}개 있어요. 목록에서 수정으로 채워주세요.
                 </p>
               )}
 

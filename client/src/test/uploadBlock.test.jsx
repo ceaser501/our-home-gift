@@ -7,7 +7,11 @@ import { act, render, screen, waitFor } from '@testing-library/react';
 const listNotices = vi.fn();
 
 vi.mock('../api', () => ({
-  listGifticons: vi.fn(async () => []),
+  // 한 장 넣어둔다. 빈 목록은 첫 화면(FirstRunScreen)으로 갈려서 오른쪽 아래 버튼이
+  // 없는데, 이 파일이 보는 것은 그 버튼에 점검 규칙이 걸려 있는가다.
+  listGifticons: vi.fn(async () => [
+    { id: 1, name: '아메리카노', category: '카페', status: 'active', expires_at: '2026-12-31' },
+  ]),
   updateGifticon: vi.fn(),
   deleteGifticon: vi.fn(),
   claimGifticon: vi.fn(),

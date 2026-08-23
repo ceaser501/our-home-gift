@@ -13,11 +13,13 @@ import NearbyStoresSheet from './components/NearbyStoresSheet';
 import InstallPrompt from './components/InstallPrompt';
 import GalleryScanSheet from './components/GalleryScanSheet';
 import WelcomeBanner from './components/WelcomeBanner';
+import FirstRunScreen from './components/FirstRunScreen';
+import NoticesSheet from './components/NoticesSheet';
 import NearbyBanner from './components/NearbyBanner';
 import AlertDialog from './components/AlertDialog';
 import PullToRefresh from './components/PullToRefresh';
 import { listGifticons, updateGifticon, deleteGifticon, claimGifticon, releaseGifticon, spendVoucher, listNotices } from './api';
-import { blockingNotice, remainingLabel } from './utils/notices';
+import { blockingNotice, importantNotices, remainingLabel } from './utils/notices';
 import { subscribeToGifticons, subscribeToFamily } from './realtime';
 import { ensureSampleGifticon } from './sampleData';
 import { daysUntil, todayStr } from './utils/date';
@@ -25,6 +27,7 @@ import { hasNewVersion } from './utils/version';
 import { hasSharedImages, takeSharedImages, discardSharedImages } from './utils/shareTarget';
 import { isGalleryScanSupported, isAutoScanOn } from './utils/gallery';
 import { useFamily } from './FamilyContext';
+import { cn } from '@/lib/utils';
 
 // 목록은 "지금 쓸 수 있는 것 → 기한이 지난 것 → 다 쓴 것" 세 덩어리다.
 // 급한 순으로만 세우면 기한이 지난 것이 D-1보다 더 급한 값(음수)이라 맨 위를 차지한다.
@@ -94,6 +97,9 @@ export default function App() {
   const [spendTarget, setSpendTarget] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [notice, setNotice] = useState(null);
+  // 처음 온 사람에게 보여주는 공지 한 줄이 이 창을 연다. 평소에는 종 안에만 있는데,
+  // 빈 화면에는 종을 눌러볼 이유가 아직 없다.
+  const [noticesOpen, setNoticesOpen] = useState(false);
 
   // silent: 당겨서 새로고침처럼 이미 다른 표시가 돌고 있을 때는 목록을 "불러오는 중…"으로
   // 갈아끼우지 않는다. 화면이 통째로 사라졌다 나타나면 오히려 새로고침이 아니라 오류처럼 보인다.
@@ -130,6 +136,15 @@ export default function App() {
     () => (category ? gifticons.filter((item) => item.category === category) : gifticons),
     [gifticons, category]
   );
+
+  // 아직 한 장도 없는 사람인가. 검색어나 필터가 걸려 있으면 "거른 결과가 비었다"는
+  // 다른 이야기라, 그때는 평소 화면 그대로 둔다.
+  //
+  // 이 값이 켜지면 화면에서 셋이 사라진다 — 필터 줄(거를 것이 없다), 환영 띠(빈 화면
+  // 본문이 그 말을 대신한다), 오른쪽 아래 버튼 둘(가운데 버튼과 같은 일을 한다).
+  const isFirstRun = !loading && !error && gifticons.length === 0 && !search && !category && statusTab === 'all';
+  // 처음 온 사람에게 한 줄로 남길 공지.
+  const firstNotice = importantNotices(noticeRows)[0] || null;
 
   useEffect(() => {
     const timer = setTimeout(() => fetchList(), search ? 300 : 0);
@@ -354,10 +369,11 @@ export default function App() {
 
           환영 인사만 예외로 이 자리를 쓴다. 가입하고 처음 들어온 날 한 번뿐이고, 그날은
           기프티콘이 없어서 매장 안내가 어차피 띄울 것이 없다. */}
-      <WelcomeBanner onShownChange={setWelcomeShown} />
+      {!isFirstRun && <WelcomeBanner onShownChange={setWelcomeShown} />}
 
       <NearbyBanner gifticons={gifticons} onPick={setSearch} yielded={welcomeShown} />
 
+      {!isFirstRun && (
       <FilterBar
         search={search}
         onSearchChange={setSearch}
@@ -368,11 +384,21 @@ export default function App() {
         statusTab={statusTab}
         onStatusTabChange={setStatusTab}
       />
+      )}
 
-      <main className="flex-1 px-5 pt-3 pb-5">
+      <main className={cn('flex flex-1 flex-col px-4 pb-5', isFirstRun ? 'pt-2' : 'pt-3')}>
         {loading && <p className="py-10 text-center text-muted-foreground">불러오는 중…</p>}
         {!loading && error && <p className="py-10 text-center text-destructive">{error}</p>}
-        {!loading && !error && (
+        {isFirstRun && (
+          <FirstRunScreen
+            notice={firstNotice}
+            onOpenNotices={() => setNoticesOpen(true)}
+            onUpload={() => guardUpload(() => setSheetState({ mode: 'create', initial: null }))}
+            onScan={() => guardUpload(() => setScanOpen(true))}
+            scanSupported={scanSupported}
+          />
+        )}
+        {!loading && !error && !isFirstRun && (
           <GifticonList
             gifticons={visibleGifticons}
             onViewCode={setCodeTarget}
@@ -391,7 +417,7 @@ export default function App() {
       {/* 갤러리 훑기는 + 위에 한 단 작게 놓는다. 거들기 위한 기능이라 등록 버튼과
           같은 크기로 나란히 두면 어느 쪽이 본길인지 헷갈린다. 앱으로 설치했을 때만
           보이고, 없어도 아래 + 로 하던 대로 등록할 수 있다. */}
-      {scanSupported && (
+      {scanSupported && !isFirstRun && (
         <button
           type="button"
           onClick={() => guardUpload(() => setScanOpen(true))}
@@ -405,6 +431,7 @@ export default function App() {
 
       {/* + 는 등록 창만 연다. 한때 여기서 사진 선택창을 곧바로 열어 한 단계를 줄였는데,
           사진 없이 손으로 적어 넣고 싶은 사람에게는 길이 막힌 것처럼 보인다. */}
+      {!isFirstRun && (
       <button
         type="button"
         onClick={() => guardUpload(() => setSheetState({ mode: 'create', initial: null }))}
@@ -414,6 +441,7 @@ export default function App() {
       >
         <Plus className="size-7" />
       </button>
+      )}
 
       {/* 훑기 창은 등록 창 아래에 그대로 열려 있는다. 여러 장을 찾았을 때 한 장 등록하고
           돌아오면 나머지가 남아 있어야, 매번 처음부터 다시 훑지 않는다. */}
@@ -494,6 +522,8 @@ export default function App() {
           onClose={() => setDeleteTarget(null)}
         />
       )}
+
+      {noticesOpen && <NoticesSheet onClose={() => setNoticesOpen(false)} />}
 
       {notice && <AlertDialog {...notice} onClose={() => setNotice(null)} />}
 

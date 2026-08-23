@@ -58,7 +58,7 @@ export default function ProfileMenu({ onClose }) {
         setNotice({
           tone: 'info',
           title: '알릴 기프티콘이 없어요',
-          description: '유효기한이 남아 있는 사용 전 기프티콘이 있어야 보낼 수 있어요.',
+          description: '사용기한이 남아 있는 사용 전 기프티콘이 있어야 보낼 수 있어요.',
         });
       }
     } catch (err) {

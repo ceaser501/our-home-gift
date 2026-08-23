@@ -190,14 +190,17 @@ export default function NotificationBell() {
           type="button"
           onClick={handleOpen}
           aria-label={unread > 0 ? `알림 ${unread}개` : '알림'}
-          className="relative flex size-7 shrink-0 items-center justify-center rounded-full text-muted-foreground"
+          className="relative flex size-[42px] shrink-0 items-center justify-center rounded-xl text-foreground/70"
         >
           {/* 말풍선이 뜰 때 한 번 까딱한다. 움직이는 것이 말하는 것이라, 종이 먼저
               움직이면 눈이 그리로 가고 말풍선은 그 뒤를 따른다. */}
           <Bell className={cn('size-5', hint && 'moacon-bell-shake')} />
-          {/* 숫자가 두 자리를 넘으면 종보다 커진다. 그 이상은 "많다"만 알면 충분하다. */}
+          {/* 숫자가 두 자리를 넘으면 종보다 커진다. 그 이상은 "많다"만 알면 충분하다.
+              흰 테두리를 둘러 종과 뱃지를 떼어놓는다 — 예전에는 종 위로 겹쳐 올라앉아
+              두 자리 숫자가 종의 선에 묻혔다. 누를 자리가 42px이 되면서 뱃지도 그 안으로
+              들어와, 헤더 밖으로 튀어나가지 않는다. */}
           {unread > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 flex min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] leading-4 font-bold text-destructive-foreground">
+            <span className="absolute top-1 right-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full border-[1.5px] border-background bg-destructive px-1.5 text-[11px] font-bold tabular-nums text-destructive-foreground">
               {unread > 99 ? '99+' : unread}
             </span>
           )}

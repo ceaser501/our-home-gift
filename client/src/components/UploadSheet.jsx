@@ -126,7 +126,7 @@ function progressLabel(progress) {
     const count = progress.total > 1 ? ` (${progress.current}/${progress.total})` : '';
     return `바코드를 읽고 있어요${count}`;
   }
-  if (progress.step === 'reading') return '상품명·금액·유효기한을 읽고 있어요';
+  if (progress.step === 'reading') return '상품명·금액·사용기한을 읽고 있어요';
   if (progress.step === 'verifying') return '상품명을 다시 확인하고 있어요';
   if (progress.step === 'thumbnail') return '상품 사진을 잘라내고 있어요';
   return '거의 다 됐어요';
@@ -749,7 +749,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
               )}
               {missingExpiry && (
                 <p className="m-0 text-sm leading-relaxed break-keep text-muted-foreground">
-                  <b className="font-semibold text-foreground">유효기한</b>을 못 읽었어요. 넣어두시면 만료 전에 알려드려요. (안 넣어도
+                  <b className="font-semibold text-foreground">사용기한</b>을 못 읽었어요. 넣어두시면 만료 전에 알려드려요. (안 넣어도
                   저장돼요)
                 </p>
               )}
@@ -819,7 +819,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="f-expires">
-                  유효기한 <Optional />
+                  사용기한 <Optional />
                 </Label>
                 <Input id="f-expires" type="date" value={form.expires_at} onChange={(e) => updateField('expires_at', e.target.value)} />
               </div>
@@ -932,7 +932,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
         {noExpiry && (
           <AlertDialog
             tone="warning"
-            title="유효기한이 비어 있어요"
+            title="사용기한이 비어 있어요"
             description={'기한이 없으면 만료 전에 알려드릴 수 없어요.'}
             details={['나중에 수정에서 채워도 돼요']}
             confirmLabel="이대로 저장"

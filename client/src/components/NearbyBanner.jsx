@@ -321,17 +321,22 @@ export default function NearbyBanner({ gifticons, onPick, yielded = false }) {
   // 이 자리는 어차피 비어 있고, 누르기 전에는 시스템 창이 안 뜬다. 무시해도 잃는 것이 없다.
   // 그리고 "위치를 허용하시겠습니까?"보다 "근처에서 쓸 수 있는 걸 알려드릴까요?"가 훨씬
   // 승낙받기 쉽다 — 무엇을 위해 묻는지가 그 자리에 적혀 있어서다.
+  // ①과 같은 배경(bg-accent)을 쓴다. 같은 자리에서 같은 성격이고 — 앱이 도움을 주려는
+  // 것이다 — 켜기를 누르면 이 띠가 그대로 ①로 바뀐다. 높이도 같게 맞춰서(54px) 상태가
+  // 바뀔 때 아래 목록이 튀지 않는다.
   if (needsPermission && hasUsable && !refused) {
     return (
-      <div className="flex w-full items-center gap-2.5 border-b border-border bg-accent/60 px-5 py-3">
-        <MapPin className="size-4 shrink-0 text-primary" />
-        <span className="min-w-0 flex-1 text-xs break-keep text-foreground">
+      <div className="flex w-full items-center gap-2.5 bg-accent py-2.5 pr-3 pl-3.5">
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-[10px] bg-primary/12">
+          <MapPin className="size-[17px] text-primary" strokeWidth={2.1} />
+        </span>
+        <span className="min-w-0 flex-1 text-[13.5px] leading-snug font-medium break-keep text-foreground/80">
           내 주변에서 쓸 수 있는 기프티콘을 알려드릴까요?
         </span>
         <button
           type="button"
           onClick={askForLocation}
-          className="shrink-0 rounded-lg bg-primary px-2.5 py-1 text-xs font-semibold text-primary-foreground"
+          className="flex h-[34px] shrink-0 items-center rounded-[10px] bg-primary px-3.5 text-[13.5px] font-bold text-primary-foreground"
         >
           켜기
         </button>
@@ -347,10 +352,13 @@ export default function NearbyBanner({ gifticons, onPick, yielded = false }) {
   // 순간 저절로 사라진다.
   if (unlocatable && hasUsable) {
     return (
-      <div className="flex w-full items-center gap-2.5 border-b border-border bg-muted/60 px-5 py-3">
+      // ①②보다 얇고 회색이다. 알려줄 것이 없는 상태라 눈에 덜 걸리는 편이 맞다.
+      // 두 문장을 하나로 줄였다 — '지금은 위치를 확인할 수 없어요'는 뒤 문장이 이미
+      // 설명하고 있었고, 지우니 한 줄에 들어간다(예전에는 잘렸다).
+      <div className="flex w-full items-center gap-2.5 border-b border-border bg-muted/40 px-3.5 py-[11px]">
         <MapPinOff className="size-4 shrink-0 text-muted-foreground" />
-        <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
-          지금은 위치를 확인할 수 없어요. 지하나 실내에서는 안 잡힐 수 있어요.
+        <span className="min-w-0 flex-1 truncate text-[12.5px] font-medium text-muted-foreground">
+          지하나 실내에서는 위치가 안 잡힐 수 있어요
         </span>
       </div>
     );
@@ -396,29 +404,30 @@ export default function NearbyBanner({ gifticons, onPick, yielded = false }) {
   // 평소의 매장 안내. 위 갈래에서 골라 부른다.
   function renderStore() {
     return (
-    // 공지 배너와 같은 차림의 상단 띠. 둘이 같이 떠도 한 덩어리로 읽힌다.
-    <div className="flex w-full items-center gap-2.5 border-b border-border bg-accent/60 px-5 py-3">
-      <MapPin className="size-4 shrink-0 text-primary" />
+    <div className="flex w-full items-center gap-2.5 bg-accent py-2.5 pr-3 pl-3.5">
+      <span className="flex size-8 shrink-0 items-center justify-center rounded-[10px] bg-primary/12">
+        <MapPin className="size-[17px] text-primary" strokeWidth={2.1} />
+      </span>
       {/* 누르면 그 브랜드로 목록을 걸러 보여준다. 여기서 새 창을 열면 목록·바코드·매장까지
           겹겹이 쌓이는데, 어차피 하려는 일은 "그 기프티콘 찾기"라 목록을 걸러주는 것으로 충분하다. */}
       <button
         type="button"
         onClick={() => onPick(best.brand)}
-        className="min-w-0 flex-1 text-left"
+        className="flex min-w-0 flex-1 flex-col gap-px text-left"
       >
-        {/* 좁은 화면에서 문장이 길면 뒤가 잘리는데, 잘려도 되는 건 매장 이름 꼬리뿐이다.
-            "몇 개"가 끝에 있으면 그게 먼저 잘리므로 문장을 짧게 줄인다. */}
-        <span className="block truncate text-xs text-foreground">
-          <b className="font-semibold">{best.store}</b>
-          {` ${formatDistance(best.distance)} · 쓸 수 있는 기프티콘 `}
-          <b className="font-semibold">{liveCount}개</b>
+        {/* 두 줄로 나눈다. 한 줄에 다 넣으면 좁은 화면에서 뒤가 잘리는데, 정작 잘려선
+            안 되는 것이 "몇 개"다. 줄을 나누면 문장을 줄이지 않아도 된다.
+            거리를 보라로 — 이 띠에서 갈까 말까를 정하는 값이다. */}
+        <span className="truncate text-[13.5px] font-bold tracking-[-0.01em] text-foreground">
+          {best.store} <span className="font-semibold text-primary">{formatDistance(best.distance)}</span>
         </span>
+        <span className="text-[12.5px] font-medium text-muted-foreground">쓸 수 있는 기프티콘 {liveCount}개</span>
       </button>
       <button
         type="button"
         onClick={dismiss}
         aria-label="주변 매장 안내 닫기"
-        className="shrink-0 text-muted-foreground"
+        className="flex size-[34px] shrink-0 items-center justify-center rounded-full text-muted-foreground"
       >
         <X className="size-4" />
       </button>

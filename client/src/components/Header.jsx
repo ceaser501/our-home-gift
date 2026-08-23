@@ -19,37 +19,42 @@ export default function Header() {
   const [profileOpen, setProfileOpen] = useState(false);
 
   return (
-    <header className="px-5 pt-[var(--safe-top)] pb-2">
-      <div className="flex items-center gap-2.5">
+    <header className="px-4 pt-[var(--safe-top)] pb-2.5">
+      {/* 아이콘 셋을 오른쪽으로 모은다. 예전에는 구성원 아이콘만 이름 옆에 붙어 있어서
+          "가족 이름 · 구성원"과 "알림 · 나" 두 무리로 갈렸는데, 셋 다 누르면 창이 뜨는
+          같은 성격이라 한 덩어리로 두는 편이 손이 덜 헤맨다. */}
+      <div className="flex items-center gap-1.5">
         {/* ⚠️ 테스트 전용. 로고를 0.8초 길게 누르면 테스트 도구가 열린다.
             출시 전에 이 감싸개를 풀고 Logo만 남긴다. */}
         <TestDataMenu familyId={family.id} ownerName={myName} userId={user.id}>
-          <Logo className="size-7 shrink-0" />
+          <Logo className="size-7 shrink-0 rounded-lg" />
         </TestDataMenu>
 
         {/* 가족 이름을 누르면 보는 가족을 바꾼다(여러 가족에 속할 수 있다). */}
         <button
           type="button"
           onClick={() => setSwitcherOpen(true)}
-          className="flex min-w-0 items-center gap-1 text-left"
+          className="mr-auto flex min-w-0 items-center gap-0.5 pl-1 text-left"
         >
-          <h1 className="m-0 truncate text-xl font-bold text-foreground">{family.name}</h1>
-          <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
+          <h1 className="m-0 truncate text-[19px] font-bold tracking-[-0.026em] text-foreground">{family.name}</h1>
+          <ChevronDown className="size-4 shrink-0 text-muted-foreground/70" strokeWidth={2.4} />
         </button>
 
+        {/* 아이콘은 20px 그대로 두고 누를 자리만 42px로 넓힌다. 여백이 과녁을 만들고
+            아이콘은 작게 — 헤더에 아이콘 셋이 크게 늘어서면 가족 이름이 밀린다. */}
         {/* 구성원 목록은 따로 뗀다. 이름은 "가족 바꾸기", 이 아이콘은 "누가 있나". */}
         <button
           type="button"
           onClick={() => setMembersOpen(true)}
           aria-label="가족 구성원 보기"
-          className="relative mr-auto flex size-7 shrink-0 items-center justify-center rounded-full text-muted-foreground"
+          className="relative flex size-[42px] shrink-0 items-center justify-center rounded-xl text-foreground/70"
         >
-          <Users className="size-4.5" />
+          <Users className="size-5" />
           {/* 참여를 기다리는 사람이 있으면 여기서만 알 수 있으니 점으로 표시한다.
               점 하나만으로는 헤더 구석이라 그냥 지나치게 돼서, 숨쉬듯 살짝 커졌다
-              작아지기를 반복하게 했다. */}
+              작아지기를 반복하게 했다. 그 숨쉬기는 그대로 둔다 — 자리만 옮긴다. */}
           {joinRequests.length > 0 && (
-            <span className="animate-dot-pulse absolute top-0.5 right-0.5 size-2 rounded-full bg-destructive ring-2 ring-background" />
+            <span className="animate-dot-pulse absolute top-2 right-2 size-2 rounded-full bg-destructive ring-[1.5px] ring-background" />
           )}
         </button>
 
@@ -62,7 +67,7 @@ export default function Header() {
           type="button"
           onClick={() => setProfileOpen(true)}
           aria-label="내 메뉴"
-          className={`flex size-8.5 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white ${
+          className={`ml-0.5 flex size-[34px] shrink-0 items-center justify-center rounded-full text-xs font-bold text-white ${
             memberTagColorClass(me) ?? OWNER_TAG_PALETTE[0]
           }`}
         >

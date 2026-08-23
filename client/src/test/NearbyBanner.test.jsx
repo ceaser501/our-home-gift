@@ -131,7 +131,7 @@ describe('NearbyBanner', () => {
 // 지하는 자주 간다. 다만 아무 때나 하는 말은 아니다 — 권한을 안 준 것은 장소 탓이 아니고,
 // 쓸 기프티콘이 없는 사람에게 "못 찾았다"는 아무 뜻도 없다.
 describe('위치를 못 잡았을 때', () => {
-  const CANT = /지금은 위치를 확인할 수 없어요/;
+  const CANT = /지하나 실내에서는 위치가 안 잡힐 수 있어요/;
 
   beforeEach(() => {
     getFreshPosition.mockRejectedValue({ code: 2 });
