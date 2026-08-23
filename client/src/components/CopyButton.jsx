@@ -27,7 +27,9 @@ async function writeToClipboard(text) {
   if (!ok) throw new Error('복사할 수 없어요.');
 }
 
-export default function CopyButton({ value, label = '복사', copiedLabel = '복사했어요', className }) {
+// icon: 글자 없이 아이콘만. 옆에 이미 무엇을 복사하는지 적혀 있는 자리에서 쓴다
+// (바코드 번호 옆). 그때도 aria-label은 남아서 화면을 읽어주는 기기에는 '복사'가 들린다.
+export default function CopyButton({ value, label = '복사', copiedLabel = '복사했어요', icon = false, className }) {
   const [state, setState] = useState('idle'); // idle | copied | failed
 
   useEffect(() => {
@@ -58,8 +60,12 @@ export default function CopyButton({ value, label = '복사', copiedLabel = '복
         className
       )}
     >
-      {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
-      {state === 'failed' ? '복사 실패' : copied ? copiedLabel : label}
+      {copied ? (
+        <Check className={icon ? 'size-[17px]' : 'size-3.5'} />
+      ) : (
+        <Copy className={icon ? 'size-[17px]' : 'size-3.5'} />
+      )}
+      {!icon && (state === 'failed' ? '복사 실패' : copied ? copiedLabel : label)}
     </button>
   );
 }

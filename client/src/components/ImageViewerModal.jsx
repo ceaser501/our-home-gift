@@ -1,9 +1,11 @@
 import { useState } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { cn } from '@/lib/utils';
+import { PhotoFrame, PhotoNav } from './PhotoViewer';
 import useBackClose from '../utils/useBackClose';
 
+// 카드에서 바로 여는 사진 창. 바코드가 없어서 열어 보여줄 것이 사진뿐인 기프티콘이 여기로 온다.
+// 바코드 창 안에서 보는 사진(BarcodeModal의 photo 화면)과 같은 틀을 쓰되, 이쪽에는
+// 돌아갈 곳이 없어서 뒤로가기 버튼이 없다 — 목록에서 바로 열린 창이다.
 export default function ImageViewerModal({ gifticon, onClose }) {
   // 뒤로가기로 이 창을 닫는다. 안 그러면 설치해서 쓸 때 앱이 통째로 꺼진다.
   useBackClose(onClose);
@@ -20,58 +22,31 @@ export default function ImageViewerModal({ gifticon, onClose }) {
   return (
     <Sheet open onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="max-h-[92dvh] gap-0 overflow-y-auto pb-[var(--safe-bottom)]">
-        <SheetHeader className="pr-14 pb-2">
-          <SheetTitle>{gifticon.name}</SheetTitle>
+        {/* 제목은 '원본 사진'으로 고정하고 상품명은 부제로 내린다. 이 창에서 먼저 알아야
+            하는 것은 무엇을 보고 있는지이고, 어느 기프티콘인지는 방금 목록에서 눌러서 왔다.
+            몇 장 중 몇 번째인지는 사진 위 오버레이에서 여기로 올렸다 — 사진을 안 가리고,
+            넘길 때 눈이 움직이지 않는다. */}
+        <SheetHeader className="gap-0 px-[18px] pr-14 pb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+              <SheetTitle className="truncate text-base font-bold tracking-[-0.02em]">원본 사진</SheetTitle>
+              <p className="m-0 truncate text-[12.5px] font-medium text-muted-foreground">{gifticon.name}</p>
+            </div>
+            {images.length > 1 && (
+              <span className="shrink-0 text-[13.5px] font-semibold tabular-nums text-muted-foreground">
+                {current + 1} / {images.length}
+              </span>
+            )}
+          </div>
         </SheetHeader>
 
-        <div className="flex flex-col gap-2 px-5 pt-2">
+        <div className="flex flex-col gap-[11px] px-[18px]">
           {images.length === 0 ? (
-            <p className="text-xs text-muted-foreground">등록된 이미지가 없어요.</p>
+            <p className="m-0 text-[13px] text-muted-foreground">등록된 이미지가 없어요.</p>
           ) : (
             <>
-              <div className="relative flex max-h-[60vh] items-center justify-center overflow-hidden rounded-xl border border-border bg-black">
-                <img
-                  src={images[current]}
-                  alt={`${gifticon.name} 이미지 ${current + 1}`}
-                  className="max-h-[60vh] w-full object-contain"
-                />
-                {images.length > 1 && (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => setIndex((i) => (i - 1 + images.length) % images.length)}
-                      aria-label="이전 이미지"
-                      className="absolute left-1.5 flex size-8 items-center justify-center rounded-full bg-black/60 text-white"
-                    >
-                      <ChevronLeft className="size-5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setIndex((i) => (i + 1) % images.length)}
-                      aria-label="다음 이미지"
-                      className="absolute right-1.5 flex size-8 items-center justify-center rounded-full bg-black/60 text-white"
-                    >
-                      <ChevronRight className="size-5" />
-                    </button>
-                    <span className="absolute bottom-1.5 rounded-full bg-black/60 px-2 py-0.5 text-[11px] font-semibold text-white">
-                      {current + 1} / {images.length}
-                    </span>
-                  </>
-                )}
-              </div>
-              {images.length > 1 && (
-                <div className="flex justify-center gap-1.5">
-                  {images.map((url, i) => (
-                    <button
-                      key={url}
-                      type="button"
-                      onClick={() => setIndex(i)}
-                      aria-label={`${i + 1}번째 이미지 보기`}
-                      className={cn('size-1.5 rounded-full', i === current ? 'bg-primary' : 'bg-border')}
-                    />
-                  ))}
-                </div>
-              )}
+              <PhotoFrame src={images[current]} alt={`${gifticon.name} 사진 ${current + 1}`} />
+              {images.length > 1 && <PhotoNav photos={images} index={current} onPick={setIndex} />}
             </>
           )}
         </div>

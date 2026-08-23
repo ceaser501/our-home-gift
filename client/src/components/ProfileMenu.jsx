@@ -317,6 +317,7 @@ export default function ProfileMenu({ onClose }) {
         {leaveAsking && (
           <AlertDialog
             tone="danger"
+            icon={DoorOpen}
             title={`'${family.name}'에서 나갈까요?`}
             // 마지막 한 사람이 나가면 그 가족은 통째로 사라진다. 결과가 아예 다르므로
             // 같은 문구를 쓰면 안 된다("다시 참여하면 되살아난다"가 거짓말이 된다).
@@ -335,6 +336,7 @@ export default function ProfileMenu({ onClose }) {
         {deleteStep === 'what' && (
           <AlertDialog
             tone="danger"
+            icon={UserRoundX}
             title="계정을 삭제할까요?"
             description={"'가족 나가기'와 달라요.\n계정이 없어져서 다시 로그인할 수 없어요."}
             details={[
@@ -351,6 +353,7 @@ export default function ProfileMenu({ onClose }) {
         {deleteStep === 'sure' && (
           <AlertDialog
             tone="danger"
+            icon={UserRoundX}
             title="정말 탈퇴할까요?"
             description="한 번 지우면 되돌릴 수 없어요."
             confirmLabel="탈퇴하기"

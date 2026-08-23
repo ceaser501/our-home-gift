@@ -33,6 +33,19 @@ export function formatDate(dateStr) {
   return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
 }
 
+// 메모 날짜처럼 최근 것만 놓이는 자리. 올해 것이면 연도를 뗀다 — '2026.08.19'는
+// 열 자리를 쓰면서 여덟 자리가 늘 같은 값이다.
+//
+// 지난 해 것은 연도를 그대로 둔다. 반년 전 당부와 어제 남긴 말을 가르는 것이 이 날짜의
+// 할 일인데, 해까지 지난 것을 '08.19'로 적으면 그 일을 못 한다.
+export function formatShortDate(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(String(dateStr).includes('T') ? dateStr : `${dateStr}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return dateStr;
+  const mmdd = `${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
+  return d.getFullYear() === new Date().getFullYear() ? mmdd : `${d.getFullYear()}.${mmdd}`;
+}
+
 // 연장은 오늘이 아니라 원래 만료일에서부터 더해진다. 8월 10일 만료를 90일 연장하면
 // 11월 8일이 되지, 오늘부터 90일이 아니다.
 export function addDays(dateStr, days) {

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Plus, ScanSearch } from 'lucide-react';
+import { Plus, ScanSearch, Trash2 } from 'lucide-react';
 import Header from './components/Header';
 import FilterBar from './components/FilterBar';
 import GifticonList from './components/GifticonList';
@@ -515,8 +515,13 @@ export default function App() {
       {deleteTarget && (
         <AlertDialog
           tone="danger"
+          icon={Trash2}
           title="이 기프티콘을 삭제할까요?"
-          description={`'${deleteTarget.name}'이(가) 목록에서 사라져요. 되돌릴 수 없어요.`}
+          // 이름을 따옴표 문장에서 빼내 한 줄로 세운다. 이름이 길면 "'…'이(가) 목록에서
+          // 사라져요"가 세 줄로 접혀서, 정작 무엇을 지우는지가 문장에 묻혔다.
+          // "목록에서 사라져요"는 '삭제'라는 말이 이미 하고 있어서 뺐다.
+          subject={deleteTarget.name}
+          warning="되돌릴 수 없어요"
           confirmLabel="삭제"
           onConfirm={handleConfirmDelete}
           onClose={() => setDeleteTarget(null)}

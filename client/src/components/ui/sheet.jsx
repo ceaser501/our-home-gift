@@ -46,7 +46,7 @@ function SheetContent({ className, children, side = 'bottom', showClose = true, 
           'data-[state=closed]:duration-200 data-[state=open]:duration-300',
           side === 'bottom' &&
             cn(
-              'inset-x-0 bottom-0 mx-auto w-full max-w-(--sheet-max-width) rounded-t-2xl border-t',
+              'inset-x-0 bottom-0 mx-auto w-full max-w-(--sheet-max-width) rounded-t-[20px] border-t',
               'max-h-[92dvh]',
               'data-[state=closed]:animate-out data-[state=closed]:slide-out-to-bottom',
               'data-[state=open]:animate-in data-[state=open]:slide-in-from-bottom'
@@ -64,7 +64,7 @@ function SheetContent({ className, children, side = 'bottom', showClose = true, 
       >
         {children}
         {showClose && (
-          <SheetPrimitive.Close className="absolute top-4 right-4 rounded-full bg-muted p-2 opacity-80 transition-opacity hover:opacity-100 focus:outline-hidden">
+          <SheetPrimitive.Close className="absolute top-4 right-4 rounded-full bg-muted p-[9px] opacity-80 transition-opacity hover:opacity-100 focus:outline-hidden">
             <XIcon className="size-4" />
             <span className="sr-only">닫기</span>
           </SheetPrimitive.Close>
