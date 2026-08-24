@@ -47,7 +47,11 @@ function NoticeRow({ notice, pinned = false }) {
     >
       <Megaphone className="mt-0.5 size-4.5 shrink-0 text-primary" />
       <div className="flex min-w-0 flex-1 flex-col">
-        <p className="m-0 text-sm leading-relaxed font-semibold break-keep text-foreground">{notice.title}</p>
+        {/* 제목에는 break-keep을 걸지 않는다. 걸면 어절 단위로만 줄이 바뀌어서, 오른쪽에
+            두세 글자 자리가 남아 있어도 다음 어절이 통째로 내려간다 — 제목이 끝까지 안 차고
+            잘린 것처럼 보인다. 고정 자리는 상자 여백(px-3.5)만큼 폭이 더 좁아서 더 자주 그랬다.
+            본문은 반대로 break-keep을 남긴다. 문단으로 읽는 글이라 어절이 갈리면 눈에 걸린다. */}
+        <p className="m-0 text-sm leading-relaxed font-semibold text-foreground">{notice.title}</p>
         {/* 게시일자는 적지 않는다. 노출기한이 하루 안쪽일 때만 남은 시간을 적는다 —
             점검이 언제 끝나는지가 곧 언제부터 다시 등록할 수 있는지라서다.
             자세한 이유는 client/src/utils/notices.js의 remainingLabel 참고. */}
