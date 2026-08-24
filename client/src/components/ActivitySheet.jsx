@@ -87,9 +87,16 @@ function PinnedNotice({ notice }) {
         {/* 게시일자는 적지 않는다. 노출기한이 하루 안쪽일 때만 남은 시간을 적는다 —
             점검이 언제 끝나는지가 곧 언제부터 다시 등록할 수 있는지라서다.
             자세한 이유는 client/src/utils/notices.js의 remainingLabel 참고.
-            줄이 넘어갈 때 '오늘 15시'와 '까지'가 갈리지 않게 통째로 묶는다. */}
+            줄이 넘어갈 때 '오늘 15시'와 '까지'가 갈리지 않게 통째로 묶는다.
+
+            아래 {' '}는 지워도 되는 공백이 아니다. JSX는 줄바꿈만 있는 사이 공백을 없애서
+            제목 끝 글자와 이 span이 딱 붙어버리는데, 그러면 브라우저는 둘을 한 낱말로 본다.
+            이 span이 nowrap이라 그 낱말은 통째로만 움직이고, 결국 제목 마지막 마디까지
+            다음 줄로 끌려 내려간다 — 옆에 자리가 남아 있는데도 그랬다.
+            띄어쓰기 하나가 여기서 줄을 끊을 수 있는 자리를 만든다. */}
+        {remaining && ' '}
         {remaining && (
-          <span className="ml-[7px] text-[12.5px] font-bold whitespace-nowrap text-primary">{remaining}</span>
+          <span className="ml-[3px] text-[12.5px] font-bold whitespace-nowrap text-primary">{remaining}</span>
         )}
       </p>
       {/* 줄바꿈을 그대로 살린다. 공지는 문단으로 쓰는 글이라 한 덩어리로 뭉치면 읽기 어렵다. */}
