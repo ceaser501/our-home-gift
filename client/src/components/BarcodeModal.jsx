@@ -13,6 +13,10 @@ import { groupDigits, readableCode } from '../utils/code';
 import { useFamily } from '../FamilyContext';
 import useBackClose from '../utils/useBackClose';
 
+// QR을 화면에 세울 크기. 정사각형이라 폭을 다 쓰면 화면 절반을 먹는데, 리더기는 그만큼
+// 클 필요가 없다. 그리는 크기(두 배)와 보여줄 크기를 이 값 하나로 묶어둔다.
+const QR_PX = 220;
+
 const ZXING_TO_JSBARCODE = {
   CODE_128: 'CODE128',
   CODE_39: 'CODE39',
@@ -64,14 +68,31 @@ export default function BarcodeModal({ gifticon, onClose, onUsed, onSpend }) {
     const format = gifticon.code_type;
 
     if (format === 'QR_CODE') {
-      // 화면에는 220px로 세운다(아래 max-w). 그 두 배로 그려야 줄일 때 딱 반으로 접혀서
-      // 칸이 고르게 남는다 — 320에서 220으로 줄이면 1.45배라 칸마다 픽셀 수가 달라져
-      // 삐뚤빼뚤해 보였다.
-      QRCode.toCanvas(canvas, gifticon.code, { width: 440, margin: 2 }, (err) => {
-        if (err) setRenderError(true);
+      // 크기를 여기서 직접 박는다.
+      //
+      // CSS 클래스로 두 번 해봤고 두 번 다 안 먹었다. max-width만 걸면 폭만 줄고 높이는
+      // 그린 크기 그대로 남았고(canvas는 img와 달리 브라우저가 비율을 안 맞춰준다),
+      // h-auto를 붙여도 그대로였고, size-[220px]로 두 변을 다 적어도 그대로였다.
+      // 왜 안 먹는지를 여기서 더 캐는 것보다, 안 밀리는 자리에 적는 편이 확실하다 —
+      // 인라인 스타일은 클래스보다 세다.
+      //
+      // 그리는 크기는 화면 크기의 두 배다. 화면이 촘촘한 폰에서 220px짜리를 그대로
+      // 늘리면 칸 경계가 흐려지는데, 두 배로 그려 반으로 접으면 고르게 남는다.
+      QRCode.toCanvas(canvas, gifticon.code, { width: QR_PX * 2, margin: 2 }, (err) => {
+        if (err) {
+          setRenderError(true);
+          return;
+        }
+        canvas.style.width = `${QR_PX}px`;
+        canvas.style.height = `${QR_PX}px`;
       });
       return;
     }
+
+    // 막대 바코드는 폭을 다 쓴다(w-full). QR을 보다가 이 기프티콘으로 넘어왔으면 위에서
+    // 박아둔 인라인 크기가 남아 있으니 걷어낸다.
+    canvas.style.width = '';
+    canvas.style.height = '';
 
     const jsFormat = ZXING_TO_JSBARCODE[format];
     if (!jsFormat) {
@@ -212,12 +233,16 @@ export default function BarcodeModal({ gifticon, onClose, onUsed, onSpend }) {
                 // 각을 살리면 칸이 고르지 않게 남아 오히려 지저분해진다.
                 <canvas
                   ref={setCanvas}
-                  className={cn(isQr ? 'size-[220px] shrink-0' : 'w-full [image-rendering:pixelated]')}
+                  className={cn('shrink-0', !isQr && 'w-full [image-rendering:pixelated]')}
                 />
               ) : (
                 gifticon.barcode_image_url && (
+                  // 새로 그리지 못했을 때 쓰는, 원본 사진에서 잘라둔 그림.
+                  // 여기엔 한도가 없었다. QR을 찍은 사진이면 정사각형이라 폭을 다 쓰면
+                  // 세로로도 그만큼 커져서 아래 버튼을 밀어낸다. 높이를 묶고 비율은
+                  // object-contain에 맡긴다.
                   <img
-                    className="w-full"
+                    className="mx-auto max-h-[260px] w-full object-contain"
                     src={gifticon.barcode_image_url}
                     alt={`${gifticon.brand || gifticon.name} 바코드`}
                   />
