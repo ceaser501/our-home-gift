@@ -196,22 +196,23 @@ export default function BarcodeModal({ gifticon, onClose, onUsed, onSpend }) {
           {(gifticon.code || gifticon.barcode_image_url) && (
             <div className="flex flex-col items-center gap-2.5 rounded-[15px] border border-border bg-white px-2.5 pt-3.5 pb-3">
               {gifticon.code && !renderError ? (
-                // 막대 바코드는 폭을 다 쓴다 — 넓을수록 리더기가 잘 읽는다.
-                // QR은 다르다. 정사각형이라 폭을 다 쓰면 화면 절반을 먹는데, 리더기는
-                // 그만큼 클 필요가 없다. 220px에서 멈추고 가운데 세운다.
-                // h-auto가 꼭 있어야 한다. canvas는 img와 달리 브라우저 기본값에
-                // height:auto가 안 걸려 있어서, 폭만 줄이면 높이는 그린 크기 그대로 남는다 —
-                // 정사각형 QR이 가로로만 눌려 찌그러진 이유가 이것이다.
+                // QR은 두 변을 다 못박는다.
                 //
-                // 픽셀 각을 살리는 것(pixelated)은 막대 바코드에만 건다. 막대는 경계가
-                // 흐려지면 인식이 나빠지는데, QR은 줄여 그릴 때 각을 살리면 칸이 고르지
-                // 않게 남아 오히려 지저분해진다.
+                // 처음에는 max-width만 걸고 높이는 비율대로 따라오게 뒀다. 안 따라왔다 —
+                // canvas는 img와 달리 브라우저가 height:auto로 비율을 맞춰주지 않아서,
+                // 폭만 220으로 줄고 높이는 그린 크기(440) 그대로 남았다. 세로로 두 배
+                // 늘어난 QR이 아래 버튼들을 화면 밖으로 밀어냈다.
+                //
+                // h-auto를 붙여도 마찬가지였다. 그래서 비율에 기대지 않고 220×220으로
+                // 직접 적는다. 그릴 때는 그 두 배(440)로 그려서 줄일 때 칸이 고르게 남는다.
+                //
+                // 막대 바코드는 그대로 둔다. 폭을 다 쓰는 편이 리더기에 좋고, 높이는
+                // 그린 크기 그대로여도 막대가 길어질 뿐이라 지금까지 잘 읽혔다.
+                // 픽셀 각을 살리는 것(pixelated)도 막대에만 건다 — QR은 줄여 그릴 때
+                // 각을 살리면 칸이 고르지 않게 남아 오히려 지저분해진다.
                 <canvas
                   ref={setCanvas}
-                  className={cn(
-                    'h-auto w-full',
-                    isQr ? 'mx-auto max-w-[220px]' : '[image-rendering:pixelated]'
-                  )}
+                  className={cn(isQr ? 'size-[220px] shrink-0' : 'w-full [image-rendering:pixelated]')}
                 />
               ) : (
                 gifticon.barcode_image_url && (
