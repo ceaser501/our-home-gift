@@ -12,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import AlertDialog from './AlertDialog';
+import { readableCode } from './BarcodeModal';
 import useBackClose from '../utils/useBackClose';
 import { groupImages } from '../utils/gallery';
 import { todayStr } from '../utils/date';
@@ -810,6 +811,19 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
                 onChange={(e) => updateField('code', e.target.value)}
                 placeholder="사진에서 읽거나 직접 입력"
               />
+              {/* 편의점 쿠폰의 QR에는 번호만 들어 있지 않다 — IX;1;9816401685019;; 처럼
+                  껍데기가 붙는다. 이 칸에는 그 값을 그대로 둬야 한다. 저장한 값으로 QR을
+                  다시 그리는데, 껍데기를 벗겨 저장하면 매장 리더기가 원본과 다르게 읽는다.
+
+                  대신 사람이 부를 번호를 아래에 적어준다. 이 칸에 낯선 글자가 왜 들어
+                  있는지도 이 한 줄이 같이 답한다. */}
+              {form.code && readableCode(form.code) !== form.code && (
+                <p className="m-0 text-xs break-all text-muted-foreground">
+                  매장에서 부를 번호는 <b className="font-semibold text-foreground">{readableCode(form.code)}</b> 예요.
+                  <br />
+                  위 칸은 그대로 두셔야 바코드가 제대로 그려져요.
+                </p>
+              )}
             </div>
           </FieldGroup>
 

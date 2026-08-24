@@ -107,11 +107,12 @@ export default function BarcodeModal({ gifticon, onClose, onUsed, onSpend }) {
         width: 4, // 막대 하나의 굵기. 크게 그려야 화면에서 줄여 보여도 경계가 뭉개지지 않는다.
         height: 150,
         margin: 20, // 좌우 여백(quiet zone)
-        // 번호는 그림 안에 굽지 않고 아래에 글자로 따로 적는다. 셋이 달라진다 —
-        // 크기와 굵기를 이 화면 규칙대로 정할 수 있고, 네 자리씩 끊어 놓을 수 있고,
-        // 편의점 쿠폰의 껍데기(IX;1;9816401685019;;)가 아니라 사람이 불러야 하는
-        // 번호만 나온다. 그림 안에 구우면 셋 다 JsBarcode가 정하는 대로 따라간다.
-        displayValue: false,
+        // 그림 안 번호를 껐다가 되살렸다. 아래에 글자로 따로 적으면 크기와 끊는 자리를
+        // 우리가 정할 수 있어서 껐는데, 매장에서 리더기가 못 읽었을 때 점원이 보는 것이
+        // 그림에 찍힌 번호다 — 없는 편보다 있는 편이 안전하다. 아래 번호와 겹쳐도 상관없다.
+        displayValue: true,
+        fontSize: 22,
+        textMargin: 8,
         background: '#ffffff',
       });
     } catch {
@@ -122,6 +123,7 @@ export default function BarcodeModal({ gifticon, onClose, onUsed, onSpend }) {
   if (!gifticon) return null;
 
   const humanCode = readableCode(gifticon.code);
+  const isQr = gifticon.code_type === 'QR_CODE';
 
   // 원본 사진은 이 창 안에서 갈아끼운다. 창을 하나 더 띄우면 목록 → 바코드 → 사진으로
   // 세 겹이 쌓여서, 닫기를 몇 번 눌러야 하는지 헷갈린다.
@@ -216,8 +218,16 @@ export default function BarcodeModal({ gifticon, onClose, onUsed, onSpend }) {
           {(gifticon.code || gifticon.barcode_image_url) && (
             <div className="flex flex-col items-center gap-2.5 rounded-[15px] border border-border bg-white px-2.5 pt-3.5 pb-3">
               {gifticon.code && !renderError ? (
-                // 새로 그린 바코드. 화면 폭에 맞춰 최대한 크게 보여줘야 리더기가 잘 읽는다.
-                <canvas ref={setCanvas} className="w-full [image-rendering:pixelated]" />
+                // 막대 바코드는 폭을 다 쓴다 — 넓을수록 리더기가 잘 읽는다.
+                // QR은 다르다. 정사각형이라 폭을 다 쓰면 화면 절반을 먹는데, 리더기는
+                // 그만큼 클 필요가 없다. 220px에서 멈추고 가운데 세운다.
+                <canvas
+                  ref={setCanvas}
+                  className={cn(
+                    'w-full [image-rendering:pixelated]',
+                    isQr && 'mx-auto max-w-[220px]'
+                  )}
+                />
               ) : (
                 gifticon.barcode_image_url && (
                   <img
@@ -232,16 +242,21 @@ export default function BarcodeModal({ gifticon, onClose, onUsed, onSpend }) {
                   눈으로 옮겨 적는 건 계산대 앞에서 하기에 성가신 일이라 복사로 끝낼 수 있게 한다.
                   '바코드정보:' 라벨은 뺐다 — 바코드 바로 아래에 있는 숫자가 무엇인지는 라벨
                   없이도 안다. */}
+              {/* 그림 안에 이미 큰 번호가 찍혀 있다. 이 줄이 하는 일은 '불러주기 쉽게
+                  끊어 보여주기'와 '복사'라, 20px까지 클 이유가 없다. 글자를 키워 쓰는
+                  사람에게는 20px + 자간 + 복사 버튼이 한 줄을 넘겼다.
+                  글자색을 못박은 이유: 이 상자는 리더기 때문에 늘 흰 바탕이라 다크 모드에서도
+                  글자는 어두워야 한다. */}
               {gifticon.code && (
-                <div className="flex items-center gap-2.5">
-                  <p className="m-0 text-center font-mono text-xl font-semibold tracking-[0.04em] break-all tabular-nums text-[#17171c]">
+                <div className="flex items-center gap-2">
+                  <p className="m-0 text-center font-mono text-[15px] font-semibold tracking-[0.02em] break-all tabular-nums text-[#17171c]">
                     {groupDigits(humanCode)}
                   </p>
                   <CopyButton
                     value={humanCode}
                     icon
                     label="바코드 번호 복사"
-                    className="size-9 justify-center rounded-[11px] border border-input bg-card p-0"
+                    className="size-8 justify-center rounded-[10px] border border-input bg-card p-0"
                   />
                 </div>
               )}

@@ -147,10 +147,14 @@ export default function GifticonCard({
   //
   // pointer-events는 위 칸 전체가 꺼져 있어서(카드 어디를 눌러도 바코드가 열린다)
   // 여기서만 다시 켠다.
+  // 날짜는 자르지 않는다. '2027.08.10까지'에서 뒤가 잘리면 며칠까지인지를 잃는데,
+  // 그건 이 줄이 있는 이유 그 자체다. 자리가 모자라면 오른쪽 금액이 다음 줄로 내려간다
+  // (아래 flex-wrap). 글자를 키워 보는 사람에게 카드가 한 줄 커지는 것이지, 값이
+  // 사라지는 것은 아니어야 한다.
   const dateNode = (
     <span
       className={cn(
-        'truncate text-[13px] font-semibold tabular-nums',
+        'text-[13px] font-semibold whitespace-nowrap tabular-nums',
         urgent ? 'text-destructive' : 'text-muted-foreground'
       )}
     >
@@ -296,8 +300,10 @@ export default function GifticonCard({
 
               칩 배경을 걷고 글자로 풀었다. 목록이 조용해지고 급한 것만 붉게 남는다.
               tabular-nums라 날짜가 카드끼리 세로로 줄이 맞는다. */}
-          <div className="flex items-center gap-2">
-            <div className="flex min-w-0 items-baseline gap-1.5">
+          {/* 자리가 모자라면 금액이 다음 줄로 내려간다. 예전에는 날짜가 잘렸는데,
+              글자를 키워 보는 사람에게 '2027.08.0…'는 값을 잃은 것이다. */}
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+            <div className="flex items-baseline gap-1.5">
               {gifticon.expires_at ? (
                 expiryLine
               ) : (

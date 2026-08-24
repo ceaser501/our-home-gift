@@ -1,13 +1,14 @@
 import { useState } from 'react';
-import { Check, Clock, KeyRound, Plus, Users } from 'lucide-react';
+import { Check, Clock, KeyRound, Pencil, Plus, Users } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useFamily } from '../FamilyContext';
-import { createFamily, requestJoinFamily } from '../family';
+import { createFamily, renameFamily, requestJoinFamily } from '../family';
 import { cn } from '@/lib/utils';
 import useBackClose from '../utils/useBackClose';
+import RenameSheet from './RenameSheet';
 
 // 보는 가족을 바꾸는 창. 한 사람이 여러 가족에 속할 수 있어서(연인끼리 하나, 부모님과 하나)
 // 여기서 오가며 본다.
@@ -17,7 +18,7 @@ import useBackClose from '../utils/useBackClose';
 export default function FamilySwitcherSheet({ onClose }) {
   // 뒤로가기로 이 창을 닫는다. 안 그러면 설치해서 쓸 때 앱이 통째로 꺼진다.
   useBackClose(onClose);
-  const { families, family, members, user, switchFamily } = useFamily();
+  const { families, family, members, user, switchFamily, refreshFamily } = useFamily();
   const myName = members.find((m) => m.user_id === user.id)?.display_name || '';
 
   const [mode, setMode] = useState('list'); // list | create | join
@@ -27,6 +28,7 @@ export default function FamilySwitcherSheet({ onClose }) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [pendingFor, setPendingFor] = useState(null);
+  const [renameOpen, setRenameOpen] = useState(false);
 
   async function pick(id) {
     if (id === family.id) {
@@ -115,6 +117,19 @@ export default function FamilySwitcherSheet({ onClose }) {
             </ul>
 
             <div className="mt-3 flex flex-col gap-2 px-5">
+              {/* 이름 바꾸기가 여기 있는 이유.
+                  이 기능은 원래 구성원 목록 창의 제목 옆 연필에만 있었다. 거기는 "누가
+                  있나"를 보러 여는 창이라, 이름을 바꾸려는 사람이 갈 데가 아니다.
+                  이름을 바꾸려는 사람은 헤더의 가족 이름을 누른다 — 그러면 이 창이 열린다.
+                  지금 보고 있는 가족에 대한 동작이라 이름을 버튼에 적어둔다. */}
+              <Button
+                variant="outline"
+                className="w-full justify-start gap-2 rounded-xl"
+                onClick={() => setRenameOpen(true)}
+              >
+                <Pencil className="size-4" />
+                <span className="min-w-0 truncate">'{family.name}' 이름 바꾸기</span>
+              </Button>
               <Button
                 variant="outline"
                 className="w-full justify-start gap-2 rounded-xl"
@@ -195,6 +210,21 @@ export default function FamilySwitcherSheet({ onClose }) {
               </Button>
             </div>
           </form>
+        )}
+
+        {renameOpen && (
+          <RenameSheet
+            title="가족 이름 바꾸기"
+            label="가족 이름"
+            description="가족 모두에게 보이는 이름이에요."
+            initialValue={family.name}
+            placeholder="예: 우리집"
+            onSubmit={async (name) => {
+              await renameFamily(family.id, name);
+              await refreshFamily();
+            }}
+            onClose={() => setRenameOpen(false)}
+          />
         )}
       </SheetContent>
     </Sheet>

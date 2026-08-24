@@ -172,8 +172,23 @@ export default function App() {
   // 반대로 앱을 열자마자 알리지는 않는다 — 바코드를 띄우러 온 사람은 공지가 있는 줄도
   // 모르고 잘 쓰고 나가는데, 그게 가장 좋은 결과다. 바코드는 저장된 것이라 점검 중에도
   // 그대로 된다.
-  function guardUpload(open) {
-    const blocked = blockingNotice(noticeRows);
+  //
+  // 막을 때만 서버에 다시 물어본다. 손에 든 공지는 앱을 열 때나 다른 앱에 다녀올 때만
+  // 갱신되는데, 앱을 켜둔 채로 점검이 끝나면 그 사이 값이 낡는다. 그때 옛 답으로 막으면
+  // 사용자는 앱을 껐다 켜거나 목록을 당겨야 올릴 수 있게 된다 — 왜 막히는지 알 방법도 없다.
+  //
+  // 여는 쪽은 그대로 빠르다. 한 번 더 묻는 것은 어차피 막힐 참인 드문 경우뿐이라,
+  // 평소에 드는 비용이 없다.
+  async function guardUpload(open) {
+    if (!blockingNotice(noticeRows)) {
+      open();
+      return;
+    }
+
+    const fresh = await listNotices().catch(() => noticeRows);
+    setNoticeRows(fresh);
+
+    const blocked = blockingNotice(fresh);
     if (blocked) {
       setBlockedBy(blocked);
       return;

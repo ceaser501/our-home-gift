@@ -321,7 +321,10 @@ export default function ProfileMenu({ onClose }) {
             title={`'${family.name}'에서 나갈까요?`}
             // 마지막 한 사람이 나가면 그 가족은 통째로 사라진다. 결과가 아예 다르므로
             // 같은 문구를 쓰면 안 된다("다시 참여하면 되살아난다"가 거짓말이 된다).
-            description={isLastMember ? '나 말고 아무도 없어서, 나가면 이 가족이 없어져요.' : undefined}
+            // 두 마디라 두 줄로 끊는다. '나 말고 아무도 없어서'가 까닭이고 '나가면 이
+            // 가족이 없어져요'가 결과인데, 한 줄로 흘리면 어디서 숨을 쉬는지가 애매하다.
+            // (AlertDialog의 description은 whitespace-pre-line이라 \n이 그대로 산다.)
+            description={isLastMember ? '나 말고 아무도 없어서,\n나가면 이 가족이 없어져요.' : undefined}
             details={
               isLastMember
                 ? ['이 가족의 기프티콘이 사진까지 지워져요', '되돌릴 수 없어요']

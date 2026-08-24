@@ -61,9 +61,9 @@ export default function CopyButton({ value, label = '복사', copiedLabel = '복
       )}
     >
       {copied ? (
-        <Check className={icon ? 'size-[17px]' : 'size-3.5'} />
+        <Check className={icon ? 'size-4' : 'size-3.5'} />
       ) : (
-        <Copy className={icon ? 'size-[17px]' : 'size-3.5'} />
+        <Copy className={icon ? 'size-4' : 'size-3.5'} />
       )}
       {!icon && (state === 'failed' ? '복사 실패' : copied ? copiedLabel : label)}
     </button>
