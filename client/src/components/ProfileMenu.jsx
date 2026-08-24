@@ -1,6 +1,8 @@
 import { useState } from 'react';
-import { ChevronRight, DoorOpen, FileText, LogOut, Megaphone, Receipt, Scale, ScanSearch, ShieldCheck, UserRound, UserRoundX } from 'lucide-react';
+import { DoorOpen, FileText, LogOut, Megaphone, Receipt, Scale, ScanSearch, ShieldCheck, UserRoundX } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Button } from '@/components/ui/button';
+import { SettingLinkRow, SettingSection, SettingSwitchRow } from './SettingRow';
 import ThemeToggle from './ThemeToggle';
 import NotificationToggle from './NotificationToggle';
 import UsageReportSheet from './UsageReportSheet';
@@ -109,196 +111,161 @@ export default function ProfileMenu({ onClose }) {
   return (
     <Sheet open onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="max-h-[92dvh] gap-0 overflow-y-auto pb-[var(--safe-bottom)]">
-        <SheetHeader className="pr-14 pb-1">
-          <SheetTitle>내 메뉴</SheetTitle>
+        <SheetHeader className="px-[18px] pr-14 pb-3">
+          <SheetTitle className="text-[19px] font-bold tracking-[-0.026em]">내 메뉴</SheetTitle>
         </SheetHeader>
 
-        <div className="flex items-center gap-3 px-5 pt-2 pb-4">
+        {/* 이름은 여기 크게 적혀 있는데 아래 '내 정보 · 내 이름' 줄에서 또 보여주고 있었다.
+            같은 값이 한 화면에 두 번 나온 셈이라, 그 줄을 걷고 바꾸는 길만 이 카드로 들인다.
+            구역이 하나 줄었다. */}
+        <div className="mx-[18px] mb-3.5 flex items-center gap-3 rounded-[14px] bg-secondary/60 px-3.5 py-[13px]">
           <span
-            className={`flex size-11 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white ${
+            className={`flex size-[46px] shrink-0 items-center justify-center rounded-full text-sm font-bold text-white ${
               memberTagColorClass(me) ?? OWNER_TAG_PALETTE[0]
             }`}
           >
             {myName.slice(0, 3)}
           </span>
-          <span className="flex min-w-0 flex-col">
-            <span className="truncate text-base font-bold text-foreground">{myName}</span>
-            <span className="truncate text-xs text-muted-foreground">{user.email}</span>
+          <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+            <span className="truncate text-[17px] font-bold tracking-[-0.02em] text-foreground">{myName}</span>
+            <span className="truncate text-[13px] font-medium text-muted-foreground">{user.email}</span>
           </span>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setRenameOpen(true)}
+            className="h-[38px] shrink-0 rounded-[11px] px-[13px] text-[13.5px] font-semibold"
+          >
+            이름 바꾸기
+          </Button>
         </div>
 
-        <div className="flex flex-col px-5">
-          <p className="m-0 pb-1 text-xs font-semibold text-muted-foreground">내 정보</p>
-          <button
-            type="button"
-            onClick={() => setRenameOpen(true)}
-            className="flex w-full items-center gap-3 px-1 py-3 text-left text-sm"
-          >
-            <UserRound className="size-4.5 text-muted-foreground" />
-            <span className="flex-1 text-foreground">내 이름</span>
-            <span className="max-w-[40%] truncate text-xs text-muted-foreground">{myName}</span>
-            <ChevronRight className="size-4 text-muted-foreground" />
-          </button>
+        {/* 구역을 여섯에서 셋으로 묶었다. '소식'과 '기록'은 각각 한 줄뿐이라 제목이 내용보다
+            컸다. 줄 사이는 2px로 붙이고 구역 사이만 20px로 벌린다 — 눈이 쉬는 곳은 줄
+            사이가 아니라 구역과 구역 사이다. */}
+        <div className="flex flex-col gap-5 px-[18px]">
+          <SettingSection label="설정">
+            <ThemeToggle asRow />
+            <NotificationToggle asRow />
 
-          <p className="m-0 pt-3 pb-1 text-xs font-semibold text-muted-foreground">설정</p>
-          <ThemeToggle asRow />
-          <NotificationToggle asRow />
-
-          {/* 켜두면 앱을 열 때 바로 찾아준다. 받아둔 기프티콘을 넣는 게 이 앱에 들어오는
-              이유라, 그걸 매번 눌러서 시작하게 할 이유가 없다. 다만 사진을 보는 일이라
-              기본은 꺼두고 사용자가 켜게 한다.
-
-              생김새는 위아래 줄에 맞춘다. 여기만 체크박스였는데, 나란히 놓인 설정들이
-              서로 다른 방식으로 켜지고 꺼지면 어느 게 켜진 건지 한눈에 읽히지 않는다. */}
-          {scanSupported && (
-            <button
-              type="button"
-              onClick={() => {
-                setAutoScan(!autoScan);
-                setAutoScanOn(!autoScan);
-              }}
-              className="flex w-full items-center gap-3 px-1 py-3 text-left text-sm"
-            >
-              <ScanSearch className="size-4.5 shrink-0 text-muted-foreground" />
-              <span className="flex min-w-0 flex-1 flex-col">
-                <span className="text-foreground">기프티콘 자동 찾기</span>
-                <span className="text-xs break-keep text-muted-foreground">앱을 열 때 갤러리에서 찾아드려요</span>
-              </span>
-              <span className={autoScan ? 'shrink-0 text-xs font-semibold text-primary' : 'shrink-0 text-xs text-muted-foreground'}>
-                {autoScan ? '켜짐' : '꺼짐'}
-              </span>
-            </button>
-          )}
-
-          {/* 알림 테스트 줄은 접어둔다.
-              앱 알림(FCM)이 붙기 전, 알림이 오는지 확인할 방법이 이것뿐이던 시절의
-              물건이다. 이제는 알림을 켜면 실제로 온다 — 확인할 것이 없는 자리에
-              '보내기' 버튼이 있으면 그것부터 눌러보게 된다.
-
-              지우지 않고 남긴다. 발송 경로(send-test-notification)를 손댈 때 다시
-              필요하다. 되살리려면 이 블록의 주석만 걷으면 된다 —
-              handleTestNotification과 pushOn도 그대로 있다.
-          <button
-            type="button"
-            onClick={handleTestNotification}
-            disabled={testing || !pushOn}
-            className="flex w-full items-center gap-3 px-1 py-3 text-left text-sm disabled:opacity-50"
-          >
-            <BellRing className="size-4.5 shrink-0 text-muted-foreground" />
-            <span className="flex min-w-0 flex-1 flex-col">
-              <span className="text-foreground">알림 테스트</span>
-              {!pushOn && <span className="text-xs break-keep text-muted-foreground">위에서 알림을 켜야 보낼 수 있어요</span>}
-            </span>
-            <span className="shrink-0 text-xs font-semibold text-primary">{testing ? '보내는 중…' : '보내기'}</span>
-          </button>
-          */}
+            {/* 켜두면 앱을 열 때 바로 찾아준다. 받아둔 기프티콘을 넣는 게 이 앱에 들어오는
+                이유라, 그걸 매번 눌러서 시작하게 할 이유가 없다. 다만 사진을 보는 일이라
+                기본은 꺼두고 사용자가 켜게 한다. */}
+            {scanSupported && (
+              <SettingSwitchRow
+                icon={ScanSearch}
+                label="기프티콘 자동 찾기"
+                hint="앱을 열 때 갤러리에서 찾아드려요"
+                on={autoScan}
+                onToggle={() => {
+                  setAutoScan(!autoScan);
+                  setAutoScanOn(!autoScan);
+                }}
+              />
+            )}
+          </SettingSection>
 
           {/* 배너를 닫아도 여기서는 늘 다시 볼 수 있어야 한다. 배너에만 있으면
               한 번 닫는 순간 그 공지를 다시 찾을 데가 없어진다. */}
-          <p className="m-0 pt-3 pb-1 text-xs font-semibold text-muted-foreground">소식</p>
-          <button
-            type="button"
-            onClick={() => setNoticesOpen(true)}
-            className="flex w-full items-center gap-3 px-1 py-3 text-left text-sm"
-          >
-            <Megaphone className="size-4.5 text-muted-foreground" />
-            <span className="flex-1 text-foreground">공지사항</span>
-            <ChevronRight className="size-4 text-muted-foreground" />
-          </button>
-
-          <p className="m-0 pt-3 pb-1 text-xs font-semibold text-muted-foreground">기록</p>
-          <button
-            type="button"
-            onClick={() => setReportOpen(true)}
-            className="flex w-full items-center gap-3 px-1 py-3 text-left text-sm"
-          >
-            <Receipt className="size-4.5 text-muted-foreground" />
-            <span className="flex-1 text-foreground">사용 내역</span>
-            <ChevronRight className="size-4 text-muted-foreground" />
-          </button>
+          <SettingSection label="기록과 소식">
+            <SettingLinkRow icon={Receipt} label="사용 내역" onClick={() => setReportOpen(true)} />
+            <SettingLinkRow icon={Megaphone} label="공지사항" onClick={() => setNoticesOpen(true)} />
+          </SettingSection>
 
           {/* 스토어 심사에서 앱 안에 방침 링크가 있는지를 본다. 그것과 별개로, 사진이 AI에
-              전송된다는 사실을 알고 싶은 사람이 찾아볼 자리는 있어야 한다. */}
-          <p className="m-0 pt-3 pb-1 text-xs font-semibold text-muted-foreground">약관</p>
-          <a
-            href={`${import.meta.env.BASE_URL}privacy.html`}
-            target="_blank"
-            rel="noreferrer"
-            className="flex w-full items-center gap-3 px-1 py-3 text-left text-sm text-foreground no-underline"
-          >
-            <ShieldCheck className="size-4.5 text-muted-foreground" />
-            <span className="flex-1">개인정보처리방침</span>
-            <ChevronRight className="size-4 text-muted-foreground" />
-          </a>
-          <a
-            href={`${import.meta.env.BASE_URL}terms.html`}
-            target="_blank"
-            rel="noreferrer"
-            className="flex w-full items-center gap-3 px-1 py-3 text-left text-sm text-foreground no-underline"
-          >
-            <FileText className="size-4.5 text-muted-foreground" />
-            <span className="flex-1">이용약관</span>
-            <ChevronRight className="size-4 text-muted-foreground" />
-          </a>
-          <a
-            href={`${import.meta.env.BASE_URL}licenses.html`}
-            target="_blank"
-            rel="noreferrer"
-            className="flex w-full items-center gap-3 px-1 py-3 text-left text-sm text-foreground no-underline"
-          >
-            <Scale className="size-4.5 text-muted-foreground" />
-            <span className="flex-1">오픈소스 및 기술 정보</span>
-            <ChevronRight className="size-4 text-muted-foreground" />
-          </a>
+              전송된다는 사실을 알고 싶은 사람이 찾아볼 자리는 있어야 한다.
+              셋 다 브라우저로 나가는 길이라 오른쪽 표시가 ↗다. */}
+          <SettingSection label="약관과 정보">
+            <SettingLinkRow
+              icon={ShieldCheck}
+              label="개인정보처리방침"
+              href={`${import.meta.env.BASE_URL}privacy.html`}
+            />
+            <SettingLinkRow icon={FileText} label="이용약관" href={`${import.meta.env.BASE_URL}terms.html`} />
+            <SettingLinkRow
+              icon={Scale}
+              label="오픈소스 및 기술 정보"
+              href={`${import.meta.env.BASE_URL}licenses.html`}
+            />
+          </SettingSection>
 
-          {/* 문의를 받았을 때 "어떤 코드를 쓰고 계신가"를 물어볼 수 있어야 한다.
-              누를 것이 없는 줄이라 아이콘 없이 옅게 적어둔다. */}
-          <p className="m-0 px-1 py-3 text-xs text-muted-foreground">
-            버전 {__APP_VERSION__} ({__BUILD_DATE__})
-          </p>
+          {/* 로그아웃을 목록에서 빼냈다.
+              예전에는 열세 번째 줄이라 끝까지 내려야 나왔고, 나와도 바로 위 '이용약관'과
+              똑같이 생겨서 눈에 걸리지 않았다. 버튼은 모양이 달라서 한눈에 찾힌다.
 
-          {/* 자주 쓰는 것(로그아웃)을 위에 두고, 되돌리기 어려운 것 둘은 아래로 내려
-              구분선으로 떼어놓는다. 손가락이 미끄러져도 위험한 쪽에 먼저 닿지 않도록. */}
-          <div className="my-2 h-px bg-border" />
+              버전은 그 아래 가운데로 내렸다. 누를 것이 없는 값이라 참고로만 있으면 된다 —
+              문의를 받았을 때 "어떤 코드를 쓰고 계신가"를 물어볼 수 있어야 해서 남긴다. */}
+          <div className="flex flex-col gap-2.5 pt-1">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => signOut()}
+              className="h-12 w-full rounded-xl text-[15px] font-semibold text-foreground/80"
+            >
+              <LogOut className="size-[18px] text-muted-foreground" />
+              로그아웃
+            </Button>
+            <p className="m-0 text-center text-[12.5px] font-medium tabular-nums text-muted-foreground">
+              버전 {__APP_VERSION__} ({__BUILD_DATE__})
+            </p>
+          </div>
 
-          <button
-            type="button"
-            onClick={() => signOut()}
-            className="flex w-full items-center gap-3 px-1 py-3 text-left text-sm text-foreground"
-          >
-            <LogOut className="size-4.5 text-muted-foreground" />
-            <span className="flex-1">로그아웃</span>
-          </button>
+          {/* 되돌릴 수 없는 둘은 목록 줄이 아니라 박스 안 버튼이다.
+              줄이면 스크롤하다 손가락이 스쳐도 열린다. 눌러야 할 자리를 따로 만들면
+              지나가다 닿을 일이 없다.
 
-          <div className="my-2 h-px bg-border" />
+              오른쪽에 '이 가족만 / 계정까지'라고 두 단어만 적어뒀던 것을 문장으로 풀었다.
+              두 단어로는 무엇이 다른지가 전달되지 않는다. */}
+          <div className="mt-0.5 mb-1 flex flex-col gap-[11px] rounded-[14px] border border-destructive/20 bg-destructive/5 p-4">
+            <p className="m-0 text-[13px] font-bold tracking-[-0.01em] text-destructive/85">되돌릴 수 없는 것</p>
 
-          <button
-            type="button"
-            onClick={() => setLeaveAsking(true)}
-            disabled={leaving}
-            className="flex w-full items-center gap-3 px-1 py-3 text-left text-sm text-destructive disabled:opacity-50"
-          >
-            <DoorOpen className="size-4.5" />
-            <span className="flex-1">{leaving ? '나가는 중…' : '가족 나가기'}</span>
-            <span className="text-xs text-muted-foreground">이 가족만</span>
-          </button>
+            <div className="flex items-center gap-3">
+              <div className="min-w-0 flex-1">
+                <p className="m-0 text-[15px] font-semibold tracking-[-0.015em] text-foreground">가족 나가기</p>
+                <p className="mt-px mb-0 text-[13px] font-medium break-keep text-muted-foreground">
+                  {family.name}에서만 빠져요
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setLeaveAsking(true)}
+                disabled={leaving}
+                className="h-10 shrink-0 rounded-[11px] border-destructive/30 px-3.5 text-sm font-semibold text-destructive/85"
+              >
+                {leaving ? '나가는 중…' : '나가기'}
+              </Button>
+            </div>
 
-          <button
-            type="button"
-            onClick={() => setDeleteStep('what')}
-            disabled={deleting}
-            className="flex w-full items-center gap-3 px-1 py-3 text-left text-sm text-destructive disabled:opacity-50"
-          >
-            <UserRoundX className="size-4.5" />
-            <span className="flex-1">{deleting ? '지우는 중…' : '계정 삭제'}</span>
-            <span className="text-xs text-muted-foreground">계정까지</span>
-          </button>
+            <div className="h-px bg-destructive/15" />
+
+            <div className="flex items-center gap-3">
+              <div className="min-w-0 flex-1">
+                <p className="m-0 text-[15px] font-semibold tracking-[-0.015em] text-foreground">계정 삭제</p>
+                <p className="mt-px mb-0 text-[13px] font-medium break-keep text-muted-foreground">
+                  모든 가족과 기프티콘이 지워져요
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setDeleteStep('what')}
+                disabled={deleting}
+                className="h-10 shrink-0 rounded-[11px] border-destructive/30 px-3.5 text-sm font-semibold text-destructive/85"
+              >
+                {deleting ? '지우는 중…' : '삭제'}
+              </Button>
+            </div>
+          </div>
         </div>
 
         {renameOpen && (
           <RenameSheet
             title="내 이름 바꾸기"
-            label="내 이름"
+            label="가족에게 보이는 이름"
             description="기프티콘에 적힌 받은 사람·사용한 사람 이름도 새 이름으로 함께 바뀌어요."
             initialValue={myName}
             placeholder="예: 태수"

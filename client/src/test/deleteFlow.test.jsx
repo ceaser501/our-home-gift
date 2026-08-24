@@ -58,7 +58,9 @@ describe('계정 삭제를 끝까지 누른다', () => {
   it('탈퇴하기까지 눌리고 서버를 부른다', async () => {
     render(<ProfileMenu onClose={() => {}} />);
 
-    await click('계정 삭제');
+    // 이름표가 아니라 그 옆 '삭제' 버튼을 누른다. 위험한 둘은 목록 줄이 아니라
+    // '되돌릴 수 없는 것' 박스 안 버튼이 됐다 — 스크롤하다 손가락이 스쳐도 안 열리게.
+    await click('삭제');
     expect(screen.queryByText('계정을 삭제할까요?')).toBeTruthy();
 
     await click('계속');
@@ -73,7 +75,7 @@ describe('계정 삭제를 끝까지 누른다', () => {
     deleteAccount.mockRejectedValue(new Error('storage.objects.owner 3건'));
 
     render(<ProfileMenu onClose={() => {}} />);
-    await click('계정 삭제');
+    await click('삭제');
     await click('계속');
     await click('탈퇴하기');
 

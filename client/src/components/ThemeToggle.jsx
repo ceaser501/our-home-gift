@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Moon, Sun } from 'lucide-react';
+import { SettingSwitchRow } from './SettingRow';
 
 // 실제 테마는 index.html의 인라인 스크립트가 앱이 그려지기 전에 정해둔다.
 // 여기서는 그 값을 그대로 읽어와서 버튼 아이콘만 맞춘다.
@@ -26,16 +27,13 @@ export default function ThemeToggle({ asRow = false }) {
   const isDark = theme === 'dark';
   const toggle = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'));
 
+  // 아이콘은 달로 고정한다. 예전에는 상태에 따라 해와 달이 바뀌었는데, 이제 상태는
+  // 오른쪽 스위치가 말한다. 아이콘까지 같이 바뀌면 무엇을 가리키는 줄인지가 흔들린다 —
+  // 이 줄은 '다크 모드'라는 설정 하나를 가리키는 자리다.
+  //
+  // 이 앱의 테마는 밝게·어둡게 둘뿐이라(시스템 자동 없음) 스위치가 맞는 모양이다.
   if (asRow) {
-    return (
-      <button type="button" onClick={toggle} className="flex w-full items-center gap-3 px-1 py-3 text-left text-sm">
-        {isDark ? <Sun className="size-4.5 text-muted-foreground" /> : <Moon className="size-4.5 text-muted-foreground" />}
-        <span className="flex-1 text-foreground">다크 모드</span>
-        <span className={isDark ? 'text-xs font-semibold text-primary' : 'text-xs text-muted-foreground'}>
-          {isDark ? '켜짐' : '꺼짐'}
-        </span>
-      </button>
-    );
+    return <SettingSwitchRow icon={Moon} label="다크 모드" on={isDark} onToggle={toggle} />;
   }
 
   return (
