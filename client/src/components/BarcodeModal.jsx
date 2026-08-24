@@ -78,7 +78,10 @@ export default function BarcodeModal({ gifticon, onClose, onUsed, onSpend }) {
       //
       // 그리는 크기는 화면 크기의 두 배다. 화면이 촘촘한 폰에서 220px짜리를 그대로
       // 늘리면 칸 경계가 흐려지는데, 두 배로 그려 반으로 접으면 고르게 남는다.
-      QRCode.toCanvas(canvas, gifticon.code, { width: QR_PX * 2, margin: 2 }, (err) => {
+      // 둘레 여백은 4칸이다. QR 규격이 정한 값이고, 리더기가 "여기서부터 코드"라고
+      // 알아보는 자리다. 2칸으로 두고 있었는데 대개는 읽히지만 매장 리더기 중에는
+      // 규격대로만 받는 것이 있다. 막대 바코드 쪽은 진작 여백을 넉넉히 주고 있었다.
+      QRCode.toCanvas(canvas, gifticon.code, { width: QR_PX * 2, margin: 4 }, (err) => {
         if (err) {
           setRenderError(true);
           return;
