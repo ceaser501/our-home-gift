@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { CheckCircle2, Heart, Info, MapPin, MoreVertical, Pencil, RotateCcw, Ticket, Trash2 } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { formatDday, formatDate, ddayUrgency } from '../utils/date';
+import { formatDday, formatDate, formatDateShortYear, ddayUrgency } from '../utils/date';
 import { nameTagColorClass, tagColorClass } from '../utils/tagColor';
 import { cn } from '@/lib/utils';
 import { useFamily } from '../FamilyContext';
@@ -158,7 +158,7 @@ export default function GifticonCard({
         urgent ? 'text-destructive' : 'text-muted-foreground'
       )}
     >
-      {formatDate(gifticon.expires_at)}까지
+      {formatDateShortYear(gifticon.expires_at)}까지
     </span>
   );
   // 기한이 급한 것과 이미 지난 것만 눌러서 연장 안내를 연다. 넉넉한 것은 안 누르게 둔다 —

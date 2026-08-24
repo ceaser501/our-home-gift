@@ -42,6 +42,25 @@ export function subscribeToActivities(familyId, onChange) {
   };
 }
 
+// 점검 공지가 올라오거나 내려가면 곧바로 받아야 한다.
+//
+// 다른 구독과 성격이 다르다. 저것들은 늦게 알아도 화면이 잠깐 낡을 뿐인데, 이건 등록을
+// 막고 여는 스위치다. 점검을 시작했는데 앱을 켜둔 사람이 그대로 등록해버리면 그 자료가
+// 어디로 가는지 아무도 모른다 — 실제로 그랬다. 공지를 띄운 뒤에도 등록이 됐고, 목록을
+// 당겨 새로고침해야 그제서야 막혔다.
+//
+// 가족으로 거르지 않는다. 공지는 모두에게 같은 것이라 필터를 걸 값이 없다.
+export function subscribeToNotices(onChange) {
+  const channel = supabase
+    .channel('notices')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'notices' }, onChange)
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}
+
 // 가족이 새로 들어오거나 나가거나 이름을 바꾸면, 헤더의 "가족 N명"과 구성원 목록도 같이 맞춘다.
 // 예전에는 가족 정보를 로그인 직후 한 번만 읽어서, 새 구성원이 들어와도 화면에는
 // 영영 나타나지 않았다(목록 새로고침은 기프티콘만 다시 불러온다).

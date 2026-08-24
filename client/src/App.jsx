@@ -20,7 +20,7 @@ import AlertDialog from './components/AlertDialog';
 import PullToRefresh from './components/PullToRefresh';
 import { listGifticons, updateGifticon, deleteGifticon, claimGifticon, releaseGifticon, spendVoucher, listNotices } from './api';
 import { blockingNotice, importantNotices, remainingLabel } from './utils/notices';
-import { subscribeToGifticons, subscribeToFamily } from './realtime';
+import { subscribeToGifticons, subscribeToFamily, subscribeToNotices } from './realtime';
 import { ensureSampleGifticon } from './sampleData';
 import { daysUntil, todayStr } from './utils/date';
 import { hasNewVersion } from './utils/version';
@@ -156,15 +156,29 @@ export default function App() {
   //
   // refreshTick은 목록을 다시 읽는 순간(당겨서 새로고침, 다른 앱 다녀오기)마다 바뀐다.
   // 점검이 시작되거나 끝난 것을 그때 따라잡는다.
+  // 언제 읽은 값인지. guardUpload가 이걸 보고 다시 물을지 정한다.
+  const noticesAtRef = useRef(0);
+
   useEffect(() => {
     let cancelled = false;
     listNotices().then((rows) => {
-      if (!cancelled) setNoticeRows(rows);
+      if (cancelled) return;
+      setNoticeRows(rows);
+      noticesAtRef.current = Date.now();
     });
     return () => {
       cancelled = true;
     };
   }, [refreshTick]);
+
+  // 공지가 올라오거나 내려가면 곧바로 받아온다.
+  //
+  // 이게 없으면 앱을 켜둔 사람은 점검이 시작된 줄 모르고 계속 등록한다. 실제로 그랬다 —
+  // 공지를 띄운 뒤에도 등록이 됐고, 목록을 당겨 새로고침해야 그제서야 막혔다. 작업이
+  // 갑자기 잡힐 때 그 틈으로 자료가 들어온다.
+  useEffect(() => {
+    return subscribeToNotices(() => setRefreshTick((n) => n + 1));
+  }, []);
 
   // 점검 중이면 등록 창을 열지 않고 그 공지를 그 자리에서 보여준다.
   //
@@ -173,20 +187,29 @@ export default function App() {
   // 모르고 잘 쓰고 나가는데, 그게 가장 좋은 결과다. 바코드는 저장된 것이라 점검 중에도
   // 그대로 된다.
   //
-  // 막을 때만 서버에 다시 물어본다. 손에 든 공지는 앱을 열 때나 다른 앱에 다녀올 때만
-  // 갱신되는데, 앱을 켜둔 채로 점검이 끝나면 그 사이 값이 낡는다. 그때 옛 답으로 막으면
-  // 사용자는 앱을 껐다 켜거나 목록을 당겨야 올릴 수 있게 된다 — 왜 막히는지 알 방법도 없다.
+  // 손에 든 답을 못 믿을 때는 다시 물어본다. 두 경우다.
   //
-  // 여는 쪽은 그대로 빠르다. 한 번 더 묻는 것은 어차피 막힐 참인 드문 경우뿐이라,
-  // 평소에 드는 비용이 없다.
+  //   막힌다고 알고 있을 때 — 점검이 그새 끝났을 수 있다. 옛 답으로 막으면 사용자는 앱을
+  //   껐다 켜거나 목록을 당겨야 올릴 수 있게 되고, 왜 막히는지 알 방법도 없다.
+  //
+  //   읽은 지 오래됐을 때 — 이쪽이 더 위험하다. 반대 방향으로 틀리는 것이라, 점검이 막
+  //   시작됐는데 열어주게 된다. 위 실시간 구독이 이걸 막아주지만 웹소켓은 조용히 끊길 수
+  //   있어서, 그때를 위한 두 번째 자물쇠를 둔다.
+  //
+  // 평소에는 실시간 구독이 값을 계속 새것으로 유지하므로 여기서 기다릴 일이 없다.
+  const NOTICE_STALE_MS = 60 * 1000;
+
   async function guardUpload(open) {
-    if (!blockingNotice(noticeRows)) {
+    const stale = Date.now() - noticesAtRef.current > NOTICE_STALE_MS;
+
+    if (!stale && !blockingNotice(noticeRows)) {
       open();
       return;
     }
 
     const fresh = await listNotices().catch(() => noticeRows);
     setNoticeRows(fresh);
+    noticesAtRef.current = Date.now();
 
     const blocked = blockingNotice(fresh);
     if (blocked) {

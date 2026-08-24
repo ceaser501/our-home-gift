@@ -9,6 +9,7 @@ import { PhotoFrame, PhotoNav } from './PhotoViewer';
 import { PRIMARY_BUTTON, SECONDARY_BUTTON } from '../utils/sheetUi';
 import { cn } from '@/lib/utils';
 import { formatShortDate } from '../utils/date';
+import { groupDigits, readableCode } from '../utils/code';
 import { useFamily } from '../FamilyContext';
 import useBackClose from '../utils/useBackClose';
 
@@ -23,35 +24,9 @@ const ZXING_TO_JSBARCODE = {
   CODABAR: 'codabar',
 };
 
-// 사람에게 불러줄 번호.
-//
-// QR에는 값만 들어 있지 않다. 편의점 쿠폰은 이런 모양이다 — IX;1;9816401685019;;
-// 그림을 다시 그릴 때는 이 껍데기까지 그대로여야 리더기가 원본과 같게 읽는다. 그런데
-// 점원이 "번호 불러주세요" 할 때 읽어야 하는 것은 그 안의 9816401685019다.
-//
-// 숫자 덩어리가 하나일 때만 벗긴다. 둘 이상이면 어느 쪽이 번호인지 알 수 없어서
-// 원래 값을 그대로 보여준다 — 잘못된 번호를 자신 있게 보여주는 것이 제일 나쁘다.
-export function readableCode(code) {
-  const value = String(code || '');
-  if (!value || /^[0-9]+$/.test(value)) return value;
-  const runs = value.match(/[0-9]{6,}/g);
-  return runs && runs.length === 1 ? runs[0] : value;
-}
-
-// 네 자리씩 띄운다. 열세 자리를 한 덩어리로 보면 불러주다가 자리를 잃는다.
-// 숫자만 있을 때만 끊는다 — 글자가 섞인 값은 어디가 자리인지 알 수 없다.
-//
-// 마지막 한 자리가 홀로 남으면 앞 묶음에 붙인다. 열세 자리를 4씩 끊으면 '9816 4016 8501 9'가
-// 되는데, 끝에 뜬 '9'는 불러줄 때 앞자리를 빼먹은 것처럼 들린다. '9816 4016 85019'로 둔다.
-export function groupDigits(code) {
-  const value = String(code || '');
-  if (!/^[0-9]+$/.test(value)) return value;
-  const groups = value.match(/\d{1,4}/g) || [];
-  if (groups.length > 1 && groups.at(-1).length === 1) {
-    groups[groups.length - 2] += groups.pop();
-  }
-  return groups.join(' ');
-}
+// 번호를 다루는 규칙은 utils/code.js에 있다. 예전부터 이 파일에서 가져다 쓰던 곳들이
+// 있어서 이름은 그대로 내보낸다.
+export { groupDigits, readableCode };
 
 export default function BarcodeModal({ gifticon, onClose, onUsed, onSpend }) {
   // 뒤로가기로 이 창을 닫는다. 안 그러면 설치해서 쓸 때 앱이 통째로 꺼진다.
@@ -89,7 +64,10 @@ export default function BarcodeModal({ gifticon, onClose, onUsed, onSpend }) {
     const format = gifticon.code_type;
 
     if (format === 'QR_CODE') {
-      QRCode.toCanvas(canvas, gifticon.code, { width: 320, margin: 2 }, (err) => {
+      // 화면에는 220px로 세운다(아래 max-w). 그 두 배로 그려야 줄일 때 딱 반으로 접혀서
+      // 칸이 고르게 남는다 — 320에서 220으로 줄이면 1.45배라 칸마다 픽셀 수가 달라져
+      // 삐뚤빼뚤해 보였다.
+      QRCode.toCanvas(canvas, gifticon.code, { width: 440, margin: 2 }, (err) => {
         if (err) setRenderError(true);
       });
       return;
@@ -221,11 +199,18 @@ export default function BarcodeModal({ gifticon, onClose, onUsed, onSpend }) {
                 // 막대 바코드는 폭을 다 쓴다 — 넓을수록 리더기가 잘 읽는다.
                 // QR은 다르다. 정사각형이라 폭을 다 쓰면 화면 절반을 먹는데, 리더기는
                 // 그만큼 클 필요가 없다. 220px에서 멈추고 가운데 세운다.
+                // h-auto가 꼭 있어야 한다. canvas는 img와 달리 브라우저 기본값에
+                // height:auto가 안 걸려 있어서, 폭만 줄이면 높이는 그린 크기 그대로 남는다 —
+                // 정사각형 QR이 가로로만 눌려 찌그러진 이유가 이것이다.
+                //
+                // 픽셀 각을 살리는 것(pixelated)은 막대 바코드에만 건다. 막대는 경계가
+                // 흐려지면 인식이 나빠지는데, QR은 줄여 그릴 때 각을 살리면 칸이 고르지
+                // 않게 남아 오히려 지저분해진다.
                 <canvas
                   ref={setCanvas}
                   className={cn(
-                    'w-full [image-rendering:pixelated]',
-                    isQr && 'mx-auto max-w-[220px]'
+                    'h-auto w-full',
+                    isQr ? 'mx-auto max-w-[220px]' : '[image-rendering:pixelated]'
                   )}
                 />
               ) : (

@@ -1444,6 +1444,10 @@ grant execute on function public.user_delete_blockers(uuid) to service_role;
 
 -- 가족 중 누가 기프티콘을 올리거나 가족이 새로 들어오면, 다른 사람 화면에도 새로고침 없이
 -- 바로 보이게 한다. 이 publication에 테이블을 넣어둬야 Supabase가 변경 사실을 앱으로 알려준다.
+--
+-- notices가 여기 있는 이유는 다른 것들과 다르다. 저것들은 늦게 알아도 화면이 잠깐 낡을
+-- 뿐인데, 공지는 등록을 막고 여는 스위치다. 점검을 시작했는데 앱을 켜둔 사람이 그대로
+-- 등록해버리면 그 자료가 어디로 가는지 아무도 모른다 — 실제로 그랬다.
 -- (누가 무엇을 받아볼지는 위의 RLS 정책이 그대로 판단하므로, 남의 가족 것은 오지 않는다.)
 -- 이미 들어 있으면 다시 넣을 때 오류가 나므로 확인하고 넣는다.
 do $$
@@ -1454,7 +1458,7 @@ begin
     return;
   end if;
 
-  foreach target in array array['gifticons', 'family_members', 'families', 'family_join_requests', 'activities'] loop
+  foreach target in array array['gifticons', 'family_members', 'families', 'family_join_requests', 'activities', 'notices'] loop
     if not exists (
       select 1 from pg_publication_tables
       where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = target

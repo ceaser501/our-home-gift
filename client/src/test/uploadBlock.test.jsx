@@ -23,6 +23,7 @@ vi.mock('../api', () => ({
 vi.mock('../realtime', () => ({
   subscribeToGifticons: () => () => {},
   subscribeToFamily: () => () => {},
+  subscribeToNotices: () => () => {},
 }));
 
 vi.mock('../sampleData', () => ({ ensureSampleGifticon: vi.fn(async () => {}) }));

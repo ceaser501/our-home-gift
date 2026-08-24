@@ -12,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import AlertDialog from './AlertDialog';
-import { readableCode } from './BarcodeModal';
+import { readableCode, wrapCode } from '../utils/code';
 import useBackClose from '../utils/useBackClose';
 import { groupImages } from '../utils/gallery';
 import { todayStr } from '../utils/date';
@@ -803,27 +803,23 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
             {/* 번호도 '무엇인가요'다. 한때 기한·금액과 한 묶음에 뒀는데, 그 묶음의 이름이
                 무엇이 되든 번호는 거기 속하지 않는다 — 이 번호가 이 기프티콘을 가리키는
                 이름이고, 계산대에서 실제로 내미는 것도 이것이다. */}
+            {/* 껍데기는 화면에서 감추되 저장값에는 남긴다.
+                편의점 쿠폰의 QR에는 번호만 들어 있지 않다 — IX;1;9816401685019;; 처럼
+                앞뒤가 붙는다. 저장한 값으로 QR을 다시 그리기 때문에 그 앞뒤를 잃으면
+                매장 리더기가 원본과 다르게 읽는다.
+
+                그렇다고 화면에 그대로 두면 사람은 자기 번호가 아닌 줄 알고 지운다. 그래서
+                보여주는 것은 숫자뿐이고, 고쳐 적으면 기억해둔 앞뒤에 다시 끼워 넣는다.
+                한때 아래에 "매장에서 부를 번호는 …" 한 줄을 달아뒀는데, 그건 화면이 왜
+                이상한지를 변명하는 줄이었다. 이상하지 않게 만드는 편이 맞다. */}
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="f-code">바코드 번호</Label>
               <Input
                 id="f-code"
-                value={form.code}
-                onChange={(e) => updateField('code', e.target.value)}
+                value={readableCode(form.code)}
+                onChange={(e) => updateField('code', wrapCode(form.code, e.target.value))}
                 placeholder="사진에서 읽거나 직접 입력"
               />
-              {/* 편의점 쿠폰의 QR에는 번호만 들어 있지 않다 — IX;1;9816401685019;; 처럼
-                  껍데기가 붙는다. 이 칸에는 그 값을 그대로 둬야 한다. 저장한 값으로 QR을
-                  다시 그리는데, 껍데기를 벗겨 저장하면 매장 리더기가 원본과 다르게 읽는다.
-
-                  대신 사람이 부를 번호를 아래에 적어준다. 이 칸에 낯선 글자가 왜 들어
-                  있는지도 이 한 줄이 같이 답한다. */}
-              {form.code && readableCode(form.code) !== form.code && (
-                <p className="m-0 text-xs break-all text-muted-foreground">
-                  매장에서 부를 번호는 <b className="font-semibold text-foreground">{readableCode(form.code)}</b> 예요.
-                  <br />
-                  위 칸은 그대로 두셔야 바코드가 제대로 그려져요.
-                </p>
-              )}
             </div>
           </FieldGroup>
 

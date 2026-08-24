@@ -33,6 +33,15 @@ export function formatDate(dateStr) {
   return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
 }
 
+// 목록 카드의 기한처럼 자리가 빠듯한 데서 쓴다. '2026.08.27까지'는 열세 자인데 '26.08.27까지'는
+// 열한 자다. 앞 두 자리는 어차피 20이라 아무것도 알려주지 않는다.
+//
+// 연도를 아주 떼지는 않는다. 기한은 올해 것도 내년 것도 있어서, 없으면 언제까지인지를 잃는다.
+export function formatDateShortYear(dateStr) {
+  const full = formatDate(dateStr);
+  return full.length === 10 ? full.slice(2) : full;
+}
+
 // 메모 날짜처럼 최근 것만 놓이는 자리. 올해 것이면 연도를 뗀다 — '2026.08.19'는
 // 열 자리를 쓰면서 여덟 자리가 늘 같은 값이다.
 //
