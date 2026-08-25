@@ -154,8 +154,6 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
   const [autoFilled, setAutoFilled] = useState(false);
   // 막대가 사진에서 너무 작게 찍혔는가. 앱 화면이나 목록을 통째로 찍은 캡처가 그렇다.
   const [smallBarcode, setSmallBarcode] = useState(false);
-  // 바코드가 없어서 뗀 사진 장수. 말없이 빼면 올린 사람은 앱이 삼킨 줄 안다.
-  const [droppedShots, setDroppedShots] = useState(0);
   // 모델이 금액권으로 봤는지. 켜주지는 않고 귀띔만 한다.
   const [voucherHint, setVoucherHint] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -229,7 +227,6 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
     setProgress({ step: 'barcode', current: 1, total: selected.length });
     setAutoFilled(false);
     setSmallBarcode(false);
-    setDroppedShots(0);
 
     // 여러 장을 골랐는데 서로 다른 기프티콘이면, 한 건짜리인 이 화면으로는 담을 수 없다.
     //
@@ -250,13 +247,16 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
         // 얕은 판이 "한 건"이라고 했는데 못 읽은 사진이 남아 있으면, 그건 한 건이라는
         // 뜻이 아니라 **아직 모른다**는 뜻이다.
         //
-        // 얕은 판은 일부러 약하다(1600px, 정밀 탐색 없음). 사진첩 훑기는 그 뒤에 정밀한
-        // 판을 한 번 더 돌려 놓친 것을 건지는데, 이쪽에는 그 두 번째가 없었다. 그래서
-        // 흐릿하게 찍힌 기프티콘 한 장이 안 읽히면 두 건이 한 건으로 보였고, 서로 다른
-        // 기프티콘의 사진이 통째로 한 건에 합쳐져 남의 금액과 기한이 들어갔다.
+        // 얕은 판은 일부러 약하다(1600px, 정밀 탐색 없음). 못 읽은 사진을 버리기로 한
+        // 뒤로 이 한 번이 더 중요해졌다 — 예전에는 안 읽히면 옆 건에 붙어 값이 섞였고,
+        // 지금은 안 읽히면 그 기프티콘이 통째로 사라진다. 흐릿하게 찍힌 한 장이
+        // 그렇게 없어지면 사용자는 올린 줄 알고 지나간다.
         //
-        // 모르면 더 봐야지, 모르는 채로 합치면 안 된다. 다만 못 읽은 사진만 다시 본다 —
-        // 정밀 탐색은 느려서, 이미 읽힌 것까지 다시 돌리면 잘 되던 경우가 같이 느려진다.
+        // 못 읽은 사진만 다시 본다. 정밀 탐색은 느려서, 이미 읽힌 것까지 다시 돌리면
+        // 잘 되던 경우가 같이 느려진다.
+        //
+        // 후보가 둘 이상이면 여기서 안 돌린다. 그건 다건 화면으로 넘어가고, 거기서
+        // 처음부터 정밀 탐색으로 다시 읽는다(GalleryScanSheet). 두 번 돌릴 이유가 없다.
         if (grouped.candidates.length <= 1 && grouped.missed.length > 0) {
           const again = await groupImages(
             grouped.missed.map((image) => image.file),
@@ -270,14 +270,10 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
         // 한동안은 못 읽은 사진까지 서버에 한 장씩 물어보고 그 답을 셌다. 번호가 나오면
         // 딴 물건(바코드 없이 번호만 인쇄된 파인트 아이스크림 쿠폰), 안 나오면 곁가지
         // 사진이라는 판단이었는데, 그 판단이 틀리면 곁가지가 남의 건에 붙어 남의 금액과
-        // 기한을 들여왔다.
+        // 기한을 들여왔다. 그 물음 한 번에 사진 한 장을 줄여 올리고 모델을 기다리는
+        // 값이 붙었고, 못 읽은 사진 두 장이면 그것만으로 몇 초였다.
         //
-        // 이제 안 가른다. 바코드가 읽힌 사진만 한 건으로 센다. 못 읽은 사진은 다건
-        // 화면에서 버려지고, 몇 장을 뺐는지 거기서 말해준다.
-        //
-        // 한 장도 못 읽었으면 여기서 멈추지 않고 아래 등록 폼으로 간다. 그쪽은 서버가
-        // 사진을 눈으로 읽어주는 길이라, 막대가 없는 기프티콘은 그 길로 들어온다.
-        // 붙일 곳이 없어서 잘못 붙을 일도 없다 — 고른 사진이 통째로 한 건이다.
+        // 이제 안 가르고 안 묻는다. 바코드가 읽힌 사진만 한 건으로 센다.
         if (grouped.candidates.length > 1) {
           setAnalyzing(false);
           setProgress(null);
@@ -285,24 +281,24 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
           return;
         }
 
-        // 한 건인데 못 읽은 사진이 섞여 있으면, 못 읽은 쪽을 떼고 간다.
+        // 한 건이면 그 건의 사진만 데리고 간다. 못 읽은 사진은 여기서 놓는다.
         //
         // 붙일 곳이 하나뿐이라 해서 그게 그 건의 사진이라는 뜻은 아니다. 금액이 적힌
         // 정보 캡처일 수도 있고, 바코드 없이 번호만 인쇄된 딴 기프티콘일 수도 있다.
         // 둘을 그림만 보고 가를 방법이 없어서 여기서 곁가지가 남의 건으로 들어갔다.
         //
-        // 이제 안 가르고 뗀다. 정보 캡처의 금액을 잃지만, 그건 등록 화면에서 손으로
-        // 적을 수 있는 값이다. 잘못 들어온 남의 기한은 손으로 고칠 기회조차 없다 —
-        // 틀린 줄을 모르기 때문이다.
+        // 이제 안 가른다. 바코드가 있어서 기프티콘으로 알아본 사진만 취급한다.
+        // 뗐다고 말하지도 않는다 — 애초에 대상이 아닌 사진이라, 알려줄 것이 없다.
+        //
+        // 떼는 자리가 prepareImages 앞인 것이 중요하다. 버릴 사진을 줄이고 인코딩하는
+        // 데만 한 장에 수백 ms가 든다.
         const drop = new Set((grouped.missed ?? []).map((image) => image.file));
         if (drop.size > 0) {
           const kept = selected.filter((file) => !drop.has(file));
-          // 한 장도 안 남으면 떼지 않는다. 그건 곁가지가 아니라 고른 사진 전부이고,
-          // 아래 등록 폼은 서버가 사진을 눈으로 읽어주는 길이라 막대가 없어도 들어간다.
-          if (kept.length > 0) {
-            setDroppedShots(selected.length - kept.length);
-            selected = kept;
-          }
+          // 한 장도 안 남으면 떼지 않는다. 그건 곁가지가 아니라 고른 사진 전부다.
+          // 아래 등록 폼은 서버가 사진에 인쇄된 숫자를 눈으로 읽어주는 길이라, 막대가
+          // 뭉개진 기프티콘은 그 길로 들어온다. 붙을 곳이 없으니 섞일 일도 없다.
+          if (kept.length > 0) selected = kept;
         }
       } catch {
         // 묶어보지 못했으면 예전 길로 간다. 한 건으로 읽히면 그것대로 맞다.
@@ -760,11 +756,6 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
           {smallBarcode && !analyzing && (
             <p className="text-warning m-0 text-sm leading-relaxed break-keep">
               바코드가 사진에서 작게 찍혀 있어요. 다시 한번 확인해주세요.
-            </p>
-          )}
-          {droppedShots > 0 && !analyzing && (
-            <p className="text-warning m-0 text-sm leading-relaxed break-keep">
-              바코드가 없는 사진 {droppedShots}장은 뺐어요. 따로 올려주세요.
             </p>
           )}
           {error && <p className="text-sm text-destructive">{error}</p>}

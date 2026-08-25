@@ -945,14 +945,15 @@ async function collect({ images, read: readImage, pass, isRegistered, skipCodes,
     }
     if (!found?.code) {
       // 막대로 보이는지를 함께 들고 간다. 화면이 "여기 있을지도 모른다"고 말할 때 쓴다.
-      // 직접 고른 사진일 때는 읽어둔 그림도 들고 간다 — 화면이 이걸 서버에 물어본다.
       //
-      // 사진첩 훑기에서는 못 읽은 것 전부를 들고 갈 수 없다. 서른 장을 훑으면 스물몇 장이
-      // 밥 사진이라, 그 base64가 그대로 쌓인다. 막대처럼 보인 것만, 그것도 앞에서부터
-      // 몇 장까지만 들고 간다(진단용. 출시 전에 뺀다).
+      // 그림(base64)은 들고 가지 않는다. 한때는 직접 고른 사진일 때 들고 가서 화면이
+      // 서버에 물어봤는데, 이제 못 읽은 사진은 아무 데도 안 쓰고 버린다. 한 장에 수백
+      // KB라, 안 쓸 것을 들고 있으면 고른 장수만큼 그대로 쌓인다.
+      //
+      // 막대처럼 보인 것 몇 장만 예외로 남긴다(진단용. 출시 전에 뺀다).
       const bars = Boolean(found?.bars);
-      const withShot = rescueMissed || (bars && diagShots < DIAG_SHOTS);
-      if (withShot && !rescueMissed) diagShots += 1;
+      const withShot = bars && diagShots < DIAG_SHOTS;
+      if (withShot) diagShots += 1;
       // hint는 진단용이다(왜 못 읽었는지 재둔 치수). 출시 때 함께 뺀다.
       missed.push({ ...image, bars, hint: found?.hint || null, ...(withShot ? { data: read.data } : null) });
       continue;

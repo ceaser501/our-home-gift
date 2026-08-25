@@ -212,13 +212,13 @@ describe('groupImages — 고른 사진을 묶는다', () => {
     expect(tally.alreadyHave).toBe(1);
   });
 
-  // 바코드가 없는 사진을 여기서 아무 데도 붙이지 않는다.
+  // 바코드가 없는 사진은 어디에도 붙지 않는다.
   //
-  // 한때 후보가 하나뿐이면 그 건에 붙였다. 그런데 바코드 없이 번호만 인쇄된 기프티콘이
-  // 있어서(파인트 아이스크림 쿠폰) 그것까지 곁가지로 빨려 들어갔다. 곁가지인지 딴
-  // 물건인지는 서버가 읽어야 아는 것이라, 그림을 들려 missed로 돌려보내고 판단은
-  // 화면에 맡긴다(GalleryScanSheet의 rescued·foldRescued).
-  it('바코드 없는 사진은 그림을 들려 missed로 돌려준다', async () => {
+  // 한때 후보가 하나뿐이면 그 건에 붙였고, 그다음에는 그림을 들려 보내 화면이 서버에
+  // 물어보게 했다. 둘 다 "이 사진이 어느 건 것인가"를 맞히는 일이고, 틀리면 남의
+  // 금액과 기한이 멀쩡한 건에 들어왔다. 이제 맞히지 않는다 — 바코드가 있어서
+  // 기프티콘으로 알아본 사진만 취급한다.
+  it('바코드 없는 사진은 후보에 안 붙고 그림도 안 들고 온다', async () => {
     barcodes.set('original.jpg', { code: '111', coverage: 0.5 });
     // info-shot.jpg는 등록하지 않는다 — 바코드가 없다.
 
@@ -227,8 +227,8 @@ describe('groupImages — 고른 사진을 묶는다', () => {
     expect(candidates).toHaveLength(1);
     expect(candidates[0].images).not.toContain(btoa('info-shot.jpg'));
     expect(missed).toHaveLength(1);
-    // 그림이 없으면 화면이 서버에 물어볼 수가 없다.
-    expect(missed[0].data).toBe(btoa('info-shot.jpg'));
+    // 쓸 데가 없는 base64를 들고 있으면 고른 장수만큼 그대로 쌓인다.
+    expect(missed[0].data).toBeUndefined();
     expect(tally.noCode).toBe(1);
   });
 

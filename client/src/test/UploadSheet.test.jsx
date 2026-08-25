@@ -181,7 +181,9 @@ describe('여러 장을 올렸을 때 한 건인지 가르는 기준', () => {
     expect(lastCall[0][0].name).toBe('starbucks.jpg');
   });
 
-  it('뗀 장수를 말해준다', async () => {
+  // 뗐다고 말하지 않는다. 바코드가 없는 사진은 애초에 이 앱이 다루는 것이 아니라서,
+  // "뺐어요"라고 하면 넣으려다 못 넣은 것처럼 들린다.
+  it('뗀 것을 굳이 말하지 않는다', async () => {
     const info = new File(['x'], 'info.jpg', { type: 'image/jpeg' });
     groupImages
       .mockResolvedValueOnce({
@@ -197,7 +199,8 @@ describe('여러 장을 올렸을 때 한 건인지 가르는 기준', () => {
       target: { files: [new File(['x'], 'starbucks.jpg', { type: 'image/jpeg' }), info] },
     });
 
-    expect(await screen.findByText(/바코드가 없는 사진 1장은 뺐어요/, {}, { timeout: 3000 })).toBeTruthy();
+    await waitFor(() => expect(prepareImages).toHaveBeenCalled());
+    expect(screen.queryByText(/뺐어요/)).toBeNull();
   });
 
   // 한 장도 못 읽었으면 떼지 않는다. 그건 곁가지가 아니라 고른 사진 전부이고,

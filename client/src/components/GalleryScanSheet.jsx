@@ -529,8 +529,6 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
   const [dismissedIds, setDismissedIds] = useState([]);
   // 바코드를 못 읽어 후보가 안 된 사진들. 아래에서 폴더별로 세어 알려준다.
   const [missedShots, setMissedShots] = useState([]);
-  // 직접 고른 사진 중 바코드가 없어 버린 장수. 말없이 빼면 삼킨 줄 안다.
-  const [droppedPicks, setDroppedPicks] = useState(0);
   // 금액권으로 넣을 후보. 판정이 확실하지 않아서 켜는 건 사람이 한다.
   const [voucherIds, setVoucherIds] = useState([]);
   const [scanned, setScanned] = useState(0);
@@ -638,7 +636,6 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
     setCandidates([]);
     setDismissedIds([]);
     setMissedShots([]);
-    setDroppedPicks(0);
     setVoucherIds([]);
     setResult(null);
     setDigging(false);
@@ -732,9 +729,6 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
       // 세우지도 않는다 — 붙일 곳을 고르는 판단이 사라지면 잘못 붙을 일도 없다.
       // 파인트처럼 막대가 없는 것은 직접 등록으로 올린다. 그 길은 한 장을 서버가 눈으로
       // 읽어주므로 원래 되던 길이고, 애초에 흔한 경우가 아니다.
-      //
-      // 몇 장을 뺐는지는 아래 안내가 말해준다. 말없이 빼면 올린 사람은 앱이 삼킨 줄 안다.
-      if (picked) setDroppedPicks((scan.missed ?? []).length);
 
       const keep = new Set(found.map((candidate) => candidate.id));
       setCandidates((prev) => prev.filter((candidate) => keep.has(candidate.id)));
@@ -1221,11 +1215,6 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
   // 그래서 사연은 줄로 나누고 할 일은 한 번만 적는다.
   const skippedNotes = useMemo(() => {
     const notes = [];
-    // 직접 고른 사진에서 바코드가 없어 뺀 것들. 이제 붙이지도 세우지도 않고 버리므로,
-    // 여기서 말하지 않으면 올린 사람은 앱이 삼킨 줄 안다.
-    if (picked && droppedPicks > 0) {
-      notes.push(`바코드가 없는 사진 ${droppedPicks}장`);
-    }
     // 사진첩을 훑었을 때만. 폴더를 적어야 어디를 열어볼지 정해진다 — 스물몇 장이
     // 스크린샷이면 대개 밥 사진이고, 기프티콘은 카카오톡이나 다운로드에 있다.
     if (!picked && missedByFolder.length > 0) {
@@ -1236,7 +1225,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
       notes.push(`바코드가 너무 작게 찍힌 사진 ${tally.tooSmall}장`);
     }
     return notes;
-  }, [picked, tally, missedByFolder, droppedPicks]);
+  }, [picked, tally, missedByFolder]);
 
   // ── 진단용. 출시 전에 이 블록과 아래 화면 조각을 함께 뺀다 ──────────────────
   //
@@ -1998,14 +1987,6 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
               {result.noExpiry > 0 && (
                 <p className="m-0 text-sm leading-relaxed break-keep text-muted-foreground">
                   사용기한이 빈 게 {result.noExpiry}개 있어요. 목록에서 수정으로 채워주세요.
-                </p>
-              )}
-
-              {/* 바코드가 없어 뺀 사진. 붙일 곳을 고르는 판단을 없앤 대가라, 말없이
-                  빼면 올린 사람은 앱이 삼킨 줄 안다. */}
-              {droppedPicks > 0 && (
-                <p className="m-0 text-sm leading-relaxed break-keep text-muted-foreground">
-                  바코드가 없는 사진 {droppedPicks}장은 뺐어요. 직접 등록으로 올려주세요.
                 </p>
               )}
 

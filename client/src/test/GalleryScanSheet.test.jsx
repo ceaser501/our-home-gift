@@ -314,8 +314,9 @@ describe('GalleryScanSheet', () => {
     expect(saved.amount).toBeFalsy();
   });
 
-  // 뺐으면 뺐다고 말한다. 말없이 빼면 올린 사람은 앱이 삼킨 줄 안다.
-  it('바코드가 없어 뺀 장수를 말해준다', async () => {
+  // 뺐다고 말하지 않는다. 바코드가 없는 사진은 애초에 이 앱이 다루는 것이 아니라서,
+  // "뺐어요"라고 하면 넣으려다 못 넣은 것처럼 들린다.
+  it('바코드가 없어 뺀 것을 굳이 말하지 않는다', async () => {
     groupImages.mockResolvedValue({
       candidates: [candidate('a', '111')],
       missed: [
@@ -329,10 +330,9 @@ describe('GalleryScanSheet', () => {
     const files = [new File(['x'], '1.jpg'), new File(['x'], '2.jpg'), new File(['x'], '3.jpg')];
     render(<GalleryScanSheet files={files} onRegistered={() => {}} onClose={() => {}} />);
 
-    // 등록을 마친 결과 화면에서 말한다. 목록 아래에서 말하면 아직 등록도 안 한 사람이
-    // 못 넣은 것부터 읽게 된다(SHOW_SKIPPED_NOTES 주석 참고).
     (await screen.findByRole('button', { name: /1개 등록/ }, { timeout: 3000 })).click();
-    expect(await screen.findByText(/바코드가 없는 사진 2장/, {}, { timeout: 3000 })).toBeTruthy();
+    await waitFor(() => expect(createGifticon).toHaveBeenCalled(), { timeout: 3000 });
+    expect(screen.queryByText(/바코드가 없는 사진/)).toBeNull();
   });
 
   // 버린 사진이 카드로 남으면 "바코드 번호를 못 읽었어요"가 목록에 걸려서,
