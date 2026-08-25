@@ -37,7 +37,8 @@ vi.mock('../utils/shareTarget', () => ({
 // 훑기는 앱으로 설치했을 때만 있다. 여기서는 켠 것으로 두고 그 버튼도 막히는지 본다.
 vi.mock('../utils/gallery', () => ({
   isGalleryScanSupported: () => true,
-  isAutoScanOn: () => false,
+  autoScanDue: () => false,
+  markAutoScanRan: () => {},
 }));
 
 vi.mock('../FamilyContext', () => ({

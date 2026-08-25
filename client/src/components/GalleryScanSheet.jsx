@@ -529,6 +529,8 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
   const [dismissedIds, setDismissedIds] = useState([]);
   // 바코드를 못 읽어 후보가 안 된 사진들. 아래에서 폴더별로 세어 알려준다.
   const [missedShots, setMissedShots] = useState([]);
+  // 직접 고른 사진 중 바코드가 없어 버린 장수. 말없이 빼면 삼킨 줄 안다.
+  const [droppedPicks, setDroppedPicks] = useState(0);
   // 금액권으로 넣을 후보. 판정이 확실하지 않아서 켜는 건 사람이 한다.
   const [voucherIds, setVoucherIds] = useState([]);
   const [scanned, setScanned] = useState(0);
@@ -636,6 +638,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
     setCandidates([]);
     setDismissedIds([]);
     setMissedShots([]);
+    setDroppedPicks(0);
     setVoucherIds([]);
     setResult(null);
     setDigging(false);
@@ -718,39 +721,20 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
       // 아래 안내로 말해준다.
       found = scan.candidates.filter((candidate) => !candidate.tooSmall);
 
-      // 못 읽은 사진도 후보로 세운다 — 직접 고른 사진일 때만.
+      // 바코드를 못 읽은 사진은 여기서 끝난다.
       //
-      // 같은 `+`인데 한 장을 올리면 등록되고 여러 장에 섞어 올리면 못 들어가는 일이
-      // 있었다. 읽는 길이 달라서다. 한 장은 서버가 사진을 보고 인쇄된 숫자를 눈으로
-      // 읽어준다. 여러 장은 브라우저가 막대를 읽고, 못 읽으면 후보가 안 만들어져 서버에
-      // 아예 가지 못한다. 카톡이 404픽셀로 줄여 보낸 배스킨 카드와, 바코드 없이 번호만
-      // 인쇄된 파인트 아이스크림 쿠폰이 그렇게 빠졌다.
+      // 한동안은 이것들도 후보로 세워 서버에 한 장씩 물어봤다. 번호가 나오면 딴 물건이고
+      // (바코드 없이 번호만 인쇄된 파인트 아이스크림 쿠폰) 안 나오면 곁가지 사진이라는
+      // 판단이었는데, 그 판단이 틀리면 곁가지가 남의 건에 붙어 남의 금액과 기한을
+      // 들여왔다. 실제로 여러 번 돌아왔다.
       //
-      // 막대가 보이는지는 가리지 않는다. 파인트에는 막대가 없다 — 글자뿐이다. 그림만
-      // 봐서는 곁가지인지 딴 물건인지 알 수 없고, 그건 서버가 읽어야 안다.
+      // 이제 안 가른다. 바코드가 읽힌 사진만 한 건이 된다. 못 읽은 사진은 붙이지도,
+      // 세우지도 않는다 — 붙일 곳을 고르는 판단이 사라지면 잘못 붙을 일도 없다.
+      // 파인트처럼 막대가 없는 것은 직접 등록으로 올린다. 그 길은 한 장을 서버가 눈으로
+      // 읽어주므로 원래 되던 길이고, 애초에 흔한 경우가 아니다.
       //
-      // 번호가 없는 것으로 밝혀지면 아래 foldRescued가 접는다.
-      // 사진첩 훑기에는 하지 않는다 — 수백 장을 하나씩 물으면 하루 한도가 날아간다.
-      if (picked) {
-        const rescued = (scan.missed ?? [])
-          .filter((image) => image.data)
-          .map((image) => ({
-            id: image.id,
-            name: image.name,
-            bucket: image.bucket,
-            addedAt: image.addedAt,
-            code: null,
-            codeType: null,
-            images: [image.data],
-            tooSmall: false,
-            // 접을 후보를 가리는 표시. 번호를 원래 알던 후보와 섞이면 안 된다.
-            rescued: true,
-          }));
-        if (rescued.length > 0) {
-          found = [...found, ...rescued];
-          setCandidates((prev) => [...prev, ...rescued]);
-        }
-      }
+      // 몇 장을 뺐는지는 아래 안내가 말해준다. 말없이 빼면 올린 사람은 앱이 삼킨 줄 안다.
+      if (picked) setDroppedPicks((scan.missed ?? []).length);
 
       const keep = new Set(found.map((candidate) => candidate.id));
       setCandidates((prev) => prev.filter((candidate) => keep.has(candidate.id)));
@@ -901,58 +885,6 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
   }
 
   /**
-   * 번호가 없는 것으로 밝혀진 후보를 접는다.
-   *
-   * 못 읽은 사진은 일단 다 후보로 세워 서버에 물어봤다. 답이 오면 둘로 갈린다 —
-   * 번호가 나온 것은 딴 물건이고(파인트 아이스크림 쿠폰), 안 나온 것은 곁가지 사진이다
-   * (금액만 적힌 정보 캡처).
-   *
-   * 곁가지는 어느 건에 붙는지 알 수 없는 게 원칙이라, 번호가 있는 후보가 하나뿐일 때만
-   * 붙인다. 여럿이면 그냥 뺀다 — 카드로 남겨두면 "바코드 번호를 못 읽었어요"가 목록에
-   * 걸려서, 사용자는 앱이 뭔가 실패한 줄 안다. 실은 곁가지를 발라낸 것이다. 말없이 뺀다.
-   *
-   * 붙일 때는 합쳐서 한 번 더 읽는다. 따로 읽은 답을 이어 붙이는 것으로는 모자랐다 —
-   * 금액이 적힌 정보 캡처를 혼자 보여주면 그게 무엇의 금액인지 몰라서 서버가 비워 온다.
-   * 원본과 나란히 놓고 봐야 채워진다. 원래 한 장으로 올릴 때 되던 것이 그것이다.
-   *
-   * 'done'으로 넘어가기 전에 불러야 한다. 그 뒤에는 미리 올리기가 시작되는데, 올리는
-   * 일은 후보 id로 한 번만 도므로 나중에 붙인 사진이 스토리지에 안 올라간다.
-   */
-  async function foldRescued(controller) {
-    const items = found0Ref.current;
-    const hasCode = (item) => Boolean(item.code || item.info?.code);
-    const hosts = items.filter((item) => !item.rescued || hasCode(item));
-    const loners = items.filter((item) => item.rescued && !hasCode(item));
-    if (loners.length === 0) return;
-
-    const dropped = new Set(loners.map((loner) => loner.id));
-    let next = items.filter((item) => !dropped.has(item.id));
-
-    // 붙일 곳이 하나뿐일 때만 합친다.
-    const host = hosts.length === 1 ? hosts[0] : null;
-    if (host?.prepared) {
-      const files = [
-        ...host.prepared.storageFiles,
-        ...loners.flatMap((loner) => loner.prepared?.storageFiles || []),
-      ];
-      const read = await readOne(host, files);
-      if (controller.signal.aborted) return;
-      // 다시 읽다가 막혔으면 먼저 읽은 답을 지키고 사진만 붙인다. 빈칸이 남는 것이
-      // 이미 읽어둔 상품명을 잃는 것보다 낫다.
-      const folded = {
-        ...host,
-        ...(read.info ? read : {}),
-        images: [...(host.images || []), ...loners.flatMap((loner) => loner.images || [])],
-        prepared: read.info ? read.prepared : { ...host.prepared, storageFiles: files },
-      };
-      next = next.map((item) => (item.id === host.id ? folded : item));
-    }
-
-    found0Ref.current = next;
-    setCandidates(next);
-  }
-
-  /**
    * 찾아낸 것들의 상품명·금액·유효기한을 읽는다.
    *
    * 훑는 동안 이미 보낸 것들이 있다(readyNow). 여기서는 남은 것만 집어 들고, 먼저
@@ -997,9 +929,6 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
     // 뒤에서 도는 판은 화면 단계를 건드리지 않는다. 사용자가 이미 목록을 보고 있다.
     if (append) return;
 
-    // 곁가지로 밝혀진 카드를 접는다. 'done' 전에 해야 한다(foldRescued 주석 참고).
-    if (picked) await foldRescued(controller);
-    if (controller.signal.aborted) return;
     // 진행률 그리기를 멈춘다. 여기서부터 늦게 돌아오는 것은 정밀 탐색 몫이라,
     // 계속 세면 끝난 막대가 다시 움직인다.
     readTallyRef.current = { done: 0, total: 0 };
@@ -1292,9 +1221,11 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
   // 그래서 사연은 줄로 나누고 할 일은 한 번만 적는다.
   const skippedNotes = useMemo(() => {
     const notes = [];
-    // 직접 고른 사진에서는 바코드가 없다고 여기서 말하지 않는다. 그 사진들은 후보로
-    // 세워 서버에 물어보고, 곁가지면 접히고 아니면 카드로 남는다(foldRescued).
-    // 카드가 사진과 함께 "바코드 번호를 못 읽었어요"라고 말하므로 여기서 또 셀 것이 없다.
+    // 직접 고른 사진에서 바코드가 없어 뺀 것들. 이제 붙이지도 세우지도 않고 버리므로,
+    // 여기서 말하지 않으면 올린 사람은 앱이 삼킨 줄 안다.
+    if (picked && droppedPicks > 0) {
+      notes.push(`바코드가 없는 사진 ${droppedPicks}장`);
+    }
     // 사진첩을 훑었을 때만. 폴더를 적어야 어디를 열어볼지 정해진다 — 스물몇 장이
     // 스크린샷이면 대개 밥 사진이고, 기프티콘은 카카오톡이나 다운로드에 있다.
     if (!picked && missedByFolder.length > 0) {
@@ -1305,7 +1236,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
       notes.push(`바코드가 너무 작게 찍힌 사진 ${tally.tooSmall}장`);
     }
     return notes;
-  }, [picked, tally, missedByFolder]);
+  }, [picked, tally, missedByFolder, droppedPicks]);
 
   // ── 진단용. 출시 전에 이 블록과 아래 화면 조각을 함께 뺀다 ──────────────────
   //
@@ -2067,6 +1998,14 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
               {result.noExpiry > 0 && (
                 <p className="m-0 text-sm leading-relaxed break-keep text-muted-foreground">
                   사용기한이 빈 게 {result.noExpiry}개 있어요. 목록에서 수정으로 채워주세요.
+                </p>
+              )}
+
+              {/* 바코드가 없어 뺀 사진. 붙일 곳을 고르는 판단을 없앤 대가라, 말없이
+                  빼면 올린 사람은 앱이 삼킨 줄 안다. */}
+              {droppedPicks > 0 && (
+                <p className="m-0 text-sm leading-relaxed break-keep text-muted-foreground">
+                  바코드가 없는 사진 {droppedPicks}장은 뺐어요. 직접 등록으로 올려주세요.
                 </p>
               )}
 

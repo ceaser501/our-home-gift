@@ -254,11 +254,52 @@ html.is-native-android {
   animation: dot-pulse 1.6s ease-in-out infinite;
 }
 
+/* 원본 사진을 미는 방향으로 화살표가 한 번씩 밀린다.
+   글자만으로는 안 보인다고 하셔서 움직임을 얹었다 — 가만히 있는 글자와 달리 움직이는
+   것은 안 읽어도 눈에 걸린다. 미는 흉내라서 방향과 거리가 뜻을 갖는다. */
+@keyframes swipe-nudge {
+  0%,
+  55%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(5px);
+  }
+}
+
+.animate-swipe-nudge {
+  animation: swipe-nudge 1.8s ease-in-out infinite;
+}
+
+/* 되감는 쪽(마지막 장)은 반대로 민다. */
+@keyframes swipe-nudge-back {
+  0%,
+  55%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-5px);
+  }
+}
+
+.animate-swipe-nudge-back {
+  animation: swipe-nudge-back 1.8s ease-in-out infinite;
+}
+
 /* 움직임을 줄여달라고 설정해둔 사람에게는 가만히 있는 점만 보여준다.
    막대 위를 지나가는 빛도 같다 — 정보를 담고 있지 않고 느낌을 위한 것이라, 빼도 잃는
    것이 없다. 사진 위의 스캔 선은 빼지 않는다. 그건 진행률 자체라서, 없애면 정보가 준다. */
 @media (prefers-reduced-motion: reduce) {
   .animate-dot-pulse {
+    animation: none;
+  }
+
+  /* 화살표는 멈춰도 남는다. 움직임은 눈에 걸리라고 얹은 것이고, 어느 쪽으로 미는지는
+     화살표 모양이 이미 말한다. */
+  .animate-swipe-nudge,
+  .animate-swipe-nudge-back {
     animation: none;
   }
 

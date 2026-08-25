@@ -284,63 +284,60 @@ describe('GalleryScanSheet', () => {
     await waitFor(() => expect(createGifticon).toHaveBeenCalledTimes(2), { timeout: 3000 });
   });
 
-  // 못 읽은 사진은 일단 다 후보로 세워 서버에 물어본다. 답이 오면 둘로 갈린다.
+  // 바코드를 못 읽은 사진은 어디에도 붙지 않는다.
   //
-  // 여기는 곁가지인 쪽. 번호가 없으니 딴 물건이 아니고, 번호가 있는 후보가 하나뿐이라
-  // 붙을 곳도 하나다. 그 카드에 빈칸을 채우고 사진을 옮긴 뒤 접는다.
-  it('번호가 없는 사진은 하나뿐인 후보에 접어 넣는다', async () => {
+  // 한동안은 이것들도 서버에 물어봐서 "곁가지면 붙이고 딴 물건이면 세우기"로 갈랐다.
+  // 그 판단이 틀리면 남의 금액과 기한이 멀쩡한 건에 들어왔고, 사용자는 틀린 줄을
+  // 알 방법이 없었다. 이제 안 가르고 버린다.
+  it('바코드가 없는 사진은 남의 건에 붙지 않는다', async () => {
     groupImages.mockResolvedValue({
       candidates: [candidate('a', '111')],
       missed: [{ id: 'm1', name: 'info.jpg', bucket: null, addedAt: 1, bars: false, data: 'BBBB' }],
       scanned: 2,
       tally: { readFailed: 0, found: 1, alreadyHave: 0, noCode: 1 },
     });
-    // 원본만 혼자 보면 금액이 없고, 정보 캡처와 나란히 놓고 봐야 채워진다.
-    readGifticonInfo.mockImplementation(async (prepared, opts) => {
+    // 곁가지에만 금액이 적혀 있다. 예전에는 이 값이 옆 건으로 옮겨 갔다.
+    readGifticonInfo.mockImplementation(async (_prepared, opts) => {
       if (opts?.knownCode !== '111') return { ...info(null, ''), code: null, name: '', amount: '5000' };
-      const together = prepared.uploads.length > 1;
-      return { ...info('111', '아이스 아메리카노'), amount: together ? '5000' : null };
+      return { ...info('111', '아이스 아메리카노'), amount: null };
     });
 
     const files = [new File(['x'], '1.jpg'), new File(['x'], '2.jpg')];
     render(<GalleryScanSheet files={files} onRegistered={() => {}} onClose={() => {}} />);
 
-    // 카드는 하나로 접힌다.
     (await screen.findByRole('button', { name: /1개 등록/ }, { timeout: 3000 })).click();
 
     await waitFor(() => expect(createGifticon).toHaveBeenCalledTimes(1), { timeout: 3000 });
     const saved = createGifticon.mock.calls[0][1];
     expect(saved.name).toBe('아이스 아메리카노');
-    // 곁가지에만 있던 금액이 채워진다. 이미 읽힌 상품명은 그대로다.
-    expect(saved.amount).toBe('5000');
+    // 남의 금액이 안 들어온다. 이 값은 등록 화면에서 손으로 적는다.
+    expect(saved.amount).toBeFalsy();
   });
 
-  // 같은 자리에서 갈리는 다른 쪽. 바코드 없이 번호만 인쇄된 기프티콘이 있다
-  // (파인트 아이스크림 쿠폰). 서버가 번호를 읽어내면 곁가지가 아니라 딴 물건이다.
-  it('번호가 나오면 별도 기프티콘으로 세운다', async () => {
+  // 뺐으면 뺐다고 말한다. 말없이 빼면 올린 사람은 앱이 삼킨 줄 안다.
+  it('바코드가 없어 뺀 장수를 말해준다', async () => {
     groupImages.mockResolvedValue({
       candidates: [candidate('a', '111')],
-      missed: [{ id: 'm1', name: 'pint.jpg', bucket: null, addedAt: 1, bars: false, data: 'BBBB' }],
-      scanned: 2,
-      tally: { readFailed: 0, found: 1, alreadyHave: 0, noCode: 1 },
+      missed: [
+        { id: 'm1', name: 'info.jpg', bucket: null, addedAt: 1, bars: false, data: 'BBBB' },
+        { id: 'm2', name: 'food.jpg', bucket: null, addedAt: 2, bars: false, data: 'CCCC' },
+      ],
+      scanned: 3,
+      tally: { readFailed: 0, found: 1, alreadyHave: 0, noCode: 2 },
     });
-    readGifticonInfo.mockImplementation(async (_prepared, opts) =>
-      opts?.knownCode === '111' ? info('111', '아이스 아메리카노') : info('92009951402228', '파인트 아이스크림')
-    );
 
-    const files = [new File(['x'], '1.jpg'), new File(['x'], '2.jpg')];
+    const files = [new File(['x'], '1.jpg'), new File(['x'], '2.jpg'), new File(['x'], '3.jpg')];
     render(<GalleryScanSheet files={files} onRegistered={() => {}} onClose={() => {}} />);
 
-    expect(await screen.findByText('파인트 아이스크림', {}, { timeout: 3000 })).toBeTruthy();
-    (await screen.findByRole('button', { name: /2개 등록/ }, { timeout: 3000 })).click();
-    await waitFor(() => expect(createGifticon).toHaveBeenCalledTimes(2), { timeout: 3000 });
+    // 등록을 마친 결과 화면에서 말한다. 목록 아래에서 말하면 아직 등록도 안 한 사람이
+    // 못 넣은 것부터 읽게 된다(SHOW_SKIPPED_NOTES 주석 참고).
+    (await screen.findByRole('button', { name: /1개 등록/ }, { timeout: 3000 })).click();
+    expect(await screen.findByText(/바코드가 없는 사진 2장/, {}, { timeout: 3000 })).toBeTruthy();
   });
 
-  // 붙일 곳이 둘이면 곁가지는 말없이 뺀다.
-  //
-  // 카드로 남겨두면 "바코드 번호를 못 읽었어요"가 목록에 걸려서, 사용자는 앱이 뭔가
-  // 실패한 줄 안다. 실은 곁가지를 발라낸 것이다.
-  it('붙일 곳이 여럿이면 곁가지 카드를 남기지 않는다', async () => {
+  // 버린 사진이 카드로 남으면 "바코드 번호를 못 읽었어요"가 목록에 걸려서,
+  // 사용자는 앱이 뭔가 실패한 줄 안다.
+  it('버린 사진을 카드로 남기지 않는다', async () => {
     groupImages.mockResolvedValue({
       candidates: [candidate('a', '111'), candidate('b', '222')],
       missed: [{ id: 'm1', name: 'info.jpg', bucket: null, addedAt: 1, bars: false, data: 'BBBB' }],

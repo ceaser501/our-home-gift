@@ -151,64 +151,76 @@ describe('여러 장을 올렸을 때 한 건인지 가르는 기준', () => {
     expect(prepareImages.mock.calls[0][0]).toHaveLength(3);
   });
 
-  // 배스킨 카드처럼 막대가 뭉개져 못 읽는 것, 파인트 쿠폰처럼 바코드 없이 번호만
-  // 인쇄된 것 — 둘 다 번호를 모를 뿐 기프티콘이다. 곁가지로 치면 스타벅스 하나에 그
-  // 사진이 얹혀서, 거기 적힌 상품명과 기한이 스타벅스 것으로 들어간다.
+  // 바코드가 읽힌 것이 하나뿐이어도, 못 읽은 사진은 떼고 간다.
   //
-  // 그림만 봐서는 곁가지인지 딴 물건인지 못 가른다. 서버에 한 장씩 물어본다.
-  it('못 읽은 사진에서 번호가 나오면 다건으로 넘긴다', async () => {
+  // 붙일 곳이 하나뿐이라 해서 그게 그 건의 사진이라는 뜻은 아니다. 금액이 적힌 정보
+  // 캡처일 수도 있고, 바코드 없이 번호만 인쇄된 딴 기프티콘(파인트 쿠폰)일 수도 있다.
+  // 그림만 봐서는 못 가르고, 잘못 붙으면 남의 상품명과 기한이 들어온다.
+  it('못 읽은 사진은 하나뿐인 후보에도 안 붙인다', async () => {
+    const info = new File(['x'], 'info.jpg', { type: 'image/jpeg' });
     groupImages
       .mockResolvedValueOnce({
         candidates: [{ id: 'pick-0', code: '111' }],
-        missed: [{ id: 'pick-1', bars: false, file: new File(['x'], 'pint.jpg', { type: 'image/jpeg' }) }],
+        missed: [{ id: 'pick-1', bars: false, file: info }],
         scanned: 2,
         tally: {},
       })
-      .mockResolvedValueOnce({ candidates: [], missed: [{ id: 'pick-1', bars: false }], scanned: 1, tally: {} });
-    // 물어보니 번호가 나온다 — 곁가지가 아니라 딴 물건이다.
-    readGifticonInfo.mockResolvedValue({ code: '92009951402228', name: '파인트 아이스크림' });
+      .mockResolvedValueOnce({ candidates: [], missed: [{ id: 'pick-1', bars: false, file: info }], scanned: 1, tally: {} });
 
     const onBulk = vi.fn();
     open({ onBulk });
     fireEvent.change(document.querySelector('#gifticon-image'), {
-      target: {
-        files: [
-          new File(['x'], 'starbucks.jpg', { type: 'image/jpeg' }),
-          new File(['x'], 'pint.jpg', { type: 'image/jpeg' }),
-        ],
-      },
-    });
-
-    await waitFor(() => expect(onBulk).toHaveBeenCalled());
-  });
-
-  // 같은 자리에서 갈리는 다른 쪽. 번호가 안 나오면 곁가지다 — 예전처럼 등록 폼으로
-  // 가고, 사진 전부를 한 번에 보여준다. 그래야 정보 캡처의 금액이 채워진다.
-  it('번호가 안 나오면 곁가지로 보고 등록 폼에서 함께 읽는다', async () => {
-    groupImages
-      .mockResolvedValueOnce({
-        candidates: [{ id: 'pick-0', code: '111' }],
-        missed: [{ id: 'pick-1', bars: false, file: new File(['x'], 'info.jpg', { type: 'image/jpeg' }) }],
-        scanned: 2,
-        tally: {},
-      })
-      .mockResolvedValueOnce({ candidates: [], missed: [{ id: 'pick-1', bars: false }], scanned: 1, tally: {} });
-    readGifticonInfo.mockResolvedValue({ code: null, name: '' });
-
-    const onBulk = vi.fn();
-    open({ onBulk });
-    fireEvent.change(document.querySelector('#gifticon-image'), {
-      target: {
-        files: [
-          new File(['x'], 'starbucks.jpg', { type: 'image/jpeg' }),
-          new File(['x'], 'info.jpg', { type: 'image/jpeg' }),
-        ],
-      },
+      target: { files: [new File(['x'], 'starbucks.jpg', { type: 'image/jpeg' }), info] },
     });
 
     await waitFor(() => expect(prepareImages).toHaveBeenCalled());
     expect(onBulk).not.toHaveBeenCalled();
-    // 두 장이 통째로 넘어가야 한다. 나눠 보내면 금액이 무엇의 금액인지 알 수 없다.
+    // 스타벅스 한 장만 간다.
+    const lastCall = prepareImages.mock.calls[prepareImages.mock.calls.length - 1];
+    expect(lastCall[0]).toHaveLength(1);
+    expect(lastCall[0][0].name).toBe('starbucks.jpg');
+  });
+
+  it('뗀 장수를 말해준다', async () => {
+    const info = new File(['x'], 'info.jpg', { type: 'image/jpeg' });
+    groupImages
+      .mockResolvedValueOnce({
+        candidates: [{ id: 'pick-0', code: '111' }],
+        missed: [{ id: 'pick-1', bars: false, file: info }],
+        scanned: 2,
+        tally: {},
+      })
+      .mockResolvedValueOnce({ candidates: [], missed: [{ id: 'pick-1', bars: false, file: info }], scanned: 1, tally: {} });
+
+    open({ onBulk: vi.fn() });
+    fireEvent.change(document.querySelector('#gifticon-image'), {
+      target: { files: [new File(['x'], 'starbucks.jpg', { type: 'image/jpeg' }), info] },
+    });
+
+    expect(await screen.findByText(/바코드가 없는 사진 1장은 뺐어요/, {}, { timeout: 3000 })).toBeTruthy();
+  });
+
+  // 한 장도 못 읽었으면 떼지 않는다. 그건 곁가지가 아니라 고른 사진 전부이고,
+  // 등록 폼은 서버가 사진을 눈으로 읽어주는 길이라 막대가 없어도 들어간다.
+  it('전부 못 읽었으면 그대로 등록 폼으로 간다', async () => {
+    const a = new File(['x'], 'pint1.jpg', { type: 'image/jpeg' });
+    const b = new File(['x'], 'pint2.jpg', { type: 'image/jpeg' });
+    groupImages.mockResolvedValue({
+      candidates: [],
+      missed: [
+        { id: 'pick-0', bars: false, file: a },
+        { id: 'pick-1', bars: false, file: b },
+      ],
+      scanned: 2,
+      tally: {},
+    });
+
+    const onBulk = vi.fn();
+    open({ onBulk });
+    fireEvent.change(document.querySelector('#gifticon-image'), { target: { files: [a, b] } });
+
+    await waitFor(() => expect(prepareImages).toHaveBeenCalled());
+    expect(onBulk).not.toHaveBeenCalled();
     const lastCall = prepareImages.mock.calls[prepareImages.mock.calls.length - 1];
     expect(lastCall[0]).toHaveLength(2);
   });

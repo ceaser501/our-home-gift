@@ -329,6 +329,37 @@ export function setAutoScanOn(on) {
   }
 }
 
+// 자동 훑기는 앱을 연 그 한 번만 돈다.
+//
+// 앱 웹뷰에는 탭이 없어서 약관 같은 바깥 링크가 이 화면을 통째로 갈아끼우고 나간다.
+// 뒤로가기로 돌아오면 앱이 처음부터 다시 열리는데, 그게 "앱을 연 것"으로 세어져서
+// 약관 한 번 보고 올 때마다 훑기 창이 다시 떴다. 사진 수백 장을 다시 읽는다.
+//
+// sessionStorage에 적는다. 새로고침은 넘어가고 웹뷰가 죽으면 지워지는 자리라,
+// "앱을 연 한 번"과 수명이 같다. localStorage에 적으면 다음 날 열어도 안 돌고,
+// 메모리에만 두면 새로고침에 지워져서 지금과 같아진다.
+const AUTO_SCAN_RAN = 'moacon:auto-scan-ran';
+
+// 지금 자동으로 열어야 하는지. 읽기만 한다 — 적는 것은 markAutoScanRan이 따로 한다.
+// (StrictMode는 useState 초기값을 두 번 부른다. 여기서 적으면 두 번째에 false가 된다.)
+export function autoScanDue() {
+  if (!isGalleryScanSupported() || !isAutoScanOn()) return false;
+  try {
+    return sessionStorage.getItem(AUTO_SCAN_RAN) !== '1';
+  } catch {
+    // 못 읽으면 연다. 한 번 더 도는 것이 아예 안 도는 것보다 낫다.
+    return true;
+  }
+}
+
+export function markAutoScanRan() {
+  try {
+    sessionStorage.setItem(AUTO_SCAN_RAN, '1');
+  } catch {
+    // 못 적으면 돌아올 때마다 다시 뜬다 — 고치기 전 모습이다.
+  }
+}
+
 export function dismissImages(ids) {
   addIds(DISMISSED_KEY, readIdSet(DISMISSED_KEY), ids);
 }
@@ -1193,7 +1224,8 @@ export async function groupImages(files, { isRegistered, onProgress, onCandidate
     pass: quick ? SHALLOW : DEEP,
     isRegistered,
     skipCodes,
-    // 골라 온 사진 몇 장뿐이라, 못 읽은 것도 그림을 들고 온다. 화면이 서버에 물어본다.
+    // 골라 온 사진 몇 장뿐이라, 어느 것이 원본인지 고르는 규칙(richness)으로 버리지
+    // 않는다. 바코드가 읽힌 사진은 다 보내고 모델이 빈칸을 서로 채우게 둔다.
     rescueMissed: true,
     onProgress,
     onCandidate,
@@ -1202,9 +1234,9 @@ export async function groupImages(files, { isRegistered, onProgress, onCandidate
 
   return {
     candidates,
-    // 바코드를 못 찾은 사진. 화면이 "이건 직접 올려주세요"로 안내하고, 등록 창은
-    // 이것들만 다시 정밀하게 읽어본다(아래 UploadSheet 참고). 그래서 원본 파일을 그대로
-    // 달고 있다.
+    // 바코드를 못 찾은 사진. 여기서 끝나는 사진들이다 — 어느 건에도 붙이지 않는다.
+    // 등록 창이 이것들만 한 번 더 정밀하게 읽어보고(UploadSheet), 그래도 못 읽으면
+    // 떼어낸 뒤 몇 장을 뺐는지 말해준다. 그래서 원본 파일을 그대로 달고 있다.
     missed,
     scanned: images.length,
     tally: {
@@ -1213,7 +1245,6 @@ export async function groupImages(files, { isRegistered, onProgress, onCandidate
       alreadyHave: knownCodes.size,
       // 뺀 사진을 두 갈래로 나눠 센다. 화면이 하는 말이 달라서다.
       //   noCode    — 바코드가 아예 없는 사진. 어느 기프티콘 것인지 몰라서 뺐다.
-      //               (후보가 한 건뿐이면 그 건에 붙였으므로 여기서 빠져 있다.)
       //   unreadable — 막대는 보이는데 못 읽은 사진. 기프티콘일 텐데 우리가 놓친 것이라,
       //               직접 등록으로 올려달라고 해야 한다. 카톡이 404픽셀로 줄여 보낸
       //               배스킨 카드가 여기 걸린다.

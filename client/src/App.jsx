@@ -25,7 +25,7 @@ import { ensureSampleGifticon } from './sampleData';
 import { daysUntil, todayStr } from './utils/date';
 import { hasNewVersion } from './utils/version';
 import { hasSharedImages, takeSharedImages, discardSharedImages } from './utils/shareTarget';
-import { isGalleryScanSupported, isAutoScanOn } from './utils/gallery';
+import { isGalleryScanSupported, autoScanDue, markAutoScanRan } from './utils/gallery';
 import { useFamily } from './FamilyContext';
 import { cn } from '@/lib/utils';
 
@@ -87,7 +87,11 @@ export default function App() {
   const [scanSupported] = useState(() => isGalleryScanSupported());
   // 켜뒀으면 앱을 열 때 바로 훑는다. 받아둔 기프티콘을 넣는 게 이 앱에 들어오는 이유라,
   // 매번 버튼을 찾아 누르게 할 이유가 없다. 끄면 버튼으로만 연다.
-  const [scanOpen, setScanOpen] = useState(() => isGalleryScanSupported() && isAutoScanOn());
+  //
+  // '앱을 열 때'는 한 번뿐이다(autoScanDue). 약관을 보고 뒤로가기로 돌아오면 이 화면이
+  // 처음부터 다시 열리는데, 그때마다 훑기 창이 다시 떠서 사진 수백 장을 또 읽었다.
+  // 그래도 훑고 싶으면 메인의 훑기 버튼이 있다.
+  const [scanOpen, setScanOpen] = useState(() => autoScanDue());
   // 방금 저장한 바코드. 훑기 창이 이걸 보고 그 후보를 목록에서 뺀다. 안 그러면 등록을
   // 마치고 돌아왔을 때 방금 넣은 것이 그대로 남아 있어서 또 넣게 된다.
   const [codeTarget, setCodeTarget] = useState(null);
@@ -150,6 +154,12 @@ export default function App() {
     const timer = setTimeout(() => fetchList(), search ? 300 : 0);
     return () => clearTimeout(timer);
   }, [fetchList, search]);
+
+  // 자동 훑기는 이번 실행에서 한 번 물어봤다고 적어둔다. 훑기 창을 열었든 안 열었든
+  // 적는다 — 물어본 것 자체가 한 번이고, 껐던 사람이 다시 켜면 그건 버튼으로 연다.
+  useEffect(() => {
+    markAutoScanRan();
+  }, []);
 
   // 점검 공지를 읽어둔다. 등록을 누르는 순간에 서버에 물으면 그만큼 기다려야 하는데,
   // 그 자리는 사진을 올리려고 누른 자리라 한 박자도 늦으면 안 눌린 것처럼 느껴진다.

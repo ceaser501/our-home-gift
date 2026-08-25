@@ -1,4 +1,6 @@
 import { useEffect, useRef } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 // 원본 사진을 보는 자리. 바코드 창 안(BarcodeModal의 photo 화면)과 카드에서 바로 여는
 // 창(ImageViewerModal)이 같은 모양을 쓴다. 두 곳에서 각각 손보다가 한쪽만 고쳐진 적이 있다.
@@ -81,14 +83,26 @@ export function PhotoDeck({ photos, index, onPick, alt }) {
 
 // 미는 줄 안내.
 //
-// 12px 회색 한 줄이던 것을 14.5px로 올렸다. 안내는 못 읽으면 없는 것과 같다.
-// 마지막 장에서는 화살표를 뒤집는다 — 없는 다음 장을 가리키면 그 줄을 다시는 안 믿는다.
+// 12px 회색 한 줄 → 14.5px → 지금. 두 번 키웠는데도 안 보인다고 하셨다. 크기가 문제가
+// 아니었다 — 흰 시트 위 회색 글씨라 배경과 같은 무게였다.
+//
+// 그래서 셋을 바꿨다. 바탕을 깔아 글자에서 덩어리로 만들고, 글자색을 본문색으로 올리고,
+// 화살표를 미는 방향으로 한 번씩 밀리게 했다. 움직이는 것은 안 읽어도 눈에 걸린다.
+//
+// 마지막 장에서는 방향을 뒤집는다 — 없는 다음 장을 가리키면 그 줄을 다시는 안 믿는다.
 export function SwipeHint({ index, total }) {
   const last = index >= total - 1;
+  const Arrow = last ? ChevronLeft : ChevronRight;
+  const nudge = last ? 'animate-swipe-nudge-back' : 'animate-swipe-nudge';
+
   return (
-    <p className="m-0 text-center text-[14.5px] font-semibold tracking-[-0.015em] text-muted-foreground">
-      {last ? '‹ 옆으로 밀면 이전 사진' : '옆으로 밀면 다음 사진 ›'}
-    </p>
+    <div className="flex justify-center">
+      <p className="m-0 flex items-center gap-1 rounded-full bg-secondary px-3.5 py-1.5 text-[14.5px] font-bold tracking-[-0.015em] text-foreground/80">
+        {last && <Arrow className={cn('size-[18px] text-primary', nudge)} strokeWidth={2.6} />}
+        {last ? '옆으로 밀면 이전 사진' : '옆으로 밀면 다음 사진'}
+        {!last && <Arrow className={cn('size-[18px] text-primary', nudge)} strokeWidth={2.6} />}
+      </p>
+    </div>
   );
 }
 
