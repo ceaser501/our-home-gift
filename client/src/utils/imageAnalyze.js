@@ -224,14 +224,29 @@ export async function decodeBarcode(canvas, { deepRetry = true } = {}) {
     // 이 값이 작다는 건 "바코드를 보여주려고 찍은 사진"이 아니라는 뜻이다 — 앱 화면이나
     // 목록을 통째로 찍은 캡처가 그렇다. 그런 그림에는 다른 기프티콘이 같이 찍혀 있어서,
     // 모델이 옆칸의 금액과 기한을 이 기프티콘 것으로 읽어온다.
-    coverage: barcodeCoverage(points, canvas.width),
+    coverage: barcodeCoverage(points, canvas.width, canvas.height, codeType),
   };
 }
 
-function barcodeCoverage(points, width) {
-  if (!points || points.length === 0 || !width) return 0;
-  const xs = points.map((point) => point.getX());
-  return (Math.max(...xs) - Math.min(...xs)) / width;
+// 훑기 쪽과 같은 자다(gallery.js의 barcodeCoverage). 두 곳이 갈리면 "한 장으로는
+// 작다는데 여러 장으로는 안 그렇다" 같은 일이 생긴다. 왜 QR만 몫을 되돌리는지는
+// 그쪽 주석에 적어뒀다.
+const QR_FINDER = 0.75;
+
+function barcodeCoverage(points, width, height, codeType) {
+  if (!points || points.length === 0 || !width) return null;
+  const xs = points.map((point) => point.getX()).filter((n) => Number.isFinite(n));
+  if (xs.length === 0) return null;
+  let spread = Math.max(...xs) - Math.min(...xs);
+
+  if (codeType === 'QR_CODE' || codeType === 'DATA_MATRIX') {
+    const ys = points.map((point) => point.getY()).filter((n) => Number.isFinite(n));
+    if (ys.length > 0) spread = Math.max(spread, Math.max(...ys) - Math.min(...ys));
+    spread /= QR_FINDER;
+    return spread / (Math.min(width, height || width) || width);
+  }
+
+  return spread / width;
 }
 
 // 이보다 작게 찍혔으면 화면에서 한마디 한다. 훑기 쪽과 같은 기준이다.
