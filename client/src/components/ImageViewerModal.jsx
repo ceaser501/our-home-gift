@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { PhotoFrame, PhotoNav } from './PhotoViewer';
+import { PhotoDeck, PhotoCount, SwipeHint } from './PhotoViewer';
 import useBackClose from '../utils/useBackClose';
 
 // 카드에서 바로 여는 사진 창. 바코드가 없어서 열어 보여줄 것이 사진뿐인 기프티콘이 여기로 온다.
@@ -32,11 +32,7 @@ export default function ImageViewerModal({ gifticon, onClose }) {
               <SheetTitle className="truncate text-base font-bold tracking-[-0.02em]">원본 사진</SheetTitle>
               <p className="m-0 truncate text-[12.5px] font-medium text-muted-foreground">{gifticon.name}</p>
             </div>
-            {images.length > 1 && (
-              <span className="shrink-0 text-[13.5px] font-semibold tabular-nums text-muted-foreground">
-                {current + 1} / {images.length}
-              </span>
-            )}
+            {images.length > 1 && <PhotoCount index={current} total={images.length} />}
           </div>
         </SheetHeader>
 
@@ -45,8 +41,8 @@ export default function ImageViewerModal({ gifticon, onClose }) {
             <p className="m-0 text-[13px] text-muted-foreground">등록된 이미지가 없어요.</p>
           ) : (
             <>
-              <PhotoFrame src={images[current]} alt={`${gifticon.name} 사진 ${current + 1}`} />
-              {images.length > 1 && <PhotoNav photos={images} index={current} onPick={setIndex} />}
+              <PhotoDeck photos={images} index={current} onPick={setIndex} alt={`${gifticon.name} 사진`} />
+              {images.length > 1 && <SwipeHint index={current} total={images.length} />}
             </>
           )}
         </div>

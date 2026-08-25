@@ -5,7 +5,7 @@ import { CheckCircle2, ChevronLeft, Image as ImageIcon, ScanLine, StickyNote, Wa
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import CopyButton from './CopyButton';
-import { PhotoFrame, PhotoNav } from './PhotoViewer';
+import { PhotoDeck, PhotoCount, SwipeHint } from './PhotoViewer';
 import { PRIMARY_BUTTON, SECONDARY_BUTTON } from '../utils/sheetUi';
 import { cn } from '@/lib/utils';
 import { formatShortDate } from '../utils/date';
@@ -172,9 +172,7 @@ export default function BarcodeModal({ gifticon, onClose, onUsed, onSpend }) {
             {/* 몇 장 중 몇 번째인지. 사진 위 오버레이에 있던 것을 여기로 올렸다 —
                 사진을 가리지 않고, 넘길 때 눈이 움직이지 않는다. */}
             {view === 'photo' && photos.length > 1 && (
-              <span className="shrink-0 text-[13.5px] font-semibold tabular-nums text-muted-foreground">
-                {photoIndex + 1} / {photos.length}
-              </span>
+              <PhotoCount index={photoIndex} total={photos.length} />
             )}
           </div>
         </SheetHeader>
@@ -337,13 +335,16 @@ export default function BarcodeModal({ gifticon, onClose, onUsed, onSpend }) {
 
         {view === 'photo' && (
           <div className="flex flex-col gap-[11px] px-[18px]">
-            <PhotoFrame src={photos[photoIndex]} alt={`${gifticon.name} 사진 ${photoIndex + 1}`} />
+            <PhotoDeck
+              photos={photos}
+              index={photoIndex}
+              onPick={setPhotoIndex}
+              alt={`${gifticon.name} 사진`}
+            />
 
-            {/* 넘길 것이 없는데 화살표나 썸네일이 있으면 더 있는 줄 알고 밀어보게 된다.
+            {/* 넘길 것이 없는데 안내가 있으면 더 있는 줄 알고 밀어보게 된다.
                 한 장뿐이면 아무것도 보여주지 않는다. */}
-            {photos.length > 1 && (
-              <PhotoNav photos={photos} index={photoIndex} onPick={setPhotoIndex} />
-            )}
+            {photos.length > 1 && <SwipeHint index={photoIndex} total={photos.length} />}
 
             <Button
               type="button"
