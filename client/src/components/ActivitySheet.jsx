@@ -79,7 +79,13 @@ function PinnedNotice({ notice }) {
   const remaining = remainingLabel(notice);
   return (
     <div className="flex flex-col gap-1.5 rounded-[14px] border-[1.5px] border-primary bg-primary/4 px-3.5 py-[13px]">
-      <p className="m-0 text-[15px] leading-snug font-bold tracking-[-0.015em] break-keep text-foreground">
+      {/* 제목에는 break-keep을 걸지 않는다.
+          걸면 어절 단위로만 줄이 바뀌어서, 오른쪽에 두세 글자 자리가 남아 있어도 다음
+          어절이 통째로 내려간다 — 제목이 끝까지 안 차고 잘린 것처럼 보인다. 고정 자리는
+          상자 여백(px-3.5)만큼 폭이 더 좁아서 유독 잦았다.
+
+          본문은 반대로 break-keep을 남긴다. 문단으로 읽는 글이라 어절이 갈리면 눈에 걸린다. */}
+      <p className="m-0 text-[15px] leading-snug font-bold tracking-[-0.015em] text-foreground">
         <span className="mr-[7px] inline-block rounded-[5px] bg-primary px-[7px] py-0.5 align-[1px] text-[11px] font-bold text-primary-foreground">
           공지
         </span>
@@ -125,7 +131,8 @@ function NoticeRow({ notice }) {
           <span className="shrink-0 rounded-[5px] bg-accent px-1.5 py-0.5 text-[10.5px] font-bold text-primary">
             공지
           </span>
-          <p className="m-0 min-w-0 flex-1 text-[15px] leading-snug font-semibold tracking-[-0.015em] break-keep text-foreground/80">
+          {/* 여기도 제목이라 break-keep을 안 건다(위 고정 공지 주석 참고). */}
+          <p className="m-0 min-w-0 flex-1 text-[15px] leading-snug font-semibold tracking-[-0.015em] text-foreground/80">
             {notice.title}
           </p>
         </div>
