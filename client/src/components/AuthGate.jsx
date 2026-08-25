@@ -5,6 +5,7 @@ import { hasAgreedToCurrent } from '../consent';
 import { FamilyContext } from '../FamilyContext';
 import LoginScreen from './LoginScreen';
 import FamilyOnboarding from './FamilyOnboarding';
+import FamilyLoadError from './FamilyLoadError';
 import ConsentScreen from './ConsentScreen';
 import LoadingScreen from './LoadingScreen';
 import DeleteAccountError from './DeleteAccountError';
@@ -50,6 +51,8 @@ export default function AuthGate({ children }) {
   // undefined = 아직 확인 중, true/false = 지금 판 약관에 동의했는지
   const [agreed, setAgreed] = useState(undefined);
   const [familyState, setFamilyState] = useState(undefined);
+  // 가족을 못 읽었을 때. 없는 것과 다르다 — 아래 loadWithRetry 주석 참고.
+  const [familyError, setFamilyError] = useState(null);
   const [dataVersion, setDataVersion] = useState(0);
   // 다시 읽어온 가족 정보와 견주어 볼 "지금 값". 비교만 하는 용도라 화면을 다시 그리지 않는다.
   const familyRef = useRef(familyState);
@@ -104,31 +107,64 @@ export default function AuthGate({ children }) {
     };
   }, [userId]);
 
+  /**
+   * 가족을 읽는다. 실패하면 잠깐 쉬었다 두 번까지 다시 해본다.
+   *
+   * 이 자리에서 실패를 '가족 없음'으로 치면, 쓰고 있던 사람에게 가족 만들기 창이 뜬다.
+   * 그러면 이미 가족이 있는 사람이 가족을 하나 더 만들어버릴 수 있다 — 되돌리기 어려운
+   * 일이라 실패는 실패로 두어야 한다.
+   *
+   * 실제로 그렇게 나갔다. "가끔 앱을 열면 참여코드 넣는 창이 뜬다"가 이것이었다.
+   * 앱을 켠 직후는 네트워크가 아직 안 붙어 있는 순간이라 여기가 제일 잘 실패한다.
+   *
+   * 다시 해보는 이유는 그 순간이 대개 짧아서다. 두 번이면 대개 붙고, 그래도 안 되면
+   * 화면에 물어보게 둔다.
+   */
+  const loadWithRetry = useCallback(
+    async (wantedId) => {
+      let lastError;
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        if (attempt > 0) await new Promise((done) => setTimeout(done, attempt * 700));
+        try {
+          return await loadFamilies(wantedId);
+        } catch (err) {
+          lastError = err;
+        }
+      }
+      throw lastError;
+    },
+    [loadFamilies]
+  );
+
   useEffect(() => {
     if (userId === undefined) return;
     if (userId === null) {
       setFamilyState(null);
+      setFamilyError(null);
       return;
     }
     let cancelled = false;
     setFamilyState(undefined);
-    loadFamilies()
+    setFamilyError(null);
+    loadWithRetry()
       .then((next) => {
         if (!cancelled) setFamilyState(next);
       })
-      .catch(() => {
-        if (!cancelled) setFamilyState(null);
+      .catch((err) => {
+        // null(가족 없음)로 두지 않는다. 못 읽은 것뿐이다.
+        if (!cancelled) setFamilyError(err);
       });
     return () => {
       cancelled = true;
     };
-  }, [userId, loadFamilies]);
+  }, [userId, loadWithRetry]);
 
   function refetchFamily() {
     setFamilyState(undefined);
-    loadFamilies()
+    setFamilyError(null);
+    loadWithRetry()
       .then(setFamilyState)
-      .catch(() => setFamilyState(null));
+      .catch(setFamilyError);
   }
 
   // 이름을 바꾼 뒤나 새 구성원이 들어온 뒤처럼, 화면은 그대로 두고 가족 정보만 다시 읽어온다.
@@ -168,6 +204,9 @@ export default function AuthGate({ children }) {
   if (agreed === undefined) return withNotice(waitingScreen);
   if (!agreed)
     return withNotice(<ConsentScreen userId={session.user.id} onDone={() => setAgreed(true)} />);
+  // 못 읽었으면 다시 해보게 한다. 여기서 가족 만들기로 넘기면, 쓰던 사람이 가족을
+  // 하나 더 만들어버릴 수 있다.
+  if (familyError) return withNotice(<FamilyLoadError onRetry={refetchFamily} />);
   if (familyState === undefined) return withNotice(waitingScreen);
   if (!familyState)
     return withNotice(<FamilyOnboarding userEmail={session.user.email} onDone={refetchFamily} />);
