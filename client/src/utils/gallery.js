@@ -487,6 +487,18 @@ const asDataUrl = (base64) => `data:image/jpeg;base64,${base64}`;
 // 쪽이라 캔버스가 작아지고(실패해도 장당 0.2~0.6초), 배율마다 실물로 재서 넣었다.
 // 근거는 barcodeScaleLadder 위 주석에 있다.
 
+// 그림의 크기.
+//
+// 두 가지가 온다. <img>는 naturalWidth를, ImageBitmap과 캔버스는 width를 갖는다.
+// 고른 사진은 ImageBitmap으로 펼치므로(readPickedFile) 여기서 갈라줘야 한다 —
+// 안 가르면 undefined가 배율 계산에 들어가 캔버스가 1px이 된다.
+function sizeOf(image) {
+  return {
+    width: image.naturalWidth || image.width || 0,
+    height: image.naturalHeight || image.height || 0,
+  };
+}
+
 async function decodeBarcode(read, pass = SHALLOW) {
   // 원본 그림을 들려 보냈으면 그걸로 읽는다.
   //
@@ -499,8 +511,7 @@ async function decodeBarcode(read, pass = SHALLOW) {
   //
   // read.data는 그대로 둔다. 그건 모델에게 보낼 그림이라 JPEG가 맞다.
   const image = read.image || (await loadImage(asDataUrl(read.data)));
-  const width = image.naturalWidth;
-  const height = image.naturalHeight;
+  const { width, height } = sizeOf(image);
   const longEdge = Math.max(width, height);
 
   // 사다리의 맨 윗단을 2000px으로 묶는다.
@@ -751,9 +762,10 @@ const RICHNESS_TIE = 0.10;
 const RICHNESS_WIDTH = 240;
 
 function infoRichness(image) {
-  const width = Math.min(RICHNESS_WIDTH, image.naturalWidth || RICHNESS_WIDTH);
-  const scale = width / (image.naturalWidth || width);
-  const height = Math.max(1, Math.round((image.naturalHeight || width) * scale));
+  const source = sizeOf(image);
+  const width = Math.min(RICHNESS_WIDTH, source.width || RICHNESS_WIDTH);
+  const scale = width / (source.width || width);
+  const height = Math.max(1, Math.round((source.height || width) * scale));
 
   const canvasWidth = Math.max(1, width);
   const canvas = document.createElement('canvas');
@@ -875,9 +887,10 @@ function overlapRatio(a, b) {
  */
 export function looksLikeBarcode(image, out = null) {
   try {
-    const scale = Math.min(1, BARS_WIDTH / image.naturalWidth);
-    const width = Math.max(1, Math.round(image.naturalWidth * scale));
-    const height = Math.min(BARS_MAX_HEIGHT, Math.max(1, Math.round(image.naturalHeight * scale)));
+    const source = sizeOf(image);
+    const scale = Math.min(1, BARS_WIDTH / source.width);
+    const width = Math.max(1, Math.round(source.width * scale));
+    const height = Math.min(BARS_MAX_HEIGHT, Math.max(1, Math.round(source.height * scale)));
 
     const canvas = document.createElement('canvas');
     canvas.width = width;
@@ -899,7 +912,7 @@ export function looksLikeBarcode(image, out = null) {
         // 진단용. 여기 이 if 안쪽만 빼면 예전으로 돌아간다.
         if (out) {
           // 이 캔버스는 240픽셀로 줄인 것이라, 원본 픽셀로 되돌려 재야 뜻이 있다.
-          const back = image.naturalWidth / width;
+          const back = source.width / width;
           const first = edges[0];
           const last = edges[edges.length - 1];
           out.span = Math.round(((last - first) / width) * 100);
@@ -990,6 +1003,12 @@ async function collect({ images, read: readImage, pass, isRegistered, skipCodes,
     } catch {
       readFailed += 1;
       continue;
+    } finally {
+      // 바코드를 읽고 나면 펼쳐둔 원본은 더 쓸 데가 없다. 요즘 폰 사진은 한 장에 수십
+      // MB라, 놓지 않으면 고른 장수만큼 그대로 쌓인다. (finally는 위 continue보다 먼저
+      // 돈다 — 못 읽은 사진도 여기서 놓인다.)
+      read.release?.();
+      read.image = null;
     }
     if (!found?.code) {
       // 막대로 보이는지를 함께 들고 간다. 화면이 "여기 있을지도 모른다"고 말할 때 쓴다.
@@ -1304,44 +1323,70 @@ export async function groupImages(files, { isRegistered, onProgress, onCandidate
   };
 }
 
-// 고른 파일 한 장을 줄여 base64로. 네이티브의 readImage가 하던 일을 브라우저에서 한다.
+// 고른 파일 한 장을 읽는다. 네이티브의 readImage가 하던 일을 브라우저에서 한다.
+//
+// 둘을 돌려준다.
+//   data  — 2000px으로 줄여 JPEG로 구운 base64. 모델에게 보낼 그림이다.
+//   image — 펼친 원본. 바코드는 이걸로 읽는다(decodeBarcode 주석 참고) —
+//           줄이고 구운 사본으로 읽으면 QR이 뭉개진다.
+//
+// createImageBitmap을 먼저 쓴다. 파일에서 바로 펼친 그림이라 blob 주소에 매이지 않고,
+// 주소를 거둔 뒤에도 그릴 수 있다.
+//
+// 한때 <img>를 넘기면서 blob 주소는 finally에서 바로 거뒀다. 규격상으로는 이미 펼친
+// 그림이 그대로 남아야 하는데, 웹뷰는 화면에 붙지 않은 <img>의 픽셀을 메모리가 아쉬우면
+// 버리고 주소로 다시 받아온다. 주소가 없으면 거기서 그리기가 터지고, 그러면 그 사진은
+// '바코드 없음'도 아니고 '읽기 실패'가 되어 목록에서 통째로 사라진다 —
+// 되묻는 창까지 안 뜬 이유가 이것이었다.
+//
+// release는 다 읽고 나서 부르는 것이다(collect). 한 장에 수십 MB라 바로 놓아야 한다.
 async function readPickedFile(image) {
-  const url = URL.createObjectURL(image.file);
-  try {
-    const loaded = await loadImage(url);
-    const width = loaded.naturalWidth;
-    const height = loaded.naturalHeight;
-    const scale = Math.min(1, READ_EDGE / Math.max(width, height));
-
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.max(1, Math.round(width * scale));
-    canvas.height = Math.max(1, Math.round(height * scale));
-    const ctx = canvas.getContext('2d');
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = 'high';
-    ctx.drawImage(loaded, 0, 0, canvas.width, canvas.height);
-
-    // 훑기가 넘겨주는 것과 같은 모양으로 돌려준다 — 접두사 없는 base64.
-    //
-    // 화질을 아끼지 않는다. 이 사본은 바코드를 읽는 데만 쓰이는 게 아니라, 등록에 넘길
-    // 때 모델이 보는 그림이 되기도 한다(candidateToFiles). 거기서 한 번 더 줄여 보내니
-    // 눌린 자국 위에 또 눌리는 셈이다.
-    //
-    // 한글은 획 하나로 갈린다. 같은 투썸 쿠폰이 직접 올릴 때는 상품명이 읽혔는데 훑기로는
-    // 못 읽혔다 — 그림이 달라서가 아니라 사본이 나빠서였다. 요금은 픽셀 수로 매겨지므로
-    // 화질을 올려도 값은 그대로다.
-    const data = canvas.toDataURL('image/jpeg', 0.95).split(',')[1];
-    canvas.width = 0;
-    canvas.height = 0;
-    // 원본 그림도 함께 넘긴다. 바코드는 이걸로 읽는다(decodeBarcode 주석 참고) — 줄이고
-    // 구운 사본으로 읽으면 QR이 뭉개진다. 다 읽고 나면 이 자리에서 놓이므로, 한 장씩
-    // 도는 이 고리 밖으로는 안 나간다.
-    //
-    // 아래에서 blob 주소를 거두지만 이미 펼쳐진 그림은 그대로 쓸 수 있다.
-    return { data, image: loaded };
-  } finally {
-    URL.revokeObjectURL(url);
+  if (typeof createImageBitmap === 'function') {
+    const bitmap = await createImageBitmap(image.file);
+    return {
+      data: shrinkToData(bitmap, bitmap.width, bitmap.height),
+      image: bitmap,
+      release: () => bitmap.close?.(),
+    };
   }
+
+  // createImageBitmap이 없는 환경(오래된 웹뷰, 시험)에서는 <img>로 간다. 이때는 주소를
+  // 여기서 거두지 않는다 — 위에 적은 이유 그대로다.
+  const url = URL.createObjectURL(image.file);
+  let loaded;
+  try {
+    loaded = await loadImage(url);
+  } catch (err) {
+    URL.revokeObjectURL(url);
+    throw err;
+  }
+  return {
+    data: shrinkToData(loaded, loaded.naturalWidth, loaded.naturalHeight),
+    image: loaded,
+    release: () => URL.revokeObjectURL(url),
+  };
+}
+
+// 모델에게 보낼 그림. 2000px으로 줄여 JPEG base64로.
+//
+// 화질을 아끼지 않는다. 등록에 넘길 때 여기서 한 번 더 줄여 보내니 눌린 자국 위에 또
+// 눌리는 셈이다. 한글은 획 하나로 갈린다 — 같은 투썸 쿠폰이 직접 올릴 때는 상품명이
+// 읽혔는데 훑기로는 못 읽혔고, 그림이 달라서가 아니라 사본이 나빠서였다. 요금은 픽셀
+// 수로 매겨지므로 화질을 올려도 값은 그대로다.
+function shrinkToData(source, width, height) {
+  const scale = Math.min(1, READ_EDGE / Math.max(width, height));
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, Math.round(width * scale));
+  canvas.height = Math.max(1, Math.round(height * scale));
+  const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(source, 0, 0, canvas.width, canvas.height);
+  // 훑기가 넘겨주는 것과 같은 모양 — 접두사 없는 base64.
+  const data = canvas.toDataURL('image/jpeg', 0.95).split(',')[1];
+  canvas.width = 0;
+  canvas.height = 0;
+  return data;
 }
 
 // 정밀 탐색은 원본 바이트를 그대로 받아오므로 그 조각이 PNG일 수 있다. 이름과 형식을

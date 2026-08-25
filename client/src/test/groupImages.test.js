@@ -56,6 +56,8 @@ let wasmCalls = 0;
 let copyLoads = 0;
 // 가짜 사진의 크기. 사다리가 어느 배율을 도는지가 이 값으로 갈린다.
 let imageSize = { width: 1000, height: 2000 };
+// 거둬들인 blob 주소. 아래 drawImage가 이걸 보고, 주소가 없어진 그림은 못 그린다고 한다.
+let revoked = new Set();
 
 vi.mock('zxing-wasm/reader', () => ({
   prepareZXingModule: () => {},
@@ -80,6 +82,7 @@ beforeEach(() => {
   wasmCalls = 0;
   copyLoads = 0;
   imageSize = { width: 1000, height: 2000 };
+  revoked = new Set();
   localStorage.clear();
 
   let loading = null;
@@ -87,13 +90,14 @@ beforeEach(() => {
     loading = file.name;
     return `blob:${file.name}`;
   };
-  globalThis.URL.revokeObjectURL = () => {};
+  globalThis.URL.revokeObjectURL = (url) => revoked.add(url);
 
   globalThis.Image = class {
     set src(value) {
       // 줄여서 JPEG로 구운 사본을 도로 펼치는 길. 고른 사진에서는 이 길로 가면 안 된다
       // (아래 'QR은 원본에서 읽는다' 참고).
       if (value.startsWith('data:')) copyLoads += 1;
+      this._url = value;
       this._name = value.startsWith('blob:') ? value.slice(5) : loading;
       setTimeout(() => this.onload?.(), 0);
     }
@@ -111,6 +115,11 @@ beforeEach(() => {
     if (tag === 'canvas') {
       el.getContext = () => ({
         drawImage(image) {
+          // 웹뷰는 화면에 안 붙은 <img>의 픽셀을 메모리가 아쉬우면 버리고 주소로 다시
+          // 받아온다. 주소가 없어졌으면 거기서 터진다.
+          if (image._url && revoked.has(image._url)) {
+            throw new Error('그림을 잃었다 (주소가 거둬졌다)');
+          }
           el.dataset.name = image._name;
         },
         set imageSmoothingEnabled(_v) {},
@@ -438,5 +447,45 @@ describe('마지막 판으로 넘어가는 문', () => {
     await deepScan({ pending: [{ id: 1, name: 'food.jpg', bucket: null, addedAt: 1 }] });
 
     expect(wasmCalls).toBe(0);
+  });
+});
+
+// 펼쳐둔 그림을 다 읽기 전에 놓지 않는다.
+//
+// 한때 readPickedFile이 <img>를 넘기면서 blob 주소는 finally에서 바로 거뒀다. 규격상
+// 이미 펼친 그림은 남아야 하는데, 웹뷰는 화면에 안 붙은 <img>의 픽셀을 메모리가 아쉬우면
+// 버리고 주소로 다시 받아온다. 주소가 없으면 거기서 그리기가 터진다.
+//
+// 그러면 그 사진은 '바코드 없음'도 아니고 '읽기 실패'가 되어 missed에도 안 들어간다.
+// 화면에서는 사진이 통째로 사라지고, 되묻는 창까지 안 뜬다.
+describe('펼쳐둔 그림의 수명', () => {
+  it('다 읽고 난 뒤에 놓는다', async () => {
+    barcodes.set('a.jpg', { code: '111', coverage: 0.6 });
+
+    const { candidates, tally } = await groupImages([pick('a.jpg')]);
+
+    expect(candidates.map((c) => c.code)).toEqual(['111']);
+    expect(tally.readFailed).toBe(0);
+  });
+
+  // 못 읽은 사진도 마찬가지다. 이쪽이 실제로 터졌던 자리다 — 읽히는 사진은 첫 배율에서
+  // 끝나지만, 못 읽는 사진은 사다리를 끝까지 돌며 같은 그림을 예닐곱 번 다시 그린다.
+  it('못 읽은 사진도 missed로 간다 (읽기 실패가 아니라)', async () => {
+    pixels.set('nope.jpg', { ink: 0.3, color: 0.1 });
+
+    const { candidates, missed, tally } = await groupImages([pick('nope.jpg')]);
+
+    expect(candidates).toHaveLength(0);
+    expect(missed).toHaveLength(1);
+    expect(tally.readFailed).toBe(0);
+  });
+
+  // 놓기는 놓아야 한다. 요즘 폰 사진은 한 장에 수십 MB라, 안 놓으면 고른 장수만큼 쌓인다.
+  it('읽고 나면 놓는다', async () => {
+    barcodes.set('a.jpg', { code: '111', coverage: 0.6 });
+
+    await groupImages([pick('a.jpg')]);
+
+    expect(revoked.has('blob:a.jpg')).toBe(true);
   });
 });
