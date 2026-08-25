@@ -276,6 +276,13 @@ const SHOW_SKIPPED_NOTES = false;
 // 여기서 나온 숫자로 zxing-wasm을 붙였고, 그 뒤로 볼 것이 없어졌다.
 const SHOW_MISSED_DETAILS = false;
 
+// ── 진단용. 출시 전에 이 줄과 아래 화면 조각을 함께 뺀다 ──
+//
+// 고른 사진이 카드로도 안 뜨고 되묻는 창에도 안 뜨는 일이 있었다. 사진 한 장이 갈 수
+// 있는 자리가 넷이라(읽기 실패·이미 등록됨·너무 작게 찍힘·바코드 없음) 숫자를 봐야
+// 가려지는데, 폰에서 볼 방법이 없어서 여기까지 짐작으로 왔다.
+const SHOW_SCAN_NOTE = true;
+
 // 결과 화면에서 카드로 세워 보여줄 등록 건수. 나머지는 'N개 더 보기'로 접는다.
 //
 // 둘이면 "무엇이 들어갔는지"는 충분히 보이고, 아래 버튼도 화면 안에 남는다.
@@ -1992,6 +1999,14 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                     </button>
                   )}
                 </div>
+              )}
+
+              {SHOW_SCAN_NOTE && tally && (
+                <p className="m-0 rounded-lg bg-secondary px-2.5 py-1.5 font-mono text-[11px] text-muted-foreground">
+                  {`후보 ${tally.found ?? 0} · 이미있음 ${tally.alreadyHave ?? 0}`}
+                  {` · 작음 ${tally.tooSmall ?? 0} · 바코드없음 ${tally.noCode ?? 0}`}
+                  {` · 막대만보임 ${tally.unreadable ?? 0} · 실패 ${tally.readFailed ?? 0}`}
+                </p>
               )}
 
               {/* 유효기한은 없어도 넣는다. 대신 비었다는 걸 알려준다 — 말해주지 않으면
