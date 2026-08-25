@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Loader2, Plus, RotateCcw, Search, X } from 'lucide-react';
+import { Image as ImageIcon, Loader2, Plus, RotateCcw, Search, X } from 'lucide-react';
 import { CATEGORIES } from '../constants';
 import { prepareImages, readGifticonInfo, SMALL_BARCODE_COVERAGE } from '../utils/imageAnalyze';
 import { createGifticon, updateGifticon, searchPrice, findGifticonByCode, findLookalikeGifticon } from '../api';
@@ -137,7 +137,7 @@ function buildExistingImages(initial) {
   return (initial?.image_paths || []).map((path, i) => ({ path, url: initial.image_urls[i] }));
 }
 
-export default function UploadSheet({ mode, initial, initialFiles, onClose, onSaved, onBulk }) {
+export default function UploadSheet({ mode, initial, initialFiles, onClose, onSaved, onBulk, onNext }) {
   // 뒤로가기로 이 창을 닫는다. 안 그러면 설치해서 쓸 때 앱이 통째로 꺼진다.
   useBackClose(onClose);
   const { family, members, user } = useFamily();
@@ -170,6 +170,14 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
   // 방금 고른 사진이 지금 편집 중인 것과 다른 기프티콘일 때, 어떻게 할지 물어보려고 들고 있는다.
   const [mismatch, setMismatch] = useState(null);
   const [progress, setProgress] = useState(null);
+  // 바코드가 없어서 이번 건에서 떼어둔 사진. 저장을 마친 뒤에 "이것도 기프티콘인가요?"를
+  // 한 번 여쭤보려고 들고 있는다. 안 누르면 서버에 묻지 않으므로 값이 들지 않는다.
+  //
+  // ref인 이유는 저장 함수 안에서 읽기 때문이다. 사진을 고른 직후에 정해지고 그 뒤로는
+  // 안 바뀌는 값이라, 다시 그리게 할 이유도 없다.
+  const leftoverRef = useRef([]);
+  const savedRef = useRef(null);
+  const [askLeftover, setAskLeftover] = useState(false);
   // 여러 장을 한 건으로 본 이유. 테스트 빌드에서만 보여준다.
   const fileInputRef = useRef(null);
 
@@ -298,7 +306,13 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
           // 한 장도 안 남으면 떼지 않는다. 그건 곁가지가 아니라 고른 사진 전부다.
           // 아래 등록 폼은 서버가 사진에 인쇄된 숫자를 눈으로 읽어주는 길이라, 막대가
           // 뭉개진 기프티콘은 그 길로 들어온다. 붙을 곳이 없으니 섞일 일도 없다.
-          if (kept.length > 0) selected = kept;
+          if (kept.length > 0) {
+            // 뗀 사진은 버리지 않고 들고 있는다. 저장을 마친 뒤에 한 번 여쭤본다 —
+            // 막대 없이 번호만 인쇄된 기프티콘(파인트 아이스크림 쿠폰)이 여기 섞여 있을
+            // 수 있는데, 그건 서버가 눈으로 읽어야 아는 것이라 지금 물으면 값이 든다.
+            leftoverRef.current = selected.filter((file) => drop.has(file));
+            selected = kept;
+          }
         }
       } catch {
         // 묶어보지 못했으면 예전 길로 간다. 한 건으로 읽히면 그것대로 맞다.
@@ -598,6 +612,13 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
           barcodeCropFile,
           thumbCropFile,
         });
+        // 바코드가 없어 떼어둔 사진이 있으면 여기서 한 번 여쭤본다. 저장이 끝난 뒤라
+        // 기다리는 사람이 없고, 누르지 않으면 서버에 묻지도 않는다.
+        if (leftoverRef.current.length > 0 && onNext) {
+          savedRef.current = created;
+          setAskLeftover(true);
+          return;
+        }
         onSaved(created);
       } else {
         const updated = await updateGifticon(family.id, initial.id, fields, {
@@ -988,6 +1009,29 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
             title="이미 등록된 기프티콘이에요"
             description={`같은 바코드로 '${duplicateName}'이(가) 이미 목록에 있어요.`}
             onClose={() => setDuplicateName(null)}
+          />
+        )}
+
+        {/* 저장을 마친 뒤 한 번만 여쭤본다. 바코드가 없어 뗀 사진 중에 막대 없이 번호만
+            인쇄된 기프티콘이 섞여 있을 수 있는데(파인트 아이스크림 쿠폰), 그건 서버가
+            눈으로 읽어야 안다. 미리 다 물어보면 정보 캡처까지 물어보게 돼서 느려진다.
+            누를 때만 읽으니 안 누르면 값이 들지 않는다. */}
+        {askLeftover && (
+          <AlertDialog
+            tone="info"
+            icon={ImageIcon}
+            title="이 사진도 기프티콘인가요?"
+            description={`바코드가 없어서 ${leftoverRef.current.length}장을 빼두었어요. 기프티콘이면 이어서 올려드릴게요.`}
+            confirmLabel="네, 올릴게요"
+            cancelLabel="아니요"
+            onConfirm={() => {
+              setAskLeftover(false);
+              onNext(leftoverRef.current, savedRef.current);
+            }}
+            onClose={() => {
+              setAskLeftover(false);
+              onSaved(savedRef.current);
+            }}
           />
         )}
       </SheetContent>

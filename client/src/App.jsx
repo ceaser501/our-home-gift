@@ -397,6 +397,17 @@ export default function App() {
     fetchList();
   }
 
+  // 방금 등록을 마치고, 빼뒀던 사진으로 한 건 더 올리러 간다.
+  //
+  // 창을 닫자마자 열면 새 창이 스스로 닫힌다 — 닫는 쪽이 히스토리 표시를 걷어내느라
+  // 부른 뒤로가기가 뒤늦게 돌아와서 새 창이 그걸 자기 것으로 받는다(openAfterClose).
+  function openNext(files) {
+    setSheetState(null);
+    setBulkFiles(null);
+    fetchList();
+    openAfterClose(() => setSheetState({ mode: 'create', initial: null, files }));
+  }
+
   return (
     <div className="relative mx-auto flex min-h-dvh w-full max-w-[480px] flex-col overflow-x-hidden bg-background pb-22">
       {/* 당겨서 새로고침은 기프티콘뿐 아니라 가족 구성원까지 같이 다시 읽어오고,
@@ -507,6 +518,7 @@ export default function App() {
           files={bulkFiles}
           onRegistered={fetchList}
           onClose={() => setBulkFiles(null)}
+          onNext={openNext}
         />
       )}
 
@@ -525,6 +537,10 @@ export default function App() {
             // 부른 뒤로가기가 뒤늦게 돌아오는데, 새 창이 그걸 자기 것으로 받는다.
             openAfterClose(() => setBulkFiles(files));
           }}
+          // 바코드가 없어 뺐던 사진을 "이것도 기프티콘인가요?"에 네라고 답했을 때.
+          // 등록 창을 한 번 더 연다 — 그쪽은 서버가 사진에 인쇄된 숫자를 눈으로 읽어주는
+          // 길이라, 막대 없이 번호만 찍힌 기프티콘이 이 길로 들어온다.
+          onNext={openNext}
         />
       )}
 

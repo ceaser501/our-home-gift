@@ -5,6 +5,7 @@ import {
   ChevronDown,
   ChevronRight,
   EyeOff,
+  Image as ImageIcon,
   ImageOff,
   ImagePlus,
   Images,
@@ -500,7 +501,7 @@ function formatWon(amount) {
 // (isGalleryScanSupported) 직접 고르는 이 길이 유일한 다건 경로가 된다. 둘이 다른
 // 화면이면 안드로이드 사용자와 아이폰 사용자가 서로 다른 것을 배워야 하고, 우리도 같은
 // 것을 두 벌 고쳐야 한다.
-export default function GalleryScanSheet({ onRegistered, onClose, files = null }) {
+export default function GalleryScanSheet({ onRegistered, onClose, onNext, files = null }) {
   // 사진을 받아 온 판인가. 훑기와 갈리는 자리가 여럿이라 이름을 붙여둔다.
   const picked = Array.isArray(files) && files.length > 0;
   // 뒤로가기로 이 창을 닫는다. 안 그러면 설치해서 쓸 때 앱이 통째로 꺼진다.
@@ -529,6 +530,10 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
   const [dismissedIds, setDismissedIds] = useState([]);
   // 바코드를 못 읽어 후보가 안 된 사진들. 아래에서 폴더별로 세어 알려준다.
   const [missedShots, setMissedShots] = useState([]);
+  // 직접 고른 사진 중 바코드가 없어 뺀 것들. 등록을 마친 뒤에 "이것도 기프티콘인가요?"를
+  // 한 번 여쭤보려고 원본 파일을 들고 있는다. 사진첩 훑기에서는 비워둔다 — 수백 장이라
+  // 물어볼 만한 목록이 아니고, 애초에 원본 파일이 없다(MediaStore 항목이다).
+  const [leftovers, setLeftovers] = useState([]);
   // 금액권으로 넣을 후보. 판정이 확실하지 않아서 켜는 건 사람이 한다.
   const [voucherIds, setVoucherIds] = useState([]);
   const [scanned, setScanned] = useState(0);
@@ -636,6 +641,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
     setCandidates([]);
     setDismissedIds([]);
     setMissedShots([]);
+    setLeftovers([]);
     setVoucherIds([]);
     setResult(null);
     setDigging(false);
@@ -727,8 +733,13 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
       //
       // 이제 안 가른다. 바코드가 읽힌 사진만 한 건이 된다. 못 읽은 사진은 붙이지도,
       // 세우지도 않는다 — 붙일 곳을 고르는 판단이 사라지면 잘못 붙을 일도 없다.
-      // 파인트처럼 막대가 없는 것은 직접 등록으로 올린다. 그 길은 한 장을 서버가 눈으로
-      // 읽어주므로 원래 되던 길이고, 애초에 흔한 경우가 아니다.
+      //
+      // 다만 버리지는 않고 들고 있는다. 등록을 마친 결과 화면에서 "이것도
+      // 기프티콘인가요?"를 한 번 여쭤보고, 누를 때만 서버가 읽는다. 파인트처럼 막대 없이
+      // 번호만 인쇄된 것이 그 길로 들어온다.
+      if (picked) {
+        setLeftovers((scan.missed ?? []).map((image) => image.file).filter(Boolean));
+      }
 
       const keep = new Set(found.map((candidate) => candidate.id));
       setCandidates((prev) => prev.filter((candidate) => keep.has(candidate.id)));
@@ -1988,6 +1999,26 @@ export default function GalleryScanSheet({ onRegistered, onClose, files = null }
                 <p className="m-0 text-sm leading-relaxed break-keep text-muted-foreground">
                   사용기한이 빈 게 {result.noExpiry}개 있어요. 목록에서 수정으로 채워주세요.
                 </p>
+              )}
+
+              {/* 바코드가 없어 뺀 사진. 등록이 끝난 뒤에 한 번만 여쭤본다.
+                  막대 없이 번호만 인쇄된 기프티콘(파인트 아이스크림 쿠폰)이 여기 섞여
+                  있을 수 있는데, 그건 서버가 눈으로 읽어야 안다. 미리 다 물어보면 정보
+                  캡처까지 물어보게 돼서 느려진다 — 누를 때만 읽는다. */}
+              {leftovers.length > 0 && onNext && (
+                <div className="flex flex-col gap-2 rounded-2xl border border-border px-3.5 py-3">
+                  <p className="m-0 text-sm leading-relaxed break-keep text-muted-foreground">
+                    바코드가 없어서 {leftovers.length}장을 빼두었어요.
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => onNext(leftovers)}
+                    className="h-11 w-full rounded-xl text-sm font-semibold"
+                  >
+                    <ImageIcon className="size-4 text-muted-foreground" />이 사진도 기프티콘인가요?
+                  </Button>
+                </div>
               )}
 
               {/* 못 넣은 것. 개수만 적으면 어느 것이 빠졌는지 알 수 없고, 아예 말하지

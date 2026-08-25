@@ -253,6 +253,79 @@ describe('여러 장을 올렸을 때 한 건인지 가르는 기준', () => {
   });
 });
 
+// 뗀 사진을 버리지 않고 한 번 여쭤본다.
+//
+// 막대 없이 번호만 인쇄된 기프티콘이 있다(파인트 아이스크림 쿠폰). 그건 서버가 눈으로
+// 읽어야 아는 것이라, 미리 다 물어보면 정보 캡처까지 물어보게 돼서 느려진다.
+// 그래서 저장이 끝난 뒤에 한 번만 묻고, 누를 때만 읽는다.
+describe('빼둔 사진 되묻기', () => {
+  function pickTwo() {
+    const info = new File(['x'], 'pint.jpg', { type: 'image/jpeg' });
+    groupImages
+      .mockResolvedValueOnce({
+        candidates: [{ id: 'pick-0', code: '111' }],
+        missed: [{ id: 'pick-1', bars: false, file: info }],
+        scanned: 2,
+        tally: {},
+      })
+      .mockResolvedValueOnce({ candidates: [], missed: [{ id: 'pick-1', bars: false, file: info }], scanned: 1, tally: {} });
+    fireEvent.change(document.querySelector('#gifticon-image'), {
+      target: { files: [new File(['x'], 'starbucks.jpg', { type: 'image/jpeg' }), info] },
+    });
+    return info;
+  }
+
+  async function save() {
+    await waitFor(() => expect(prepareImages).toHaveBeenCalled());
+    await waitFor(() => expect(screen.getByRole('button', { name: /저장/ }).disabled).toBe(false));
+    fireEvent.click(screen.getByRole('button', { name: /저장/ }));
+  }
+
+  it('저장을 마친 뒤에 묻는다', async () => {
+    open({ onNext: vi.fn() });
+    pickTwo();
+    await save();
+
+    expect(await screen.findByText('이 사진도 기프티콘인가요?', {}, { timeout: 3000 })).toBeTruthy();
+  });
+
+  it('네라고 하면 그 사진으로 한 건 더 올리러 간다', async () => {
+    const onNext = vi.fn();
+    open({ onNext });
+    const info = pickTwo();
+    await save();
+
+    fireEvent.click(await screen.findByRole('button', { name: /네, 올릴게요/ }, { timeout: 3000 }));
+    expect(onNext).toHaveBeenCalled();
+    expect(onNext.mock.calls[0][0]).toEqual([info]);
+  });
+
+  // 아니라고 하면 방금 저장한 것은 그대로 목록에 남아야 한다. 되묻는 창을 닫는 것이
+  // 저장을 무르는 것으로 읽히면 안 된다.
+  it('아니라고 해도 저장은 살아 있다', async () => {
+    const onSaved = vi.fn();
+    open({ onSaved, onNext: vi.fn() });
+    pickTwo();
+    await save();
+
+    fireEvent.click(await screen.findByRole('button', { name: '아니요' }, { timeout: 3000 }));
+    expect(onSaved).toHaveBeenCalledWith({ id: 'new' });
+  });
+
+  // 뗀 사진이 없으면 묻지 않는다. 매번 뜨면 그 창은 곧 안 읽고 닫는 창이 된다.
+  it('뗀 사진이 없으면 묻지 않는다', async () => {
+    const onSaved = vi.fn();
+    open({ onSaved, onNext: vi.fn() });
+    fireEvent.change(document.querySelector('#gifticon-image'), {
+      target: { files: [new File(['x'], 'starbucks.jpg', { type: 'image/jpeg' })] },
+    });
+    await save();
+
+    await waitFor(() => expect(onSaved).toHaveBeenCalled());
+    expect(screen.queryByText('이 사진도 기프티콘인가요?')).toBeNull();
+  });
+});
+
 // 얕은 판은 일부러 약하다(1600px, 정밀 탐색 없음). 사진첩 훑기는 그 뒤에 정밀한 판을 한 번
 // 더 돌려 놓친 것을 건지는데, 등록 창에는 그 두 번째가 없었다. 그래서 흐릿하게 찍힌
 // 기프티콘 한 장이 안 읽히면 두 건이 한 건으로 보였고, 서로 다른 기프티콘의 사진이 통째로
