@@ -140,7 +140,7 @@ function isOriginal(bucket) {
  * 정리하면, 사고가 나는 경우만 골라서 기다린다. 나머지는 찾는 즉시 보낸다.
  */
 function canReadEarly(bucket, coverage) {
-  return isOriginal(bucket) && coverage >= MIN_BARCODE_COVERAGE;
+  return isOriginal(bucket) && bigEnough(coverage);
 }
 
 // 바코드를 읽을 때의 크기.
@@ -463,10 +463,55 @@ const HARD_HINTS = new Map([[DecodeHintType.TRY_HARDER, true]]);
  * 재는 그림이 이미 배율 조정을 거쳤지만 비율이라 상관없다 — 바코드와 사진이 같이
  * 커지고 작아지기 때문이다.
  */
-function barcodeCoverage(points, width) {
-  if (!points || points.length === 0 || !width) return 0;
-  const xs = points.map((point) => point.getX());
-  return (Math.max(...xs) - Math.min(...xs)) / width;
+// 판독기가 알려주는 QR 자리는 무늬 '가운데'라 실제보다 짧다. 되돌릴 몫.
+// (칸수에 따라 0.67~0.83. 기프티콘 QR은 대개 25~33칸이라 그 가운데를 쓴다.)
+const QR_FINDER = 0.75;
+
+/**
+ * 코드가 이 사진에서 얼마나 큰가. 0~1. 못 재면 null(=모름).
+ *
+ * 막대는 가로만 잰다. 세로 길이는 규격이 아니라 그리는 사람 마음이라 뜻이 없다.
+ *
+ * QR은 한 몫을 되돌려줘야 한다. 판독기가 알려주는 자리는 세 모서리 무늬의 **가운데**라,
+ * 실제 QR보다 좌우로 3.5칸씩 짧게 재진다. 21칸짜리면 실제의 0.67, 33칸짜리면 0.79로
+ * 나온다. 기프티콘 QR은 대개 25~33칸이라 0.72~0.79 — 그 몫을 QR_FINDER로 되돌린다.
+ *
+ * 이 한 줄을 안 두면 가로의 30%를 차지하는 멀쩡한 QR이 0.225로 재어져 자(0.25)에 걸린다.
+ * 썬키스트가 그랬다. 카드가 걷혀서 화면에서는 "QR을 못 읽는다"로 보였는데, 실은 읽어놓고
+ * 작다고 버린 것이었다.
+ *
+ * 되돌린 값은 실제 크기의 어림이라 딱 맞지는 않는다. 다만 틀리는 방향이 하나뿐이다 —
+ * 조금 크게 잡힌다. 여기서 크게 잡으면 목록 캡처 속 썸네일이 통과할 수 있고, 작게 잡으면
+ * 멀쩡한 QR이 사라진다. 사라지는 쪽이 나쁘다.
+ */
+function barcodeCoverage(points, width, height, codeType) {
+  if (!points || points.length === 0 || !width) return null;
+  const xs = points.map((point) => point.getX()).filter((n) => Number.isFinite(n));
+  if (xs.length === 0) return null;
+  let spread = Math.max(...xs) - Math.min(...xs);
+
+  if (codeType === 'QR_CODE' || codeType === 'DATA_MATRIX') {
+    // 네모라 세로로도 같은 크기다. 무늬가 셋뿐이라 한쪽이 짧게 나올 수 있어 큰 쪽을 쓴다.
+    const ys = points.map((point) => point.getY()).filter((n) => Number.isFinite(n));
+    if (ys.length > 0) spread = Math.max(spread, Math.max(...ys) - Math.min(...ys));
+    // 재는 자리가 무늬 가운데라 짧다. 그 몫을 되돌린다.
+    spread /= QR_FINDER;
+    // 네모난 코드는 사진의 짧은 변에 견준다. 세로로 긴 기프티콘 캡처에서 세로에 견주면
+    // 같은 QR이 절반으로 작아진다.
+    return spread / (Math.min(width, height || width) || width);
+  }
+
+  return spread / width;
+}
+
+/**
+ * 이 사진의 코드가 쓸 만한 크기인가.
+ *
+ * 못 잰 것(null)은 통과시킨다. 모른다는 것과 작다는 것은 다르다 — 모름을 작음으로
+ * 치면, 자리를 안 알려주는 판독기가 읽어낸 건은 전부 버려진다.
+ */
+function bigEnough(coverage) {
+  return coverage == null || coverage >= MIN_BARCODE_COVERAGE;
 }
 
 async function loadImage(src) {
@@ -647,6 +692,10 @@ async function decodeWithWasm(image, width, height) {
     ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
     const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    // 크기를 먼저 챙긴다. 아래에서 캔버스를 비우고 나면 canvas.width가 0이 되는데,
+    // 예전에는 그걸로 코드 크기를 나누고 있었다(0으로 나눠 Infinity).
+    const readWidth = canvas.width;
+    const readHeight = canvas.height;
     canvas.width = 0;
     canvas.height = 0;
 
@@ -657,17 +706,22 @@ async function decodeWithWasm(image, width, height) {
     const hit = found?.[0];
     if (!hit?.text) return null;
 
-    const xs = [
-      hit.position?.topLeft?.x,
-      hit.position?.topRight?.x,
-      hit.position?.bottomLeft?.x,
-      hit.position?.bottomRight?.x,
-    ].filter((x) => typeof x === 'number');
+    // 위 barcodeCoverage와 같은 자를 쓴다. 자리를 안 알려주면 null(모름)이 되고,
+    // 모름은 아래에서 통과한다 — 읽어낸 것을 못 쟀다고 버리면 안 된다.
+    const corners = [
+      hit.position?.topLeft,
+      hit.position?.topRight,
+      hit.position?.bottomLeft,
+      hit.position?.bottomRight,
+    ]
+      .filter((p) => p && Number.isFinite(p.x) && Number.isFinite(p.y))
+      .map((p) => ({ getX: () => p.x, getY: () => p.y }));
+    const wasmType = WASM_FORMATS[hit.format] || null;
 
     return {
       code: hit.text,
-      codeType: WASM_FORMATS[hit.format] || null,
-      coverage: xs.length ? (Math.max(...xs) - Math.min(...xs)) / canvas.width : 0,
+      codeType: wasmType,
+      coverage: barcodeCoverage(corners, readWidth, readHeight, wasmType),
       // 확인 판독을 건너뛰라는 표시. 위에서 쓴다.
       viaWasm: true,
     };
@@ -693,12 +747,15 @@ async function decodeAt(image, width, height, scale, tryHarder) {
   try {
     const reader = new BrowserMultiFormatReader(tryHarder ? HARD_HINTS : undefined);
     const result = await reader.decodeFromCanvas(canvas);
+    // 크기를 재는 자가 형식에 따라 다르다(QR은 몫을 되돌린다). 먼저 꺼내둔다 —
+    // 아래 객체 안에서 codeType을 쓰면 그건 속성 이름이지 값이 아니다.
+    const codeType = result.getBarcodeFormat ? BarcodeFormat[result.getBarcodeFormat()] || null : null;
     return {
       code: result.getText(),
-      codeType: result.getBarcodeFormat ? BarcodeFormat[result.getBarcodeFormat()] || null : null,
+      codeType,
       // 바코드가 이 사진에서 차지하는 가로 비율. 크기와 달리 비율은 발행사가 달라도
       // 뜻이 같다 — 바코드를 보여주려고 찍었는지, 어쩌다 한구석에 들어갔는지를 가른다.
-      coverage: barcodeCoverage(result.getResultPoints?.(), canvas.width),
+      coverage: barcodeCoverage(result.getResultPoints?.(), canvas.width, canvas.height, codeType),
     };
   } catch {
     return null;
@@ -1095,7 +1152,7 @@ async function collect({ images, read: readImage, pass, isRegistered, skipCodes,
   candidates.forEach((candidate) => {
     // 바코드가 너무 작게 찍힌 것은 뺀다. 다만 그것밖에 없으면 그거라도 쓴다 —
     // 등록 자체가 막히는 것보다는 낫고, 바코드 번호는 이미 읽어놨다.
-    const meaningful = candidate.shots.filter((shot) => shot.coverage >= MIN_BARCODE_COVERAGE);
+    const meaningful = candidate.shots.filter((shot) => bigEnough(shot.coverage));
     const usable = meaningful.length > 0 ? meaningful : candidate.shots;
 
     // 쓸 만한 크기의 사진이 하나도 없다는 표시. 번호는 제대로 읽혔지만(막대에는 검산
@@ -1152,7 +1209,7 @@ async function collect({ images, read: readImage, pass, isRegistered, skipCodes,
     // 크게 찍힌 쪽이 낫다.
     const sorted = [...pool].sort((a, b) => {
       if (a.rich != null && b.rich != null && Math.abs(b.rich - a.rich) > RICHNESS_TIE) return b.rich - a.rich;
-      return b.coverage - a.coverage;
+      return (b.coverage ?? 1) - (a.coverage ?? 1);
     });
     candidate.images = sorted.slice(0, IMAGES_PER_CODE).map((shot) => shot.data);
     // 다 골랐으면 나머지 조각은 놓는다. 한 장이 수백 KB라 후보 몇 개만 되어도 쌓인다.

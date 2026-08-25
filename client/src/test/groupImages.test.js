@@ -28,22 +28,32 @@ vi.mock('@zxing/browser', () => ({
       if (found.needsEdge && Math.max(canvas.width, canvas.height) < found.needsEdge) {
         throw new Error('too small');
       }
+      // 판독기가 알려주는 자리. coverage는 '가로 폭의 몇 할'이다.
+      //
+      // QR이면 세 모서리 무늬를 흉내낸다 — 가로세로로 같은 만큼 벌어져 있고, 그 거리는
+      // 실제 QR보다 짧다(무늬 '가운데'끼리라서). 그 짧아짐을 되돌리는 것이 QR_FINDER다.
+      const span = canvas.width * found.coverage;
       return {
         getText: () => found.code,
-        getBarcodeFormat: () => 1,
-        // 가로 폭의 몇 할을 차지하는지를 좌표 두 점으로 흉내낸다. 바코드가 너무 작게
-        // 찍힌 사진을 빼는 규칙(MIN_BARCODE_COVERAGE)이 이 값을 본다.
-        getResultPoints: () => [
-          { getX: () => 0, getY: () => 0 },
-          { getX: () => canvas.width * found.coverage, getY: () => 0 },
-        ],
+        getBarcodeFormat: () => (found.qr ? 2 : 1),
+        getResultPoints: () =>
+          found.qr
+            ? [
+                { getX: () => 0, getY: () => 0 },
+                { getX: () => span, getY: () => 0 },
+                { getX: () => 0, getY: () => span },
+              ]
+            : [
+                { getX: () => 0, getY: () => 0 },
+                { getX: () => span, getY: () => 0 },
+              ],
       };
     }
   },
 }));
 
 vi.mock('@zxing/library', () => ({
-  BarcodeFormat: { 1: 'CODE_128' },
+  BarcodeFormat: { 1: 'CODE_128', 2: 'QR_CODE' },
   DecodeHintType: { TRY_HARDER: 'TRY_HARDER' },
 }));
 
@@ -487,5 +497,43 @@ describe('펼쳐둔 그림의 수명', () => {
     await groupImages([pick('a.jpg')]);
 
     expect(revoked.has('blob:a.jpg')).toBe(true);
+  });
+});
+
+// QR을 재는 자.
+//
+// 판독기가 알려주는 QR 자리는 세 모서리 무늬의 '가운데'라, 실제 QR보다 좌우로 3.5칸씩
+// 짧게 재진다. 그 몫을 안 되돌리면 가로의 30%를 차지하는 멀쩡한 QR이 0.225로 재어져
+// 자(0.25)에 걸리고, 카드가 통째로 걷힌다. 썬키스트가 그랬다 — 읽어놓고 작다고 버렸다.
+describe('QR 크기 재기', () => {
+  it('가로의 30%를 차지하는 QR은 안 걸린다', async () => {
+    // 잰 값 0.225. 되돌리면 0.30.
+    barcodes.set('qr.jpg', { code: 'IX;1;9816401685019;;', coverage: 0.225, qr: true });
+
+    const { candidates, tally } = await groupImages([pick('qr.jpg')]);
+
+    expect(candidates).toHaveLength(1);
+    expect(candidates[0].tooSmall).toBe(false);
+    expect(tally.tooSmall).toBe(0);
+  });
+
+  // 되돌린다고 다 통과시키면 자가 없는 것과 같다. 목록 화면을 통째로 찍은 캡처 속
+  // 썸네일 QR은 여전히 걸려야 한다 — 옆칸 기프티콘의 금액과 기한이 딸려 들어온다.
+  it('목록 캡처 속 작은 QR은 여전히 걸린다', async () => {
+    barcodes.set('list.jpg', { code: 'IX;1;9816401685019;;', coverage: 0.09, qr: true });
+
+    const { candidates, tally } = await groupImages([pick('list.jpg')]);
+
+    expect(candidates[0].tooSmall).toBe(true);
+    expect(tally.tooSmall).toBe(1);
+  });
+
+  // 막대는 몫을 안 되돌린다. 세로 길이는 규격이 아니라 뜻이 없고, 가로는 그대로 잰다.
+  it('막대는 재던 대로 잰다', async () => {
+    barcodes.set('bar.jpg', { code: '111', coverage: 0.225 });
+
+    const { candidates } = await groupImages([pick('bar.jpg')]);
+
+    expect(candidates[0].tooSmall).toBe(true);
   });
 });
