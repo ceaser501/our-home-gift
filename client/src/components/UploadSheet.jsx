@@ -15,6 +15,7 @@ import AlertDialog from './AlertDialog';
 import { readableCode, wrapCode } from '../utils/code';
 import useBackClose from '../utils/useBackClose';
 import { groupImages } from '../utils/gallery';
+import { PhotoStrip } from './PhotoViewer';
 import { todayStr } from '../utils/date';
 
 // 스토리지 버킷에 걸어둔 제한과 같은 값이어야 한다(supabase/schema.sql).
@@ -1021,7 +1022,8 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
             tone="info"
             icon={ImageIcon}
             title="이 사진도 기프티콘인가요?"
-            description={`바코드가 없어서 ${leftoverRef.current.length}장을 빼두었어요. 기프티콘이면 이어서 올려드릴게요.`}
+            description="바코드가 없어서 빼두었어요. 기프티콘이면 이어서 올려드릴게요."
+            preview={<PhotoStrip files={leftoverRef.current} />}
             confirmLabel="네, 올릴게요"
             cancelLabel="아니요"
             onConfirm={() => {

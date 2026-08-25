@@ -22,12 +22,15 @@ const TONE = {
 //        사라져요") 이름이 길 때 세 줄로 접혀서, 정작 무엇을 지우는지가 문장에 묻힌다.
 // warning — 붉게 남길 한마디("되돌릴 수 없어요"). 문장 끝에 붙여두면 앞의 설명과 같은
 //        무게로 읽혀 그냥 지나간다.
+// preview — 무엇에 대해 묻는지 그림으로 보여줄 자리. "이 사진도 기프티콘인가요?"처럼
+//        '이것'이 화면 밖에 있으면, 읽는 사람은 무엇인지 모르는 채로 답해야 한다.
 export default function AlertDialog({
   title,
   description,
   subject,
   warning,
   details,
+  preview,
   icon: CustomIcon,
   tone = 'info',
   confirmLabel = '확인',
@@ -81,6 +84,8 @@ export default function AlertDialog({
             <p className="m-0 text-[13.5px] font-bold tracking-[-0.01em] text-destructive">{warning}</p>
           )}
         </div>
+
+        {preview && <div className="mt-3.5">{preview}</div>}
 
         {/* 여러 항목을 알려줘야 할 때. 가운데 정렬 안에 목록을 넣으면 줄마다 시작점이 달라져
             읽기 어려워서, 목록만 왼쪽으로 맞추고 상자로 묶어 본문과 구분한다. */}

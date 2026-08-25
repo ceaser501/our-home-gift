@@ -168,7 +168,16 @@ const SHALLOW = { deep: false, tryHarder: false };
 
 // 정밀 탐색. 느린 대신 흐린 것을 살린다. 훑기 결과를 보여준 다음에 조용히 돈다.
 // 수기등록(고른 사진 몇 장)도 처음부터 이걸로 본다 — 장수가 적어 값이 싸다.
-const DEEP = { deep: true, tryHarder: true };
+//
+// lastResort — 다 실패했을 때 무거운 판독기(wasm)를 한 번 더 부른다.
+//
+// 원래는 "막대처럼 보이는가"(looksLikeBarcode)를 통과한 사진에만 걸었다. 그 자를
+// QR은 통과하지 못한다 — 세로줄이 아니라 네모 격자라서다. 그래서 썬키스트 QR이
+// 이 마지막 판까지 못 가고 그냥 '바코드 없음'이 됐다.
+//
+// 사진첩 훑기(SHALLOW)에는 걸지 않는다. 거긴 밥 사진 수백 장이 다 실패로 떨어지는
+// 자리라, 장마다 무거운 판독기를 부르면 훑기가 끝나지 않는다.
+const DEEP = { deep: true, tryHarder: true, lastResort: true };
 
 // 어떤 배율들로 읽어볼지. 큰 쪽부터 차례로 줄여 본다.
 //
@@ -228,7 +237,7 @@ const NO_BARCODE_KEY = 'moacon:gallery-no-barcode';
 // 예전에는 못 읽던 사진을 지금은 읽을 수 있게 되는 일이 실제로 있었다(작은 이미지를
 // 키워서 읽도록 고친 뒤). 그런데 "없음"으로 적힌 사진은 다시 읽지 않으니, 고쳐놓고도
 // 그 사진들만 영영 안 나온다. 버전이 다르면 기록을 통째로 버리고 다시 읽는다.
-const DECODER_VERSION = 13;
+const DECODER_VERSION = 14;
 
 function readIdSet(key) {
   try {
@@ -463,14 +472,32 @@ const asDataUrl = (base64) => `data:image/jpeg;base64,${base64}`;
 // 근거는 barcodeScaleLadder 위 주석에 있다.
 
 async function decodeBarcode(read, pass = SHALLOW) {
-  const image = await loadImage(asDataUrl(read.data));
+  // 원본 그림을 들려 보냈으면 그걸로 읽는다.
+  //
+  // 직접 고른 사진이 그렇다. 그 전에는 여기서 read.data — 2000px으로 줄여 JPEG로 구운
+  // 사본 — 을 도로 펼쳐 읽었는데, 그러면 줄이기 한 번과 JPEG 한 번을 거친 그림에
+  // 아래 사다리가 또 줄이기를 건다. 막대는 그걸 견디지만 QR은 못 견딘다. QR은 잘고
+  // 네모난 칸이 격자로 붙어 있어서 JPEG의 8×8 블록이 칸 경계를 뭉개고, 그러면 격자가
+  // 안 읽힌다. 실제로 같은 썬키스트 QR이 한 장으로 올리면 읽히고(그 길은 캔버스에서
+  // 바로 읽는다) 여러 장에 섞으면 안 읽혔다.
+  //
+  // read.data는 그대로 둔다. 그건 모델에게 보낼 그림이라 JPEG가 맞다.
+  const image = read.image || (await loadImage(asDataUrl(read.data)));
   const width = image.naturalWidth;
   const height = image.naturalHeight;
   const longEdge = Math.max(width, height);
 
+  // 사다리의 맨 윗단을 2000px으로 묶는다.
+  //
+  // 사본으로 읽던 시절에는 사본이 이미 2000px이라 '원본 그대로(배율 1)'가 곧 2000px이었다.
+  // 이제 원본을 그대로 받으니 그 단이 4000px 캔버스가 될 수 있는데, 그건 앞단이 다 실패한
+  // 사진에서만 도는 단이라 느려지는 쪽이 하필 기프티콘이 아닌 사진들이다.
+  const cap = READ_EDGE / longEdge;
+  const rungs = [...new Set(barcodeScaleLadder(longEdge, pass.deep).map((f) => Math.min(f, cap)))];
+
   let found = null;
   let usedFactor = 1;
-  for (const factor of barcodeScaleLadder(longEdge, pass.deep)) {
+  for (const factor of rungs) {
     found = await decodeAt(image, width, height, factor, false);
     if (found) {
       usedFactor = factor;
@@ -491,7 +518,8 @@ async function decodeBarcode(read, pass = SHALLOW) {
     hint = { size: `${width}×${height}` };
     bars = looksLikeBarcode(image, hint);
     // 막대가 보이는데 못 읽었으면 무거운 판독기를 한 번 부른다.
-    if (bars) found = await decodeWithWasm(image, width, height);
+    // QR은 그 자를 통과 못 하므로, 정밀 판에서는 막대가 안 보여도 한 번 부른다(lastResort).
+    if (bars || pass.lastResort) found = await decodeWithWasm(image, width, height);
   }
 
   if (!found) {
@@ -1285,7 +1313,12 @@ async function readPickedFile(image) {
     const data = canvas.toDataURL('image/jpeg', 0.95).split(',')[1];
     canvas.width = 0;
     canvas.height = 0;
-    return { data };
+    // 원본 그림도 함께 넘긴다. 바코드는 이걸로 읽는다(decodeBarcode 주석 참고) — 줄이고
+    // 구운 사본으로 읽으면 QR이 뭉개진다. 다 읽고 나면 이 자리에서 놓이므로, 한 장씩
+    // 도는 이 고리 밖으로는 안 나간다.
+    //
+    // 아래에서 blob 주소를 거두지만 이미 펼쳐진 그림은 그대로 쓸 수 있다.
+    return { data, image: loaded };
   } finally {
     URL.revokeObjectURL(url);
   }

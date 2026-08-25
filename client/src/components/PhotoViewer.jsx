@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -115,5 +115,35 @@ export function PhotoCount({ index, total }) {
     <span className="shrink-0 rounded-full bg-secondary px-[11px] py-[3px] text-[15px] font-bold tabular-nums text-foreground">
       {index + 1} / {total}
     </span>
+  );
+}
+
+// 되묻는 창에 넣는 사진 몇 장.
+//
+// "이 사진도 기프티콘인가요?"에서 '이 사진'이 화면 밖에 있으면, 읽는 사람은 무엇인지
+// 모르는 채로 답해야 한다. 모르면 아니라고 누른다 — 그게 안전해 보여서다.
+//
+// 파일에서 바로 주소를 만든다. 훑기가 읽어둔 base64는 이제 안 들고 다닌다(쓸 데가
+// 없어서 놓았다). 창이 닫힐 때 거둔다.
+export function PhotoStrip({ files }) {
+  const [urls, setUrls] = useState([]);
+
+  useEffect(() => {
+    const made = files.map((file) => URL.createObjectURL(file));
+    setUrls(made);
+    return () => made.forEach((url) => URL.revokeObjectURL(url));
+  }, [files]);
+
+  return (
+    <div className="flex flex-wrap justify-center gap-2">
+      {urls.map((url) => (
+        <span
+          key={url}
+          className="flex h-[104px] w-[78px] items-center justify-center overflow-hidden rounded-[11px] border border-border bg-secondary/60"
+        >
+          <img src={url} alt="" className="max-h-full max-w-full object-contain" />
+        </span>
+      ))}
+    </div>
   );
 }

@@ -47,6 +47,8 @@ vi.mock('@zxing/library', () => ({
 // 것은 "언제 이 길로 넘어가는가"다.
 let wasmCodes = new Map();
 let wasmCalls = 0;
+// 구운 사본을 도로 펼친 횟수.
+let copyLoads = 0;
 
 vi.mock('zxing-wasm/reader', () => ({
   prepareZXingModule: () => {},
@@ -69,6 +71,7 @@ beforeEach(() => {
   pixels = new Map();
   wasmCodes = new Map();
   wasmCalls = 0;
+  copyLoads = 0;
   localStorage.clear();
 
   let loading = null;
@@ -80,6 +83,9 @@ beforeEach(() => {
 
   globalThis.Image = class {
     set src(value) {
+      // 줄여서 JPEG로 구운 사본을 도로 펼치는 길. 고른 사진에서는 이 길로 가면 안 된다
+      // (아래 'QR은 원본에서 읽는다' 참고).
+      if (value.startsWith('data:')) copyLoads += 1;
       this._name = value.startsWith('blob:') ? value.slice(5) : loading;
       setTimeout(() => this.onload?.(), 0);
     }
@@ -341,5 +347,50 @@ describe('groupImages — 고른 사진을 묶는다', () => {
     const { candidates } = await groupImages([pick('a.jpg'), pick('b.jpg')], { quick: true });
 
     expect(candidates).toHaveLength(1);
+  });
+});
+
+// 고른 사진의 바코드는 원본에서 읽는다.
+//
+// 그 전에는 2000px으로 줄여 JPEG로 구운 사본을 도로 펼쳐 읽었다. 막대는 그걸 견디는데
+// QR은 못 견딘다 — 잘고 네모난 칸이 격자로 붙어 있어서 JPEG의 8×8 블록이 칸 경계를
+// 뭉갠다. 같은 썬키스트 QR이 한 장으로 올리면 읽히고(그 길은 캔버스에서 바로 읽는다)
+// 여러 장에 섞으면 안 읽혔다. 아이폰에는 사진첩 훑기가 없어서 이 길이 유일한 길이다.
+describe('QR은 원본에서 읽는다', () => {
+  it('구운 사본을 도로 펼치지 않는다', async () => {
+    barcodes.set('qr.jpg', { code: 'IX;1;9816401685019;;', coverage: 0.5 });
+
+    const { candidates } = await groupImages([pick('qr.jpg')]);
+
+    expect(candidates).toHaveLength(1);
+    expect(copyLoads).toBe(0);
+  });
+});
+
+// 마지막 판(wasm)으로 넘어가는 문.
+//
+// 그 문은 "막대처럼 보이는가"였는데, QR은 세로줄이 아니라 네모 격자라 그 자를 통과하지
+// 못한다. 그래서 QR은 마지막 판까지 가보지도 못하고 '바코드 없음'이 됐다.
+describe('마지막 판으로 넘어가는 문', () => {
+  it('정밀 판에서는 막대가 안 보여도 한 번 더 본다', async () => {
+    // 막대가 아닌 그림. looksLikeBarcode가 아니라고 한다.
+    pixels.set('qr.jpg', { ink: 0.3, color: 0.1 });
+    wasmCodes.set('qr.jpg', { text: 'IX;1;9816401685019;;', format: 'QRCode' });
+
+    const { candidates } = await groupImages([pick('qr.jpg')]);
+
+    expect(wasmCalls).toBeGreaterThan(0);
+    expect(candidates.map((c) => c.code)).toEqual(['IX;1;9816401685019;;']);
+  });
+
+  // 사진첩 훑기에는 안 건다. 밥 사진 수백 장이 다 여기로 떨어지는 자리라, 장마다
+  // 무거운 판독기를 부르면 훑기가 끝나지 않는다.
+  it('얕은 판에서는 부르지 않는다', async () => {
+    pixels.set('qr.jpg', { ink: 0.3, color: 0.1 });
+    wasmCodes.set('qr.jpg', { text: 'IX;1;9816401685019;;', format: 'QRCode' });
+
+    await groupImages([pick('qr.jpg')], { quick: true });
+
+    expect(wasmCalls).toBe(0);
   });
 });

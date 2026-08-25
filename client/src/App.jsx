@@ -401,11 +401,13 @@ export default function App() {
   //
   // 창을 닫자마자 열면 새 창이 스스로 닫힌다 — 닫는 쪽이 히스토리 표시를 걷어내느라
   // 부른 뒤로가기가 뒤늦게 돌아와서 새 창이 그걸 자기 것으로 받는다(openAfterClose).
+  // last: 이 창에서는 다시 묻지 않는다. 되묻기가 되묻기를 낳으면 사진 세 장을 올린 사람이
+  // 창을 세 번 넘기게 된다. 한 번 여쭤보는 것까지가 친절이고 그다음은 붙잡는 것이다.
   function openNext(files) {
     setSheetState(null);
     setBulkFiles(null);
     fetchList();
-    openAfterClose(() => setSheetState({ mode: 'create', initial: null, files }));
+    openAfterClose(() => setSheetState({ mode: 'create', initial: null, files, last: true }));
   }
 
   return (
@@ -540,7 +542,7 @@ export default function App() {
           // 바코드가 없어 뺐던 사진을 "이것도 기프티콘인가요?"에 네라고 답했을 때.
           // 등록 창을 한 번 더 연다 — 그쪽은 서버가 사진에 인쇄된 숫자를 눈으로 읽어주는
           // 길이라, 막대 없이 번호만 찍힌 기프티콘이 이 길로 들어온다.
-          onNext={openNext}
+          onNext={sheetState.last ? undefined : openNext}
         />
       )}
 

@@ -18,6 +18,7 @@ import {
   X,
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { PhotoStrip } from './PhotoViewer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -2006,10 +2007,11 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                   있을 수 있는데, 그건 서버가 눈으로 읽어야 안다. 미리 다 물어보면 정보
                   캡처까지 물어보게 돼서 느려진다 — 누를 때만 읽는다. */}
               {leftovers.length > 0 && onNext && (
-                <div className="flex flex-col gap-2 rounded-2xl border border-border px-3.5 py-3">
+                <div className="flex flex-col gap-2.5 rounded-2xl border border-border px-3.5 py-3">
                   <p className="m-0 text-sm leading-relaxed break-keep text-muted-foreground">
-                    바코드가 없어서 {leftovers.length}장을 빼두었어요.
+                    바코드가 없어서 빼둔 사진이에요. 기프티콘이면 이어서 올려드릴게요.
                   </p>
+                  <PhotoStrip files={leftovers} />
                   <Button
                     type="button"
                     variant="outline"
