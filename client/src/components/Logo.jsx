@@ -1,18 +1,15 @@
-import { useId } from 'react';
+import { useId } from "react";
 
-// 앱 아이콘과 같은 그림(하트 매듭을 얹은 선물상자)을 화면 안에서 쓰는 버전.
-// 런처 아이콘 파일(client/public/icon.svg)과 다른 점이 둘 있다.
-//  - 여기서는 모서리를 직접 굴린다. 런처 아이콘은 iOS·안드로이드가 알아서 깎아주기 때문에
-//    파일에 라운딩을 넣으면 두 번 깎여 지저분해지지만, 화면 안에 놓이는 로고는 아무도 안 깎아준다.
-//  - 그레인(노이즈)은 뺐다. 28px짜리 헤더 로고에서는 보이지도 않으면서 필터 비용만 든다.
+// 화면 안에서 쓰는 모아콘 마크. 런처 아이콘(assets/brand/icon-master.svg)과 두 군데 다르다.
+//  - 모서리를 여기서 직접 굴린다. 런처 아이콘은 iOS·안드로이드가 알아서 깎아주므로
+//    파일에 라운딩을 넣으면 두 번 깎이지만, 화면 안 로고는 아무도 안 깎아준다.
+//  - 글자를 더 채웠다(캡 높이 132 → 150). 잘릴 걱정이 없는 자리라서 그만큼 키운다.
+//
+// 글자는 패스로 박혀 있다. Nunito 1000 에서 뽑았고, 폰트가 없는 환경에서도 똑같이 그려진다.
+// 원본과 다른 크기가 필요하면 assets/brand/ 아래 SVG 를 쓰면 된다.
 export default function Logo({ className }) {
-  // 한 화면에 로고가 여러 개 놓여도 그라데이션 id가 부딪히지 않게 컴포넌트마다 다른 값을 쓴다.
+  // 한 화면에 로고가 여러 개 놓여도 그라데이션 id 가 부딪히지 않게 컴포넌트마다 다른 값을 쓴다.
   const id = useId();
-  const bg = `${id}-bg`;
-  const glow = `${id}-glow`;
-  const lid = `${id}-lid`;
-  const body = `${id}-body`;
-  const ribbon = `${id}-ribbon`;
 
   return (
     <svg
@@ -22,49 +19,35 @@ export default function Logo({ className }) {
       aria-hidden="true"
     >
       <defs>
-        <linearGradient id={bg} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#8A5CFF" />
-          <stop offset="1" stopColor="#E8579B" />
+        <linearGradient id={id} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#8B5CF6" />
+          <stop offset="1" stopColor="#3A2F96" />
         </linearGradient>
-        <radialGradient id={glow} cx="18%" cy="12%" r="78%">
-          <stop offset="0" stopColor="#C79BFF" stopOpacity=".95" />
-          <stop offset="1" stopColor="#C79BFF" stopOpacity="0" />
-        </radialGradient>
-        <linearGradient id={lid} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#FFFFFF" />
-          <stop offset="1" stopColor="#FFF0F8" />
-        </linearGradient>
-        <linearGradient id={body} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#FFE7F3" />
-          <stop offset="1" stopColor="#FFC9E2" />
-        </linearGradient>
-        {/* 리본은 색을 칠하지 않고 배경이 비쳐 보이도록 몸통을 파낸다. */}
-        <mask id={ribbon}>
-          <rect width="512" height="512" fill="#fff" />
-          <rect x="248" y="256" width="16" height="150" fill="#000" />
-        </mask>
       </defs>
+      <rect width="512" height="512" rx="114" fill={`url(#${id})`} />
 
-      <rect width="512" height="512" rx="114" fill={`url(#${bg})`} />
-      <rect width="512" height="512" rx="114" fill={`url(#${glow})`} />
-
-      {/* 런처 아이콘은 안드로이드가 원형으로 깎아내는 걸 감안해 상자를 작게 그렸다.
-          화면 안 로고는 아무도 깎지 않으므로 그 여백이 그대로 남아 상자가 작아 보인다.
-          도형을 다시 그리는 대신 여기서만 키운다(그림 한가운데를 축으로). */}
-      <g transform="translate(256 257) scale(1.2) translate(-256 -257)">
-        {/* 몸통. 윗변은 각지게 둬야 뚜껑이 얹힌 것으로 읽힌다. */}
-        <path
-          d="M146 262H366V380A20 20 0 0 1 346 400H166A20 20 0 0 1 146 380Z"
-          fill={`url(#${body})`}
-          mask={`url(#${ribbon})`}
-        />
-        {/* 뚜껑. 몸통보다 넓게 빼서 턱을 만든다. */}
-        <rect x="118" y="196" width="276" height="66" rx="18" fill={`url(#${lid})`} />
-        {/* 하트 매듭. 아래 꼭짓점이 뚜껑을 파고들어 얹힌 것처럼 붙는다. */}
-        <path
-          d="M256 206C256 206 198 172 198 142C198 124 212 114 226 114C238 114 249 121 256 130C263 121 274 114 286 114C300 114 314 124 314 142C314 172 256 206 256 206Z"
-          fill="#fff"
-        />
+      {/* 워드마크는 -9도 기울여 놓는다. 홈 화면에서 삐딱한 아이콘이 드물어 눈에 걸린다. */}
+      <g transform="translate(256 256)">
+        <g transform="rotate(-9)">
+          <path
+            d="M156 10Q109 10 84-15.500Q59-41 59-88L59-617Q59-664 86-689.500Q113-715 162-715Q203-715 227-699Q251-683 271-647L467-301L431-301L627-647Q647-683 671.500-699Q696-715 736-715Q783-715 808.500-689.500Q834-664 834-617L834-88Q834-41 809-15.500Q784 10 737 10Q690 10 665-15.500Q640-41 640-88L640-365L660-365L526-143Q511-118 492.500-105.500Q474-93 445-93Q416-93 397.500-105.500Q379-118 364-143L230-365L253-365L253-88Q253-41 228-15.500Q203 10 156 10"
+            transform="translate(-251.96 75.00) scale(0.20979)"
+            fill="#FFFFFF"
+          />
+          <circle
+            cx="2.51"
+            cy="0"
+            r="46.23"
+            fill="none"
+            stroke="#FFD84D"
+            strokeWidth="45.54"
+          />
+          <path
+            d="M105 10Q69 10 44.500-7Q20-24 13.500-53.500Q7-83 24-120L265-628Q286-673 316.500-694Q347-715 387-715Q427-715 457-694Q487-673 508-628L749-120Q767-82 761.500-52.500Q756-23 732.500-6.500Q709 10 674 10Q628 10 603-11Q578-32 558-79L510-191L590-131L183-131L263-191L215-79Q195-32 173-11Q151 10 105 10M387-483L385-483L283-238L253-295L520-295L490-238"
+            transform="translate(79.55 75.00) scale(0.20979)"
+            fill="#FFFFFF"
+          />
+        </g>
       </g>
     </svg>
   );

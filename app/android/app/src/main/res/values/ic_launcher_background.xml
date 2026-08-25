@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="ic_launcher_background">#FFFFFF</color>
+    <!-- 적응형 아이콘은 @mipmap/ic_launcher_background 그림을 쓴다. 이 값은 그림을
+         못 읽는 자리에서만 쓰이는 예비색이라, 브랜드 보라의 끝색으로 맞춰 둔다. -->
+    <color name="ic_launcher_background">#3A2F96</color>
 </resources>
