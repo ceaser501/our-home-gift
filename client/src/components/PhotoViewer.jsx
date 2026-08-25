@@ -125,23 +125,46 @@ export function PhotoCount({ index, total }) {
 //
 // 파일에서 바로 주소를 만든다. 훑기가 읽어둔 base64는 이제 안 들고 다닌다(쓸 데가
 // 없어서 놓았다). 창이 닫힐 때 거둔다.
+// ── 진단용. 출시 전에 이 줄과 아래 <b> 한 줄을 함께 뺀다 ────────────────────
+//
+// 못 읽은 사진의 픽셀 크기를 그림 아래 적는다.
+//
+// 바코드를 읽는 배율 사다리는 사진의 긴 변에서 갈린다(gallery.js의 barcodeScaleLadder).
+// 그래서 "왜 이 사진만 안 읽히나"는 크기만 알면 계산으로 끝나는데, 폰에서 그 값을 볼
+// 방법이 없어서 여기까지 짐작으로 왔다. 한 번 재보고 뺀다.
+const SHOW_SHOT_SIZE = true;
+
 export function PhotoStrip({ files }) {
-  const [urls, setUrls] = useState([]);
+  const [shots, setShots] = useState([]);
 
   useEffect(() => {
-    const made = files.map((file) => URL.createObjectURL(file));
-    setUrls(made);
-    return () => made.forEach((url) => URL.revokeObjectURL(url));
+    const made = files.map((file) => ({ url: URL.createObjectURL(file), size: null }));
+    setShots(made);
+    if (SHOW_SHOT_SIZE) {
+      made.forEach((shot, i) => {
+        const img = new Image();
+        img.onload = () =>
+          setShots((prev) =>
+            prev.map((it, at) =>
+              at === i ? { ...it, size: `${img.naturalWidth}×${img.naturalHeight}` } : it
+            )
+          );
+        img.src = shot.url;
+      });
+    }
+    return () => made.forEach((shot) => URL.revokeObjectURL(shot.url));
   }, [files]);
 
   return (
     <div className="flex flex-wrap justify-center gap-2">
-      {urls.map((url) => (
-        <span
-          key={url}
-          className="flex h-[104px] w-[78px] items-center justify-center overflow-hidden rounded-[11px] border border-border bg-secondary/60"
-        >
-          <img src={url} alt="" className="max-h-full max-w-full object-contain" />
+      {shots.map((shot) => (
+        <span key={shot.url} className="flex flex-col items-center gap-1">
+          <span className="flex h-[104px] w-[78px] items-center justify-center overflow-hidden rounded-[11px] border border-border bg-secondary/60">
+            <img src={shot.url} alt="" className="max-h-full max-w-full object-contain" />
+          </span>
+          {SHOW_SHOT_SIZE && shot.size && (
+            <b className="text-[10.5px] font-medium tabular-nums text-muted-foreground/70">{shot.size}</b>
+          )}
         </span>
       ))}
     </div>

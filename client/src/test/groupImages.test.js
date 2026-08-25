@@ -23,6 +23,11 @@ vi.mock('@zxing/browser', () => ({
     async decodeFromCanvas(canvas) {
       const found = barcodes.get(canvas.dataset.name);
       if (!found) throw new Error('not found');
+      // 이 크기 이상으로 키워야 읽히는 사진. QR이 그렇다 — 작은 네모칸이 격자로 붙어
+      // 있어서 줄이면 칸 경계가 사라진다.
+      if (found.needsEdge && Math.max(canvas.width, canvas.height) < found.needsEdge) {
+        throw new Error('too small');
+      }
       return {
         getText: () => found.code,
         getBarcodeFormat: () => 1,
@@ -49,6 +54,8 @@ let wasmCodes = new Map();
 let wasmCalls = 0;
 // 구운 사본을 도로 펼친 횟수.
 let copyLoads = 0;
+// 가짜 사진의 크기. 사다리가 어느 배율을 도는지가 이 값으로 갈린다.
+let imageSize = { width: 1000, height: 2000 };
 
 vi.mock('zxing-wasm/reader', () => ({
   prepareZXingModule: () => {},
@@ -72,6 +79,7 @@ beforeEach(() => {
   wasmCodes = new Map();
   wasmCalls = 0;
   copyLoads = 0;
+  imageSize = { width: 1000, height: 2000 };
   localStorage.clear();
 
   let loading = null;
@@ -90,10 +98,10 @@ beforeEach(() => {
       setTimeout(() => this.onload?.(), 0);
     }
     get naturalWidth() {
-      return 1000;
+      return imageSize.width;
     }
     get naturalHeight() {
-      return 2000;
+      return imageSize.height;
     }
   };
 
@@ -357,6 +365,33 @@ describe('groupImages — 고른 사진을 묶는다', () => {
 // 뭉갠다. 같은 썬키스트 QR이 한 장으로 올리면 읽히고(그 길은 캔버스에서 바로 읽는다)
 // 여러 장에 섞으면 안 읽혔다. 아이폰에는 사진첩 훑기가 없어서 이 길이 유일한 길이다.
 describe('QR은 원본에서 읽는다', () => {
+  // 이 한 줄이 QR을 갈랐다. 한 장으로 올리는 길은 읽기 전에 그림을 1600px까지 키우는데
+  // (analyzeScale), 여러 장 길에는 키우는 법이 아예 없었다. 막대는 줄여도 읽히지만
+  // QR은 키워야 읽힌다.
+  it('작은 그림은 규격 크기까지 키워서도 본다', async () => {
+    // 카톡이 줄여 보낸 크기. 1600까지 키워야만 읽히게 해둔다.
+    imageSize = { width: 600, height: 1200 };
+    barcodes.set('qr.jpg', { code: 'IX;1;9816401685019;;', coverage: 0.5, needsEdge: 1500 });
+
+    const { candidates } = await groupImages([pick('qr.jpg')]);
+
+    expect(candidates.map((c) => c.code)).toEqual(['IX;1;9816401685019;;']);
+  });
+
+  // 사진첩 훑기에는 안 건다. 못 읽은 사진마다 큰 캔버스를 한 번 더 그리는 값이,
+  // 첫 훑기에서는 밥 사진 수백 장어치가 된다.
+  it('훑기에서는 키우지 않는다', async () => {
+    imageSize = { width: 600, height: 1200 };
+    barcodes.set('qr.jpg', { code: 'IX;1;9816401685019;;', coverage: 0.5, needsEdge: 1500 });
+    pixels.set('qr.jpg', { ink: 0.3, color: 0.1 });
+
+    const { candidates } = await deepScan({
+      pending: [{ id: 1, name: 'qr.jpg', bucket: null, addedAt: 1 }],
+    });
+
+    expect(candidates).toHaveLength(0);
+  });
+
   it('구운 사본을 도로 펼치지 않는다', async () => {
     barcodes.set('qr.jpg', { code: 'IX;1;9816401685019;;', coverage: 0.5 });
 

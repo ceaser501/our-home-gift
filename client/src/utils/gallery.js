@@ -181,7 +181,19 @@ const DEEP = { deep: true, tryHarder: true };
 // 통째로 다시 보는데, 첫 훑기에서 그건 밥 사진 수백 장이다. 장마다 무거운 판독기를
 // 부르면 훑기가 끝나지 않는다. 고른 사진은 사람이 골라온 몇 장뿐이라 값이 싸고,
 // 아이폰에는 훑기가 없어서 이 길이 유일한 길이다.
-const PICKED = { deep: true, tryHarder: true, lastResort: true };
+//
+// minEdge — 작은 그림은 이만큼 키워서도 한 번 본다.
+//
+// 이 한 줄이 QR을 갈랐다. 한 장으로 올리는 길은 읽기 전에 그림을 1600px까지 키우는데
+// (imageAnalyze의 analyzeScale), 여러 장 길에는 키우는 법이 아예 없었다. 1200px짜리
+// 사진이면 한 장 길은 1600까지 올려보고 여러 장 길은 1200을 넘겨본 적이 없다.
+//
+// 막대는 그래도 읽힌다 — 굵은 세로줄이라 줄여도 남는다. QR은 작은 네모칸이 격자로
+// 붙어 있어서 줄이면 칸 경계가 사라진다. 키워야 읽히고, 키울 때 보간을 끄면
+// (decodeAt의 imageSmoothingEnabled) 원본 픽셀이 그대로 복제돼 격자가 또렷해진다.
+//
+// 같은 썬키스트 QR이 한 장으로는 읽히고 여러 장에 섞으면 안 읽힌 이유가 이것이다.
+const PICKED = { deep: true, tryHarder: true, lastResort: true, minEdge: 1600 };
 
 // 어떤 배율들로 읽어볼지. 큰 쪽부터 차례로 줄여 본다.
 //
@@ -497,7 +509,11 @@ async function decodeBarcode(read, pass = SHALLOW) {
   // 이제 원본을 그대로 받으니 그 단이 4000px 캔버스가 될 수 있는데, 그건 앞단이 다 실패한
   // 사진에서만 도는 단이라 느려지는 쪽이 하필 기프티콘이 아닌 사진들이다.
   const cap = READ_EDGE / longEdge;
-  const rungs = [...new Set(barcodeScaleLadder(longEdge, pass.deep).map((f) => Math.min(f, cap)))];
+  const steps = barcodeScaleLadder(longEdge, pass.deep);
+  // 작은 그림을 규격 크기까지 키워보는 단. 맨 뒤에 둔다 — 앞단에서 읽히는 사진이
+  // 대부분이라, 여기까지 오는 것은 그 사진들이 아니다.
+  if (pass.minEdge && longEdge < pass.minEdge) steps.push(pass.minEdge / longEdge);
+  const rungs = [...new Set(steps.map((f) => Math.min(f, cap)))];
 
   let found = null;
   let usedFactor = 1;
