@@ -154,7 +154,7 @@ export default function GifticonCard({
   const dateNode = (
     <span
       className={cn(
-        'text-[13px] font-semibold whitespace-nowrap tabular-nums',
+        'text-[14.5px] font-semibold whitespace-nowrap tabular-nums',
         urgent ? 'text-destructive' : 'text-muted-foreground'
       )}
     >
@@ -170,7 +170,7 @@ export default function GifticonCard({
       className="pointer-events-auto flex min-w-0 items-center gap-1"
     >
       {dateNode}
-      <Info className="size-3.5 shrink-0 text-muted-foreground" />
+      <Info className="size-4 shrink-0 text-muted-foreground" />
     </button>
   ) : (
     dateNode
@@ -302,6 +302,8 @@ export default function GifticonCard({
               tabular-nums라 날짜가 카드끼리 세로로 줄이 맞는다. */}
           {/* 자리가 모자라면 금액이 다음 줄로 내려간다. 예전에는 날짜가 잘렸는데,
               글자를 키워 보는 사람에게 '2027.08.0…'는 값을 잃은 것이다. */}
+          {/* 이 줄만 상품명(15.5px)에 가깝게 키웠다. 목록을 훑을 때 실제로 찾는 값이
+              언제까지와 얼마 둘이라, 13px로는 상품명 아래 부속처럼 읽혔다. */}
           <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
             <div className="flex items-baseline gap-1.5">
               {gifticon.expires_at ? (
@@ -310,22 +312,21 @@ export default function GifticonCard({
                 // 기한을 안 적으면 이 자리가 통째로 비어서, 기한이 넉넉한 것과 구분이 안 됐다.
                 // 빈칸 대신 "안 적혔다"고 말해준다. 급한 일은 아니므로 붉은색은 쓰지 않는다
                 // (목록에서 붉은색은 기한이 임박한 것 하나만 가져야 눈에 들어온다).
-                <span className="shrink-0 rounded-full border border-dashed border-input px-2.5 py-0.5 text-xs font-bold whitespace-nowrap text-muted-foreground">
+                <span className="shrink-0 rounded-full border border-dashed border-input px-2.5 py-0.5 text-[13px] font-bold whitespace-nowrap text-muted-foreground">
                   유효기한 미입력
                 </span>
               )}
             </div>
 
-            {/* 금액은 얇은 세로선 뒤 오른쪽. 기한보다 반 단 작아서 둘 다 읽히되 기한이
-                먼저다. 금액이 없으면 선까지 같이 사라져 빈 칸을 남기지 않는다 — 칸을
-                따로 잡아두면 긴 상품명이 그만큼 폭을 잃는다. */}
+            {/* 금액은 얇은 세로선 뒤 오른쪽. 금액이 없으면 선까지 같이 사라져 빈 칸을
+                남기지 않는다 — 칸을 따로 잡아두면 긴 상품명이 그만큼 폭을 잃는다. */}
             {hasAmount && (
               <>
-                <span className="h-[11px] w-px shrink-0 bg-border" />
+                <span className="h-[12px] w-px shrink-0 bg-border" />
                 <div className="flex shrink-0 items-baseline gap-0.5">
                   <span
                     className={cn(
-                      'text-[13.5px] font-bold tabular-nums',
+                      'text-[15px] font-bold tabular-nums',
                       codeLocked ? 'text-muted-foreground' : 'text-foreground'
                     )}
                   >
@@ -334,7 +335,7 @@ export default function GifticonCard({
                   {/* 금액권은 액면가보다 "지금 얼마 남았나"가 먼저다. 계산대 앞에서 알아야
                       할 값이라 잔액을 적고, 얼마짜리였는지는 맨 윗줄이 말한다. */}
                   {isVoucher && spent > 0 && (
-                    <span className="text-[11.5px] font-medium text-muted-foreground">남음</span>
+                    <span className="text-[12.5px] font-medium text-muted-foreground">남음</span>
                   )}
                 </div>
               </>
