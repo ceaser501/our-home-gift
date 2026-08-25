@@ -271,7 +271,14 @@ export default function LoginScreen() {
 
       <div className="flex flex-1 flex-col items-center justify-center gap-8 px-6 py-7">
       <div className="flex flex-col items-center gap-4">
-        <Logo className="size-14 rounded-2xl shadow-[0_6px_18px_rgba(138,92,255,0.26)]" />
+        {/* 모서리를 여기서 또 깎지 않는다. 로고가 제 모서리를 굴려서 갖고 있고(Logo.jsx의
+            rx=114 — 56px에서 12.5px), rounded-2xl은 16px이라 그 위를 3.5px 더 깎는다.
+            헤더도 같은 이유로 안 깎는다.
+
+            그림자는 drop-shadow로 준다. box-shadow는 네모난 상자를 따라가서, 모서리를
+            안 깎으면 둥근 로고 뒤에 네모난 그림자가 깔린다 — rounded-2xl이 거기 있던
+            이유가 그것이었다. drop-shadow는 그림 모양을 따라간다. */}
+        <Logo className="size-14 [filter:drop-shadow(0_6px_14px_rgba(138,92,255,0.32))]" />
         <h1 className="m-0 text-[22px] font-bold tracking-[-0.03em] text-foreground">모아콘</h1>
         {/* 이 앱의 중심은 가족과 함께 보는 것이다. 개인용으로 방향을 틀면 카카오톡 선물함과
             겨루는 싸움이 되고, 유일한 차별점을 잃는다. 그래서 문구에서 가족을 빼지 않는다.
