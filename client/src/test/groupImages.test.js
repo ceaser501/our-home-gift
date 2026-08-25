@@ -61,7 +61,7 @@ vi.mock('zxing-wasm/reader', () => ({
 
 vi.mock('zxing-wasm/reader/zxing_reader.wasm?url', () => ({ default: 'zxing_reader.wasm' }));
 
-const { groupImages } = await import('../utils/gallery');
+const { groupImages, deepScan } = await import('../utils/gallery');
 
 // 캔버스도 이미지 로딩도 jsdom에는 없다. 사진 한 장이 그림 한 장으로 이어지도록,
 // 파일 이름을 캔버스까지 들고 간다 — 위 가짜 판독기가 그 이름으로 답을 고른다.
@@ -390,6 +390,17 @@ describe('마지막 판으로 넘어가는 문', () => {
     wasmCodes.set('qr.jpg', { text: 'IX;1;9816401685019;;', format: 'QRCode' });
 
     await groupImages([pick('qr.jpg')], { quick: true });
+
+    expect(wasmCalls).toBe(0);
+  });
+
+  // 훑기의 두 번째 판에도 안 건다. 이쪽은 얕은 판이 못 읽은 것을 통째로 다시 보는데,
+  // 첫 훑기에서 그건 밥 사진 수백 장이다. 여기에 마지막 판을 얹으면 훑기가 끝나지 않는다.
+  it('훑기의 정밀 판에서도 부르지 않는다', async () => {
+    pixels.set('food.jpg', { ink: 0.3, color: 0.1 });
+    wasmCodes.set('food.jpg', { text: '아무거나', format: 'QRCode' });
+
+    await deepScan({ pending: [{ id: 1, name: 'food.jpg', bucket: null, addedAt: 1 }] });
 
     expect(wasmCalls).toBe(0);
   });

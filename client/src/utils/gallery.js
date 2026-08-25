@@ -167,17 +167,21 @@ const READ_EDGE = 2000;
 const SHALLOW = { deep: false, tryHarder: false };
 
 // 정밀 탐색. 느린 대신 흐린 것을 살린다. 훑기 결과를 보여준 다음에 조용히 돈다.
-// 수기등록(고른 사진 몇 장)도 처음부터 이걸로 본다 — 장수가 적어 값이 싸다.
+const DEEP = { deep: true, tryHarder: true };
+
+// 고른 사진을 볼 때. 정밀 탐색에 마지막 판 하나를 더 얹는다.
 //
 // lastResort — 다 실패했을 때 무거운 판독기(wasm)를 한 번 더 부른다.
 //
-// 원래는 "막대처럼 보이는가"(looksLikeBarcode)를 통과한 사진에만 걸었다. 그 자를
-// QR은 통과하지 못한다 — 세로줄이 아니라 네모 격자라서다. 그래서 썬키스트 QR이
-// 이 마지막 판까지 못 가고 그냥 '바코드 없음'이 됐다.
+// 원래 그 판으로 가는 문은 "막대처럼 보이는가"(looksLikeBarcode)였다. 그 자를 QR은
+// 통과하지 못한다 — 세로줄이 아니라 네모 격자라서다. 그래서 썬키스트 QR이 마지막
+// 판까지 가보지도 못하고 그냥 '바코드 없음'이 됐다.
 //
-// 사진첩 훑기(SHALLOW)에는 걸지 않는다. 거긴 밥 사진 수백 장이 다 실패로 떨어지는
-// 자리라, 장마다 무거운 판독기를 부르면 훑기가 끝나지 않는다.
-const DEEP = { deep: true, tryHarder: true, lastResort: true };
+// 고른 사진에만 건다. 사진첩 훑기의 두 번째 판(deepScan)은 얕은 판이 못 읽은 것을
+// 통째로 다시 보는데, 첫 훑기에서 그건 밥 사진 수백 장이다. 장마다 무거운 판독기를
+// 부르면 훑기가 끝나지 않는다. 고른 사진은 사람이 골라온 몇 장뿐이라 값이 싸고,
+// 아이폰에는 훑기가 없어서 이 길이 유일한 길이다.
+const PICKED = { deep: true, tryHarder: true, lastResort: true };
 
 // 어떤 배율들로 읽어볼지. 큰 쪽부터 차례로 줄여 본다.
 //
@@ -518,7 +522,7 @@ async function decodeBarcode(read, pass = SHALLOW) {
     hint = { size: `${width}×${height}` };
     bars = looksLikeBarcode(image, hint);
     // 막대가 보이는데 못 읽었으면 무거운 판독기를 한 번 부른다.
-    // QR은 그 자를 통과 못 하므로, 정밀 판에서는 막대가 안 보여도 한 번 부른다(lastResort).
+    // QR은 그 자를 통과 못 하므로, 고른 사진에서는 막대가 안 보여도 한 번 부른다(PICKED).
     if (bars || pass.lastResort) found = await decodeWithWasm(image, width, height);
   }
 
@@ -1250,7 +1254,7 @@ export async function groupImages(files, { isRegistered, onProgress, onCandidate
   const { candidates, missed, knownCodes, readFailed } = await collect({
     images,
     read: readPickedFile,
-    pass: quick ? SHALLOW : DEEP,
+    pass: quick ? SHALLOW : PICKED,
     isRegistered,
     skipCodes,
     // 골라 온 사진 몇 장뿐이라, 어느 것이 원본인지 고르는 규칙(richness)으로 버리지
