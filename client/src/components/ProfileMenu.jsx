@@ -194,22 +194,18 @@ export default function ProfileMenu({ onClose }) {
               예전에는 열세 번째 줄이라 끝까지 내려야 나왔고, 나와도 바로 위 '이용약관'과
               똑같이 생겨서 눈에 걸리지 않았다. 버튼은 모양이 달라서 한눈에 찾힌다.
 
-              버전은 그 아래 가운데로 내렸다. 누를 것이 없는 값이라 참고로만 있으면 된다 —
-              문의를 받았을 때 "어떤 코드를 쓰고 계신가"를 물어볼 수 있어야 해서 남긴다. */}
-          <div className="flex flex-col gap-2.5 pt-1">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => signOut()}
-              className="h-12 w-full rounded-xl text-[15px] font-semibold text-foreground/80"
-            >
-              <LogOut className="size-[18px] text-muted-foreground" />
-              로그아웃
-            </Button>
-            <p className="m-0 text-center text-[12.5px] font-medium tabular-nums text-muted-foreground">
-              버전 {__APP_VERSION__} ({__BUILD_DATE__})
-            </p>
-          </div>
+              폭은 다 쓰되 높이는 44px이다. 48px로 뒀더니 화면 아래에서 유독 두꺼워
+              보였다 — 이 버튼이 해야 하는 일은 '찾히는 것'이지 '제일 커 보이는 것'이
+              아니다. 찾히는 값은 이미 모양(테두리 버튼)이 지고 있다. */}
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => signOut()}
+            className="mt-1 h-11 w-full rounded-xl text-[15px] font-semibold text-foreground/80"
+          >
+            <LogOut className="size-[18px] text-muted-foreground" />
+            로그아웃
+          </Button>
 
           {/* 되돌릴 수 없는 둘은 목록 줄이 아니라 박스 안 버튼이다.
               줄이면 스크롤하다 손가락이 스쳐도 열린다. 눌러야 할 자리를 따로 만들면
@@ -260,6 +256,13 @@ export default function ProfileMenu({ onClose }) {
               </Button>
             </div>
           </div>
+
+          {/* 버전은 화면 맨 끝이다. 누를 것도 없고 알아야 할 일도 없는 값이라, 무엇보다
+              뒤에 있어야 한다. 남겨두는 이유는 하나뿐 — 문의를 받았을 때 "어떤 코드를
+              쓰고 계신가"를 물어볼 수 있어야 해서다. */}
+          <p className="m-0 pb-1 text-center text-[12.5px] font-medium tabular-nums text-muted-foreground">
+            버전 {__APP_VERSION__} ({__BUILD_DATE__})
+          </p>
         </div>
 
         {renameOpen && (
