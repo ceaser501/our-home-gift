@@ -1,5 +1,6 @@
 import { ChevronRight, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { markLeaving } from '../utils/returnTo';
 
 // 내 메뉴의 줄들. 세 가지뿐이라 한 군데 모아둔다 — 켜고 끄는 줄, 앱 안으로 가는 줄,
 // 브라우저로 나가는 줄.
@@ -51,9 +52,13 @@ export function SettingSwitchRow({ icon: Icon, label, hint, on, onToggle, disabl
 
 // 어디론가 가는 줄.
 //
-// 오른쪽 표시가 두 가지다. 앱 안에서 열리면 ›, 브라우저로 나가면 ↗. 누르기 전에
+// 오른쪽 표시가 두 가지다. 이 창에서 열리면 ›, 이 화면을 떠나면 ↗. 누르기 전에
 // "여기서 열리나 나가나"를 알려주는 값이라 모양이 달라야 한다.
-export function SettingLinkRow({ icon: Icon, label, onClick, href }) {
+//
+// returnTo는 떠나기 전에 "여기로 돌아와야 한다"를 적어둘 이름이다. 앱 웹뷰에는 탭이
+// 없어서 target="_blank"가 그 자리에서 이동해버리는데, 그러고 뒤로가기를 누르면 앱이
+// 처음부터 다시 열려 이 창이 사라진다(utils/returnTo.js 참고).
+export function SettingLinkRow({ icon: Icon, label, onClick, href, returnTo }) {
   const external = Boolean(href);
   const Mark = external ? ExternalLink : ChevronRight;
 
@@ -71,7 +76,13 @@ export function SettingLinkRow({ icon: Icon, label, onClick, href }) {
   const className = 'flex w-full items-center gap-[13px] px-0.5 py-[13px] no-underline';
 
   return external ? (
-    <a href={href} target="_blank" rel="noreferrer" className={className}>
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      onClick={() => returnTo && markLeaving(returnTo)}
+      className={className}
+    >
       {inner}
     </a>
   ) : (

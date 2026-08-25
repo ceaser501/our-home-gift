@@ -8,6 +8,7 @@ import FamilySwitcherSheet from './FamilySwitcherSheet';
 import ProfileMenu from './ProfileMenu';
 import { useFamily } from '../FamilyContext';
 import { OWNER_TAG_PALETTE, memberTagColorClass } from '../utils/tagColor';
+import { takeReturnTo } from '../utils/returnTo';
 
 export default function Header() {
   const { family, members, user, joinRequests } = useFamily();
@@ -16,7 +17,10 @@ export default function Header() {
 
   const [membersOpen, setMembersOpen] = useState(false);
   const [switcherOpen, setSwitcherOpen] = useState(false);
-  const [profileOpen, setProfileOpen] = useState(false);
+  // 약관을 보러 앱 화면을 떠났다가 돌아온 것이면 내 메뉴를 도로 연다.
+  // 그 세 줄은 앱 웹뷰에서 이 자리를 통째로 갈아끼우고 나가기 때문에, 뒤로가기로 돌아오면
+  // 앱이 처음부터 다시 열린다 — 열어뒀던 창이 사라진 채로.
+  const [profileOpen, setProfileOpen] = useState(() => takeReturnTo() === 'profile');
 
   return (
     <header className="px-4 pt-[var(--safe-top)] pb-2.5">

@@ -181,12 +181,19 @@ export default function ProfileMenu({ onClose }) {
               icon={ShieldCheck}
               label="개인정보처리방침"
               href={`${import.meta.env.BASE_URL}privacy.html`}
+              returnTo="profile"
             />
-            <SettingLinkRow icon={FileText} label="이용약관" href={`${import.meta.env.BASE_URL}terms.html`} />
+            <SettingLinkRow
+              icon={FileText}
+              label="이용약관"
+              href={`${import.meta.env.BASE_URL}terms.html`}
+              returnTo="profile"
+            />
             <SettingLinkRow
               icon={Scale}
               label="오픈소스 및 기술 정보"
               href={`${import.meta.env.BASE_URL}licenses.html`}
+              returnTo="profile"
             />
           </SettingSection>
 
