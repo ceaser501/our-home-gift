@@ -6,7 +6,7 @@ import { useId } from "react";
 //  - 글자를 더 채웠다(캡 높이 132 → 150). 잘릴 걱정이 없는 자리라서 그만큼 키운다.
 //
 // 글자는 패스로 박혀 있다. Nunito 1000 에서 뽑았고, 폰트가 없는 환경에서도 똑같이 그려진다.
-// 원본과 다른 크기가 필요하면 assets/brand/ 아래 SVG 를 쓰면 된다.
+// 고칠 일이 있으면 여기가 아니라 assets/brand/ 의 SVG 를 고치고 다시 뽑는다.
 export default function Logo({ className }) {
   // 한 화면에 로고가 여러 개 놓여도 그라데이션 id 가 부딪히지 않게 컴포넌트마다 다른 값을 쓴다.
   const id = useId();
@@ -24,10 +24,8 @@ export default function Logo({ className }) {
           <stop offset="1" stopColor="#3A2F96" />
         </linearGradient>
       </defs>
-      <rect width="512" height="512" rx="114" fill={`url(#${id})`} />
-
-      {/* 워드마크는 -9도 기울여 놓는다. 홈 화면에서 삐딱한 아이콘이 드물어 눈에 걸린다. */}
-      <g transform="translate(256 256)">
+      <rect width="512" height="512" rx="114" fill="{`url(#${id})`}" />
+      <g transform="translate(256 256) scale(1)">
         <g transform="rotate(-9)">
           <path
             d="M156 10Q109 10 84-15.500Q59-41 59-88L59-617Q59-664 86-689.500Q113-715 162-715Q203-715 227-699Q251-683 271-647L467-301L431-301L627-647Q647-683 671.500-699Q696-715 736-715Q783-715 808.500-689.500Q834-664 834-617L834-88Q834-41 809-15.500Q784 10 737 10Q690 10 665-15.500Q640-41 640-88L640-365L660-365L526-143Q511-118 492.500-105.500Q474-93 445-93Q416-93 397.500-105.500Q379-118 364-143L230-365L253-365L253-88Q253-41 228-15.500Q203 10 156 10"
@@ -47,6 +45,32 @@ export default function Logo({ className }) {
             transform="translate(79.55 75.00) scale(0.20979)"
             fill="#FFFFFF"
           />
+          <g transform="translate(72.89 -72.45) rotate(45)">
+            <rect
+              x="-23.10"
+              y="-16.50"
+              width="11.70"
+              height="33.00"
+              rx="5.85"
+              fill="#FFD84D"
+            />
+            <rect
+              x="-5.85"
+              y="-21.00"
+              width="11.70"
+              height="42.00"
+              rx="5.85"
+              fill="#FFD84D"
+            />
+            <rect
+              x="11.40"
+              y="-13.50"
+              width="11.70"
+              height="27.00"
+              rx="5.85"
+              fill="#FFD84D"
+            />
+          </g>
         </g>
       </g>
     </svg>

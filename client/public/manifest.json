@@ -1,7 +1,7 @@
 {
   "name": "모아콘",
   "short_name": "모아콘",
-  "description": "가족끼리 나눠 쓰는 기프티콘, 한곳에",
+  "description": "우리 가족 기프티콘 서랍",
   "start_url": ".",
   "display": "standalone",
   "background_color": "#ffffff",

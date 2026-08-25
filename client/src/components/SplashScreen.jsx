@@ -19,7 +19,7 @@ export default function SplashScreen() {
       <div className="animate-splash-in-delayed flex flex-col items-center gap-1.5">
         <h1 className="m-0 text-2xl font-bold tracking-tight text-foreground">모아콘</h1>
         <p className="m-0 text-center text-sm break-keep text-muted-foreground">
-          가족끼리 나눠 쓰는 기프티콘, 한곳에
+          우리 가족 기프티콘 서랍
         </p>
       </div>
     </div>
