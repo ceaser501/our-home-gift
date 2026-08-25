@@ -45,32 +45,6 @@ export default function Logo({ className }) {
             transform="translate(79.55 75.00) scale(0.20979)"
             fill="#FFFFFF"
           />
-          <g transform="translate(72.89 -72.45) rotate(45)">
-            <rect
-              x="-23.10"
-              y="-16.50"
-              width="11.70"
-              height="33.00"
-              rx="5.85"
-              fill="#FFD84D"
-            />
-            <rect
-              x="-5.85"
-              y="-21.00"
-              width="11.70"
-              height="42.00"
-              rx="5.85"
-              fill="#FFD84D"
-            />
-            <rect
-              x="11.40"
-              y="-13.50"
-              width="11.70"
-              height="27.00"
-              rx="5.85"
-              fill="#FFD84D"
-            />
-          </g>
         </g>
       </g>
     </svg>
