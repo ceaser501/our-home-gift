@@ -23,7 +23,7 @@ export default function Logo({ className }) {
           <stop offset="1" stopColor="#3A2F96" />
         </linearGradient>
       </defs>
-      <rect width="512" height="512" rx="114" fill="{`url(#${id})`}" />
+      <rect width="512" height="512" rx="114" fill={`url(#${id})`} />
       <g transform="translate(256 256) scale(1)">
         <g transform="rotate(-9)">
           <path
