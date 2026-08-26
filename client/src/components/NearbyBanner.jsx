@@ -12,6 +12,7 @@ import {
 } from "../utils/geolocation";
 import { todayStr } from "../utils/date";
 import { isNativeApp } from "../utils/browser";
+import { canOpenAppSettings, openAppSettings } from "../utils/gallery";
 
 // "지금 이 근처에서 쓸 수 있는 게 있다"를 알려주는 상단 띠.
 //
@@ -45,6 +46,17 @@ const DISMISS_KEY = "nearby-banner-dismissed-on";
 // 시스템 창은 한 번뿐이라 아껴야 하지만, 우리 띠는 몇 번이든 다시 물을 수 있다. 그렇다고
 // 거절한 그날 또 물으면 조르는 것이 된다. 하루 쉬고 다음 날 다시 묻는다.
 const REFUSED_KEY = "nearby-permission-refused-on";
+
+// 시스템 창이 아예 안 뜬 것을 알아내는 문턱.
+//
+// 안드로이드는 두 번 거절당하면 그때부터 창을 띄우지 않고 곧장 거절을 돌려준다. 그러면
+// '켜기'를 눌러도 아무 일이 안 일어나서, 사용자 눈에는 버튼이 고장 난 것으로 보인다.
+// 창이 떴다면 사람이 읽고 누르는 시간이 드니 최소 몇백 밀리초는 걸린다. 눈 깜짝할 사이에
+// 거절이 돌아왔다면 창 자체가 없었던 것이다.
+//
+// 400ms로 둔다. 사람이 창을 보고 누르는 데 이보다 빠를 수는 없고, 창이 없을 때는 대개
+// 50ms 안에 돌아온다. 사이가 넓어서 어느 쪽으로든 잘못 볼 일이 드물다.
+const NO_DIALOG_MS = 400;
 
 // 위치 권한을 새로 묻지 않는다. 앱을 열자마자 권한 창부터 들이밀면 거절당하기 딱 좋고,
 // 한 번 거절되면 매장 찾기까지 같이 막힌다. 이미 허용된 경우에만 현재 위치를 잡고,
@@ -144,6 +156,8 @@ export default function NearbyBanner({ gifticons, onPick, yielded = false }) {
   // 아직 위치를 준 적이 없는 상태. 이 자리에서 먼저 물어본다.
   const [needsPermission, setNeedsPermission] = useState(false);
   const [refused, setRefused] = useState(() => readRefusedToday());
+  // 폰이 아예 잠가버린 상태. '켜기'를 눌러도 창이 안 뜬다.
+  const [blocked, setBlocked] = useState(false);
   const [dismissed, setDismissed] = useState(() => readDismissedToday());
   // 설정에서 켜고 끄는 값. 꺼두면 매장을 뒤지지도 않는다 — 카카오 검색에는 하루 상한이
   // 걸려 있어서, 안 보여줄 것을 찾느라 그걸 쓰면 정작 '매장' 버튼이 막힌다.
@@ -372,6 +386,44 @@ export default function NearbyBanner({ gifticons, onPick, yielded = false }) {
     );
   }
 
+  //   2-1) 폰이 잠가버렸다 — '켜기'를 눌러도 창이 안 뜬다
+  //
+  // 안드로이드는 두 번 거절당하면 그다음부터 아무 말 없이 바로 거절을 돌려준다. 그러면
+  // 버튼이 고장 난 것처럼 보인다. 눌렀는데 아무 일도 안 일어나는 자리를 남겨두면 안 된다.
+  //
+  // 남은 길은 폰 설정 하나뿐이라 거기까지 데려다준다. 이 자리를 그냥 비우지 않는 이유는,
+  // 마음을 바꾼 사람이 돌아올 길이 이것 말고 없어서다(매장 찾기에도 같은 버튼이 있지만
+  // 거기까지 가려면 카드 메뉴를 열어야 한다).
+  //
+  // ②와 같은 배경을 쓴다. 하려던 일이 같고, 설정에서 켜고 돌아오면 그대로 ①이 된다.
+  if (blocked && hasUsable) {
+    const canOpen = canOpenAppSettings();
+    return (
+      <div className="flex w-full items-center gap-[11px] bg-accent py-[13px] pr-3 pl-3.5">
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-[10px] bg-primary/12">
+          <MapPin className="size-[17px] text-primary" strokeWidth={2.1} />
+        </span>
+        {/* '거절하셨네요'라고 하지 않는다. 지난 일을 짚는 말이고, 지금 할 일은 그게
+            아니다. 어디서 무엇을 켜면 되는지만 적는다. 설정 화면을 못 여는 브라우저
+            에서는 어디로 가야 하는지가 이 한 줄뿐이라 조금 더 자세히 적는다. */}
+        <span className="min-w-0 flex-1 text-[13.5px] leading-normal font-medium break-keep text-foreground/80">
+          {canOpen
+            ? '설정에서 위치 권한을 켜주세요. 위치 → 앱 사용 중에만 허용.'
+            : '브라우저 주소창의 자물쇠를 눌러 위치를 허용해주세요.'}
+        </span>
+        {canOpen && (
+          <button
+            type="button"
+            onClick={openAppSettings}
+            className="flex h-[34px] shrink-0 items-center rounded-[10px] bg-primary px-3.5 text-[13.5px] font-bold whitespace-nowrap text-primary-foreground"
+          >
+            설정 열기
+          </button>
+        )}
+      </div>
+    );
+  }
+
   //   3) 허락은 받았는데 못 잡았다 — 왜 아무것도 안 뜨는지 알려준다
   //
   // 아무 말 없이 비워두면 "이 기능이 고장 났나" 하게 된다. 지하에서는 늘 그렇고, 지하는
@@ -397,14 +449,23 @@ export default function NearbyBanner({ gifticons, onPick, yielded = false }) {
   // '켜기'를 눌렀을 때만 시스템 창이 뜬다. 여기까지 온 사람은 무엇을 위해 묻는지 이미
   // 읽었으므로, 앱을 열자마자 들이미는 것보다 훨씬 잘 허락한다.
   async function askForLocation() {
+    const startedAt = Date.now();
     try {
       const fresh = await getFreshPosition();
       saveCachedPosition(fresh);
       setNeedsPermission(false);
+      setBlocked(false);
       search(fresh);
     } catch (err) {
       if (err?.code === 1) {
-        // 거절. 그날은 다시 묻지 않는다.
+        // 창이 안 뜬 채로 거절이 돌아왔다. 폰이 이미 잠근 것이라 앱이 더 물어볼 길이
+        // 없다. 남은 길은 설정 화면 하나뿐이니 그리로 데려다준다.
+        if (Date.now() - startedAt < NO_DIALOG_MS) {
+          setBlocked(true);
+          setNeedsPermission(false);
+          return;
+        }
+        // 사람이 거절했다. 그날은 다시 묻지 않는다.
         try {
           localStorage.setItem(REFUSED_KEY, todayStr());
         } catch {

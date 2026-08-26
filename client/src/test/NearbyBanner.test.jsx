@@ -13,6 +13,14 @@ vi.mock('../api', () => ({
 
 vi.mock('../utils/browser', () => ({ isNativeApp: () => true }));
 
+const canOpenAppSettings = vi.fn(() => true);
+const openAppSettings = vi.fn();
+
+vi.mock('../utils/gallery', () => ({
+  canOpenAppSettings: (...a) => canOpenAppSettings(...a),
+  openAppSettings: (...a) => openAppSettings(...a),
+}));
+
 vi.mock('@capacitor/app', () => ({
   App: {
     addListener: (_name, fn) => {
@@ -61,6 +69,7 @@ beforeEach(() => {
   // 매장 찾기를 한 번 써서 위치를 적어둔 사람. 곧 권한을 준 사람이다.
   hasSavedPosition.mockReturnValue(true);
   isNearbyBannerOn.mockReturnValue(true);
+  canOpenAppSettings.mockReturnValue(true);
   searchNearbyStores.mockResolvedValue([{ name: '스타벅스 서울숲점', distance: 120 }]);
   getFreshPosition.mockResolvedValue({ lat: 37.5, lng: 127.0 });
   readCachedPosition.mockReturnValue({ lat: 37.5, lng: 127.0 });
@@ -331,13 +340,18 @@ describe('위치를 아직 안 준 사람에게', () => {
 
   // 시스템 창은 한 번뿐이라 아껴야 하지만, 우리 띠는 몇 번이든 다시 물을 수 있다.
   // 그렇다고 거절한 그날 또 물으면 조르는 것이 된다.
+  // 사람이 창을 보고 거절한 경우. 즉시 돌아오는 거절은 뜻이 달라서(창이 아예 안 뜬 것)
+  // 여기서는 사람이 누르는 시간만큼 늦춰 흉내낸다.
   it('거절하면 그날은 다시 묻지 않는다', async () => {
-    getFreshPosition.mockRejectedValue({ code: 1 });
+    getFreshPosition.mockImplementation(
+      () => new Promise((_, reject) => setTimeout(() => reject({ code: 1 }), 450))
+    );
 
     const { unmount } = render(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
     await screen.findByText(ASK, {}, { timeout: 3000 });
     await act(async () => screen.getByRole('button', { name: '켜기' }).click());
-    expect(screen.queryByText(ASK)).toBeNull();
+    // 거절이 450ms 뒤에 온다(사람이 창을 읽고 누르는 시간). 그때까지 기다린다.
+    await waitFor(() => expect(screen.queryByText(ASK)).toBeNull(), { timeout: 2000 });
 
     unmount();
     render(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
@@ -362,12 +376,45 @@ describe('위치를 아직 안 준 사람에게', () => {
 
   // 거절한 뒤 앱을 뒤로 보냈다 다시 여는 것은 흔한 일이다. 그때 다시 찾으면서 물음이
   // 되살아나면, 방금 거절한 사람에게 같은 것을 또 들이미는 셈이다.
-  it('거절한 뒤 앱을 다시 열어도 그날은 안 묻는다', async () => {
+  // 안드로이드는 두 번 거절당하면 그때부터 창을 안 띄우고 곧장 거절을 돌려준다.
+  // 그러면 '켜기'가 눌러도 아무 일이 없는 버튼이 된다 — 고장으로 읽힌다.
+  // 남은 길은 폰 설정 하나뿐이라 그리로 데려다준다.
+  it('창이 안 뜨고 거절이 돌아오면 설정으로 데려다준다', async () => {
     getFreshPosition.mockRejectedValue({ code: 1 });
 
     render(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
     await screen.findByText(ASK, {}, { timeout: 3000 });
     await act(async () => screen.getByRole('button', { name: '켜기' }).click());
+
+    expect(screen.queryByText(ASK)).toBeNull();
+    expect(screen.getByText(/설정에서 위치 권한을 켜주세요/)).toBeTruthy();
+
+    await act(async () => screen.getByRole('button', { name: '설정 열기' }).click());
+    expect(openAppSettings).toHaveBeenCalled();
+  });
+
+  // 브라우저에는 열어줄 설정 화면이 없다. 버튼 대신 어디를 눌러야 하는지를 적는다.
+  it('설정 화면을 못 여는 곳에서는 버튼 없이 길만 알려준다', async () => {
+    canOpenAppSettings.mockReturnValue(false);
+    getFreshPosition.mockRejectedValue({ code: 1 });
+
+    render(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
+    await screen.findByText(ASK, {}, { timeout: 3000 });
+    await act(async () => screen.getByRole('button', { name: '켜기' }).click());
+
+    expect(screen.getByText(/자물쇠를 눌러 위치를 허용/)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: '설정 열기' })).toBeNull();
+  });
+
+  it('거절한 뒤 앱을 다시 열어도 그날은 안 묻는다', async () => {
+    getFreshPosition.mockImplementation(
+      () => new Promise((_, reject) => setTimeout(() => reject({ code: 1 }), 450))
+    );
+
+    render(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
+    await screen.findByText(ASK, {}, { timeout: 3000 });
+    await act(async () => screen.getByRole('button', { name: '켜기' }).click());
+    await waitFor(() => expect(screen.queryByText(ASK)).toBeNull(), { timeout: 2000 });
 
     sessionStorage.clear();
     await act(async () => {
