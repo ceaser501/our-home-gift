@@ -216,7 +216,12 @@ function buildSchema(categories: string[]) {
       isVoucher: { type: 'boolean', description: '금액권이면 true, 정해진 상품과 바꾸는 교환권이면 false' },
       thumbnail: {
         type: 'object',
-        description: '상품 사진이 있는 네모 영역',
+        // 한때 '상품 사진이 있는 네모 영역' 한 줄이었다. 그러면 화면에서 제일 큰 네모를
+        // 골라온다 — 약관이 적힌 검은 상자, 바코드 블록, 안내 배너가 그렇게 뽑혔다.
+        // 무엇이 아닌지를 같이 적어야 한다. 못 찾겠으면 0을 내라는 것도 함께 — 엉뚱한
+        // 데를 자르느니 안 자르는 편이 낫다(화면은 캡처 전체로 대신한다).
+        description:
+          '먹을 것·마실 것·상품이 찍힌 사진 부분만. 바코드나 QR이 있는 자리, 약관이나 안내 문구가 적힌 글자 상자, 브랜드 로고만 있는 띠, 화면 전체는 상품 사진이 아니다. 그런 것밖에 없으면 image를 0으로 준다',
         properties: {
           image: { type: 'integer', description: '몇 번째 이미지인지(1부터). 못 찾으면 0' },
           x: { type: 'number', description: '왼쪽 위 x. 이미지 너비의 백분율(0~100)' },

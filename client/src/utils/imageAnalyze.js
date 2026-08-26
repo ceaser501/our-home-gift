@@ -220,11 +220,31 @@ export async function decodeBarcode(canvas, { deepRetry = true } = {}) {
     code: result.getText(),
     codeType,
     cropBlob,
+    // 막대가 놓인 자리(백분율). 썸네일이 이 자리를 상품 사진이라고 짚어오면 걸러낸다 —
+    // 모델은 화면에서 제일 큰 네모를 고르는 버릇이 있어서 바코드 블록을 자주 집는다.
+    box: pointsBox(points, canvas.width, canvas.height),
     // 막대가 사진 가로폭의 몇 할을 차지하는가. 훑기 쪽과 같은 값이다(gallery.js).
     // 이 값이 작다는 건 "바코드를 보여주려고 찍은 사진"이 아니라는 뜻이다 — 앱 화면이나
     // 목록을 통째로 찍은 캡처가 그렇다. 그런 그림에는 다른 기프티콘이 같이 찍혀 있어서,
     // 모델이 옆칸의 금액과 기한을 이 기프티콘 것으로 읽어온다.
     coverage: barcodeCoverage(points, canvas.width, canvas.height, codeType),
+  };
+}
+
+// 막대를 감싸는 네모를 백분율로. 모델이 주는 썸네일 좌표와 같은 눈금이라 바로 견줄 수 있다.
+function pointsBox(points, width, height) {
+  if (!points || points.length === 0 || !width || !height) return null;
+  const xs = points.map((p) => p.getX()).filter((n) => Number.isFinite(n));
+  const ys = points.map((p) => p.getY()).filter((n) => Number.isFinite(n));
+  if (xs.length === 0 || ys.length === 0) return null;
+
+  const left = Math.min(...xs);
+  const top = Math.min(...ys);
+  return {
+    x: (left / width) * 100,
+    y: (top / height) * 100,
+    width: ((Math.max(...xs) - left) / width) * 100,
+    height: ((Math.max(...ys) - top) / height) * 100,
   };
 }
 
@@ -313,31 +333,105 @@ async function cropBarcodeRegion(source, points, codeType) {
 // 캡처라, 68px로 줄이면 상품 사진·상품명·버튼이 한꺼번에 뭉개져서 뭐가 뭔지 알 수 없다.
 // 서버가 짚어준 영역(백분율)을 원본 좌표로 되돌려 그 부분만 잘라 쓴다.
 // 백분율로 주고받는 이유: 모델이 본 이미지는 줄여서 보낸 것이라 픽셀 좌표가 원본과 다르다.
-async function cropThumbnail(file, box) {
-  const canvas = await toAnalyzeCanvas(file);
+// 목록 칸은 정사각형이다(GifticonCard). 잘라낸 그림이 가로로 길면 그 칸이 양옆을 다시
+// 잘라내서, 상품이 한쪽에 치우쳐 있으면 화면에서 사라진다. 그래서 자를 때 짧은 쪽을
+// 가운데 기준으로 늘려 정사각형으로 맞춘다. 사진 가장자리에 닿으면 그만큼 안쪽으로 민다.
+export function toSquare(x, y, width, height, maxWidth, maxHeight) {
+  const side = Math.min(Math.max(width, height), maxWidth, maxHeight);
+  const left = Math.min(Math.max(0, x + width / 2 - side / 2), maxWidth - side);
+  const top = Math.min(Math.max(0, y + height / 2 - side / 2), maxHeight - side);
+  return { x: left, y: top, side };
+}
+
+// 잘라낸 자리가 사진인가, 글자판인가.
+//
+// 모델은 약관이 적힌 검은 상자를 상품 사진이라고 자주 짚는다. 배스킨라빈스 카드에서
+// "유효기간 연장 및 환불이 불가합니다"가 적힌 검은 네모가 그렇게 뽑혀 목록에 남았다.
+//
+// 글자판은 두 가지가 함께 나타난다 — 바탕색 하나가 거의 다 차지하고(밝기가 한 칸에 몰림),
+// 색이랄 게 없다(채도가 낮음). 사진은 아이스크림이든 커피든 밝기가 흩어지고 색이 있다.
+// 둘 다 걸릴 때만 버린다. 하나만 보면 흰 접시에 담긴 검은 커피 같은 것이 억울하게 걸린다.
+const FLAT_SHARE = 0.65;
+const FLAT_COLORFUL = 0.12;
+
+export function looksLikeTextPanel(ctx, width, height) {
+  let data;
   try {
+    data = ctx.getImageData(0, 0, width, height).data;
+  } catch {
+    // 캔버스를 못 읽으면(테스트 환경 등) 판단하지 않는다. 버리지 않는 쪽이 안전하다.
+    return false;
+  }
+
+  const buckets = Array.from({ length: 16 }, () => 0);
+  let colorful = 0;
+  let seen = 0;
+  // 한 변에 40칸씩만 훑는다. 1,600점이면 비율을 재는 데 넘치고, 전부 보면 큰 사진에서 느리다.
+  const stepX = Math.max(1, Math.floor(width / 40));
+  const stepY = Math.max(1, Math.floor(height / 40));
+
+  for (let py = 0; py < height; py += stepY) {
+    for (let px = 0; px < width; px += stepX) {
+      const i = (py * width + px) * 4;
+      const r = data[i];
+      const g = data[i + 1];
+      const b = data[i + 2];
+      const light = (r * 299 + g * 587 + b * 114) / 1000;
+      buckets[Math.min(15, Math.floor(light / 16))] += 1;
+      if (Math.max(r, g, b) - Math.min(r, g, b) > 25) colorful += 1;
+      seen += 1;
+    }
+  }
+  if (seen === 0) return false;
+
+  return Math.max(...buckets) / seen >= FLAT_SHARE && colorful / seen < FLAT_COLORFUL;
+}
+
+// 백분율 네모 둘이 겹치는가. 막대가 놓인 자리를 상품 사진이라고 짚어왔는지 볼 때 쓴다.
+// 막대의 가운데가 썸네일 네모 안에 들면 같은 자리를 가리킨 것으로 본다 — 1D 막대는
+// 납작하고 QR은 네모라 모양이 제각각인데, 가운데 한 점이면 둘 다 똑같이 잴 수 있다.
+export function boxHolds(box, other) {
+  if (!box || !other) return false;
+  const cx = other.x + other.width / 2;
+  const cy = other.y + other.height / 2;
+  return cx >= box.x && cx <= box.x + box.width && cy >= box.y && cy <= box.y + box.height;
+}
+
+async function cropThumbnail(file, box) {
+  let canvas = null;
+  try {
+    canvas = await toAnalyzeCanvas(file);
     const x = Math.max(0, (box.x / 100) * canvas.width);
     const y = Math.max(0, (box.y / 100) * canvas.height);
     const width = Math.min(canvas.width - x, (box.width / 100) * canvas.width);
     const height = Math.min(canvas.height - y, (box.height / 100) * canvas.height);
     if (width < 16 || height < 16) return null;
 
-    const scale = Math.min(1, THUMB_EDGE / Math.max(width, height));
+    const square = toSquare(x, y, width, height, canvas.width, canvas.height);
+    const scale = Math.min(1, THUMB_EDGE / square.side);
     const out = document.createElement('canvas');
-    out.width = Math.round(width * scale);
-    out.height = Math.round(height * scale);
+    out.width = Math.round(square.side * scale);
+    out.height = out.width;
     const ctx = out.getContext('2d');
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
-    ctx.drawImage(canvas, x, y, width, height, 0, 0, out.width, out.height);
+    ctx.drawImage(canvas, square.x, square.y, square.side, square.side, 0, 0, out.width, out.height);
+
+    // 글자판을 잘라 놓느니 안 자르는 게 낫다. 안 자르면 목록은 캡처 전체를 보여주는데,
+    // 그건 적어도 무슨 카드인지는 알아볼 수 있다.
+    if (looksLikeTextPanel(ctx, out.width, out.height)) return null;
 
     return await new Promise((resolve) => out.toBlob(resolve, 'image/jpeg', 0.85));
   } catch {
     // 썸네일은 없어도 원본 사진으로 대신할 수 있다. 여기서 막히면 등록 자체가 막힌다.
+    // 사진을 여는 것까지 이 안에 둔 이유가 그것이다 — 한 장이 상해 있다고 등록이
+    // 통째로 엎어지면 안 된다.
     return null;
   } finally {
-    canvas.width = 0;
-    canvas.height = 0;
+    if (canvas) {
+      canvas.width = 0;
+      canvas.height = 0;
+    }
   }
 }
 
@@ -354,7 +448,7 @@ async function cropThumbnail(file, box) {
 // 멈춘 것처럼 보이기 때문에, 화면 쪽에서 진행 상황을 표시할 수 있게 한다.
 export async function prepareImages(files, { onProgress, knownCode } = {}) {
   const report = (step, extra) => onProgress?.({ step, total: files.length, ...extra });
-  const barcode = { code: null, codeType: null, cropBlob: null, coverage: 0 };
+  const barcode = { code: null, codeType: null, cropBlob: null, coverage: 0, box: null, image: 0 };
   const storageFiles = [];
   const uploads = [];
 
@@ -364,7 +458,7 @@ export async function prepareImages(files, { onProgress, knownCode } = {}) {
     try {
       if (!barcode.code) {
         const found = await decodeBarcode(canvas, { deepRetry: !knownCode });
-        if (found.code) Object.assign(barcode, found);
+        if (found.code) Object.assign(barcode, found, { image: index + 1 });
       }
       const { storage, analyze } = await toOutputBlobs(canvas);
       storageFiles.push(new File([storage], storageName(file), { type: 'image/jpeg' }));
@@ -382,6 +476,9 @@ export async function prepareImages(files, { onProgress, knownCode } = {}) {
     barcodeCropBlob: barcode.cropBlob,
     // 읽어낸 막대가 사진에서 얼마나 큰가. 화면이 "작게 찍혔어요"를 말할 때 쓴다.
     barcodeCoverage: barcode.coverage,
+    // 막대가 몇 번째 사진의 어디에 있는가. 썸네일이 그 자리를 짚어오면 걸러낸다.
+    barcodeImage: barcode.image,
+    barcodeBox: barcode.box,
     // 스토리지에 올릴 파일. 사용자가 고른 원본이 아니라 줄인 것이다.
     storageFiles,
     // 모델에게 보낼 같은 그림의 base64.
@@ -500,7 +597,16 @@ export async function readGifticonInfo(prepared, { onProgress, knownCode, knownT
   // 사진이 더 적으면 가리키는 자리가 비어 있을 수 있다. 없으면 자르지 않는다.
   report('thumbnail');
   const thumbBox = info.thumbnail;
-  const thumbSource = thumbBox ? prepared.storageFiles[thumbBox.image - 1] : null;
+  // 막대가 놓인 자리를 상품 사진이라고 짚어왔으면 버린다.
+  //
+  // 모델은 화면에서 제일 큰 네모를 고르는 버릇이 있어서 바코드 블록을 자주 집는다. BBQ
+  // 카드에서 노란 띠 아래 막대와 번호가 통째로 썸네일이 된 적이 있다.
+  //
+  // 여기서는 모델을 안 믿고 우리가 아는 사실로 검산한다 — 막대 자리는 zxing이 이미
+  // 읽어뒀다(prepareImages). 짐작이 아니라 잰 값이라 프롬프트보다 단단하다.
+  const onBarcode =
+    thumbBox && prepared.barcodeImage === thumbBox.image && boxHolds(thumbBox, prepared.barcodeBox);
+  const thumbSource = thumbBox && !onBarcode ? prepared.storageFiles[thumbBox.image - 1] : null;
   const thumbCropBlob = thumbSource ? await cropThumbnail(thumbSource, thumbBox) : null;
   report('done');
 
