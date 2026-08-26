@@ -219,48 +219,56 @@ export default function ProfileMenu({ onClose }) {
               지나가다 닿을 일이 없다.
 
               오른쪽에 '이 가족만 / 계정까지'라고 두 단어만 적어뒀던 것을 문장으로 풀었다.
-              두 단어로는 무엇이 다른지가 전달되지 않는다. */}
-          <div className="mt-0.5 mb-1 flex flex-col gap-[11px] rounded-[14px] border border-destructive/20 bg-destructive/5 p-4">
-            <p className="m-0 text-[13px] font-bold tracking-[-0.01em] text-destructive/85">되돌릴 수 없는 것</p>
+              두 단어로는 무엇이 다른지가 전달되지 않는다.
 
-            <div className="flex items-center gap-3">
-              <div className="min-w-0 flex-1">
-                <p className="m-0 text-[15px] font-semibold tracking-[-0.015em] text-foreground">가족 나가기</p>
-                <p className="mt-px mb-0 text-[13px] font-medium break-keep text-muted-foreground">
-                  {family.name}에서만 빠져요
-                </p>
+              제목은 박스 밖으로 냈다. 안에 붉은 글자로 있을 때는 이 구역만 다른 물건처럼
+              보였다 — 위의 '기록과 소식'·'약관과 정보'와 같은 자리에 같은 모양으로 두면
+              화면이 한 줄로 읽힌다. 붉은색은 아래 두 버튼이 이미 지고 있어서, 제목까지
+              붉으면 무엇이 실제로 눌리는 것인지가 흐려진다. */}
+          <div className="mt-0.5 mb-1 flex flex-col gap-0.5">
+            <p className="m-0 pb-1 text-[13px] font-bold tracking-[-0.01em] text-muted-foreground">
+              조심해서 눌러주세요
+            </p>
+            <div className="flex flex-col gap-[11px] rounded-[14px] border border-destructive/20 bg-destructive/5 p-4">
+              <div className="flex items-center gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="m-0 text-[15px] font-semibold tracking-[-0.015em] text-foreground">가족 나가기</p>
+                  <p className="mt-px mb-0 text-[13px] font-medium break-keep text-muted-foreground">
+                    {family.name}에서만 빠져요
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setLeaveAsking(true)}
+                  disabled={leaving}
+                  className="h-10 shrink-0 rounded-[11px] border-destructive/30 px-3.5 text-sm font-semibold text-destructive/85"
+                >
+                  {leaving ? '나가는 중…' : '나가기'}
+                </Button>
               </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setLeaveAsking(true)}
-                disabled={leaving}
-                className="h-10 shrink-0 rounded-[11px] border-destructive/30 px-3.5 text-sm font-semibold text-destructive/85"
-              >
-                {leaving ? '나가는 중…' : '나가기'}
-              </Button>
-            </div>
 
-            <div className="h-px bg-destructive/15" />
+              <div className="h-px bg-destructive/15" />
 
-            <div className="flex items-center gap-3">
-              <div className="min-w-0 flex-1">
-                <p className="m-0 text-[15px] font-semibold tracking-[-0.015em] text-foreground">계정 삭제</p>
-                <p className="mt-px mb-0 text-[13px] font-medium break-keep text-muted-foreground">
-                  모든 가족과 기프티콘이 지워져요
-                </p>
+              <div className="flex items-center gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="m-0 text-[15px] font-semibold tracking-[-0.015em] text-foreground">계정 삭제</p>
+                  <p className="mt-px mb-0 text-[13px] font-medium break-keep text-muted-foreground">
+                    모든 가족과 기프티콘이 지워져요
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setDeleteStep('what')}
+                  disabled={deleting}
+                  className="h-10 shrink-0 rounded-[11px] border-destructive/30 px-3.5 text-sm font-semibold text-destructive/85"
+                >
+                  {deleting ? '지우는 중…' : '삭제'}
+                </Button>
               </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setDeleteStep('what')}
-                disabled={deleting}
-                className="h-10 shrink-0 rounded-[11px] border-destructive/30 px-3.5 text-sm font-semibold text-destructive/85"
-              >
-                {deleting ? '지우는 중…' : '삭제'}
-              </Button>
             </div>
           </div>
 
