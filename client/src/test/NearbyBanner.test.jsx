@@ -137,7 +137,7 @@ describe('NearbyBanner', () => {
 
     const before = searchNearbyStores.mock.calls.length;
     // 캐시가 가로채지 않도록 비운다. 실제로는 10분이 지났거나 300m를 움직인 상황이다.
-    sessionStorage.clear();
+    localStorage.removeItem('nearby-banner:result');
     searchNearbyStores.mockResolvedValue([{ name: '스타벅스 성수점', distance: 80 }]);
 
     await act(async () => {
@@ -155,7 +155,7 @@ describe('NearbyBanner', () => {
     await screen.findByText(/스타벅스 서울숲점/, {}, { timeout: 3000 });
 
     const before = searchNearbyStores.mock.calls.length;
-    sessionStorage.clear();
+    localStorage.removeItem('nearby-banner:result');
 
     await act(async () => {
       await appStateHandler({ isActive: false });
@@ -173,11 +173,30 @@ describe('NearbyBanner', () => {
 
     // 앱을 껐다 켠 셈이다. 예전에는 세션 단위라 여기서 다시 떴다.
     unmount();
-    sessionStorage.clear();
+    localStorage.removeItem('nearby-banner:result');
     render(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
 
     await new Promise((resolve) => setTimeout(resolve, 300));
     expect(screen.queryByText(/스타벅스 서울숲점/)).toBeNull();
+  });
+
+  // 찾아둔 결과는 앱을 껐다 켜도 10분간 살아 있어야 한다.
+  //
+  // 한때 sessionStorage에 뒀다. 웹에서는 탭 하나가 세션이지만 설치한 앱에서는 웹뷰가
+  // 죽을 때마다 새 세션이라, 켤 때마다 브랜드 셋을 새로 뒤졌다. 한 번 열 때마다 세 번씩
+  // 나간 셈이고, 하루 테스트하다 사람 몫을 다 써서 '오늘은 여기까지예요'를 봤다.
+  it('앱을 껐다 켜도 10분 안이면 다시 안 찾는다', async () => {
+    const { unmount } = render(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
+    await screen.findByText(/스타벅스 서울숲점/, {}, { timeout: 3000 });
+    const before = searchNearbyStores.mock.calls.length;
+
+    // 앱을 껐다 켠 셈이다. 세션은 새로 시작되지만 캐시는 남아 있어야 한다.
+    unmount();
+    sessionStorage.clear();
+    render(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
+
+    expect(await screen.findByText(/스타벅스 서울숲점/, {}, { timeout: 3000 })).toBeTruthy();
+    expect(searchNearbyStores.mock.calls.length).toBe(before);
   });
 
   it('다음 날이 되면 다시 뜬다', async () => {
@@ -257,7 +276,7 @@ describe('위치를 못 잡았을 때', () => {
 
     getFreshPosition.mockResolvedValue({ lat: 37.5, lng: 127.0 });
     searchNearbyStores.mockResolvedValue([]);
-    sessionStorage.clear();
+    localStorage.removeItem('nearby-banner:result');
     await act(async () => {
       await appStateHandler({ isActive: true });
     });
@@ -281,7 +300,7 @@ describe('위치를 못 잡았을 때', () => {
     await screen.findByText(CANT, {}, { timeout: 3000 });
 
     getFreshPosition.mockResolvedValue({ lat: 37.5, lng: 127.0 });
-    sessionStorage.clear();
+    localStorage.removeItem('nearby-banner:result');
     await act(async () => {
       await appStateHandler({ isActive: true });
     });
@@ -441,7 +460,7 @@ describe('위치를 아직 안 준 사람에게', () => {
     await act(async () => screen.getByRole('button', { name: '켜기' }).click());
     await waitFor(() => expect(screen.queryByText(ASK)).toBeNull(), { timeout: 2000 });
 
-    sessionStorage.clear();
+    localStorage.removeItem('nearby-banner:result');
     await act(async () => {
       await appStateHandler({ isActive: true });
     });

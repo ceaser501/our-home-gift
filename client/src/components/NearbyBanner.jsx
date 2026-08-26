@@ -23,7 +23,15 @@ import { canOpenAppSettings, openAppSettings } from "../utils/gallery";
 const RADIUS_M = 500;
 
 // 같은 자리에서 앱을 여닫을 때마다 카카오를 다시 부르지 않는다. 검색에는 하루 상한이
-// 걸려 있어서(사람당 200번), 배너가 그걸 조용히 갉아먹으면 정작 "매장" 버튼이 막힌다.
+// 걸려 있어서, 배너가 그걸 조용히 갉아먹으면 정작 "매장" 버튼이 막힌다.
+//
+// localStorage에 둔다. 한때 sessionStorage였는데 그건 앱을 끄면 사라진다 — 웹에서는
+// 탭 하나가 세션이지만, 설치한 앱에서는 웹뷰가 죽을 때마다 새 세션이다. 그래서 "여닫을
+// 때마다 다시 부르지 않는다"는 말이 정작 앱에서만 안 지켜지고 있었다. 켤 때마다 브랜드
+// 셋을 새로 뒤졌으니 한 번 열 때마다 세 번씩 나간 셈이다.
+//
+// 하루 종일 테스트하며 앱을 여닫다가 사람 몫을 다 써서 "오늘은 여기까지예요"를 본 적이
+// 있다. 실제로 새던 자리가 여기였다.
 const CACHE_KEY = "nearby-banner:result";
 const CACHE_TTL_MS = 10 * 60 * 1000;
 const CACHE_MOVE_M = 300;
@@ -139,7 +147,7 @@ function readDismissedToday() {
 
 function readCache(at) {
   try {
-    const saved = JSON.parse(sessionStorage.getItem(CACHE_KEY) || "null");
+    const saved = JSON.parse(localStorage.getItem(CACHE_KEY) || "null");
     if (!saved || Date.now() - saved.ts > CACHE_TTL_MS) return null;
     if (distanceBetween(saved.at, at) > CACHE_MOVE_M) return null;
     return saved;
@@ -318,7 +326,7 @@ export default function NearbyBanner({ gifticons, onPick, yielded = false }) {
       });
 
       try {
-        sessionStorage.setItem(
+        localStorage.setItem(
           CACHE_KEY,
           JSON.stringify({ ts: Date.now(), at, best: found }),
         );
