@@ -1167,6 +1167,12 @@ async function collect({ images, read: readImage, pass, isRegistered, skipCodes,
     // (등록 화면이 다건으로 넘길지 정할 때)은 이것도 한 건으로 세야 한다. 안 그러면
     // 작게 찍힌 다른 기프티콘이 통째로 옆 건에 합쳐진다.
     candidate.tooSmall = meaningful.length === 0;
+    // ── 진단용. SHOW_SCAN_NOTE와 함께 뺀다 ──
+    // 얼마로 재어졌는지. '작음 1'까지는 화면이 말해주는데, 그 값이 0.18인지 0.02인지에
+    // 따라 고칠 자리가 다르다. 두 번을 짐작으로 썼으니 이번엔 숫자를 본다.
+    candidate.measured = candidate.shots
+      .map((shot) => (shot.coverage == null ? 'null' : shot.coverage.toFixed(3)))
+      .join('/');
 
     // 읽을 것이 없어 보이는 사진은 뒤로 민다.
     const informative = usable.filter((shot) => !(shot.rich < MIN_RICHNESS));
@@ -1373,6 +1379,10 @@ export async function groupImages(files, { isRegistered, onProgress, onCandidate
       //   unreadable — 막대는 보이는데 못 읽은 사진. 기프티콘일 텐데 우리가 놓친 것이라,
       //               직접 등록으로 올려달라고 해야 한다. 카톡이 404픽셀로 줄여 보낸
       //               배스킨 카드가 여기 걸린다.
+      // ── 진단용. 작다고 뺀 것이 무슨 형식으로 얼마에 재어졌는지. 출시 전에 뺀다 ──
+      smallDetail: candidates
+        .filter((c) => c.tooSmall)
+        .map((c) => `${c.codeType || '?'} ${c.measured}`),
       noCode: missed.filter((image) => !image.bars).length,
       unreadable: missed.filter((image) => image.bars).length,
       tooSmall: candidates.filter((c) => c.tooSmall).length,

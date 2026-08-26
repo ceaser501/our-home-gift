@@ -319,7 +319,8 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
             ` · 못읽음 ${(grouped.missed ?? []).length}` +
             ` · 실패 ${grouped.tally?.readFailed ?? 0}` +
             ` · 이미있음 ${grouped.tally?.alreadyHave ?? 0}` +
-            ` · 작음 ${grouped.tally?.tooSmall ?? 0}`
+            ` · 작음 ${grouped.tally?.tooSmall ?? 0}` +
+            ((grouped.tally?.smallDetail ?? []).length ? ` [${grouped.tally.smallDetail.join(', ')}]` : '')
         );
 
         const drop = new Set((grouped.missed ?? []).map((image) => image.file));

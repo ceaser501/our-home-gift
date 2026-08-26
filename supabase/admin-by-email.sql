@@ -30,8 +30,24 @@ begin;
 --
 -- 열쇠와 참조를 함께 걷는다. 참조만 걷고 열쇠를 두면 uuid가 비어 있는 줄을 못 넣는다 —
 -- 아직 한 번도 로그인한 적 없는 사람을 미리 명단에 올릴 수 없게 된다.
-alter table public.admin_users drop constraint if exists admin_users_user_id_fkey;
-alter table public.admin_users drop constraint if exists admin_users_pkey;
+--
+-- 이름을 찍어서 지우지 않고 찾아서 지운다. 표를 만든 방식에 따라 제약 이름이 다를 수
+-- 있는데, 이름이 어긋나면 'if exists'가 조용히 넘어가고 그 다음 줄에서 막힌다
+-- (열쇠가 살아 있으면 not null을 못 푼다). 그러면 왜 안 되는지 알기 어렵다.
+do $$
+declare
+  con record;
+begin
+  for con in
+    select c.conname, c.contype
+      from pg_constraint c
+     where c.conrelid = 'public.admin_users'::regclass
+       and c.contype in ('p', 'f')
+  loop
+    execute format('alter table public.admin_users drop constraint %I', con.conname);
+  end loop;
+end $$;
+
 alter table public.admin_users alter column user_id drop not null;
 
 -- 2) 이메일을 열쇠로 세운다.
@@ -57,7 +73,8 @@ select u.id, '90tskim@gmail.com', '최초 관리자'
   from (select '90tskim@gmail.com' as e) t
   left join auth.users u on lower(u.email) = t.e
 on conflict (email_key) do update
-  set user_id = coalesce(excluded.user_id, public.admin_users.user_id);
+  set user_id = coalesce(excluded.user_id, admin_users.user_id),
+      memo = coalesce(admin_users.memo, excluded.memo);
 
 -- 4) 명단을 이메일로 확인하는 함수. Edge Function이 이걸 부른다.
 --

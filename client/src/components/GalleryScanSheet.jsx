@@ -2004,7 +2004,9 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
               {SHOW_SCAN_NOTE && tally && (
                 <p className="m-0 rounded-lg bg-secondary px-2.5 py-1.5 font-mono text-[11px] text-muted-foreground">
                   {`후보 ${tally.found ?? 0} · 이미있음 ${tally.alreadyHave ?? 0}`}
-                  {` · 작음 ${tally.tooSmall ?? 0} · 바코드없음 ${tally.noCode ?? 0}`}
+                  {` · 작음 ${tally.tooSmall ?? 0}`}
+                  {(tally.smallDetail ?? []).length > 0 && ` [${tally.smallDetail.join(', ')}]`}
+                  {` · 바코드없음 ${tally.noCode ?? 0}`}
                   {` · 막대만보임 ${tally.unreadable ?? 0} · 실패 ${tally.readFailed ?? 0}`}
                 </p>
               )}
