@@ -270,11 +270,14 @@ export default function ActivitySheet({
           <div className="flex flex-col px-[18px]">
             {/* 안 읽은 것이 없으면 구역을 나누지 않는다. 한쪽이 비어 있는 칸막이는
                 칸막이가 아니라 그냥 줄 하나다. */}
+            {/* 줄들을 한 겹으로 감싼다. 안 감싸면 마지막 줄의 last:border-b-0이 이 칸
+                전체를 기준으로 잡혀서 안 먹고, '지난 소식' 제목 바로 위에 선이 하나 더 생긴다.
+                제목에는 이미 제 줄이 있어서 선이 둘로 겹쳐 보였다. */}
             {fresh.length > 0 && (
-              <>
+              <div>
                 <SectionTitle label="새 소식" count={fresh.length} accent />
                 {fresh.map(renderItem)}
-              </>
+              </div>
             )}
 
             {past.length > 0 && (

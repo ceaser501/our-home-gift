@@ -35,6 +35,11 @@ export default function FamilyReport({ gifticons }) {
       return sum + (g.is_voucher ? Math.max(0, face - Number(g.spent_amount || 0)) : face);
     }, 0);
 
+    // 조금 쓰다 만 채로 기한이 지난 금액권이 있는가. 이건 '안 쓴 것'도 '쓴 것'도 아니라
+    // 아래 안내에서 따로 밝힌다 — 밝히지 않으면 "0개 썼어요" 바로 아래에 "1개 4,000원"이
+    // 서서, 두 숫자가 서로 틀린 말처럼 보인다.
+    const partlyMissed = missed.some((g) => g.is_voucher && Number(g.spent_amount || 0) > 0);
+
     return {
       scope,
       received: pool.length,
@@ -43,6 +48,7 @@ export default function FamilyReport({ gifticons }) {
       // 아직 쓸 수 있는 것. 띠의 회색 자리이자 범례의 마지막 값이다.
       left: pool.length - used.length - missed.length,
       missedAmount,
+      partlyMissed,
     };
   }, [gifticons]);
 
@@ -110,6 +116,10 @@ export default function FamilyReport({ gifticons }) {
       {stat.missed > 0 && (
         <p className="m-0 text-[12.5px] leading-relaxed font-medium break-keep text-muted-foreground">
           기한이 지났는데 사용완료로 표시되지 않은 것들이에요. 이미 쓰셨다면 목록에서 사용완료로 바꿔주세요.
+          {/* 5천원권에서 4천원을 쓰고 천원을 남긴 채 지나갔다면 잃은 건 천원이다. 그런데
+              위에는 "0개 썼어요"라고 적혀서, 아래 '누가 썼나요'의 4,000원과 어긋나 보인다.
+              둘 다 맞는 숫자이고 세는 것이 다를 뿐이라, 그 한마디만 보탠다. */}
+          {stat.partlyMissed && ' 조금 쓰다 만 것은 남은 금액만 셌어요.'}
         </p>
       )}
     </div>

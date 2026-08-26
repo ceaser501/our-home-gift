@@ -72,16 +72,24 @@ export default function UsageReportSheet({ onClose }) {
 
   // 사람별로 몇 개, 얼마어치를 썼는지. 막대 길이는 가장 많이 쓴 사람을 100으로 잡는다 —
   // 전체 합으로 나누면 사람이 넷일 때 다 같이 짧아져서 서로 견주기가 어렵다.
+  //
+  // 개수는 줄 수가 아니라 기프티콘 수로 센다. 5만원권 하나에서 딸이 3,000원과 5,000원을
+  // 두 번 썼으면 그건 '2개'가 아니라 '1개 8,000원'이다. 아래 목록은 쓴 사건을 그대로
+  // 늘어놓는 자리라 두 줄이 맞지만, 여기는 "무엇을 몇 개 썼나"를 세는 자리다.
   const summary = useMemo(() => {
     const byPerson = new Map();
     for (const row of rows) {
       const who = row.used_by_name || row.owner || '알 수 없음';
-      const current = byPerson.get(who) || { count: 0, amount: 0 };
-      byPerson.set(who, { count: current.count + 1, amount: current.amount + (row.amount || 0) });
+      const current = byPerson.get(who) || { items: new Set(), amount: 0 };
+      current.items.add(row.gifticon_id ?? row.id);
+      current.amount += row.amount || 0;
+      byPerson.set(who, current);
     }
-    const list = [...byPerson.entries()].sort((a, b) => b[1].count - a[1].count);
-    const top = list[0]?.[1].count || 1;
-    return list.map(([name, stat]) => ({ name, ...stat, ratio: (stat.count / top) * 100 }));
+    const list = [...byPerson.entries()]
+      .map(([name, stat]) => ({ name, count: stat.items.size, amount: stat.amount }))
+      .sort((a, b) => b.count - a.count || b.amount - a.amount);
+    const top = list[0]?.count || 1;
+    return list.map((person) => ({ ...person, ratio: (person.count / top) * 100 }));
   }, [rows]);
 
   // 내 이름. 사용 내역에는 사람 번호가 없고 이름만 적혀 있어서, 가족 명단에서 찾아 맞춘다.

@@ -323,7 +323,7 @@ describe('위치를 아직 안 준 사람에게', () => {
     render(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
     await screen.findByText(ASK, {}, { timeout: 3000 });
 
-    await act(async () => screen.getByRole('button', { name: '켜기' }).click());
+    await act(async () => screen.getByRole('button', { name: '위치 켜기' }).click());
 
     expect(getFreshPosition).toHaveBeenCalled();
     expect(await screen.findByText(/스타벅스 서울숲점/, {}, { timeout: 3000 })).toBeTruthy();
@@ -336,7 +336,7 @@ describe('위치를 아직 안 준 사람에게', () => {
 
     const { unmount } = render(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
     await screen.findByText(ASK, {}, { timeout: 3000 });
-    await act(async () => screen.getByRole('button', { name: '켜기' }).click());
+    await act(async () => screen.getByRole('button', { name: '위치 켜기' }).click());
     expect(screen.queryByText(ASK)).toBeNull();
 
     unmount();
@@ -367,7 +367,7 @@ describe('위치를 아직 안 준 사람에게', () => {
 
     render(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
     await screen.findByText(ASK, {}, { timeout: 3000 });
-    await act(async () => screen.getByRole('button', { name: '켜기' }).click());
+    await act(async () => screen.getByRole('button', { name: '위치 켜기' }).click());
 
     sessionStorage.clear();
     await act(async () => {

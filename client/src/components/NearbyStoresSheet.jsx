@@ -233,9 +233,11 @@ export default function NearbyStoresSheet({ gifticon, onClose }) {
                   onClick={() => setDetail(first)}
                   className="flex items-start gap-3 text-left"
                 >
-                  {/* 숫자와 단위를 세로로 쌓는다. 한 줄로 두면 '180' 다음에 'm'이 내려앉는다. */}
-                  <span className="flex shrink-0 flex-col items-center gap-px pt-px">
-                    <span className="text-[17px] leading-none font-bold tracking-[-0.02em] text-primary tabular-nums">
+                  {/* 한 줄로 둔다. 세로로 쌓아 뒀더니 '755' 아래 'm'이 혼자 떨어져,
+                      줄바꿈된 것처럼 읽혔다. 안 갈리게 하려던 것이 갈린 것처럼 보인 셈이다.
+                      shrink-0과 nowrap 둘 다 걸어야 옆 상호가 길어도 안 밀린다. */}
+                  <span className="flex shrink-0 items-baseline gap-px pt-0.5 whitespace-nowrap">
+                    <span className="text-[17px] font-bold tracking-[-0.02em] text-primary tabular-nums">
                       {firstDistance?.value ?? '?'}
                     </span>
                     <span className="text-[11.5px] font-semibold text-primary/75">{firstDistance?.unit ?? ''}</span>
