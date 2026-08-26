@@ -1,5 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
-import { Car, Clock, ExternalLink, Footprints, MapPin, Maximize2, Minimize2, Navigation, Phone } from 'lucide-react';
+import {
+  Car,
+  Clock,
+  ExternalLink,
+  Footprints,
+  Info,
+  MapPin,
+  Maximize2,
+  Minimize2,
+  Navigation,
+  Phone,
+} from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -255,7 +266,10 @@ export default function StoreDetailSheet({ store, origin, onClose }) {
               <div className="flex items-center gap-[11px] border-b border-border/40 px-0.5 py-3 text-sm">
                 <Navigation className="size-4 shrink-0 text-primary" />
                 <span className="min-w-0 flex-1 text-foreground">
-                  내 위치에서 <span className="font-bold text-primary">{formatDistance(store.distance)}</span>
+                  {/* 숫자와 단위가 갈리면 안 된다. 옆의 차·도보 칩이 자리를 먹으면
+                      '792'에서 줄이 넘어가 'm'만 아래로 떨어졌다. */}
+                  내 위치에서{' '}
+                  <span className="font-bold whitespace-nowrap text-primary">{formatDistance(store.distance)}</span>
                 </span>
                 {/* 같은 곳이라도 차로 갈 때와 걸어갈 때 길이 달라서, 눌러서 각각 볼 수 있게 한다. */}
                 {canShowRoute && mapState === 'ready' && (
@@ -298,12 +312,9 @@ export default function StoreDetailSheet({ store, origin, onClose }) {
                 같은 브랜드라도 가맹점마다 받는 기프티콘이 다르다.
                 굵게 하지 않는다. 주소·전화와 같은 무게로 두어야 안내가 경고처럼 안 읽힌다. */}
             <div className="flex gap-[11px] border-b border-border/40 px-0.5 py-3">
-              <span
-                aria-hidden="true"
-                className="mt-px flex size-[17px] shrink-0 items-center justify-center rounded-full bg-muted-foreground"
-              >
-                <span className="text-[10.5px] leading-none font-bold text-background">i</span>
-              </span>
+              {/* 회색을 채운 동그라미였다. 위아래 줄(주소·전화·영업시간)은 다 선으로 그린
+                  아이콘이라 이 줄만 무겁고, 채운 회색이 도리어 흐리게 읽혔다. */}
+              <Info className="mt-px size-[17px] shrink-0 text-muted-foreground/70" strokeWidth={2} />
               <p className="m-0 flex-1 text-sm leading-relaxed font-medium break-keep text-foreground/80">
                 기프티콘 사용가능여부는 매장에 확인해주세요
               </p>
@@ -346,7 +357,7 @@ export default function StoreDetailSheet({ store, origin, onClose }) {
               <Button
                 asChild
                 variant="outline"
-                className="h-[42px] rounded-[11px] border-border/60 text-sm font-semibold text-muted-foreground"
+                className="h-[42px] rounded-[11px] text-sm font-semibold"
               >
                 <a href={store.placeUrl} target="_blank" rel="noopener noreferrer">
                   <ExternalLink className="size-4" strokeWidth={2} /> 카카오맵에서 보기

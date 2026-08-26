@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ChevronRight, Loader2, LocateFixed, MapPin, Navigation, Phone } from 'lucide-react';
+import { ChevronRight, Info, Loader2, LocateFixed, MapPin, Navigation, Phone } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import StoreDetailSheet from './StoreDetailSheet';
@@ -32,20 +32,6 @@ function splitDistance(meters) {
 function formatDistance(meters) {
   const parts = splitDistance(meters);
   return parts ? `${parts.value}${parts.unit}` : null;
-}
-
-// 안내 앞에 놓는 동그란 i.
-//
-// 선으로 그린 원은 12.5px 옆에서 흐리다. 원을 채우고 글자를 흰색으로 두면 작아도 또렷하다.
-function InfoDot({ className }) {
-  return (
-    <span
-      aria-hidden="true"
-      className={`flex size-4 shrink-0 items-center justify-center rounded-full bg-muted-foreground ${className || ''}`}
-    >
-      <span className="text-[10px] leading-none font-bold text-background">i</span>
-    </span>
-  );
 }
 
 export default function NearbyStoresSheet({ gifticon, onClose }) {
@@ -231,7 +217,9 @@ export default function NearbyStoresSheet({ gifticon, onClose }) {
                 해결책이다 — 줄마다 '지도' 버튼을 넣으면 전화와 경쟁하고, 줄 전체를 회색
                 카드로 만들면 첫 카드의 연보라와 겹쳐 색이 너무 많아진다. */}
             <div className="flex items-center gap-2 px-[18px] pb-2.5">
-              <InfoDot />
+              {/* 회색을 채운 동그라미로 두었더니 이 한 줄만 무겁고 흐렸다. 선으로 그린
+                  i는 바탕이 흰색이라 옆 글자와 같은 무게로 읽힌다. */}
+              <Info aria-hidden="true" className="size-[15px] shrink-0 text-muted-foreground" strokeWidth={2.2} />
               <p className="m-0 flex-1 text-[12.5px] font-medium text-muted-foreground">매장을 누르면 지도가 열려요</p>
               <p className="m-0 shrink-0 text-[12.5px] font-medium text-muted-foreground">가까운 순</p>
             </div>
@@ -310,7 +298,9 @@ export default function NearbyStoresSheet({ gifticon, onClose }) {
                       onClick={() => setDetail(store)}
                       className="flex min-w-0 flex-1 items-center gap-3 text-left"
                     >
-                      <span className="w-[50px] shrink-0 text-center text-[15px] font-bold whitespace-nowrap text-foreground/70 tabular-nums">
+                      {/* 폭을 고정하지 않는다. 폰 설정으로 글자를 키우면 '1.2km'가 50px을
+                          넘어 옆 상호와 겹친다. 최소 폭만 잡아 줄이 세로로 맞게 둔다. */}
+                      <span className="min-w-[50px] shrink-0 text-center text-[15px] font-bold whitespace-nowrap text-foreground/70 tabular-nums">
                         {formatDistance(store.distance) ?? '?'}
                       </span>
                       {/* 전화번호 숫자 줄은 걷었다. 옆에 전화 버튼이 있어 번호를 눈으로

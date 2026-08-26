@@ -148,12 +148,14 @@ export default function UsageReportSheet({ onClose }) {
                     </span>
                     <div className="flex min-w-0 flex-1 flex-col gap-1">
                       <div className="flex items-baseline justify-between gap-2.5">
-                        <span className="flex min-w-0 items-baseline gap-1.5">
+                        {/* 딱지는 글자 밑선이 아니라 이름 한가운데에 맞춘다. 밑선에 맞추면
+                            딱지의 위아래 여백만큼 아래로 내려앉아 반 칸쯤 처져 보인다. */}
+                        <span className="flex min-w-0 items-center gap-1.5">
                           <span className="truncate text-[14.5px] font-semibold text-foreground">{person.name}</span>
                           {/* 이름이 '아들'이면 그게 나인지 동생인지 알 수 없다. 가족 명단
                               화면과 같은 자리에 같은 딱지를 붙인다. */}
                           {person.name === myName && (
-                            <span className="shrink-0 rounded-md bg-accent px-1.5 py-px text-[11.5px] font-bold text-accent-foreground">
+                            <span className="shrink-0 rounded-md bg-accent px-1.5 py-0.5 text-[11.5px] leading-none font-bold text-accent-foreground">
                               나
                             </span>
                           )}
