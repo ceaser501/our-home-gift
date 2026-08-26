@@ -4,9 +4,11 @@ import { searchNearbyStores } from "../api";
 import {
   getFreshPosition,
   hasSavedPosition,
+  isNearbyBannerOn,
   readCachedPosition,
   saveCachedPosition,
   distanceBetween,
+  NEARBY_BANNER_EVENT,
 } from "../utils/geolocation";
 import { todayStr } from "../utils/date";
 import { isNativeApp } from "../utils/browser";
@@ -143,6 +145,9 @@ export default function NearbyBanner({ gifticons, onPick, yielded = false }) {
   const [needsPermission, setNeedsPermission] = useState(false);
   const [refused, setRefused] = useState(() => readRefusedToday());
   const [dismissed, setDismissed] = useState(() => readDismissedToday());
+  // 설정에서 켜고 끄는 값. 꺼두면 매장을 뒤지지도 않는다 — 카카오 검색에는 하루 상한이
+  // 걸려 있어서, 안 보여줄 것을 찾느라 그걸 쓰면 정작 '매장' 버튼이 막힌다.
+  const [bannerOn, setBannerOn] = useState(() => isNearbyBannerOn());
   // 목록은 검색어를 칠 때마다 다시 오는데, 그때마다 주변을 다시 뒤질 일은 아니다.
   // 처음 목록이 채워졌을 때 한 번만 찾는다.
   const ranRef = useRef(false);
@@ -153,14 +158,21 @@ export default function NearbyBanner({ gifticons, onPick, yielded = false }) {
   // 지금 돌고 있는 판을 멈추기 위한 손잡이. 앱을 다시 볼 때마다 새로 돈다.
   const stopRef = useRef(null);
 
+  // 설정 창은 이 띠 위에 겹쳐 뜬다. 거기서 끄면 그 자리에서 사라져야 한다.
   useEffect(() => {
-    if (ranRef.current || gifticons.length === 0) return;
+    const onChange = (e) => setBannerOn(Boolean(e.detail));
+    window.addEventListener(NEARBY_BANNER_EVENT, onChange);
+    return () => window.removeEventListener(NEARBY_BANNER_EVENT, onChange);
+  }, []);
+
+  useEffect(() => {
+    if (!bannerOn || ranRef.current || gifticons.length === 0) return;
     ranRef.current = true;
     search();
     return () => stopRef.current?.();
     // search는 매번 새로 만들어지는 함수라 의존성에 넣으면 효과가 계속 다시 돈다.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gifticons]);
+  }, [gifticons, bannerOn]);
 
   // 앱이 다시 앞으로 오면 한 번 더 찾는다.
   //
@@ -181,6 +193,9 @@ export default function NearbyBanner({ gifticons, onPick, yielded = false }) {
       .then(({ App }) =>
         App.addListener("appStateChange", ({ isActive }) => {
           if (!isActive || listRef.current.length === 0) return;
+          // 여기서는 저장된 값을 그때그때 읽는다. 이 리스너는 처음 한 번만 붙어서
+          // 위 상태를 붙잡아 두면 껐다 켠 것을 못 따라간다.
+          if (!isNearbyBannerOn()) return;
           search();
         }),
       )
@@ -306,7 +321,7 @@ export default function NearbyBanner({ gifticons, onPick, yielded = false }) {
   const hasUsable = gifticons.some((g) => g.status !== "used" && g.brand?.trim());
 
   // 이 자리에 무엇을 띄울지. 위에서부터 먼저 이긴다.
-  if (dismissed || yielded) return null;
+  if (!bannerOn || dismissed || yielded) return null;
 
   //   1) 찾았다 — 평소의 매장 안내
   if (best && liveCount > 0) return renderStore();

@@ -87,6 +87,42 @@ export function saveCachedPosition({ lat, lng }) {
   }
 }
 
+// 주변 안내 띠를 켜둘까.
+//
+// 띠의 X는 그날 하루만 안 띄운다(NearbyBanner의 DISMISS_KEY). 매일 닫는 사람에게는
+// 매일 닫는 일이 남는데, 그건 안 보겠다는 뜻을 앱이 못 알아듣는 것이다. 여기서 아예
+// 끄면 다시 물어보지 않는다.
+//
+// 기본은 켜짐이다. 자동 찾기(사진첩을 훑는 일)와 달리 이건 이미 준 위치만 쓰고, 앱을
+// 여는 이유 자체가 "지금 쓸 게 있나"라서 기본으로 도는 것이 맞다.
+const NEARBY_KEY = 'moacon:nearby-banner';
+
+// 설정에서 끈 그 순간에 띠가 사라져야 한다. 설정 창은 띠 위에 겹쳐 뜨는 것이라, 닫고
+// 나서야 없어지면 방금 끈 것이 먹혔는지 알 수 없다. 두 화면이 부모-자식이 아니라서
+// 상태를 내려줄 길이 없어 창으로 알린다.
+export const NEARBY_BANNER_EVENT = 'moacon:nearby-banner-changed';
+
+export function isNearbyBannerOn() {
+  try {
+    return localStorage.getItem(NEARBY_KEY) !== '0';
+  } catch {
+    return true;
+  }
+}
+
+export function setNearbyBannerOn(on) {
+  try {
+    localStorage.setItem(NEARBY_KEY, on ? '1' : '0');
+  } catch {
+    // 저장이 막혀 있으면 이번 실행에만 적용된다.
+  }
+  try {
+    window.dispatchEvent(new CustomEvent(NEARBY_BANNER_EVENT, { detail: Boolean(on) }));
+  } catch {
+    // 알리지 못해도 다음에 앱을 열면 반영된다.
+  }
+}
+
 // 두 지점 사이의 대략적인 거리(미터). 다시 검색할지 판단할 정도면 충분해서 간단히 계산한다.
 export function distanceBetween(a, b) {
   const R = 6371000;

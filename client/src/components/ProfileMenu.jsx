@@ -1,5 +1,16 @@
 import { useState } from 'react';
-import { DoorOpen, FileText, LogOut, Megaphone, Receipt, Scale, ScanSearch, ShieldCheck, UserRoundX } from 'lucide-react';
+import {
+  DoorOpen,
+  FileText,
+  LogOut,
+  MapPin,
+  Megaphone,
+  Receipt,
+  Scale,
+  ScanSearch,
+  ShieldCheck,
+  UserRoundX,
+} from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { SettingLinkRow, SettingSection, SettingSwitchRow } from './SettingRow';
@@ -15,6 +26,7 @@ import { leaveFamily, renameMember } from '../family';
 import { OWNER_TAG_PALETTE, memberTagColorClass } from '../utils/tagColor';
 import useBackClose from '../utils/useBackClose';
 import { isGalleryScanSupported, isAutoScanOn, setAutoScanOn } from '../utils/gallery';
+import { isNearbyBannerOn, setNearbyBannerOn } from '../utils/geolocation';
 
 export default function ProfileMenu({ onClose }) {
   // 뒤로가기로 이 창을 닫는다. 안 그러면 설치해서 쓸 때 앱이 통째로 꺼진다.
@@ -36,6 +48,8 @@ export default function ProfileMenu({ onClose }) {
   // 갤러리 자동 스캔은 앱에서만 있다. 브라우저에는 폴더를 볼 방법이 없어서 줄 자체를 감춘다.
   const [scanSupported] = useState(() => isGalleryScanSupported());
   const [autoScan, setAutoScan] = useState(() => isAutoScanOn());
+  // 목록 위 '내 주변' 띠. 여기는 앱·브라우저 둘 다 있어서 줄을 감추지 않는다.
+  const [nearby, setNearby] = useState(() => isNearbyBannerOn());
   /* 알림 테스트와 짝인 것들. 줄을 접어둔 동안 함께 접어둔다(아래 블록 참고).
   const [testing, setTesting] = useState(false);
   const [pushOn, setPushOn] = useState(false);
@@ -148,6 +162,22 @@ export default function ProfileMenu({ onClose }) {
           <SettingSection label="설정">
             <ThemeToggle asRow />
             <NotificationToggle asRow />
+
+            {/* 목록 위에 뜨는 '이 근처에 쓸 수 있는 게 있어요' 띠. 띠의 X는 그날 하루만
+                안 띄우는 것이라, 매일 닫는 사람에게는 매일 닫는 일이 남았다.
+
+                기본은 켜짐이다. 이미 준 위치만 쓰고, 앱을 여는 이유 자체가 '지금 쓸 게
+                있나'라서 아래 자동 찾기(사진첩을 훑는 일)와는 무게가 다르다. */}
+            <SettingSwitchRow
+              icon={MapPin}
+              label="내 주변 안내"
+              hint="근처에서 쓸 수 있으면 알려드려요"
+              on={nearby}
+              onToggle={() => {
+                setNearby(!nearby);
+                setNearbyBannerOn(!nearby);
+              }}
+            />
 
             {/* 켜두면 앱을 열 때 바로 찾아준다. 받아둔 기프티콘을 넣는 게 이 앱에 들어오는
                 이유라, 그걸 매번 눌러서 시작하게 할 이유가 없다. 다만 사진을 보는 일이라

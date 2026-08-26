@@ -28,12 +28,16 @@ const getFreshPosition = vi.fn();
 const readCachedPosition = vi.fn();
 const hasSavedPosition = vi.fn();
 
+const isNearbyBannerOn = vi.fn(() => true);
+
 vi.mock('../utils/geolocation', () => ({
   getFreshPosition: (...a) => getFreshPosition(...a),
   readCachedPosition: (...a) => readCachedPosition(...a),
   hasSavedPosition: (...a) => hasSavedPosition(...a),
   saveCachedPosition: () => {},
   distanceBetween: () => 0,
+  isNearbyBannerOn: (...a) => isNearbyBannerOn(...a),
+  NEARBY_BANNER_EVENT: 'moacon:nearby-banner-changed',
 }));
 
 const { default: NearbyBanner } = await import('../components/NearbyBanner');
@@ -56,12 +60,38 @@ beforeEach(() => {
   });
   // 매장 찾기를 한 번 써서 위치를 적어둔 사람. 곧 권한을 준 사람이다.
   hasSavedPosition.mockReturnValue(true);
+  isNearbyBannerOn.mockReturnValue(true);
   searchNearbyStores.mockResolvedValue([{ name: '스타벅스 서울숲점', distance: 120 }]);
   getFreshPosition.mockResolvedValue({ lat: 37.5, lng: 127.0 });
   readCachedPosition.mockReturnValue({ lat: 37.5, lng: 127.0 });
 });
 
 describe('NearbyBanner', () => {
+  // 설정에서 끈 사람. 띠만 안 뜨는 게 아니라 매장을 뒤지지도 않아야 한다 —
+  // 카카오 검색에는 하루 상한이 있어서, 안 보여줄 것을 찾느라 그걸 쓰면 정작
+  // '매장' 버튼이 막힌다.
+  it('설정에서 끄면 뜨지도 않고 찾지도 않는다', async () => {
+    isNearbyBannerOn.mockReturnValue(false);
+
+    render(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
+
+    await new Promise((r) => setTimeout(r, 50));
+    expect(screen.queryByText(/스타벅스 서울숲점/)).toBeNull();
+    expect(searchNearbyStores).not.toHaveBeenCalled();
+  });
+
+  // 설정 창은 이 띠 위에 겹쳐 뜬다. 닫고 나서야 사라지면 방금 끈 것이 먹혔는지 모른다.
+  it('설정에서 끄면 그 자리에서 사라진다', async () => {
+    render(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
+    await screen.findByText(/스타벅스 서울숲점/, {}, { timeout: 3000 });
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('moacon:nearby-banner-changed', { detail: false }));
+    });
+
+    await waitFor(() => expect(screen.queryByText(/스타벅스 서울숲점/)).toBeNull());
+  });
+
   it('앱을 열면 주변을 찾아 띄운다', async () => {
     render(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
     expect(await screen.findByText(/스타벅스 서울숲점/, {}, { timeout: 3000 })).toBeTruthy();
