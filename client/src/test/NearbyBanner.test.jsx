@@ -37,12 +37,16 @@ const readCachedPosition = vi.fn();
 const hasSavedPosition = vi.fn();
 
 const isNearbyBannerOn = vi.fn(() => true);
+const forgetCachedPosition = vi.fn();
 
 vi.mock('../utils/geolocation', () => ({
   getFreshPosition: (...a) => getFreshPosition(...a),
   readCachedPosition: (...a) => readCachedPosition(...a),
   hasSavedPosition: (...a) => hasSavedPosition(...a),
   saveCachedPosition: () => {},
+  // 권한이 없다는 걸 알게 되면 적어둔 좌표를 지운다. 안 지우면 다음에 앱을 열어도
+  // '권한 있음'으로 알고 또 조용해진다.
+  forgetCachedPosition: (...a) => forgetCachedPosition(...a),
   distanceBetween: () => 0,
   isNearbyBannerOn: (...a) => isNearbyBannerOn(...a),
   NEARBY_BANNER_EVENT: 'moacon:nearby-banner-changed',
@@ -208,13 +212,34 @@ describe('위치를 못 잡았을 때', () => {
     expect(screen.queryByRole('button', { name: '주변 매장 안내 닫기' })).toBeNull();
   });
 
-  // 이 앱은 일부러 위치 권한을 조르지 않는다. 여기서 그 이야기를 꺼내면 결국 조르는 것이 된다.
-  it('권한을 거둔 것은 장소 탓이 아니라 조용히 넘어간다', async () => {
+  // 권한을 도로 거둔 것은 장소 탓이 아니다. '지하라서 못 잡았다'고 하면 거짓말이 된다.
+  //
+  // 예전에는 여기서 조용히 넘어갔는데, 그러면 폰 설정에서 위치를 끄고 앱을 연 사람에게
+  // 아무것도 안 떴다. 적어둔 좌표가 남아 있어 '권한 있음'으로 통과한 뒤 여기서 실패하고는
+  // 입을 다무는 자리였다. 이제는 그 좌표를 지우고 이 자리에서 다시 물어본다.
+  it('권한을 거둔 것은 장소 탓이 아니라 다시 묻는 자리로 간다', async () => {
     getFreshPosition.mockRejectedValue({ code: 1 });
 
     render(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
-    await new Promise((resolve) => setTimeout(resolve, 300));
+
+    expect(
+      await screen.findByText(/위치 권한을 켜면 근처에서 쓸 수 있는 기프티콘을 알려드려요/, {}, { timeout: 3000 })
+    ).toBeTruthy();
     expect(screen.queryByText(CANT)).toBeNull();
+    // 안 지우면 다음에 앱을 열어도 '권한 있음'으로 알고 또 조용해진다.
+    expect(forgetCachedPosition).toHaveBeenCalled();
+  });
+
+  // 웹뷰가 성공도 실패도 안 부른 경우(no_answer). 사실상 권한 문제라 같은 길로 보낸다.
+  it('아무 답도 없을 때도 다시 묻는다', async () => {
+    getFreshPosition.mockRejectedValue({ code: 'no_answer' });
+
+    render(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
+
+    expect(
+      await screen.findByText(/위치 권한을 켜면 근처에서 쓸 수 있는 기프티콘을 알려드려요/, {}, { timeout: 3000 })
+    ).toBeTruthy();
+    expect(forgetCachedPosition).toHaveBeenCalled();
   });
 
   it('쓸 기프티콘이 없으면 이 말도 하지 않는다', async () => {
