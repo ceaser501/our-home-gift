@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import StoreDetailSheet from './StoreDetailSheet';
 import { searchNearbyStores } from '../api';
 import { openTmapRoute } from '../utils/tmap';
+import { canOpenAppSettings, openAppSettings } from '../utils/gallery';
 import {
   SIGNIFICANT_MOVE_M,
   distanceBetween,
@@ -180,20 +181,30 @@ export default function NearbyStoresSheet({ gifticon, onClose }) {
               )}
             </div>
 
-            {/* 시안에는 '설정 열기' 버튼이 있는데 안 넣었다. 안드로이드 설정 화면을
-                직접 여는 길이 이 앱에 아직 없어서, 버튼만 두면 눌러도 아무 일이 없다.
-                길을 적어주는 편이 낫다 — 없는 버튼보다 정확한 경로가 빠르다. */}
+            {/* 버튼이 설정 화면까지 데려다주고, 그 아래 한 줄이 거기서 무엇을 누를지
+                말해준다. 버튼만 두면 설정 화면에 도착해서 또 헤매고, 글만 두면 그 화면을
+                찾아가는 데서 헤맨다. 둘이 한 벌이다.
+                (브라우저에는 설정 화면이 없어서 버튼이 안 뜬다 — 글만 남는다.) */}
             {error.denied && (
               <div className="flex w-full flex-col gap-1.5 rounded-[13px] bg-secondary px-[15px] py-[13px]">
                 <p className="m-0 text-[13px] font-bold tracking-[-0.01em] text-foreground/80">켜는 방법</p>
                 <p className="m-0 text-[13.5px] leading-relaxed font-medium break-keep text-foreground/70">
-                  설정 → 모아콘 → 위치 → <b className="font-bold text-foreground">앱 사용 중에만 허용</b>
+                  위치 → <b className="font-bold text-foreground">앱 사용 중에만 허용</b>
                 </p>
               </div>
             )}
 
-            {error.retriable && (
-              <div className="flex w-full flex-col gap-2">
+            <div className="flex w-full flex-col gap-2">
+              {error.denied && canOpenAppSettings() && (
+                <Button
+                  size="lg"
+                  className="h-12 w-full rounded-xl text-[15.5px] font-bold"
+                  onClick={openAppSettings}
+                >
+                  설정 열기
+                </Button>
+              )}
+              {error.retriable && (
                 <Button
                   variant="outline"
                   className="h-11 w-full rounded-[11px] text-[14.5px] font-semibold"
@@ -201,8 +212,8 @@ export default function NearbyStoresSheet({ gifticon, onClose }) {
                 >
                   다시 시도
                 </Button>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         )}
 

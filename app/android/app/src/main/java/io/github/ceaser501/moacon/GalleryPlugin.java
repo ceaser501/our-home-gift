@@ -3,6 +3,7 @@ package io.github.ceaser501.moacon;
 import android.Manifest;
 import android.content.ContentResolver;
 import android.content.ContentUris;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.graphics.Bitmap;
@@ -10,6 +11,7 @@ import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Build;
 import android.provider.MediaStore;
+import android.provider.Settings;
 import android.util.Base64;
 
 import com.getcapacitor.JSArray;
@@ -381,6 +383,35 @@ public class GalleryPlugin extends Plugin {
         } catch (OutOfMemoryError e) {
             // 아주 큰 사진에서 날 수 있다. 한 장 때문에 스캔 전체가 멈추지는 않게 한다.
             call.reject("사진이 너무 커서 건너뛰었어요.", "too_large");
+        }
+    }
+
+    /**
+     * 이 앱의 설정 화면을 연다.
+     *
+     * 위치나 사진을 거절한 사람에게 "설정에서 허용해주세요"라고만 적어두면, 그 설정이
+     * 어디 있는지를 스스로 찾아야 한다. 안드로이드는 제조사마다 메뉴 이름과 깊이가
+     * 달라서 길을 글로 적어주는 것으로는 모자란다.
+     *
+     * ACTION_APPLICATION_DETAILS_SETTINGS는 그 앱의 설정 화면을 바로 연다. 거기서
+     * 권한 항목까지는 한 번 더 눌러야 하지만, 그 한 번은 어느 폰에서나 같은 자리다.
+     *
+     * 권한 화면으로 곧장 여는 인텐트는 없다. 제조사가 만든 것이 있기는 한데 폰마다
+     * 다르고, 없는 폰에서는 앱이 그대로 죽는다 — 표준 하나만 쓴다.
+     */
+    @PluginMethod
+    public void openAppSettings(PluginCall call) {
+        try {
+            Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+            intent.setData(Uri.fromParts("package", getContext().getPackageName(), null));
+            // 액티비티가 아닌 곳에서 열 때를 대비한다. 없으면 일부 폰에서 안 열린다.
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            getContext().startActivity(intent);
+            call.resolve();
+        } catch (Exception e) {
+            // 설정 화면이 없는 기기는 없다시피 하지만, 여기서 터지면 앱이 죽는다.
+            // 화면 쪽은 이 실패를 받아 적어둔 경로 안내를 그대로 보여준다.
+            call.reject("설정 화면을 열지 못했어요.", "no_settings");
         }
     }
 }

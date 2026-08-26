@@ -438,6 +438,30 @@ export function isGalleryScanSupported() {
   return isNativeApp() && window.Capacitor?.getPlatform?.() === 'android';
 }
 
+// 앱 설정 화면을 열 수 있는가. 안드로이드 앱에서만 된다.
+export function canOpenAppSettings() {
+  return isGalleryScanSupported();
+}
+
+/**
+ * 이 앱의 설정 화면을 연다. 열었으면 true.
+ *
+ * 권한을 거절한 사람에게 "설정에서 허용해주세요"라고만 적으면, 그 설정이 어디 있는지를
+ * 스스로 찾아야 한다. 제조사마다 메뉴 이름과 깊이가 달라서 글로 적는 것으로는 모자란다.
+ *
+ * 못 열었을 때 false를 돌려주는 이유는, 부르는 쪽이 적어둔 경로 안내를 그대로 두기
+ * 위해서다 — 버튼이 안 먹었다고 안내까지 사라지면 갈 길이 아예 없어진다.
+ */
+export async function openAppSettings() {
+  if (!canOpenAppSettings()) return false;
+  try {
+    await MoaconGallery.openAppSettings();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function getGalleryStatus() {
   if (!isGalleryScanSupported()) return { supported: false, granted: false, partial: false };
   const status = await MoaconGallery.getStatus();

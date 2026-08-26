@@ -22,18 +22,20 @@ import { PhotoStrip } from './PhotoViewer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
-  candidateToFiles,
-  dismissImages,
-  undismissImages,
-  countSkipped,
-  forgetSkipped,
   FOLDERS,
-  summarizeFolders,
+  canOpenAppSettings,
+  candidateToFiles,
+  countSkipped,
+  deepScan,
+  dismissImages,
+  forgetSkipped,
   getGalleryStatus,
+  groupImages,
+  openAppSettings,
   requestGalleryAccess,
   scanGallery,
-  deepScan,
-  groupImages,
+  summarizeFolders,
+  undismissImages,
 } from '../utils/gallery';
 import { createGifticon, findGifticonByCode, removeImages, uploadGifticonImages } from '../api';
 import { prepareImages, readGifticonInfo } from '../utils/imageAnalyze';
@@ -1835,9 +1837,16 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                 사진을 볼 수 없어요. 그래도 <b className="font-semibold text-foreground">+ 로 직접 올리면</b>{' '}
                 정보는 자동으로 채워드려요.
               </p>
+              {/* 버튼이 설정 화면까지 데려다주고, 그 위 한 줄이 거기서 무엇을 누를지
+                  말해준다. 글만 두면 그 화면을 찾아가는 데서 헤맨다. */}
               <p className="m-0 text-sm leading-relaxed break-keep text-muted-foreground">
-                설정 → 애플리케이션 → 모아콘 → 권한 → 사진에서 허용할 수 있어요.
+                권한 → <b className="font-semibold text-foreground">사진</b>에서 허용할 수 있어요.
               </p>
+              {canOpenAppSettings() && (
+                <Button type="button" size="lg" className="w-full rounded-xl" onClick={openAppSettings}>
+                  설정 열기
+                </Button>
+              )}
               <Button type="button" variant="outline" size="lg" className="w-full rounded-xl" onClick={onClose}>
                 닫기
               </Button>
