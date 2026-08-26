@@ -220,19 +220,9 @@ Deno.serve(async (req) => {
     new Response(JSON.stringify(body), { status, headers: jsonHeaders });
 
   try {
-    // 카카오는 무료 쿼터가 있고 TMAP 보행경로는 하루 1,000건을 넘으면 건당 요금이다.
     // 아무나 부를 수 있으면 하룻밤 사이에 쿼터가 비고 요금이 붙는다.
     const guard = await requireUser(req);
     if (guard.error) return reply({ error: guard.error }, guard.status);
-
-    const usage = await withinDailyLimit(
-      guard.admin,
-      guard.user.id,
-      'places',
-      limitFromEnv('PLACES_DAILY_LIMIT', 200),
-      limitFromEnv('PLACES_TOTAL_DAILY_LIMIT', 3000),
-    );
-    if (!usage.allowed) return reply({ error: tooManyMessage(usage) }, 429);
 
     const apiKey = Deno.env.get('KAKAO_REST_API_KEY');
     if (!apiKey) {
@@ -240,8 +230,34 @@ Deno.serve(async (req) => {
     }
 
     const payload = await req.json();
+    // 도보와 나머지를 따로 센다. 뒤에 붙은 회사가 다르고, 무엇보다 돈이 나오는 쪽이
+    // 도보 하나뿐이라서다. 한 통에 담아 세면 공짜인 검색이 유료인 도보의 몫을 먹는다.
+    const walking = payload?.mode === 'walk';
+    const usage = walking
+      ? // TMAP 보행경로는 하루 1,000건까지 무료고 넘으면 건당 요금이다. 딱 그 선에서
+        // 멈춘다 — 1,000번째는 나가고 1,001번째가 막힌다. 사람 몫을 100으로 두는 것은
+        // 한 사람이 두드려서 그날 전체를 비우지 못하게 하려는 것이다.
+        await withinDailyLimit(
+          guard.admin,
+          guard.user.id,
+          'places_walk',
+          limitFromEnv('PLACES_WALK_DAILY_LIMIT', 100),
+          limitFromEnv('PLACES_WALK_TOTAL_DAILY_LIMIT', 1000),
+        )
+      : // 카카오 로컬 검색은 하루 10만 건까지 공짜다. 그런데 이 함수를 한 번 부르면
+        // 카카오를 최대 세 번 두드리므로(아래 쪽 넘김), 우리 쪽 3만이 카카오 쪽 9만이다.
+        // 사람 몫 2,000은 막으려는 것이 사용이 아니라 무한 반복이라 넉넉히 둔다.
+        await withinDailyLimit(
+          guard.admin,
+          guard.user.id,
+          'places',
+          limitFromEnv('PLACES_DAILY_LIMIT', 2000),
+          limitFromEnv('PLACES_TOTAL_DAILY_LIMIT', 30000),
+        );
+    if (!usage.allowed) return reply({ error: tooManyMessage(usage) }, 429);
+
     if (payload?.mode === 'route') return handleRoute(payload, apiKey, reply);
-    if (payload?.mode === 'walk') return handleWalkRoute(payload, reply);
+    if (walking) return handleWalkRoute(payload, reply);
 
     const { query, lat, lng } = payload;
     if (!query || !String(query).trim()) {
@@ -270,8 +286,8 @@ Deno.serve(async (req) => {
 
     // 남의 가게를 걸러내고 나면 한 쪽(15개)에서 몇 개 안 남는다 — "BBQ"는 열다섯 중 넷뿐이다.
     // 그래서 목록이 찰 때까지 다음 쪽을 더 가져온다. 카카오는 15개씩 세 쪽(45개)까지 준다.
-    // 호출이 늘지만 카카오 로컬 무료 쿼터는 하루 십만 건이라 여유가 있고, 사람 쪽 한도
-    // (PLACES_DAILY_LIMIT)는 이 함수를 부른 횟수로 세니 그대로다.
+    // 카카오 로컬 무료 쿼터는 하루 십만 건이다. 여기서 최대 세 번을 두드리므로 위의
+    // 전체 한도(30,000)가 카카오 쪽으로는 9만이 된다 — 그 선을 그렇게 잡았다.
     const found: ReturnType<typeof toStore>[] = [];
     for (let page = 1; page <= 3; page += 1) {
       const url = new URL('https://dapi.kakao.com/v2/local/search/keyword.json');
