@@ -80,4 +80,29 @@ describe('기한 늘리기 — 두 화면', () => {
     expect(screen.queryByText('1 / 2')).toBeNull();
     expect(screen.queryByRole('button', { name: '연장했어요' })).toBeNull();
   });
+
+  // 저장을 누르기 직전인데 어느 기프티콘인지가 화면에 없었다. 목록에 카드가 많으면
+  // 무엇을 바꾸는지 확인할 데가 없다.
+  it('2단계에도 상품명이 있다', () => {
+    const gifticon = gifticonDue(1);
+    render(<ExtendSheet gifticon={gifticon} onExtend={onExtend} onClose={onClose} />);
+
+    fireEvent.click(screen.getByRole('button', { name: '연장했어요' }));
+
+    expect(screen.getByText(gifticon.name)).toBeTruthy();
+  });
+
+  // 붉은색은 임박한 것 하나만 가진다. 이미 지난 것까지 붉으면 두 색이 같은 뜻이 된다.
+  it('지난 것은 회색으로, 임박한 것만 붉게 적는다', () => {
+    const { unmount } = render(<ExtendSheet gifticon={gifticonDue(-22)} onExtend={onExtend} onClose={onClose} />);
+
+    // '기한 만료 (22일 지남)'이 아니라 '22일 지남'. 제목이 이미 같은 말을 한다.
+    const pastLine = screen.getByText('22일 지남').parentElement;
+    expect(pastLine.className).toContain('text-muted-foreground');
+    expect(pastLine.className).not.toContain('text-destructive');
+    unmount();
+
+    render(<ExtendSheet gifticon={gifticonDue(1)} onExtend={onExtend} onClose={onClose} />);
+    expect(screen.getByText('D-1').parentElement.className).toContain('text-destructive');
+  });
 });

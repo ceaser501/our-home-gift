@@ -135,6 +135,27 @@ Play에 올리면 **앱 서명 키를 구글이 관리**(Play App Signing)하게
   - `NSLocationWhenInUseUsageDescription` — 주변 사용처를 찾기 위해
   - `NSCameraUsageDescription` — 기프티콘을 촬영해 등록하기 위해 (쓰는 경우)
 
+### 안드로이드에만 있어서 같이 옮겨야 하는 것 — 설정 열기
+
+권한을 거절한 사람에게 **[설정 열기]** 버튼을 보여주는 자리가 두 곳 있다.
+`client/src/components/NearbyStoresSheet.jsx`(위치)와
+`client/src/components/GalleryScanSheet.jsx`(사진)다.
+
+지금은 안드로이드에서만 뜬다. `client/src/utils/gallery.js:442`의 `canOpenAppSettings()`가
+`isGalleryScanSupported()`를 그대로 쓰고 있어서다 — 그건 **안드로이드 네이티브**일 때만
+참이다. 실제로 여는 코드도 자바 한 곳에만 있다
+(`app/android/app/src/main/java/io/github/ceaser501/moacon/GalleryPlugin.java`의
+`openAppSettings`, `Settings.ACTION_APPLICATION_DETAILS_SETTINGS`).
+
+- [ ] 스위프트 쪽에 같은 이름의 메서드를 만든다 — `UIApplication.openSettingsURLString`
+- [ ] `canOpenAppSettings()`를 사진첩 훑기와 떼어내고 `android`·`ios` 둘 다 통과시킨다.
+      **지금 하나로 묶여 있는 것이 사고 지점이다.** 사진첩 훑기는 아이폰에서 못 하는 일이고,
+      설정 열기는 되는 일인데 같은 판정을 쓰고 있다
+- [ ] 아이폰 실기에서 거절 → [설정 열기] → 그 앱 권한 목록으로 바로 가는지
+
+아이폰 쪽이 오히려 낫다. 안드로이드는 앱 정보 화면까지만 가서 권한을 한 번 더 눌러 들어가야
+하는데, 아이폰은 그 앱의 권한 목록에 바로 떨어진다.
+
 ---
 
 ## 6. 확인이 필요한 것 — 이름과 브랜드
