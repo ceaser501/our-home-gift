@@ -12,11 +12,13 @@ vi.mock('../components/StoreDetailSheet', () => ({
   default: ({ store }) => <div>상세: {store.name}</div>,
 }));
 
+const readCachedPosition = vi.fn(() => null);
+
 vi.mock('../utils/geolocation', () => ({
   SIGNIFICANT_MOVE_M: 300,
   distanceBetween: () => 0,
   getFreshPosition: async () => ({ lat: 37.5, lng: 127 }),
-  readCachedPosition: () => null,
+  readCachedPosition: (...a) => readCachedPosition(...a),
   saveCachedPosition: () => {},
 }));
 
@@ -28,6 +30,7 @@ function store(n, extra = {}) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  readCachedPosition.mockReturnValue(null);
 });
 
 function open() {
@@ -96,5 +99,46 @@ describe('주변 매장', () => {
     await screen.findByText('매장 2');
 
     expect(screen.queryByText('02-1234-5678')).toBeNull();
+  });
+});
+
+// '주변 매장을 찾고 있어요…'에서 영영 돌던 자리.
+//
+// 지난번 위치로 먼저 찾아 보여주는 빠른 길이 있는데, 그 검색이 실패하면 .catch(() => {})가
+// 조용히 삼켰다. 실패했다는 사실이 어디에도 안 남아서 그다음 갈래가 "이미 보여줬다"고 믿고
+// 끝냈고, 아무도 화면을 다음 상태로 못 옮겼다. 사용자가 할 수 있는 일이 앱을 끄는 것뿐이었다.
+describe('검색이 막혔을 때', () => {
+  it('돌기만 하지 않고 이유를 화면에 올린다', async () => {
+    // 지난번 위치가 있어서 그것으로 먼저 찾는 길로 들어간다.
+    readCachedPosition.mockReturnValue({ lat: 37.5, lng: 127 });
+    searchNearbyStores.mockRejectedValue(new Error('오늘은 여기까지예요. 내일 다시 시도해주세요.'));
+
+    open();
+
+    expect(await screen.findByText('주변 매장을 찾지 못했어요')).toBeTruthy();
+    expect(screen.getByText(/오늘은 여기까지예요/)).toBeTruthy();
+    expect(screen.queryByText(/찾고 있어요/)).toBeNull();
+  });
+
+  // 같은 자리에서 두 번 물어봐야 같은 답이다. 막힌 뒤에 한 번 더 쓰면 한도만 더 깎는다.
+  it('같은 자리면 다시 묻지 않는다', async () => {
+    readCachedPosition.mockReturnValue({ lat: 37.5, lng: 127 });
+    searchNearbyStores.mockRejectedValue(new Error('오늘은 여기까지예요.'));
+
+    open();
+    await screen.findByText('주변 매장을 찾지 못했어요');
+
+    expect(searchNearbyStores).toHaveBeenCalledTimes(1);
+  });
+
+  // 지난번 위치로 찾은 것이 이미 떠 있으면, 새 위치를 못 잡아도 그대로 두는 게 낫다.
+  it('먼저 보여준 것이 있으면 그대로 둔다', async () => {
+    readCachedPosition.mockReturnValue({ lat: 37.5, lng: 127 });
+    searchNearbyStores.mockResolvedValue([store(1)]);
+
+    open();
+
+    expect(await screen.findByText('매장 1')).toBeTruthy();
+    expect(screen.queryByText('주변 매장을 찾지 못했어요')).toBeNull();
   });
 });

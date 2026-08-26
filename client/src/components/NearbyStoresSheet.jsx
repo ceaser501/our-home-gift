@@ -63,31 +63,47 @@ export default function NearbyStoresSheet({ gifticon, onClose }) {
       setError(null);
 
       // 지난번 위치가 있으면 기다리지 않고 그것으로 먼저 찾아 보여준다.
+      //
+      // 그게 실패했는지를 기억해둔다. 예전에는 .catch(() => {})로 그냥 삼켰는데, 그러면
+      // 검색이 막혔을 때(하루 한도를 다 썼다든지) 아무도 phase를 'done'으로 못 옮겨서
+      // '주변 매장을 찾고 있어요'에서 영영 돌았다. 실패했다는 사실이 어디에도 안 남아서,
+      // 아래 두 갈래가 "이미 보여줬다"고 믿고 조용히 끝냈다.
       const cached = readCachedPosition();
       setPhase(cached ? 'searching' : 'locating');
-      const shown = cached ? search(cached).catch(() => {}) : null;
+      let shownFailed = null;
+      const shown = cached
+        ? search(cached).catch((err) => {
+            shownFailed = err;
+          })
+        : null;
 
       try {
         const fresh = await getFreshPosition();
         if (cancelled) return;
         saveCachedPosition(fresh);
 
+        await shown;
+        if (cancelled) return;
+
+        const samePlace = cached && distanceBetween(cached, fresh) < SIGNIFICANT_MOVE_M;
         // 지난번 위치로 이미 보여준 목록이 지금 자리와 크게 어긋날 때만 다시 찾는다.
-        if (cached && distanceBetween(cached, fresh) < SIGNIFICANT_MOVE_M) {
-          await shown;
-          if (!cancelled) setOrigin(fresh);
+        if (samePlace && !shownFailed) {
+          setOrigin(fresh);
           return;
         }
+        // 같은 자리인데 아까 막혔다면 다시 물어도 같은 답이다. 한 번 더 쓰지 않고
+        // 그 이유를 그대로 화면에 올린다.
+        if (samePlace && shownFailed) throw shownFailed;
 
-        if (!cached) setPhase('searching');
+        setPhase('searching');
         await search(fresh);
       } catch (err) {
         if (cancelled) return;
         // 지난번 위치로 이미 보여줬으면 새 위치를 못 잡아도 그대로 두는 게 낫다.
-        if (cached) {
-          await shown;
-          return;
-        }
+        // 다만 그 검색이 실패했다면 보여준 것이 없으니, 아래로 내려가 이유를 밝힌다.
+        await shown;
+        if (cancelled) return;
+        if (cached && !shownFailed) return;
         // 1 = PERMISSION_DENIED: 사용자가 위치를 허용하지 않은 경우라 안내가 다르다.
         //
         // 제목은 사용자에게 벌어진 일로 적는다. '권한이 필요해요'는 앱의 사정이고,
