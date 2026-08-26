@@ -199,6 +199,49 @@ describe('NearbyBanner', () => {
     expect(searchNearbyStores.mock.calls.length).toBe(before);
   });
 
+  // 캐시를 꺼내려면 '지금 자리가 그때와 같은가'를 봐야 하고, 그러려면 위치가 있어야 했다.
+  // 그래서 찾아둔 것이 있어도 GPS를 다 기다린 뒤에야 띠가 떴다 — 폰이 좌표를 새로 잡으면
+  // 1~8초다. "앱을 켜고 한참 있다가 뜬다"는 말이 여기서 나왔다.
+  it('위치를 기다리는 동안 찾아둔 것을 먼저 그린다', async () => {
+    localStorage.setItem(
+      'nearby-banner:result',
+      JSON.stringify({
+        ts: Date.now(),
+        at: { lat: 37.5, lng: 127.0 },
+        best: { brand: '스타벅스', count: 2, store: '스타벅스 서울숲점', distance: 120 },
+      })
+    );
+    // 위치가 영영 안 온다. 그래도 띠는 떠야 한다.
+    getFreshPosition.mockImplementation(() => new Promise(() => {}));
+
+    render(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
+
+    expect(await screen.findByText(/스타벅스 서울숲점/, {}, { timeout: 3000 })).toBeTruthy();
+    // 먼저 그리는 것이지 다시 찾는 것이 아니다.
+    expect(searchNearbyStores).not.toHaveBeenCalled();
+  });
+
+  // 먼저 그려놓고 권한이 없다는 걸 알게 되면 그것을 걷어야 한다. 그대로 두면 '켜기' 띠가
+  // 그 뒤에 가려져서, 권한을 켤 길이 화면에서 사라진다.
+  it('권한이 없어진 걸 알면 먼저 그린 것을 걷는다', async () => {
+    localStorage.setItem(
+      'nearby-banner:result',
+      JSON.stringify({
+        ts: Date.now(),
+        at: { lat: 37.5, lng: 127.0 },
+        best: { brand: '스타벅스', count: 2, store: '스타벅스 서울숲점', distance: 120 },
+      })
+    );
+    getFreshPosition.mockRejectedValue({ code: 1 });
+
+    render(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
+
+    expect(
+      await screen.findByText(/위치 권한을 켜면 근처에서 쓸 수 있는 기프티콘을 알려드려요/, {}, { timeout: 3000 })
+    ).toBeTruthy();
+    expect(screen.queryByText(/스타벅스 서울숲점/)).toBeNull();
+  });
+
   it('다음 날이 되면 다시 뜬다', async () => {
     localStorage.setItem('nearby-banner-dismissed-on', '2020-01-01');
 

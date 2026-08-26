@@ -156,6 +156,30 @@ function readCache(at) {
   }
 }
 
+// 위치를 기다리기 전에 먼저 꺼내는 캐시.
+//
+// readCache는 "지금 자리가 그때와 같은가"를 보느라 위치가 있어야 한다. 그래서 찾아둔 것이
+// 있어도 GPS를 다 기다린 뒤에야 띠가 떴다 — 폰이 좌표를 새로 잡으면 1~8초다. "앱을 켜고
+// 한참 있다가 뜬다"는 말이 여기서 나왔다.
+//
+// 여기서는 나이만 본다. 10분 안에 찾아둔 것이면 일단 그리고, 진짜 위치는 뒤에서 받아
+// 300m 넘게 어긋났을 때만 고쳐 그린다. 검색 횟수는 그대로다 — 다시 찾을지 정하는 규칙이
+// 같고 순서만 '그린 뒤'로 옮긴 것이다.
+//
+// 그사이 매장 찾기가 새 좌표를 적어뒀을 수 있다. 그게 멀면 먼저 그리지 않는다 — 잠깐이라도
+// 다른 동네 매장을 보여주느니 몇 초 기다리는 편이 낫다.
+function readCacheAhead() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(CACHE_KEY) || "null");
+    if (!saved || Date.now() - saved.ts > CACHE_TTL_MS) return null;
+    const last = readCachedPosition(CACHE_MAX_AGE_MS);
+    if (last && distanceBetween(saved.at, last) > CACHE_MOVE_M) return null;
+    return saved;
+  } catch {
+    return null;
+  }
+}
+
 function formatDistance(meters) {
   if (meters == null) return "";
   if (meters < 1000) return `${Math.round(meters)}m`;
@@ -284,12 +308,24 @@ export default function NearbyBanner({ gifticons, onPick, yielded = false }) {
         .slice(0, MAX_BRANDS);
       if (brands.length === 0) return;
 
+      // 위치를 기다리기 전에 먼저 그린다. 아래에서 진짜 위치를 받아 다시 판단한다.
+      if (!knownAt) {
+        const ahead = readCacheAhead();
+        if (ahead && !cancelled) setBest(ahead.best);
+      }
+
       const located = knownAt ? { at: knownAt } : await getPositionSilently();
       if (cancelled) return;
       setUnlocatable(Boolean(located.unlocatable));
       setNeedsPermission(Boolean(located.needsPermission));
       const at = located.at;
-      if (!at) return;
+      if (!at) {
+        // 권한이 없어진 것이면 먼저 그려둔 것을 걷는다. 그대로 두면 '켜기' 띠가 그 뒤에
+        // 가려져서, 권한을 켤 길이 화면에서 사라진다.
+        // 지하라서 못 잡은 것(unlocatable)은 그대로 둔다 — 아까 알아둔 것은 여전히 맞다.
+        if (located.needsPermission && !cancelled) setBest(null);
+        return;
+      }
 
       const cached = readCache(at);
       if (cached) {
