@@ -139,8 +139,8 @@ function isOriginal(bucket) {
  *
  * 정리하면, 사고가 나는 경우만 골라서 기다린다. 나머지는 찾는 즉시 보낸다.
  */
-function canReadEarly(bucket, coverage) {
-  return isOriginal(bucket) && bigEnough(coverage);
+function canReadEarly(bucket, coverage, codeType) {
+  return isOriginal(bucket) && bigEnough(coverage, codeType);
 }
 
 // 바코드를 읽을 때의 크기.
@@ -504,14 +504,30 @@ function barcodeCoverage(points, width, height, codeType) {
   return spread / width;
 }
 
+// 네모난 코드의 자. 막대와 따로 둔다.
+//
+// 0.25는 막대를 재서 정한 값이다. 실측이 남아 있다 — 스타벅스 원본 0.477, 캡처 0.512.
+// 막대는 카드 가로를 거의 다 쓰기 때문에 그렇게 나온다.
+//
+// QR은 네모라 그 자를 댈 수가 없다. 같은 카드에 같은 크기로 박혀 있어도 가로만 놓고
+// 보면 막대의 절반이다. 썬키스트가 0.226으로 재어져 걸렸는데, 1080px 화면에서 244px
+// 짜리 QR이다 — 계산대에 내밀면 그냥 읽히는 크기다.
+//
+// 이 자가 막으려는 것은 "목록 화면을 통째로 찍은 캡처"다. 거기 실린 QR은 훨씬 작다 —
+// 모아콘 목록의 썸네일이 62px(5.7%)이고, 두 배로 큰 목록이어도 11.5%다.
+// 0.15면 그 둘 사이가 넉넉히 갈린다. 위로도 아래로도 여유가 있다.
+const MIN_SQUARE_COVERAGE = 0.15;
+
 /**
  * 이 사진의 코드가 쓸 만한 크기인가.
  *
  * 못 잰 것(null)은 통과시킨다. 모른다는 것과 작다는 것은 다르다 — 모름을 작음으로
  * 치면, 자리를 안 알려주는 판독기가 읽어낸 건은 전부 버려진다.
  */
-function bigEnough(coverage) {
-  return coverage == null || coverage >= MIN_BARCODE_COVERAGE;
+function bigEnough(coverage, codeType) {
+  if (coverage == null) return true;
+  const floor = codeType === 'QR_CODE' || codeType === 'DATA_MATRIX' ? MIN_SQUARE_COVERAGE : MIN_BARCODE_COVERAGE;
+  return coverage >= floor;
 }
 
 async function loadImage(src) {
@@ -1121,7 +1137,7 @@ async function collect({ images, read: readImage, pass, isRegistered, skipCodes,
       // 알고 쓴다. 그래서 훑는 동안 올라온 카드의 사진이 전부 깨져 검은 칸으로 보였다.
       images: [read.data],
       // 다 훑기를 기다리지 않고 지금 보내도 되는지. 위 canReadEarly가 정한다.
-      readyNow: canReadEarly(image.bucket, found.coverage),
+      readyNow: canReadEarly(image.bucket, found.coverage, found.codeType),
     };
     seenCodes.set(found.code, candidate);
     candidates.push(candidate);
@@ -1152,7 +1168,7 @@ async function collect({ images, read: readImage, pass, isRegistered, skipCodes,
   candidates.forEach((candidate) => {
     // 바코드가 너무 작게 찍힌 것은 뺀다. 다만 그것밖에 없으면 그거라도 쓴다 —
     // 등록 자체가 막히는 것보다는 낫고, 바코드 번호는 이미 읽어놨다.
-    const meaningful = candidate.shots.filter((shot) => bigEnough(shot.coverage));
+    const meaningful = candidate.shots.filter((shot) => bigEnough(shot.coverage, candidate.codeType));
     const usable = meaningful.length > 0 ? meaningful : candidate.shots;
 
     // 쓸 만한 크기의 사진이 하나도 없다는 표시. 번호는 제대로 읽혔지만(막대에는 검산

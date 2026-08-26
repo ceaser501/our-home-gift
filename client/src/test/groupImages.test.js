@@ -506,9 +506,11 @@ describe('펼쳐둔 그림의 수명', () => {
 // 짧게 재진다. 그 몫을 안 되돌리면 가로의 30%를 차지하는 멀쩡한 QR이 0.225로 재어져
 // 자(0.25)에 걸리고, 카드가 통째로 걷힌다. 썬키스트가 그랬다 — 읽어놓고 작다고 버렸다.
 describe('QR 크기 재기', () => {
-  it('가로의 30%를 차지하는 QR은 안 걸린다', async () => {
-    // 잰 값 0.225. 되돌리면 0.30.
-    barcodes.set('qr.jpg', { code: 'IX;1;9816401685019;;', coverage: 0.225, qr: true });
+  // 썬키스트가 여기 걸렸다. 되돌린 값이 0.226 — 1080px 화면에서 244px짜리 QR이고,
+  // 계산대에 내밀면 그냥 읽히는 크기다. 자(0.25)가 막대를 재서 정한 값이라 그랬다.
+  it('짧은 변의 20%대 QR은 안 걸린다', async () => {
+    // 잰 값 0.170. 되돌리면 0.226.
+    barcodes.set('qr.jpg', { code: 'IX;1;9816401685019;;', coverage: 0.170, qr: true });
 
     const { candidates, tally } = await groupImages([pick('qr.jpg')]);
 
@@ -519,8 +521,10 @@ describe('QR 크기 재기', () => {
 
   // 되돌린다고 다 통과시키면 자가 없는 것과 같다. 목록 화면을 통째로 찍은 캡처 속
   // 썸네일 QR은 여전히 걸려야 한다 — 옆칸 기프티콘의 금액과 기한이 딸려 들어온다.
+  // 모아콘 목록의 썸네일이 62px(1080px 화면에서 5.7%)이고, 두 배로 큰 목록이어도 11.5%다.
   it('목록 캡처 속 작은 QR은 여전히 걸린다', async () => {
-    barcodes.set('list.jpg', { code: 'IX;1;9816401685019;;', coverage: 0.09, qr: true });
+    // 잰 값 0.06. 되돌려도 0.08이라 자(0.15) 아래다.
+    barcodes.set('list.jpg', { code: 'IX;1;9816401685019;;', coverage: 0.06, qr: true });
 
     const { candidates, tally } = await groupImages([pick('list.jpg')]);
 
