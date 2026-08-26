@@ -25,8 +25,8 @@ export default function FamilyReport({ gifticons }) {
 
     const today = todayStr();
     const used = pool.filter((g) => g.status === 'used');
-    // 안 쓴 채로 기한이 지난 것. 쓰고도 표시를 안 한 것이 여기 섞이는데, 그건 아래
-    // 안내에서 밝히고 목록에서 고칠 수 있게 한다.
+    // 안 쓴 채로 기한이 지난 것. 조금 쓰다 만 금액권도 여기 든다 — 남은 돈은 못 쓰고
+    // 지나간 것이 맞다. 얼마를 놓친 것으로 세는지는 아래 한 줄로 밝힌다.
     const missed = pool.filter((g) => g.status !== 'used' && g.expires_at && g.expires_at < today);
     // 금액권은 이미 쓴 만큼을 뺀 잔액만 손실이다. 3만원권으로 2만원을 쓰고 남은 1만원을
     // 못 썼다면 잃은 건 1만원이지 3만원이 아니다.
@@ -34,11 +34,6 @@ export default function FamilyReport({ gifticons }) {
       const face = Number(g.amount || 0);
       return sum + (g.is_voucher ? Math.max(0, face - Number(g.spent_amount || 0)) : face);
     }, 0);
-
-    // 조금 쓰다 만 채로 기한이 지난 금액권이 있는가. 이건 '안 쓴 것'도 '쓴 것'도 아니라
-    // 아래 안내에서 따로 밝힌다 — 밝히지 않으면 "0개 썼어요" 바로 아래에 "1개 4,000원"이
-    // 서서, 두 숫자가 서로 틀린 말처럼 보인다.
-    const partlyMissed = missed.some((g) => g.is_voucher && Number(g.spent_amount || 0) > 0);
 
     return {
       scope,
@@ -48,7 +43,6 @@ export default function FamilyReport({ gifticons }) {
       // 아직 쓸 수 있는 것. 띠의 회색 자리이자 범례의 마지막 값이다.
       left: pool.length - used.length - missed.length,
       missedAmount,
-      partlyMissed,
     };
   }, [gifticons]);
 
@@ -111,15 +105,14 @@ export default function FamilyReport({ gifticons }) {
         ))}
       </div>
 
-      {/* 손실을 보여주면서 동시에 고칠 길을 연다 — 쓰고 표시만 안 한 것이 여기 섞이는데,
-          그 사실을 감추면 사용자는 숫자를 믿지 않게 된다. */}
+      {/* 무엇을 놓친 금액으로 세는지만 적는다.
+          예전에는 "이미 쓰셨다면 목록에서 사용완료로 바꿔주세요"까지 적었는데, 그건 할 일을
+          시키는 말이라 결산을 읽는 자리에 어울리지 않았다. 그리고 5천원권에서 4천원을 쓰고
+          천원이 남은 채 지나갔을 때는 맞는 말도 아니다 — 그건 쓴 것이지 표시를 안 한 것이
+          아니다. 지금 문장은 그 경우까지 한 줄로 설명한다. */}
       {stat.missed > 0 && (
         <p className="m-0 text-[12.5px] leading-relaxed font-medium break-keep text-muted-foreground">
-          기한이 지났는데 사용완료로 표시되지 않은 것들이에요. 이미 쓰셨다면 목록에서 사용완료로 바꿔주세요.
-          {/* 5천원권에서 4천원을 쓰고 천원을 남긴 채 지나갔다면 잃은 건 천원이다. 그런데
-              위에는 "0개 썼어요"라고 적혀서, 아래 '누가 썼나요'의 4,000원과 어긋나 보인다.
-              둘 다 맞는 숫자이고 세는 것이 다를 뿐이라, 그 한마디만 보탠다. */}
-          {stat.partlyMissed && ' 조금 쓰다 만 것은 남은 금액만 셌어요.'}
+          사용기한이 지난 기프티콘 중 잔액이 남은 것은 놓친 금액으로 세어요
         </p>
       )}
     </div>

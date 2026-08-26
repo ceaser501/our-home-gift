@@ -1,5 +1,11 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { getFreshPosition, readCachedPosition, saveCachedPosition } from '../utils/geolocation';
+import {
+  forgetCachedPosition,
+  getFreshPosition,
+  hasSavedPosition,
+  readCachedPosition,
+  saveCachedPosition,
+} from '../utils/geolocation';
 
 // 여의도에서 앱을 켰는데 몇 시간 전 서울숲에서 잡아둔 좌표가 그대로 나왔다. 검색은
 // 멀쩡했고 — 카카오에 sort=distance로 묻고 500m 안만 띄운다 — 앱이 자기 위치를 잘못
@@ -61,5 +67,49 @@ describe('readCachedPosition', () => {
     expect(readCachedPosition(30 * 60 * 1000)).toBeNull();
     // 하루까지 받는 쪽에는 그대로 준다.
     expect(readCachedPosition()).toEqual({ lat: 37.5, lng: 126.9 });
+  });
+});
+
+// 안드로이드 웹뷰는 앱 권한이 없으면 성공도 실패도 안 부르고 그냥 조용해진다.
+// options.timeout은 좌표를 잡는 시간에만 걸리는 것이라 권한 단계에서 멈춘 것은 못 깨운다.
+//
+// 그래서 목록 위 띠는 '물어볼까 말까'를 영영 못 정해 아무것도 안 띄웠고, 매장 찾기는
+// '주변 매장을 찾고 있어요'에서 끝없이 돌았다. 사용자가 할 수 있는 일이 앱을 끄는 것뿐이었다.
+describe('저쪽이 아무 답도 안 할 때', () => {
+  it('우리 쪽에서 끝내고 no_answer로 알린다', async () => {
+    vi.useFakeTimers();
+    // 성공도 실패도 부르지 않는다.
+    getCurrentPosition.mockImplementation(() => {});
+
+    const pending = getFreshPosition().then(
+      () => ({ ok: true }),
+      (err) => ({ code: err?.code })
+    );
+    await vi.advanceTimersByTimeAsync(11000);
+
+    expect(await pending).toEqual({ code: 'no_answer' });
+    // 두 번째 판까지 기다리면 사용자는 30초를 빈 화면 앞에서 보낸다.
+    expect(getCurrentPosition).toHaveBeenCalledTimes(1);
+    vi.useRealTimers();
+  });
+
+  // 답이 제때 왔으면 우리 시계는 아무 일도 하지 않아야 한다.
+  it('제때 답하면 그대로 받는다', async () => {
+    const at = await getFreshPosition();
+    expect(at).toEqual({ lat: 37.5, lng: 126.9 });
+  });
+});
+
+// 적어둔 좌표는 "이 사람이 권한을 준 적이 있다"는 증거로도 쓰인다. 권한을 도로 거둬도
+// 좌표는 남아 있어서, 그대로 두면 앱이 계속 '권한 있음'으로 알고 물어보지 않는다.
+describe('권한이 없다는 걸 알게 되면', () => {
+  it('적어둔 좌표를 지워서 다음에 다시 묻게 한다', () => {
+    saveCachedPosition({ lat: 37.5, lng: 126.9 });
+    expect(hasSavedPosition()).toBe(true);
+
+    forgetCachedPosition();
+
+    expect(hasSavedPosition()).toBe(false);
+    expect(readCachedPosition()).toBeNull();
   });
 });

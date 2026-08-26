@@ -21,15 +21,47 @@ const RECENT_FIX_MS = 60 * 1000;
 // 저장해둔 위치와 이만큼 넘게 떨어져 있으면 매장 목록을 다시 불러온다.
 export const SIGNIFICANT_MOVE_M = 300;
 
+// getCurrentPosition이 아무 답도 안 하는 경우가 있다.
+//
+// 안드로이드 웹뷰는 위치 요청을 앱 권한에 얹어 처리하는데, 앱 권한이 없으면 성공도 실패도
+// 부르지 않고 그냥 조용해진다. options.timeout은 좌표를 잡는 시간에만 걸리는 것이라
+// 권한 단계에서 멈춘 것은 못 깨운다.
+//
+// 실제로 이것 때문에 두 자리가 한꺼번에 망가져 있었다 — 목록 위 띠는 '권한을 물어볼까
+// 말까'를 영영 못 정해 아무것도 안 띄웠고, 매장 찾기는 '주변 매장을 찾고 있어요'에서
+// 끝없이 돌았다. 사용자가 할 수 있는 일이 앱을 끄는 것뿐이었다.
+//
+// 그래서 우리 쪽에서도 시계를 잰다. 저쪽이 답할 시간을 조금 더 주고, 그래도 조용하면
+// 우리가 끝낸다. 'no_answer'로 따로 이름 붙이는 이유는, 이게 지하에서 못 잡은 것(code 3)이
+// 아니라 사실상 권한 문제라서다 — 부르는 쪽이 그렇게 다루도록 갈라 둔다.
+const NO_ANSWER_GRACE_MS = 2000;
+
 export function locate(options) {
   return new Promise((resolve, reject) => {
     if (!navigator.geolocation) {
       reject(Object.assign(new Error('이 기기에서는 위치를 확인할 수 없어요.'), { code: 'unsupported' }));
       return;
     }
+
+    let settled = false;
+    const done = (fn) => (value) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(wall);
+      fn(value);
+    };
+
+    const wall = setTimeout(
+      () =>
+        done(reject)(
+          Object.assign(new Error('위치를 확인할 수 없어요.'), { code: 'no_answer' })
+        ),
+      (options?.timeout ?? 8000) + NO_ANSWER_GRACE_MS
+    );
+
     navigator.geolocation.getCurrentPosition(
-      (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      reject,
+      done((pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude })),
+      done(reject),
       options
     );
   });
@@ -38,10 +70,24 @@ export function locate(options) {
 // 최근에 잡아둔 위치가 있으면 그걸 그대로 받고(즉시), 없으면 시간을 넉넉히 주고 새로 잡는다.
 export function getFreshPosition() {
   return locate({ enableHighAccuracy: false, timeout: 8000, maximumAge: RECENT_FIX_MS }).catch((err) => {
-    // 권한을 거부했으면 다시 물어봐야 소용이 없다.
-    if (err?.code === 1 || err?.code === 'unsupported') throw err;
+    // 권한을 거부했거나 아예 답이 없으면 다시 물어봐야 소용이 없다. 두 번째 판까지 기다리면
+    // 사용자는 30초를 빈 화면 앞에서 보낸다.
+    if (err?.code === 1 || err?.code === 'no_answer' || err?.code === 'unsupported') throw err;
     return locate({ enableHighAccuracy: false, timeout: 20000, maximumAge: 0 });
   });
+}
+
+// 위치 권한이 없다는 것을 알게 됐을 때 적어둔 좌표를 지운다.
+//
+// 이 좌표는 "이 사람이 권한을 준 적이 있다"는 증거로도 쓰인다(hasSavedPosition). 권한을
+// 도로 거둬도 좌표는 남아 있어서, 그대로 두면 앱이 계속 '권한 있음'으로 알고 물어보지
+// 않는다. 폰 설정에서 위치를 끄고 앱을 열었는데 아무 안내도 안 뜨던 것이 이것이었다.
+export function forgetCachedPosition() {
+  try {
+    localStorage.removeItem(STORE_KEY);
+  } catch {
+    // 못 지워도 아래 판단은 code로 다시 하게 된다.
+  }
 }
 
 // maxAgeMs: 부르는 쪽이 얼마나 오래된 것까지 받아들일지 정한다.

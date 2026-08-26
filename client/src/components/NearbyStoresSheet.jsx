@@ -92,7 +92,10 @@ export default function NearbyStoresSheet({ gifticon, onClose }) {
         //
         // 제목은 사용자에게 벌어진 일로 적는다. '권한이 필요해요'는 앱의 사정이고,
         // 이 사람에게 벌어진 일은 "위치를 모른다"는 것이다.
-        if (err?.code === 1) {
+        // no_answer는 웹뷰가 성공도 실패도 안 부른 경우다. 앱 권한이 없을 때 그렇게 되고,
+        // 그때는 이 화면이 '주변 매장을 찾고 있어요'에서 끝없이 돌았다. 사실상 권한
+        // 문제라서 거절과 같은 안내로 보낸다.
+        if (err?.code === 1 || err?.code === 'no_answer') {
           setError({ title: '위치를 알 수 없어요', denied: true, retriable: true });
         } else if (err?.code === 'unsupported') {
           setError({ title: err.message, description: null, retriable: false });

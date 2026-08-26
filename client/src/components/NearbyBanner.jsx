@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { MapPin, MapPinOff, X } from "lucide-react";
 import { searchNearbyStores } from "../api";
 import {
+  forgetCachedPosition,
   getFreshPosition,
   hasSavedPosition,
   isNearbyBannerOn,
@@ -102,11 +103,21 @@ async function getPositionSilently() {
     saveCachedPosition(fresh);
     return { at: fresh };
   } catch (err) {
+    // 권한이 없다. 거절(code 1)이거나, 웹뷰가 아무 답도 안 한 경우(no_answer)다.
+    //
+    // 예전에는 여기서 조용히 넘어갔는데, 그러면 폰 설정에서 위치를 끄고 앱을 연 사람에게
+    // 아무 안내도 안 떴다. 적어둔 좌표가 남아 있어 위에서 '권한 있음'으로 통과한 뒤,
+    // 여기서 실패하고는 입을 다무는 자리였다.
+    //
+    // 그 좌표를 지워야 한다. 안 지우면 다음에 앱을 열어도 같은 길로 또 들어온다.
+    if (err?.code === 1 || err?.code === "no_answer") {
+      forgetCachedPosition();
+      return { at: null, needsPermission: true };
+    }
     const at = readCachedPosition(CACHE_MAX_AGE_MS);
     if (at) return { at };
     // 권한은 줬는데 못 잡았다. 지하·실내·엘리베이터가 여기 든다.
-    // 권한을 도로 거둔 경우(code 1)는 장소 탓이 아니라 조용히 넘어간다.
-    return { at: null, unlocatable: err?.code !== 1 };
+    return { at: null, unlocatable: true };
   }
 }
 
@@ -457,6 +468,12 @@ export default function NearbyBanner({ gifticons, onPick, yielded = false }) {
       setBlocked(false);
       search(fresh);
     } catch (err) {
+      // no_answer는 아예 답이 없었던 것이라, 창이 뜨지 않았다는 뜻으로 곧장 본다.
+      if (err?.code === "no_answer") {
+        setBlocked(true);
+        setNeedsPermission(false);
+        return;
+      }
       if (err?.code === 1) {
         // 창이 안 뜬 채로 거절이 돌아왔다. 폰이 이미 잠근 것이라 앱이 더 물어볼 길이
         // 없다. 남은 길은 설정 화면 하나뿐이니 그리로 데려다준다.
