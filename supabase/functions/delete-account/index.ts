@@ -52,6 +52,16 @@ Deno.serve(async (req) => {
     if (!error) removedImages += chunk.length;
   }
 
+  // 관리자 명단은 계정과 함께 지우지 않는다.
+  //
+  // 명단이 이메일 기준으로 바뀌어서(supabase/admin-by-email.sql) uuid가 사라져도 줄은
+  // 남는다. 다만 uuid는 이제 가리키는 곳이 없으니 비워둔다 — 안 비우면 나중에 그 uuid로
+  // 다른 사람을 찾으려 할 때 없는 계정을 가리킨다.
+  await admin
+    .from('admin_users')
+    .update({ user_id: null })
+    .eq('email_key', (user.email || '').trim().toLowerCase());
+
   const { error: deleteError } = await admin.auth.admin.deleteUser(user.id);
   if (deleteError) {
     // 여기서 막히는 이유는 거의 언제나 하나다 — 아직 이 계정을 가리키는 줄이 어딘가 남아

@@ -58,10 +58,18 @@ Deno.serve(async (req) => {
   }
 
   // 2) 관리자 명단 확인. 로그인만으로는 부족하다 — 앱 사용자는 누구나 로그인할 수 있다.
+  //
+  // 이메일로 본다. uuid로 보던 시절에는 계정이 한 번 지워지면(전체 초기화·탈퇴·대시보드에서
+  // 손으로) 관리자 자격이 함께 날아갔고, 다시 로그인하면 uuid가 새로 생겨서 같은 사람인데도
+  // 명단에 없는 사람이 됐다. 실제로 두 번 날아갔다.
+  //
+  // 이 앱에서 사람을 가리키는 값은 원래 이메일이다 — 카카오·네이버·구글 어느 쪽으로
+  // 들어와도 이메일이 같으면 같은 계정으로 본다. 관리자도 같은 기준을 쓴다.
+  // (supabase/admin-by-email.sql)
   const { data: row, error: adminError } = await admin
     .from('admin_users')
-    .select('user_id')
-    .eq('user_id', auth.user.id)
+    .select('email')
+    .eq('email_key', (auth.user.email || '').trim().toLowerCase())
     .maybeSingle();
 
   if (adminError) {
