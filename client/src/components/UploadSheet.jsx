@@ -73,13 +73,6 @@ function buildForm(initial, defaultOwner) {
 // 값어치보다 비용이 커서 내려둔다.
 const SHOW_PRICE_SEARCH = false;
 
-// ── 진단용. 출시 전에 이 줄과 위 setScanNote, 아래 화면 조각을 함께 뺀다 ──
-//
-// 고른 사진이 카드로도 안 뜨고 되묻는 창에도 안 뜨는 일이 있었다. 그런 사진이 갈 수
-// 있는 자리가 코드상 넷이다 — 읽기 실패, 이미 등록된 번호, 너무 작게 찍힘, 건너뛴 번호.
-// 어디로 갔는지는 숫자를 봐야 가려지는데 폰에서 볼 방법이 없어서 여기까지 짐작으로 왔다.
-const SHOW_SCAN_NOTE = true;
-
 const REQUIRED_FIELDS = [
   { key: 'name', message: '상품명을 입력해주세요.' },
   { key: 'brand', message: '상호를 입력해주세요. (예: 스타벅스, BBQ)' },
@@ -186,9 +179,6 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
   const leftoverRef = useRef([]);
   const savedRef = useRef(null);
   const [askLeftover, setAskLeftover] = useState(false);
-  // ── 진단용. 아래 SHOW_SCAN_NOTE와 함께 뺀다 ──
-  const [scanNote, setScanNote] = useState('');
-  // 여러 장을 한 건으로 본 이유. 테스트 빌드에서만 보여준다.
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -245,7 +235,6 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
     setProgress({ step: 'barcode', current: 1, total: selected.length });
     setAutoFilled(false);
     setSmallBarcode(false);
-    setScanNote('');
 
     // 여러 장을 골랐는데 서로 다른 기프티콘이면, 한 건짜리인 이 화면으로는 담을 수 없다.
     //
@@ -311,18 +300,6 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
         //
         // 떼는 자리가 prepareImages 앞인 것이 중요하다. 버릴 사진을 줄이고 인코딩하는
         // 데만 한 장에 수백 ms가 든다.
-        // ── 진단용. 고른 사진 한 장 한 장이 어디로 갔는지 세어 화면에 적는다.
-        //    카드도 안 뜨고 되묻기도 안 뜨는 사진이 있는데, 그런 사진이 갈 수 있는 자리가
-        //    코드상 넷이라 숫자를 봐야 가려진다. 출시 전에 뺀다(SHOW_SCAN_NOTE).
-        setScanNote(
-          `고른 ${selected.length} · 후보 ${grouped.candidates.length}` +
-            ` · 못읽음 ${(grouped.missed ?? []).length}` +
-            ` · 실패 ${grouped.tally?.readFailed ?? 0}` +
-            ` · 이미있음 ${grouped.tally?.alreadyHave ?? 0}` +
-            ` · 작음 ${grouped.tally?.tooSmall ?? 0}` +
-            ((grouped.tally?.smallDetail ?? []).length ? ` [${grouped.tally.smallDetail.join(', ')}]` : '')
-        );
-
         const drop = new Set((grouped.missed ?? []).map((image) => image.file));
         if (drop.size > 0) {
           const kept = selected.filter((file) => !drop.has(file));
@@ -796,11 +773,6 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
             </div>
           ) : (
             autoFilled && <p className="text-sm text-success">정보를 채웠어요. 확인하고 저장해주세요.</p>
-          )}
-          {SHOW_SCAN_NOTE && scanNote && !analyzing && (
-            <p className="m-0 rounded-lg bg-secondary px-2.5 py-1.5 font-mono text-[11px] text-muted-foreground">
-              {scanNote}
-            </p>
           )}
           {smallBarcode && !analyzing && (
             <p className="text-warning m-0 text-sm leading-relaxed break-keep">
