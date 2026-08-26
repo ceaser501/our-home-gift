@@ -300,7 +300,7 @@ describe('권한을 어떻게 아는가', () => {
 // 풀린다. 그래서 시스템 창이 첫 질문이 되면 안 된다 — 앱이 뭘 하는지도 모르는 상태에서
 // 물으면 반사적으로 거절하고, 그러면 띠도 매장 찾기도 영영 막힌다.
 describe('위치를 아직 안 준 사람에게', () => {
-  const ASK = /내 주변에서 쓸 수 있는 기프티콘을 알려드릴까요/;
+  const ASK = /위치 권한을 켜야 내 주변에서 쓸 수 있는 기프티콘을 알려드릴 수 있어요/;
 
   beforeEach(() => {
     hasSavedPosition.mockReturnValue(false);
@@ -323,7 +323,7 @@ describe('위치를 아직 안 준 사람에게', () => {
     render(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
     await screen.findByText(ASK, {}, { timeout: 3000 });
 
-    await act(async () => screen.getByRole('button', { name: '위치 켜기' }).click());
+    await act(async () => screen.getByRole('button', { name: '켜기' }).click());
 
     expect(getFreshPosition).toHaveBeenCalled();
     expect(await screen.findByText(/스타벅스 서울숲점/, {}, { timeout: 3000 })).toBeTruthy();
@@ -336,7 +336,7 @@ describe('위치를 아직 안 준 사람에게', () => {
 
     const { unmount } = render(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
     await screen.findByText(ASK, {}, { timeout: 3000 });
-    await act(async () => screen.getByRole('button', { name: '위치 켜기' }).click());
+    await act(async () => screen.getByRole('button', { name: '켜기' }).click());
     expect(screen.queryByText(ASK)).toBeNull();
 
     unmount();
@@ -367,7 +367,7 @@ describe('위치를 아직 안 준 사람에게', () => {
 
     render(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
     await screen.findByText(ASK, {}, { timeout: 3000 });
-    await act(async () => screen.getByRole('button', { name: '위치 켜기' }).click());
+    await act(async () => screen.getByRole('button', { name: '켜기' }).click());
 
     sessionStorage.clear();
     await act(async () => {

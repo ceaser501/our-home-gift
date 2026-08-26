@@ -349,18 +349,20 @@ export default function NearbyBanner({ gifticons, onPick, yielded = false }) {
         <span className="flex size-8 shrink-0 items-center justify-center rounded-[10px] bg-primary/12">
           <MapPin className="size-[17px] text-primary" strokeWidth={2.1} />
         </span>
+        {/* '내 주변에서 쓸 수 있는 기프티콘을 알려드릴까요?'였다. 그러면 설정의
+            '내 주변 안내' 스위치를 켜는 말로 읽힌다 — 그건 이미 켜져 있는데 여기서 또
+            켜라고 하니, 설정이 왜 있는지 알 수 없어진다.
+            여기서 켜는 것은 앱 기능이 아니라 폰의 위치 권한이다. 무엇을 켜는지를
+            문장 맨 앞에 둔다. 그러면 버튼은 '켜기' 한 마디로 충분하다. */}
         <span className="min-w-0 flex-1 text-[13.5px] leading-normal font-medium break-keep text-foreground/80">
-          내 주변에서 쓸 수 있는 기프티콘을 알려드릴까요?
+          위치 권한을 켜야 내 주변에서 쓸 수 있는 기프티콘을 알려드릴 수 있어요.
         </span>
-        {/* '켜기'라고만 적어두면 설정의 '내 주변 안내' 스위치를 켜는 말로 읽힌다. 그건
-            이미 켜져 있는데 여기서 또 켜라고 하니, 설정이 왜 있는지 알 수 없어진다.
-            여기서 켜는 것은 앱 기능이 아니라 폰의 위치 권한이다. 그걸 버튼에 적는다. */}
         <button
           type="button"
           onClick={askForLocation}
           className="flex h-[34px] shrink-0 items-center rounded-[10px] bg-primary px-3.5 text-[13.5px] font-bold whitespace-nowrap text-primary-foreground"
         >
-          위치 켜기
+          켜기
         </button>
       </div>
     );
