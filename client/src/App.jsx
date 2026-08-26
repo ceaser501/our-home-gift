@@ -18,7 +18,16 @@ import NoticesSheet from './components/NoticesSheet';
 import NearbyBanner from './components/NearbyBanner';
 import AlertDialog from './components/AlertDialog';
 import PullToRefresh from './components/PullToRefresh';
-import { listGifticons, updateGifticon, deleteGifticon, claimGifticon, releaseGifticon, spendVoucher, listNotices } from './api';
+import {
+  listGifticons,
+  updateGifticon,
+  deleteGifticon,
+  claimGifticon,
+  releaseGifticon,
+  spendVoucher,
+  undoLastUse,
+  listNotices,
+} from './api';
 import { blockingNotice, importantNotices, remainingLabel } from './utils/notices';
 import { subscribeToGifticons, subscribeToFamily, subscribeToNotices } from './realtime';
 import { ensureSampleGifticon } from './sampleData';
@@ -315,18 +324,36 @@ export default function App() {
   }, []);
 
   async function handleToggleUsed(gifticon) {
-    const nextStatus = gifticon.status === 'used' ? 'unused' : 'used';
-    const used = nextStatus === 'used';
+    const used = gifticon.status !== 'used';
     try {
-      // 누가 썼는지 남긴다. 이름은 나중에 그 사람이 가족에서 나가도 사용 내역에 보여야 해서
-      // 아이디와 별개로 그때의 이름을 그대로 적어둔다.
-      await updateGifticon(family.id, gifticon.id, {
-        status: nextStatus,
-        used_at: used ? todayStr() : null,
-        used_by: used ? user.id : null,
-        used_by_name: used ? myName : null,
-      });
+      if (used) {
+        // 누가 썼는지 남긴다. 이름은 나중에 그 사람이 가족에서 나가도 사용 내역에 보여야 해서
+        // 아이디와 별개로 그때의 이름을 그대로 적어둔다.
+        await updateGifticon(family.id, gifticon.id, {
+          status: 'used',
+          used_at: todayStr(),
+          used_by: user.id,
+          used_by_name: myName,
+        });
+        fetchList();
+        return;
+      }
+
+      // 사용취소는 마지막에 쓴 한 번만 되돌린다. 5만원권을 셋이 나눠 썼다면 내가 채운
+      // 마지막 금액만 돌아오고 엄마·딸이 쓴 기록은 그대로 남는다.
+      const { restored } = await undoLastUse(gifticon.id);
       fetchList();
+
+      // 금액권을 일부만 되돌렸을 때는 한마디 한다. 5만원권을 취소했는데 잔액이 25,500원이면
+      // 말해주지 않는 한 고장으로 읽힌다.
+      const face = Number(gifticon.amount || 0);
+      if (gifticon.is_voucher && restored > 0 && restored < face) {
+        setNotice({
+          tone: 'info',
+          title: `${restored.toLocaleString('ko-KR')}원이 다시 남았어요`,
+          description: '마지막에 쓴 것만 되돌려요.',
+        });
+      }
     } catch (err) {
       setNotice({ tone: 'warning', title: '상태를 바꾸지 못했어요', description: err.message });
     }

@@ -159,27 +159,50 @@ export async function listGifticons(params = {}) {
 
 // 사용 내역(누가 어떤 기프티콘을 언제 썼는지). 가족에서 나간 사람이 쓴 것도 남는다.
 export async function listUsageHistory(familyId) {
+  // 기프티콘이 아니라 '쓴 사건'을 읽는다.
+  //
+  // 예전에는 사용완료인 기프티콘을 그대로 늘어놨다. 그러면 5만원권 하나가 한 줄이라,
+  // 엄마 3,000 · 딸 20,000 · 아들 1,500으로 나눠 쓴 것이 마지막 사람의 5만원 한 줄로
+  // 보였다. 이제 쓸 때마다 한 줄씩 쌓이므로(supabase/gifticon-uses.sql) 여기서는
+  // 그 줄을 그대로 읽어 온다.
   const { data, error } = await supabase
-    .from(GIFTICON_TABLE)
-    .select('id, name, brand, amount, owner, used_at, used_by_name, updated_at, thumb_image_path, image_paths')
+    .from('gifticon_uses')
+    .select('id, gifticon_id, gifticon_name, thumb_image_path, user_id, user_name, amount, used_at, created_at')
     .eq('family_id', familyId)
-    .eq('status', 'used')
-    .order('used_at', { ascending: false, nullsFirst: false })
-    .order('updated_at', { ascending: false });
+    .order('used_at', { ascending: false })
+    .order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
 
   // 썸네일 하나씩만 서명받는다. 상품명만 늘어놓으면 '떠먹는 스트로베리 초콜릿 생크림 +
   // 아메리카노 R 2잔'처럼 긴 이름이 줄줄이 이어져서, 무엇을 썼는지 훑기가 어렵다.
-  //
-  // 잘라둔 상품 사진(thumb)이 있으면 그것을, 없으면(이 기능이 생기기 전에 올린 것)
-  // 첫 사진을 쓴다. 서명은 한 번에 몰아서 받는다 — 한 장씩 부르면 왕복이 건수만큼 는다.
-  const wanted = data.map((row) => row.thumb_image_path || row.image_paths?.[0]).filter(Boolean);
-  const urls = await signImagePaths(wanted);
+  // 서명은 한 번에 몰아서 받는다 — 한 장씩 부르면 왕복이 건수만큼 는다.
+  const urls = await signImagePaths(data.map((row) => row.thumb_image_path).filter(Boolean));
 
+  // 화면이 쓰던 이름 그대로 돌려준다. 부르는 쪽(UsageReportSheet)이 표가 바뀐 것을
+  // 알 필요가 없다.
   return data.map((row) => ({
-    ...row,
-    thumb_url: urls.get(row.thumb_image_path || row.image_paths?.[0]) ?? null,
+    id: row.id,
+    gifticon_id: row.gifticon_id,
+    name: row.gifticon_name,
+    amount: row.amount,
+    used_by_name: row.user_name,
+    used_at: row.used_at,
+    updated_at: row.created_at,
+    thumb_url: urls.get(row.thumb_image_path) ?? null,
   }));
+}
+
+// 사용취소. 마지막에 쓴 한 번만 되돌리고, 그만큼 잔액이 돌아온다.
+//
+// 상태만 되돌리던 때는 5만원권을 취소해도 쓴 금액이 50,000 그대로 남아서, 목록에는
+// 돌아오는데 잔액이 0원이라 아무것도 못 하는 카드가 됐다. 되돌릴 수가 없어서 그랬다 —
+// 앱이 아는 건 합계 하나뿐이라 마지막이 얼마였는지를 몰랐다.
+//
+// 줄 지우기·잔액 되돌리기·상태 바꾸기가 한꺼번에 일어나야 해서 서버 함수로 부른다.
+export async function undoLastUse(id) {
+  const { data, error } = await supabase.rpc('undo_last_use', { gid: id });
+  if (error) throw new Error(error.message);
+  return data || { ok: true, restored: 0 };
 }
 
 // 금액권을 쓴 만큼 깎는다. 잔액이 남으면 상태는 그대로 두고(아직 쓸 수 있는 돈이다),
