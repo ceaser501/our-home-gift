@@ -34,6 +34,12 @@ if (!Element.prototype.hasPointerCapture) {
   Element.prototype.releasePointerCapture = () => {};
 }
 
+// radix의 셀렉트가 목록을 열면서 고른 줄로 스크롤한다. jsdom에는 이 함수가 없어서
+// 목록이 뜨자마자 죽는다.
+if (!Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = function scrollIntoView() {};
+}
+
 // 고른 사진을 그 자리에서 보여주려고 미리보기 주소를 만든다.
 if (!URL.createObjectURL) {
   URL.createObjectURL = () => 'blob:preview';

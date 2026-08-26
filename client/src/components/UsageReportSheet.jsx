@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
+import { ChevronDown } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import FamilyReport from './FamilyReport';
 import { listGifticonStats, listUsageHistory } from '../api';
 import { useFamily } from '../FamilyContext';
@@ -17,14 +19,24 @@ function formatMonthDay(iso) {
   return short ? short.slice(3) : '';
 }
 
+// 목록을 처음에 몇 줄까지 펼쳐 둘까. 다섯 줄이면 결산 카드와 '누가 썼나요' 아래로
+// 화면 한 장이 대충 찬다. 그 뒤는 남은 개수를 적은 버튼 하나로 넘긴다 — 스무 건이
+// 그대로 이어지면 창을 닫을 자리를 찾느라 한참 내려야 한다.
+const FIRST_ROWS = 5;
+const ALL = 'all';
+
 export default function UsageReportSheet({ onClose }) {
   // 뒤로가기로 이 창을 닫는다. 안 그러면 설치해서 쓸 때 앱이 통째로 꺼진다.
   useBackClose(onClose);
-  const { family, members } = useFamily();
+  const { family, members, user } = useFamily();
   const [rows, setRows] = useState([]);
   const [all, setAll] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  // 누구 것만 볼까. 'all'이면 가족 전체다.
+  const [who, setWho] = useState(ALL);
+  // 남은 것까지 다 펼쳤나.
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -72,6 +84,31 @@ export default function UsageReportSheet({ onClose }) {
     return list.map(([name, stat]) => ({ name, ...stat, ratio: (stat.count / top) * 100 }));
   }, [rows]);
 
+  // 내 이름. 사용 내역에는 사람 번호가 없고 이름만 적혀 있어서, 가족 명단에서 찾아 맞춘다.
+  const myName = members.find((m) => m.user_id === user.id)?.display_name ?? null;
+
+  // 필터에 올릴 사람들. 가족 명단 순서를 그대로 쓰고, 명단에 없는 이름(나간 사람)이
+  // 내역에 있으면 뒤에 붙인다 — 그 사람 기록만 골라 볼 길이 없어지면 안 된다.
+  const people = useMemo(() => {
+    const names = members.map((m) => m.display_name).filter(Boolean);
+    const seen = new Set(names);
+    for (const row of rows) {
+      const name = row.used_by_name || row.owner || '알 수 없음';
+      if (!seen.has(name)) {
+        seen.add(name);
+        names.push(name);
+      }
+    }
+    return names;
+  }, [members, rows]);
+
+  const filtered = useMemo(
+    () => (who === ALL ? rows : rows.filter((row) => (row.used_by_name || row.owner || '알 수 없음') === who)),
+    [rows, who]
+  );
+  const visible = expanded ? filtered : filtered.slice(0, FIRST_ROWS);
+  const more = filtered.length - visible.length;
+
   return (
     <Sheet open onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="max-h-[92dvh] gap-0 overflow-y-auto pb-[var(--safe-bottom)]">
@@ -111,7 +148,16 @@ export default function UsageReportSheet({ onClose }) {
                     </span>
                     <div className="flex min-w-0 flex-1 flex-col gap-1">
                       <div className="flex items-baseline justify-between gap-2.5">
-                        <span className="truncate text-[14.5px] font-semibold text-foreground">{person.name}</span>
+                        <span className="flex min-w-0 items-baseline gap-1.5">
+                          <span className="truncate text-[14.5px] font-semibold text-foreground">{person.name}</span>
+                          {/* 이름이 '아들'이면 그게 나인지 동생인지 알 수 없다. 가족 명단
+                              화면과 같은 자리에 같은 딱지를 붙인다. */}
+                          {person.name === myName && (
+                            <span className="shrink-0 rounded-md bg-accent px-1.5 py-px text-[11.5px] font-bold text-accent-foreground">
+                              나
+                            </span>
+                          )}
+                        </span>
                         <span className="shrink-0 text-[13.5px] tabular-nums text-foreground/80">
                           <b className="font-bold">{person.count}개</b>
                           {person.amount > 0 && ` · ${formatAmount(person.amount)}`}
@@ -125,17 +171,54 @@ export default function UsageReportSheet({ onClose }) {
                 ))}
               </div>
 
-              <div className="flex items-baseline gap-[7px] pt-1">
-                <p className="m-0 text-[14.5px] font-bold tracking-[-0.015em]">사용한 기프티콘</p>
-                <p className="m-0 text-[13px] font-semibold tabular-nums text-muted-foreground">{rows.length}개</p>
+              <div className="flex items-center justify-between gap-2 pt-1">
+                <div className="flex items-baseline gap-[7px]">
+                  <p className="m-0 text-[14.5px] font-bold tracking-[-0.015em]">사용한 기프티콘</p>
+                  <p className="m-0 text-[13px] font-semibold tabular-nums text-muted-foreground">{filtered.length}개</p>
+                </div>
+                {/* 사람으로 거른다. 가족이 넷이면 내가 쓴 것을 찾는 데만도 스무 줄을
+                    지나야 한다. 테두리를 준 이유는 누를 수 있다는 표시가 ▾ 하나뿐이면
+                    작아서다 — 이 앱에서 테두리는 조작하는 것에 붙인다. */}
+                <Select
+                  value={who}
+                  onValueChange={(value) => {
+                    setWho(value);
+                    // 거르고 나면 줄 수가 확 줄어든다. 펼쳐둔 상태를 그대로 두면
+                    // 세 줄짜리 목록에 '더 보기'가 남아 있게 된다.
+                    setExpanded(false);
+                  }}
+                >
+                  <SelectTrigger
+                    aria-label="누가 쓴 것만 볼까요"
+                    className="h-9 w-auto shrink-0 gap-1.5 rounded-full px-3.5 text-[13.5px] font-semibold text-foreground/80 shadow-none"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="min-w-36">
+                    <SelectItem value={ALL} className="py-2.5 text-[15px]">
+                      가족 전체
+                    </SelectItem>
+                    {people.map((name) => (
+                      <SelectItem key={name} value={name} className="py-2.5 text-[15px]">
+                        {name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
+
+              {filtered.length === 0 && (
+                <p className="py-7 text-center text-sm font-medium text-muted-foreground">
+                  {who}님이 쓴 것은 아직 없어요.
+                </p>
+              )}
 
               {/* 목록에는 회색 배경을 깔지 않는다. 위 결산 카드가 이미 회색 면이라,
                   여기도 회색이면 회색 두 종류가 겹쳐 어느 쪽이 묶음인지 흐려진다.
                   화면에서 회색 면은 결산 하나로 두고 목록은 구분선으로 나눈다. */}
               <ul className="m-0 flex list-none flex-col p-0 pt-1.5">
-                {rows.map((row) => {
-                  const who = row.used_by_name || row.owner || '알 수 없음';
+                {visible.map((row) => {
+                  const usedBy = row.used_by_name || row.owner || '알 수 없음';
                   return (
                     <li
                       key={row.id}
@@ -149,9 +232,9 @@ export default function UsageReportSheet({ onClose }) {
                           {row.name}
                         </span>
                         <span className="flex items-center gap-1.5">
-                          <span aria-hidden="true" className={`size-1.5 shrink-0 rounded-full ${colorOf(who)}`} />
+                          <span aria-hidden="true" className={`size-1.5 shrink-0 rounded-full ${colorOf(usedBy)}`} />
                           <span className="truncate text-[13px] font-medium tabular-nums text-muted-foreground">
-                            {who} · {formatMonthDay(row.used_at || row.updated_at)}
+                            {usedBy} · {formatMonthDay(row.used_at || row.updated_at)}
                           </span>
                         </span>
                       </span>
@@ -164,6 +247,20 @@ export default function UsageReportSheet({ onClose }) {
                   );
                 })}
               </ul>
+
+              {/* 남은 개수를 그대로 적는다. '더 보기'만 있으면 몇 개가 더 있는지 몰라
+                  누를지 말지를 못 정한다. 한 번 누르면 나머지가 다 나온다 — 두 번
+                  세 번 누르게 하면 끝이 어딘지 모르는 목록이 된다. */}
+              {more > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setExpanded(true)}
+                  className="mt-2.5 flex h-[46px] w-full items-center justify-center gap-1 rounded-xl border border-input bg-card text-[14.5px] font-semibold text-foreground/80"
+                >
+                  {more}개 더 보기
+                  <ChevronDown className="size-4 text-muted-foreground" />
+                </button>
+              )}
             </>
           )}
         </div>
