@@ -353,9 +353,13 @@ export default function NearbyBanner({ gifticons, onPick, yielded = false }) {
             '내 주변 안내' 스위치를 켜는 말로 읽힌다 — 그건 이미 켜져 있는데 여기서 또
             켜라고 하니, 설정이 왜 있는지 알 수 없어진다.
             여기서 켜는 것은 앱 기능이 아니라 폰의 위치 권한이다. 무엇을 켜는지를
-            문장 맨 앞에 둔다. 그러면 버튼은 '켜기' 한 마디로 충분하다. */}
+            문장 맨 앞에 둔다. 그러면 버튼은 '켜기' 한 마디로 충분하다.
+
+            '켜야 합니다'가 아니라 '켜면 알려드려요'다. 앞은 조건을 내미는 말이고 뒤는
+            무엇을 받는지를 보여주는 말인데, 여기는 승낙을 받아야 하는 자리다.
+            안드로이드는 두 번 거절당하면 다시 묻지도 못한다. */}
         <span className="min-w-0 flex-1 text-[13.5px] leading-normal font-medium break-keep text-foreground/80">
-          위치 권한을 켜야 내 주변에서 쓸 수 있는 기프티콘을 알려드릴 수 있어요.
+          위치 권한을 켜면 근처에서 쓸 수 있는 기프티콘을 알려드려요.
         </span>
         <button
           type="button"
