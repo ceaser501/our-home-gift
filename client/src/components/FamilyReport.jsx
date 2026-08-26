@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { todayStr } from '../utils/date';
 
-// 사용 내역 위에 얹는 결산. 핵심은 마지막 줄 하나다 — "못 쓰고 지나간 것이 얼마어치".
+// 사용 내역 위에 얹는 결산. 핵심은 오른쪽 위 하나다 — "못 쓰고 지나간 것이 얼마어치".
 // 건수만 세면 남의 일처럼 보이는데, 금액으로 적으면 다음부터 챙기게 된다.
 //
 // 그래프는 막대 하나로 끝낸다. 월별 추이 같은 것을 넣으면 정확해지기는 해도 이 화면이
@@ -40,6 +40,8 @@ export default function FamilyReport({ gifticons }) {
       received: pool.length,
       used: used.length,
       missed: missed.length,
+      // 아직 쓸 수 있는 것. 띠의 회색 자리이자 범례의 마지막 값이다.
+      left: pool.length - used.length - missed.length,
       missedAmount,
     };
   }, [gifticons]);
@@ -49,53 +51,66 @@ export default function FamilyReport({ gifticons }) {
   const pct = (n) => (n / stat.received) * 100;
 
   return (
-    <div className="rounded-2xl border border-border bg-card px-4 py-3.5">
-      <p className="m-0 text-xs font-semibold text-muted-foreground">{stat.scope} 우리 가족</p>
+    <div className="flex flex-col gap-3 rounded-[14px] bg-secondary p-[15px]">
+      {/* 왼쪽은 "몇 개 중 몇 개를 썼나", 오른쪽은 "얼마를 놓쳤나".
+          숫자 셋을 나란히 세던 자리인데, 셋 다 같은 크기면 무엇을 봐야 하는지가 없다.
+          쓴 개수 하나를 크게 두고 놓친 금액을 맞은편에 붙이면 둘만 읽어도 끝난다. */}
+      <div className="flex items-end justify-between gap-3">
+        <div className="flex flex-col gap-[3px]">
+          <p className="m-0 text-[13px] font-semibold tracking-[-0.01em] text-muted-foreground">
+            {stat.scope} 받은 기프티콘 {stat.received}개 중
+          </p>
+          <p className="m-0 flex items-baseline gap-[5px]">
+            <span className="text-[27px] leading-none font-bold tracking-[-0.025em] tabular-nums text-foreground">
+              {stat.used}개
+            </span>
+            <span className="text-[15px] font-semibold text-foreground/80">썼어요</span>
+          </p>
+        </div>
 
-      {/* 셋을 폭에 고르게 나눠 놓는다. 왼쪽에 몰아두면 숫자가 한 자리일 때 오른쪽이
-          휑하게 비어서 덩그러니 놓인 것처럼 보인다. 가운데 선으로 칸을 나눠 세 값이
-          한 묶음이라는 것도 같이 말해준다. */}
-      <div className="mt-2.5 flex">
-        <span className="flex flex-1 flex-col items-center">
-          <span className="text-xl font-bold text-foreground">{stat.received}</span>
-          <span className="text-[11px] text-muted-foreground">받은 것</span>
-        </span>
-        <span className="flex flex-1 flex-col items-center border-l border-border">
-          <span className="text-xl font-bold text-success">{stat.used}</span>
-          <span className="text-[11px] text-muted-foreground">쓴 것</span>
-        </span>
-        <span className="flex flex-1 flex-col items-center border-l border-border">
-          <span className={stat.missed > 0 ? 'text-xl font-bold text-destructive' : 'text-xl font-bold text-muted-foreground'}>
-            {stat.missed}
-          </span>
-          <span className="text-[11px] text-muted-foreground">놓친 것</span>
-        </span>
+        {stat.missedAmount > 0 && (
+          <div className="flex shrink-0 flex-col items-end gap-0.5">
+            <p className="m-0 text-xs font-semibold text-muted-foreground">놓친 금액</p>
+            <p className="m-0 text-[16.5px] font-bold tracking-[-0.01em] tabular-nums text-destructive">
+              {formatWon(stat.missedAmount)}
+            </p>
+          </div>
+        )}
       </div>
 
-      {/* 비율 띠. 띠 전체가 "받은 것"이고, 그 위에 끝난 것부터 왼쪽으로 채운다 —
+      {/* 띠 전체가 "받은 것"이고, 그 위에 끝난 것부터 왼쪽으로 채운다 —
           쓴 것(초록) · 놓친 것(빨강). 남은 회색 자리가 "아직 쓸 수 있는 것"이다.
           결판난 둘을 붙여놓아야 초록이 어디서 끝나고 빨강이 어디서 시작하는지 한눈에
           보인다. 사이에 회색을 끼우면 초록과 빨강이 떨어져서 비교가 안 된다. */}
-      <div className="mt-3 flex h-2 w-full overflow-hidden rounded-full bg-secondary" aria-hidden="true">
+      <div className="flex h-[9px] w-full overflow-hidden rounded-[5px] bg-border" aria-hidden="true">
         <span className="bg-success" style={{ width: `${pct(stat.used)}%` }} />
         <span className="bg-destructive" style={{ width: `${pct(stat.missed)}%` }} />
       </div>
 
-      {/* 금액은 숫자 칸에 끼워 넣지 않고 이 문장 안에서 말한다. 건수 셋과 나란히 두면
-          어느 게 개수고 어느 게 돈인지 헷갈리고, 칸도 좁아 자리가 안 난다.
-          손실을 보여주면서 동시에 고칠 길을 연다 — 쓰고 표시만 안 한 것이 여기 섞이는데,
+      {/* 범례 순서를 막대에 맞춘다. 막대는 쓴 것 → 놓친 것 → 남은 것 순으로 그려지는데
+          범례가 다른 순서면 눈이 색을 두 번 찾는다. 막대 쪽을 바꾸면 초록과 빨강이 떨어져
+          "이미 끝난 것"이라는 덩어리가 깨지므로, 범례를 막대에 맞추는 쪽이 맞다. */}
+      <div className="flex items-center justify-between gap-2">
+        {[
+          { key: 'used', dot: 'bg-success', label: '쓴 것', value: stat.used },
+          { key: 'missed', dot: 'bg-destructive', label: '놓친 것', value: stat.missed },
+          { key: 'left', dot: 'bg-border', label: '남은 것', value: stat.left },
+        ].map(({ key, dot, label, value }) => (
+          <span key={key} className="flex items-center gap-[5px]">
+            <span aria-hidden="true" className={`size-2 shrink-0 rounded-full ${dot}`} />
+            <span className="text-[12.5px] font-medium text-foreground/80">
+              {label} {value}
+            </span>
+          </span>
+        ))}
+      </div>
+
+      {/* 손실을 보여주면서 동시에 고칠 길을 연다 — 쓰고 표시만 안 한 것이 여기 섞이는데,
           그 사실을 감추면 사용자는 숫자를 믿지 않게 된다. */}
-      {stat.missed > 0 ? (
-        <p className="m-0 mt-2.5 text-[11px] leading-relaxed break-keep text-muted-foreground">
-          {stat.missedAmount > 0 && (
-            <>
-              놓친 기프티콘이 <b className="font-semibold text-destructive">{formatWon(stat.missedAmount)}</b>어치예요.{' '}
-            </>
-          )}
+      {stat.missed > 0 && (
+        <p className="m-0 text-[12.5px] leading-relaxed font-medium break-keep text-muted-foreground">
           기한이 지났는데 사용완료로 표시되지 않은 것들이에요. 이미 쓰셨다면 목록에서 사용완료로 바꿔주세요.
         </p>
-      ) : (
-        <p className="m-0 mt-2.5 text-[11px] text-muted-foreground">기한을 넘긴 기프티콘이 없어요.</p>
       )}
     </div>
   );

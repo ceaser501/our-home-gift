@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
-import { ChevronRight, Loader2, LocateFixed, MapPin, Phone } from 'lucide-react';
+import { ChevronRight, Loader2, LocateFixed, MapPin, Navigation, Phone } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
 import StoreDetailSheet from './StoreDetailSheet';
 import { searchNearbyStores } from '../api';
+import { openTmapRoute } from '../utils/tmap';
 import {
   SIGNIFICANT_MOVE_M,
   distanceBetween,
@@ -18,10 +18,33 @@ import useBackClose from '../utils/useBackClose';
 // 늘어놓는다. 매장을 누르면 앱 안 상세(지도·주소·거리·전화·길찾기)가 열리고,
 // 영업시간·리뷰처럼 카카오가 API로 주지 않는 정보만 거기서 카카오맵으로 잇는다.
 
-function formatDistance(meters) {
+// 값과 단위를 나눠 돌려준다.
+//
+// 첫 카드는 둘을 세로로 쌓아 놓는데, 한 덩어리 문자열이면 '180' 다음에 'm'이 줄을 넘어가
+// 혼자 떨어진다. 나눠두면 각각 안 잘린다.
+function splitDistance(meters) {
   if (meters == null) return null;
-  if (meters < 1000) return `${meters}m`;
-  return `${(meters / 1000).toFixed(1)}km`;
+  if (meters < 1000) return { value: String(meters), unit: 'm' };
+  return { value: (meters / 1000).toFixed(1), unit: 'km' };
+}
+
+function formatDistance(meters) {
+  const parts = splitDistance(meters);
+  return parts ? `${parts.value}${parts.unit}` : null;
+}
+
+// 안내 앞에 놓는 동그란 i.
+//
+// 선으로 그린 원은 12.5px 옆에서 흐리다. 원을 채우고 글자를 흰색으로 두면 작아도 또렷하다.
+function InfoDot({ className }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={`flex size-4 shrink-0 items-center justify-center rounded-full bg-muted-foreground ${className || ''}`}
+    >
+      <span className="text-[10px] leading-none font-bold text-background">i</span>
+    </span>
+  );
 }
 
 export default function NearbyStoresSheet({ gifticon, onClose }) {
@@ -32,7 +55,7 @@ export default function NearbyStoresSheet({ gifticon, onClose }) {
 
   const [phase, setPhase] = useState('locating'); // locating | searching | done | error
   const [stores, setStores] = useState([]);
-  const [error, setError] = useState(null); // { title, description, retriable }
+  const [error, setError] = useState(null); // { title, description, denied, retriable }
   const [attempt, setAttempt] = useState(0);
   const [detail, setDetail] = useState(null);
   // 매장 상세에서 "내 위치 → 매장" 선을 그릴 때 쓴다.
@@ -79,12 +102,11 @@ export default function NearbyStoresSheet({ gifticon, onClose }) {
           return;
         }
         // 1 = PERMISSION_DENIED: 사용자가 위치를 허용하지 않은 경우라 안내가 다르다.
+        //
+        // 제목은 사용자에게 벌어진 일로 적는다. '권한이 필요해요'는 앱의 사정이고,
+        // 이 사람에게 벌어진 일은 "위치를 모른다"는 것이다.
         if (err?.code === 1) {
-          setError({
-            title: '위치 권한이 필요해요',
-            description: '가까운 매장 순서로 보여드리려면 위치가 필요해요. 폰 설정에서 위치를 허용한 뒤 다시 시도해주세요.',
-            retriable: true,
-          });
+          setError({ title: '위치를 알 수 없어요', denied: true, retriable: true });
         } else if (err?.code === 'unsupported') {
           setError({ title: err.message, description: null, retriable: false });
         } else {
@@ -104,39 +126,82 @@ export default function NearbyStoresSheet({ gifticon, onClose }) {
     };
   }, [query, attempt]);
 
+  const [first, ...rest] = stores;
+  const firstDistance = first ? splitDistance(first.distance) : null;
+
+  function openNavigation(store) {
+    openTmapRoute({ name: store.name, lat: store.lat, lng: store.lng });
+  }
 
   return (
     <Sheet open onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="max-h-[92dvh] gap-0 overflow-y-auto pb-[var(--safe-bottom)]">
-        <SheetHeader className="pr-14 pb-1">
-          <SheetTitle>{query} 주변 매장</SheetTitle>
+        {/* 부제 두 줄을 걷었다. 설명이 매장 하나 자리를 먹었고, "가까운 순"과 "누르면
+            열린다"는 목록 바로 위에 있어야 눈이 목록과 함께 읽는다(아래 안내 한 줄). */}
+        <SheetHeader className="pr-14 pb-3">
+          <SheetTitle className="text-[19px] font-bold tracking-[-0.026em]">{query} 주변 매장</SheetTitle>
         </SheetHeader>
-        <p className="m-0 px-5 pb-3 text-xs text-muted-foreground">
-          현재 위치에서 가까운 순이에요. 매장을 누르면 지도와 자세한 정보가 열려요.
-        </p>
 
         {(phase === 'locating' || phase === 'searching') && (
-          <div className="flex flex-col items-center gap-2.5 px-5 py-12">
+          <div className="flex flex-col items-center gap-2.5 px-[18px] py-12">
             {phase === 'locating' ? (
               <LocateFixed className="size-6 animate-pulse text-primary" />
             ) : (
               <Loader2 className="size-6 animate-spin text-primary" />
             )}
-            <p className="m-0 text-sm text-muted-foreground">
+            <p className="m-0 text-sm font-medium text-muted-foreground">
               {phase === 'locating' ? '현재 위치를 확인하고 있어요…' : '주변 매장을 찾고 있어요…'}
             </p>
           </div>
         )}
 
+        {/* 위치를 못 잡았을 때. 허용을 안 한 경우에는 "설정에서 허용하세요" 대신
+            실제로 눌러야 하는 길을 적는다 — 그 말만으로는 어디를 여는지 모른다. */}
         {phase === 'error' && (
-          <div className="flex flex-col items-center gap-3 px-8 py-10 text-center">
-            <MapPin className="size-7 text-muted-foreground" />
-            <p className="m-0 text-sm font-semibold text-foreground">{error.title}</p>
-            {error.description && <p className="m-0 text-xs leading-relaxed text-muted-foreground">{error.description}</p>}
+          <div className="flex flex-col items-center gap-3.5 px-[26px] pt-[22px] pb-2">
+            <span className="flex size-[60px] items-center justify-center rounded-full bg-warning/12">
+              <MapPin className="size-7 text-warning" strokeWidth={1.9} />
+            </span>
+
+            <div className="flex flex-col items-center gap-2">
+              <p className="m-0 text-[17.5px] font-bold tracking-[-0.02em]">{error.title}</p>
+              {error.denied ? (
+                <p className="m-0 text-center text-sm leading-relaxed font-medium break-keep text-foreground/70">
+                  가까운 순으로 보여드리려면
+                  <br />
+                  위치 권한이 필요해요
+                </p>
+              ) : (
+                error.description && (
+                  <p className="m-0 text-center text-sm leading-relaxed font-medium break-keep text-muted-foreground">
+                    {error.description}
+                  </p>
+                )
+              )}
+            </div>
+
+            {/* 시안에는 '설정 열기' 버튼이 있는데 안 넣었다. 안드로이드 설정 화면을
+                직접 여는 길이 이 앱에 아직 없어서, 버튼만 두면 눌러도 아무 일이 없다.
+                길을 적어주는 편이 낫다 — 없는 버튼보다 정확한 경로가 빠르다. */}
+            {error.denied && (
+              <div className="flex w-full flex-col gap-1.5 rounded-[13px] bg-secondary px-[15px] py-[13px]">
+                <p className="m-0 text-[13px] font-bold tracking-[-0.01em] text-foreground/80">켜는 방법</p>
+                <p className="m-0 text-[13.5px] leading-relaxed font-medium break-keep text-foreground/70">
+                  설정 → 모아콘 → 위치 → <b className="font-bold text-foreground">앱 사용 중에만 허용</b>
+                </p>
+              </div>
+            )}
+
             {error.retriable && (
-              <Button size="sm" variant="outline" className="mt-1 rounded-xl" onClick={() => setAttempt((n) => n + 1)}>
-                다시 시도
-              </Button>
+              <div className="flex w-full flex-col gap-2">
+                <Button
+                  variant="outline"
+                  className="h-11 w-full rounded-[11px] text-[14.5px] font-semibold"
+                  onClick={() => setAttempt((n) => n + 1)}
+                >
+                  다시 시도
+                </Button>
+              </div>
             )}
           </div>
         )}
@@ -144,46 +209,135 @@ export default function NearbyStoresSheet({ gifticon, onClose }) {
         {phase === 'done' && stores.length === 0 && (
           <div className="flex flex-col items-center gap-2 px-8 py-10 text-center">
             <MapPin className="size-7 text-muted-foreground" />
-            <p className="m-0 text-sm text-muted-foreground">주변에서 '{query}' 매장을 찾지 못했어요.</p>
+            <p className="m-0 text-sm font-medium text-muted-foreground">주변에서 '{query}' 매장을 찾지 못했어요.</p>
           </div>
         )}
 
         {phase === 'done' && stores.length > 0 && (
-          <ul className="m-0 flex list-none flex-col p-0 px-5">
-            {/* 목록은 가까운 순으로 온다. 거리를 전부 포인트색으로 칠하면 다 같은 무게로
-                보여서, 정작 "제일 가까운 데가 어디냐"를 눈이 아니라 순서로 세어야 한다.
-                맨 위 하나만 색을 갖고 나머지는 물러난다. */}
-            {stores.map((store, index) => (
-              <li key={store.id} className="flex items-center gap-2 border-b border-border py-3 last:border-b-0">
-                <button type="button" onClick={() => setDetail(store)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
-                  <span className="flex w-13 shrink-0 flex-col items-center">
-                    <span className={cn('text-sm font-bold', index === 0 ? 'text-primary' : 'text-muted-foreground')}>
-                      {formatDistance(store.distance) ?? '?'}
+          <>
+            {/* 아래 목록 줄은 전화 버튼만 테두리를 갖고 있어서, 줄 전체가 눌린다는 신호가
+                오른쪽 › 하나뿐이다. 그것도 회색이라 약하다. 이 한 줄이 가장 조용한
+                해결책이다 — 줄마다 '지도' 버튼을 넣으면 전화와 경쟁하고, 줄 전체를 회색
+                카드로 만들면 첫 카드의 연보라와 겹쳐 색이 너무 많아진다. */}
+            <div className="flex items-center gap-2 px-[18px] pb-2.5">
+              <InfoDot />
+              <p className="m-0 flex-1 text-[12.5px] font-medium text-muted-foreground">매장을 누르면 지도가 열려요</p>
+              <p className="m-0 shrink-0 text-[12.5px] font-medium text-muted-foreground">가까운 순</p>
+            </div>
+
+            {/* 가장 가까운 한 곳만 카드로 세운다. 거리를 전부 포인트색으로 칠하면 다 같은
+                무게라 "제일 가까운 데가 어디냐"를 눈이 아니라 순서로 세어야 한다. */}
+            <div className="px-[18px] pb-3">
+              <div className="flex flex-col gap-[11px] rounded-[15px] border-[1.5px] border-primary bg-primary/4 px-3.5 py-[13px]">
+                <button
+                  type="button"
+                  onClick={() => setDetail(first)}
+                  className="flex items-start gap-3 text-left"
+                >
+                  {/* 숫자와 단위를 세로로 쌓는다. 한 줄로 두면 '180' 다음에 'm'이 내려앉는다. */}
+                  <span className="flex shrink-0 flex-col items-center gap-px pt-px">
+                    <span className="text-[17px] leading-none font-bold tracking-[-0.02em] text-primary tabular-nums">
+                      {firstDistance?.value ?? '?'}
                     </span>
+                    <span className="text-[11.5px] font-semibold text-primary/75">{firstDistance?.unit ?? ''}</span>
                   </span>
-                  <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                    <span className="truncate text-sm font-semibold text-foreground">{store.name}</span>
-                    {store.address && <span className="truncate text-xs text-muted-foreground">{store.address}</span>}
-                    {store.phone && <span className="text-xs text-muted-foreground">{store.phone}</span>}
+                  <span className="flex min-w-0 flex-1 flex-col gap-[3px]">
+                    <span className="self-start rounded-[5px] bg-primary px-1.5 py-0.5 text-[11px] font-bold text-primary-foreground">
+                      가장 가까움
+                    </span>
+                    <span className="truncate text-[15.5px] font-bold tracking-[-0.015em] text-foreground">
+                      {first.name}
+                    </span>
+                    {first.address && (
+                      <span className="truncate text-[13px] font-medium text-foreground/70">{first.address}</span>
+                    )}
                   </span>
-                  <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
                 </button>
-                {store.phone && (
-                  <a
-                    href={`tel:${store.phone.replace(/[^\d+]/g, '')}`}
-                    aria-label={`${store.name}에 전화 걸기`}
-                    className="flex size-9 shrink-0 items-center justify-center rounded-full border border-border bg-background text-primary"
+
+                {/* 강조는 지도 보기 하나만. 길찾기·전화 아이콘은 보라로 둔다 — 아래 목록의
+                    전화가 보라라, 여기서 회색이면 다른 기능처럼 보인다. */}
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setDetail(first)}
+                    className="flex h-11 flex-1 items-center justify-center gap-[7px] rounded-[11px] bg-primary text-[15px] font-bold text-primary-foreground"
                   >
-                    <Phone className="size-4" />
-                  </a>
-                )}
-              </li>
-            ))}
-          </ul>
+                    <MapPin className="size-[17px]" strokeWidth={2.2} />
+                    지도 보기
+                  </button>
+                  {first.lat != null && (
+                    <button
+                      type="button"
+                      onClick={() => openNavigation(first)}
+                      className="flex h-11 flex-1 items-center justify-center gap-[7px] rounded-[11px] border border-input bg-card text-[15px] font-semibold text-foreground/80"
+                    >
+                      <Navigation className="size-[17px] text-primary" strokeWidth={2} />
+                      길찾기
+                    </button>
+                  )}
+                  {first.phone && (
+                    <a
+                      href={`tel:${first.phone.replace(/[^\d+]/g, '')}`}
+                      aria-label={`${first.name}에 전화 걸기`}
+                      className="flex size-11 shrink-0 items-center justify-center rounded-[11px] border border-input bg-card"
+                    >
+                      <Phone className="size-[18px] text-primary" strokeWidth={2} />
+                    </a>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* 나머지는 끝까지 낸다. 세 곳에서 자르면 집 근처·회사 근처처럼 일부러 먼
+                매장을 고르려는 사람이 갈 곳을 못 찾는다. */}
+            {rest.length > 0 && (
+              <ul className="m-0 flex list-none flex-col p-0 px-[18px]">
+                {rest.map((store) => (
+                  <li key={store.id} className="flex items-center gap-3 border-b border-border/50 px-1 py-3 last:border-b-0">
+                    <button
+                      type="button"
+                      onClick={() => setDetail(store)}
+                      className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                    >
+                      <span className="w-[50px] shrink-0 text-center text-[15px] font-bold whitespace-nowrap text-foreground/70 tabular-nums">
+                        {formatDistance(store.distance) ?? '?'}
+                      </span>
+                      {/* 전화번호 숫자 줄은 걷었다. 옆에 전화 버튼이 있어 번호를 눈으로
+                          읽을 일이 없고, 3줄이 2줄이 되어 목록이 그만큼 짧아진다. */}
+                      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                        <span className="truncate text-[15.5px] font-semibold tracking-[-0.015em] text-foreground">
+                          {store.name}
+                        </span>
+                        {store.address && (
+                          <span className="truncate text-[13px] font-medium text-muted-foreground">{store.address}</span>
+                        )}
+                      </span>
+                    </button>
+                    {/* stopPropagation이 없으면 전화를 눌렀는데 상세가 함께 열린다. */}
+                    {store.phone && (
+                      <a
+                        href={`tel:${store.phone.replace(/[^\d+]/g, '')}`}
+                        aria-label={`${store.name}에 전화 걸기`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="flex size-10 shrink-0 items-center justify-center rounded-full border border-input bg-background"
+                      >
+                        <Phone className="size-[17px] text-primary" strokeWidth={2} />
+                      </a>
+                    )}
+                    {/* ›를 전화 버튼 뒤로 옮겼다. 앞에 있으면 "줄 전체 → 화살표 → 전화"로
+                        읽혀서 화살표가 무엇을 가리키는지 흐려진다. 뒤에 두면 줄의 끝맺음이 된다. */}
+                    <ChevronRight className="size-[17px] shrink-0 text-muted-foreground/60" strokeWidth={2.2} />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </>
         )}
 
         {phase === 'done' && (
-          <p className="m-0 px-5 pt-3 text-center text-[11px] text-muted-foreground">장소 정보 제공: 카카오</p>
+          <p className="m-0 px-[18px] pt-3 text-center text-[11px] font-medium text-muted-foreground">
+            장소 정보 제공: 카카오
+          </p>
         )}
 
         {detail && <StoreDetailSheet store={detail} origin={origin} onClose={() => setDetail(null)} />}

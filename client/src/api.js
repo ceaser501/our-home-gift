@@ -161,13 +161,25 @@ export async function listGifticons(params = {}) {
 export async function listUsageHistory(familyId) {
   const { data, error } = await supabase
     .from(GIFTICON_TABLE)
-    .select('id, name, brand, amount, owner, used_at, used_by_name, updated_at')
+    .select('id, name, brand, amount, owner, used_at, used_by_name, updated_at, thumb_image_path, image_paths')
     .eq('family_id', familyId)
     .eq('status', 'used')
     .order('used_at', { ascending: false, nullsFirst: false })
     .order('updated_at', { ascending: false });
   if (error) throw new Error(error.message);
-  return data;
+
+  // 썸네일 하나씩만 서명받는다. 상품명만 늘어놓으면 '떠먹는 스트로베리 초콜릿 생크림 +
+  // 아메리카노 R 2잔'처럼 긴 이름이 줄줄이 이어져서, 무엇을 썼는지 훑기가 어렵다.
+  //
+  // 잘라둔 상품 사진(thumb)이 있으면 그것을, 없으면(이 기능이 생기기 전에 올린 것)
+  // 첫 사진을 쓴다. 서명은 한 번에 몰아서 받는다 — 한 장씩 부르면 왕복이 건수만큼 는다.
+  const wanted = data.map((row) => row.thumb_image_path || row.image_paths?.[0]).filter(Boolean);
+  const urls = await signImagePaths(wanted);
+
+  return data.map((row) => ({
+    ...row,
+    thumb_url: urls.get(row.thumb_image_path || row.image_paths?.[0]) ?? null,
+  }));
 }
 
 // 금액권을 쓴 만큼 깎는다. 잔액이 남으면 상태는 그대로 두고(아직 쓸 수 있는 돈이다),

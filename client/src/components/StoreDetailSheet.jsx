@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Car, Clock, ExternalLink, Footprints, Info, MapPin, Maximize2, Minimize2, Navigation, Phone } from 'lucide-react';
+import { Car, Clock, ExternalLink, Footprints, MapPin, Maximize2, Minimize2, Navigation, Phone } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -178,7 +178,7 @@ export default function StoreDetailSheet({ store, origin, onClose }) {
     <Sheet open onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="max-h-[92dvh] gap-0 overflow-y-auto pb-[var(--safe-bottom)]">
         <SheetHeader className="pr-14 pb-1">
-          <SheetTitle className="flex min-w-0 items-center gap-2">
+          <SheetTitle className="flex min-w-0 items-center gap-2 text-[19px] font-bold tracking-[-0.026em]">
             <span className="min-w-0 truncate">{store.name}</span>
             {store.category && (
               <span className="shrink-0 rounded-full bg-accent px-2 py-0.5 text-[11px] font-semibold text-accent-foreground">
@@ -188,7 +188,7 @@ export default function StoreDetailSheet({ store, origin, onClose }) {
           </SheetTitle>
         </SheetHeader>
 
-        <div className="flex flex-col gap-3 px-5 pt-2">
+        <div className="flex flex-col gap-3 px-[18px] pt-2">
           {/* 지도를 못 그릴 때도 자리를 비워두지 않고 이유를 보여준다. 조용히 사라지면
               설정이 빠진 건지 원래 없는 건지 알 수 없어서 고치기도 어렵다. */}
           {/* 지도를 크게 볼 때도 새 창을 띄우지 않는다. 이 창 자체가 이미 목록 위에 겹쳐
@@ -196,7 +196,8 @@ export default function StoreDetailSheet({ store, origin, onClose }) {
               키우고 나머지 정보는 아래로 밀어 스크롤로 볼 수 있게 한다. */}
           <div
             className={cn(
-              'relative w-full overflow-hidden rounded-xl border border-border bg-muted transition-[height] duration-300 ease-out',
+              // 테두리를 걷었다. 회색 지도가 이미 면이라 테두리가 할 일이 없다.
+              'relative w-full overflow-hidden rounded-[14px] bg-muted transition-[height] duration-300 ease-out',
               mapExpanded ? 'h-[58dvh]' : 'h-45'
             )}
           >
@@ -207,7 +208,7 @@ export default function StoreDetailSheet({ store, origin, onClose }) {
                 type="button"
                 onClick={() => setMapExpanded((on) => !on)}
                 aria-label={mapExpanded ? '지도 작게 보기' : '지도 크게 보기'}
-                className="absolute top-2 right-2 z-1 flex size-8 items-center justify-center rounded-lg border border-border bg-card/95 text-foreground shadow-sm"
+                className="absolute top-2 right-2 z-1 flex size-[34px] items-center justify-center rounded-lg border border-border bg-card/95 text-foreground shadow-sm"
               >
                 {mapExpanded ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
               </button>
@@ -246,9 +247,12 @@ export default function StoreDetailSheet({ store, origin, onClose }) {
             )}
           </div>
 
-          <div className="flex flex-col rounded-xl border border-border">
+          {/* 바깥 테두리를 걷고 구분선만 남긴다. 테두리 하나에 안쪽 선 다섯이 겹치면
+              격자처럼 보인다. 선을 한 종류만 쓰면 조용해지고, 좌우 여백을 거의 없애
+              글자가 지도·버튼과 같은 축에 선다. */}
+          <div className="flex flex-col">
             {store.distance != null && (
-              <div className="flex items-center gap-2.5 border-b border-border px-3.5 py-2.5 text-sm">
+              <div className="flex items-center gap-[11px] border-b border-border/40 px-0.5 py-3 text-sm">
                 <Navigation className="size-4 shrink-0 text-primary" />
                 <span className="min-w-0 flex-1 text-foreground">
                   내 위치에서 <span className="font-bold text-primary">{formatDistance(store.distance)}</span>
@@ -279,53 +283,73 @@ export default function StoreDetailSheet({ store, origin, onClose }) {
               </div>
             )}
             {store.address && (
-              <p className="m-0 flex items-center gap-2.5 border-b border-border px-3.5 py-2.5 text-sm">
-                <MapPin className="size-4 shrink-0 text-muted-foreground" />
-                <span className="min-w-0 break-keep text-foreground">{store.address}</span>
+              <p className="m-0 flex items-center gap-[11px] border-b border-border/40 px-0.5 py-3 text-sm">
+                <MapPin className="size-[17px] shrink-0 text-muted-foreground/70" strokeWidth={2} />
+                <span className="min-w-0 font-medium break-keep text-foreground">{store.address}</span>
               </p>
             )}
             {store.phone && (
-              <a href={phoneHref} className="m-0 flex items-center gap-2.5 border-b border-border px-3.5 py-2.5 text-sm no-underline">
-                <Phone className="size-4 shrink-0 text-muted-foreground" />
-                <span className="text-foreground">{store.phone}</span>
+              <a href={phoneHref} className="m-0 flex items-center gap-[11px] border-b border-border/40 px-0.5 py-3 text-sm no-underline">
+                <Phone className="size-[17px] shrink-0 text-muted-foreground/70" strokeWidth={2} />
+                <span className="font-medium text-foreground">{store.phone}</span>
               </a>
             )}
+            {/* 사용가능여부를 영업시간보다 위에 둔다. 헛걸음을 막는 말이 먼저 읽혀야 한다 —
+                같은 브랜드라도 가맹점마다 받는 기프티콘이 다르다.
+                굵게 하지 않는다. 주소·전화와 같은 무게로 두어야 안내가 경고처럼 안 읽힌다. */}
+            <div className="flex gap-[11px] border-b border-border/40 px-0.5 py-3">
+              <span
+                aria-hidden="true"
+                className="mt-px flex size-[17px] shrink-0 items-center justify-center rounded-full bg-muted-foreground"
+              >
+                <span className="text-[10.5px] leading-none font-bold text-background">i</span>
+              </span>
+              <p className="m-0 flex-1 text-sm leading-relaxed font-medium break-keep text-foreground/80">
+                기프티콘 사용가능여부는 매장에 확인해주세요
+              </p>
+            </div>
             {/* 영업시간은 카카오가 API로 주지 않아서 앱 안에서는 보여줄 수 없다. 어디서 볼 수 있는지만 안내한다. */}
-            <p className="m-0 flex items-center gap-2.5 border-b border-border px-3.5 py-2.5 text-sm">
-              <Clock className="size-4 shrink-0 text-muted-foreground" />
-              <span className="text-muted-foreground">영업시간·리뷰는 카카오맵에서 볼 수 있어요</span>
-            </p>
-            {/* 같은 브랜드라도 가맹점마다 받는 기프티콘이 다르다. 헛걸음하지 않도록 미리 알려준다. */}
-            <p className="m-0 flex items-center gap-2.5 px-3.5 py-2.5 text-sm">
-              <Info className="size-4 shrink-0 text-muted-foreground" />
-              <span className="break-keep text-muted-foreground">기프티콘 사용가능여부는 매장에 확인해주세요</span>
-            </p>
+            <div className="flex items-center gap-[11px] px-0.5 py-3">
+              <Clock className="size-[17px] shrink-0 text-muted-foreground/70" strokeWidth={2} />
+              <p className="m-0 flex-1 text-[13.5px] font-medium break-keep text-muted-foreground">
+                영업시간·리뷰는 카카오맵에서 볼 수 있어요
+              </p>
+            </div>
           </div>
 
           {/* 여기서 사람이 가장 먼저 해야 하는 일은 "이 기프티콘 되나요?" 확인이라, 전화를 대표로 둔다.
               카카오맵은 영업시간·리뷰를 보러 가는 보조 통로라 가장 조용하게 남긴다.
               전화번호가 없는 매장이면 길찾기가 대표가 된다. */}
-          <div className="flex gap-2">
-            {phoneHref && (
-              <Button asChild className="flex-1 rounded-xl">
-                <a href={phoneHref}>
-                  <Phone className="size-4" /> 전화
-                </a>
-              </Button>
-            )}
-            {canOpenNavigation && (
-              <Button
-                variant={phoneHref ? 'outline' : 'default'}
-                className="flex-1 rounded-xl"
-                onClick={() => openTmapRoute({ name: store.name, lat: store.lat, lng: store.lng })}
-              >
-                <Navigation className="size-4" /> 길찾기
-              </Button>
-            )}
+          {/* 2 + 1로 나눈다. 전화·길찾기는 여기서 할 일이고 카카오맵은 밖으로 나가는
+              통로다. 셋을 나란히 두면 '카카오맵'이 같은 무게로 꽉 차서 오히려 눈에 걸리고,
+              칸이 좁아 라벨도 줄여 써야 한다. 아래 한 줄로 내리면 라벨을 다 쓸 수 있다. */}
+          <div className="flex flex-col gap-2">
+            <div className="flex gap-2">
+              {phoneHref && (
+                <Button asChild className="h-12 flex-1 rounded-xl text-[15px] font-bold">
+                  <a href={phoneHref}>
+                    <Phone className="size-[17px]" strokeWidth={2.2} /> 전화
+                  </a>
+                </Button>
+              )}
+              {canOpenNavigation && (
+                <Button
+                  variant={phoneHref ? 'outline' : 'default'}
+                  className="h-12 flex-1 rounded-xl text-[15px] font-semibold"
+                  onClick={() => openTmapRoute({ name: store.name, lat: store.lat, lng: store.lng })}
+                >
+                  <Navigation className="size-[17px]" strokeWidth={2} /> 길찾기
+                </Button>
+              )}
+            </div>
             {store.placeUrl && (
-              <Button asChild variant="outline" className="flex-1 rounded-xl">
+              <Button
+                asChild
+                variant="outline"
+                className="h-[42px] rounded-[11px] border-border/60 text-sm font-semibold text-muted-foreground"
+              >
                 <a href={store.placeUrl} target="_blank" rel="noopener noreferrer">
-                  <ExternalLink className="size-4" /> 카카오맵
+                  <ExternalLink className="size-4" strokeWidth={2} /> 카카오맵에서 보기
                 </a>
               </Button>
             )}
