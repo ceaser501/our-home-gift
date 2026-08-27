@@ -425,6 +425,60 @@ describe('위치를 아직 안 준 사람에게', () => {
     expect(await screen.findByText(/스타벅스 서울숲점/, {}, { timeout: 3000 })).toBeTruthy();
   });
 
+  // 폰 설정에서 위치 권한을 '허용 안 함'으로 바꿔두면 웹뷰가 아무 답도 안 준다 — 성공도
+  // 실패도 안 부른다. 그러면 벽시계(10초)가 칠 때까지 화면에 아무 변화가 없어서 누른 사람
+  // 눈에는 버튼이 죽은 것이다. "켜기가 눌리지 않는다"는 말이 여기서 나왔다.
+  it('누른 것이 그 자리에서 보인다', async () => {
+    getFreshPosition.mockImplementation(() => new Promise(() => {}));
+
+    render(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
+    await screen.findByText(ASK, {}, { timeout: 3000 });
+    await act(async () => screen.getByRole('button', { name: '켜기' }).click());
+
+    const button = screen.getByRole('button', { name: '여는 중' });
+    expect(button.disabled).toBe(true);
+  });
+
+  // 시스템 창이 떴는지는 이쪽에서 알 길이 없다. 그래서 띠를 바꿔치우지 않고 덧붙인다 —
+  // 창이 떠 있으면 그 창에 가려 안 보이고, 창이 안 떴다면 이 한 줄이 유일한 길이다.
+  it('답이 안 오면 설정으로 가는 길을 덧붙인다', async () => {
+    getFreshPosition.mockImplementation(() => new Promise(() => {}));
+
+    render(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
+    await screen.findByText(ASK, {}, { timeout: 3000 });
+    await act(async () => screen.getByRole('button', { name: '켜기' }).click());
+
+    const way = await screen.findByRole(
+      'button',
+      { name: '창이 안 뜨면 설정에서 켜주세요' },
+      { timeout: 3000 }
+    );
+    // 덧붙이는 것이라 원래 문장은 그대로 있어야 한다.
+    expect(screen.queryByText(ASK)).toBeTruthy();
+
+    await act(async () => way.click());
+    expect(openAppSettings).toHaveBeenCalled();
+  });
+
+  // 사람이 창을 보고 거절한 것은 잠긴 것과 다르다. 덧붙였던 길을 걷지 않으면 방금 고른
+  // 것을 무르라는 말이 화면에 남는다.
+  it('사람이 거절하면 설정 안내를 남기지 않는다', async () => {
+    getFreshPosition.mockImplementation(
+      () => new Promise((_, reject) => setTimeout(() => reject({ code: 1 }), 1800))
+    );
+
+    render(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
+    await screen.findByText(ASK, {}, { timeout: 3000 });
+    await act(async () => screen.getByRole('button', { name: '켜기' }).click());
+
+    // 거절이 오기 전에 길이 먼저 덧붙는다(창을 읽는 동안이다).
+    await screen.findByRole('button', { name: '창이 안 뜨면 설정에서 켜주세요' }, { timeout: 3000 });
+
+    await waitFor(() => expect(screen.queryByText(ASK)).toBeNull(), { timeout: 3000 });
+    expect(screen.queryByText(/설정에서 위치 권한을 켜주세요/)).toBeNull();
+    expect(screen.queryByRole('button', { name: '설정 열기' })).toBeNull();
+  });
+
   // 시스템 창은 한 번뿐이라 아껴야 하지만, 우리 띠는 몇 번이든 다시 물을 수 있다.
   // 그렇다고 거절한 그날 또 물으면 조르는 것이 된다.
   // 사람이 창을 보고 거절한 경우. 즉시 돌아오는 거절은 뜻이 달라서(창이 아예 안 뜬 것)

@@ -67,6 +67,18 @@ const REFUSED_KEY = "nearby-permission-refused-on";
 // 50ms 안에 돌아온다. 사이가 넓어서 어느 쪽으로든 잘못 볼 일이 드물다.
 const NO_DIALOG_MS = 400;
 
+// 눌렀는데 아무 답도 안 올 때, 설정으로 가는 길을 내주기까지 기다리는 시간.
+//
+// 위 400ms가 잡는 것은 '즉시 거절'이다. 그런데 폰 설정에서 위치 권한을 '허용 안 함'으로
+// 바꿔두면 웹뷰가 거절조차 안 돌려준다 — 성공도 실패도 안 부른다. 그러면 벽시계(10초)가
+// 칠 때까지 화면에 아무 변화가 없어서, 누른 사람 눈에는 버튼이 죽은 것이다. 실제로
+// "켜기가 눌리지 않는다"는 말이 여기서 나왔다.
+//
+// 시스템 창이 떴는지는 이쪽에서 알 길이 없다. 그래서 띠를 바꿔치우지 않고 한 줄을
+// 덧붙인다 — 창이 떠 있으면 그 창이 화면을 덮고 있어 안 보이고, 창이 안 떴다면
+// 이 한 줄이 유일한 길이다. 어느 쪽으로 틀려도 잃는 것이 없다.
+const SHOW_SETTINGS_MS = 1500;
+
 // 위치 권한을 새로 묻지 않는다. 앱을 열자마자 권한 창부터 들이밀면 거절당하기 딱 좋고,
 // 한 번 거절되면 매장 찾기까지 같이 막힌다. 이미 허용된 경우에만 현재 위치를 잡고,
 // 권한 상태를 알 수 없는 브라우저에서는 지난번 위치(매장 찾기를 써봤다면 남아 있다)로만 맞춰본다.
@@ -197,6 +209,10 @@ export default function NearbyBanner({ gifticons, onPick }) {
   const [refused, setRefused] = useState(() => readRefusedToday());
   // 폰이 아예 잠가버린 상태. '켜기'를 눌러도 창이 안 뜬다.
   const [blocked, setBlocked] = useState(false);
+  // '켜기'를 눌러 답을 기다리는 중. 누른 것이 그 자리에서 보여야 한다.
+  const [asking, setAsking] = useState(false);
+  // 눌렀는데 답이 안 온다. 설정으로 가는 길을 덧붙인다.
+  const [stuck, setStuck] = useState(false);
   const [dismissed, setDismissed] = useState(() => readDismissedToday());
   // 설정에서 켜고 끄는 값. 꺼두면 매장을 뒤지지도 않는다 — 카카오 검색에는 하루 상한이
   // 걸려 있어서, 안 보여줄 것을 찾느라 그걸 쓰면 정작 '매장' 버튼이 막힌다.
@@ -423,15 +439,36 @@ export default function NearbyBanner({ gifticons, onPick }) {
             '켜야 합니다'가 아니라 '켜면 알려드려요'다. 앞은 조건을 내미는 말이고 뒤는
             무엇을 받는지를 보여주는 말인데, 여기는 승낙을 받아야 하는 자리다.
             안드로이드는 두 번 거절당하면 다시 묻지도 못한다. */}
-        <span className="min-w-0 flex-1 text-[13.5px] leading-normal font-medium break-keep text-foreground/80">
-          위치 권한을 켜면 근처에서 쓸 수 있는 기프티콘을 알려드려요.
+        <span className="flex min-w-0 flex-1 flex-col gap-[3px]">
+          <span className="text-[13.5px] leading-normal font-medium break-keep text-foreground/80">
+            위치 권한을 켜면 근처에서 쓸 수 있는 기프티콘을 알려드려요.
+          </span>
+          {/* 답이 안 올 때만 나온다. 띠를 바꿔치우지 않고 덧붙이는 이유는 위 SHOW_SETTINGS_MS
+              주석에 적어뒀다 — 시스템 창이 떴는지를 이쪽에서 모르기 때문이다. */}
+          {stuck &&
+            (canOpenAppSettings() ? (
+              <button
+                type="button"
+                onClick={openAppSettings}
+                className="self-start text-[12.5px] font-bold text-primary underline underline-offset-[3px]"
+              >
+                창이 안 뜨면 설정에서 켜주세요
+              </button>
+            ) : (
+              <span className="text-[12.5px] font-medium break-keep text-muted-foreground">
+                주소창의 자물쇠를 눌러 허용해주세요.
+              </span>
+            ))}
         </span>
+        {/* 누른 것이 그 자리에서 보여야 한다. 답이 늦는 경우가 있어서(웹뷰가 아무 답도 안 줄
+            때가 있다) 아무 변화가 없으면 눌리지 않은 것으로 읽힌다. */}
         <button
           type="button"
           onClick={askForLocation}
-          className="flex h-[34px] shrink-0 items-center rounded-[10px] bg-primary px-3.5 text-[13.5px] font-bold whitespace-nowrap text-primary-foreground"
+          disabled={asking}
+          className="flex h-[34px] shrink-0 items-center rounded-[10px] bg-primary px-3.5 text-[13.5px] font-bold whitespace-nowrap text-primary-foreground disabled:opacity-60"
         >
-          켜기
+          {asking ? '여는 중' : '켜기'}
         </button>
       </div>
     );
@@ -501,11 +538,16 @@ export default function NearbyBanner({ gifticons, onPick }) {
   // 읽었으므로, 앱을 열자마자 들이미는 것보다 훨씬 잘 허락한다.
   async function askForLocation() {
     const startedAt = Date.now();
+    setAsking(true);
+    // 답이 안 오면 설정으로 가는 길을 덧붙인다. 지우는 것이 아니라 더하는 것이라,
+    // 시스템 창이 떠 있는 동안 이것이 돌아도 그 창에 가려 안 보인다.
+    const nudge = setTimeout(() => setStuck(true), SHOW_SETTINGS_MS);
     try {
       const fresh = await getFreshPosition();
       saveCachedPosition(fresh);
       setNeedsPermission(false);
       setBlocked(false);
+      setStuck(false);
       search(fresh);
     } catch (err) {
       // no_answer는 아예 답이 없었던 것이라, 창이 뜨지 않았다는 뜻으로 곧장 본다.
@@ -523,6 +565,9 @@ export default function NearbyBanner({ gifticons, onPick }) {
           return;
         }
         // 사람이 거절했다. 그날은 다시 묻지 않는다.
+        //
+        // 잠긴 것이 아니라 사람이 고른 것이라 blocked를 걷는다. 안 걷으면 창을 보고
+        // 거절한 사람에게 '설정에서 켜주세요'가 남는데, 그건 방금 고른 것을 무르라는 말이다.
         try {
           localStorage.setItem(REFUSED_KEY, todayStr());
         } catch {
@@ -530,11 +575,16 @@ export default function NearbyBanner({ gifticons, onPick }) {
         }
         setRefused(true);
         setNeedsPermission(false);
+        setBlocked(false);
         return;
       }
       // 허락은 했는데 못 잡았다. 지하·실내다.
       setNeedsPermission(false);
+      setBlocked(false);
       setUnlocatable(true);
+    } finally {
+      clearTimeout(nudge);
+      setAsking(false);
     }
   }
 
