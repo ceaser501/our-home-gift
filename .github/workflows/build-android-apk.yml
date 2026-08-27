@@ -323,7 +323,7 @@ jobs:
           </td>
           <td style="vertical-align:top;">
           <div style="font-size:15.5px;font-weight:800;color:#1c1b22;letter-spacing:-0.02em;line-height:1.35;">모아콘 관리자<span style="display:inline-block;margin-left:6px;padding:2px 7px;border-radius:6px;background:#FFF3CC;font-size:10.5px;font-weight:700;color:#7a5c00;vertical-align:2px;letter-spacing:0;">관리자 전용</span></div>
-          <div style="font-size:12.5px;color:#6b6879;line-height:1.6;margin-top:3px;">가입·등록·비용을 보는 화면이에요. 명단에 올라 있는 계정만 들어갑니다.</div>
+          <div style="font-size:12.5px;color:#6b6879;line-height:1.6;margin-top:3px;">가입·등록·비용을 보는 화면이에요. 명단에 올라 있는 계정만 들어갑니다.<br>받는 파일은 없어요. 열어서 홈 화면에 추가하면 앱처럼 열립니다.</div>
           </td></tr></table>
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:13px;">
           <tr><td style="border:1px solid #d9d6e6;border-radius:11px;">
