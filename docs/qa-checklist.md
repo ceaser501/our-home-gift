@@ -101,6 +101,8 @@
 - [x] `supabase functions deploy delete-account`
 - [ ] `supabase functions deploy reset-all-data` — 관리자 확인을 이메일 기준으로
 - [ ] `select jobname, schedule from cron.job;`으로 예약이 다 살아 있는지 한 번 확인
+- [ ] 만료 알림이 실제로 폰까지 오는지 — `supabase/push-test-once.sql`로 시각을 정해
+      한 번 보내본다. 정기 발송(9시·15시)을 기다리면 반나절이 간다
 
 ---
 
