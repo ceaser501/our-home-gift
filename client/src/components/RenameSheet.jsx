@@ -11,7 +11,7 @@ const MAX_LENGTH = 20;
 // 이름 한 줄만 고치는 작은 창. 내 이름과 가족 이름이 같은 모양을 쓴다.
 // 다른 창(내 메뉴, 가족 목록) 위에 겹쳐서 열리는데, Radix 시트는 겹쳐 열어도
 // 글자 입력 포커스를 맨 위 창이 가져가므로 그대로 겹쳐 쓴다.
-export default function RenameSheet({ title, label, description, initialValue = '', placeholder, onSubmit, onClose }) {
+export default function RenameSheet({ title, label, hint, description, initialValue = '', placeholder, onSubmit, onClose }) {
   // 뒤로가기로 이 창을 닫는다. 안 그러면 설치해서 쓸 때 앱이 통째로 꺼진다.
   useBackClose(onClose);
   const [value, setValue] = useState(initialValue);
@@ -50,9 +50,16 @@ export default function RenameSheet({ title, label, description, initialValue = 
         <form onSubmit={handleSubmit} className="flex flex-col gap-3.5 px-[18px]">
           <div className="flex flex-col gap-[7px]">
             <div className="flex items-baseline justify-between gap-2">
-              <Label htmlFor="rename-input" className="text-sm font-semibold text-foreground/80">
-                {label}
-              </Label>
+              {/* hint는 라벨 옆 한마디다. 바뀌는 곳이 한 군데뿐이라 아래 안내 상자까지
+                  쓸 것은 없고, 누가 보는지만 적으면 되는 경우에 쓴다(가족 이름). */}
+              <div className="flex min-w-0 items-baseline gap-1.5">
+                <Label htmlFor="rename-input" className="text-sm font-semibold text-foreground/80">
+                  {label}
+                </Label>
+                {hint && (
+                  <span className="shrink-0 text-[12.5px] font-medium text-muted-foreground">{hint}</span>
+                )}
+              </div>
               {/* 글자 수는 한계에 가까울 때만 나타난다. 이름은 보통 두세 글자라 늘 띄우면
                   쓸모없는 숫자가 하나 더 있는 셈이고, 그 자리에 있으면 자꾸 세게 된다. */}
               {value.length > MAX_LENGTH - 5 && (

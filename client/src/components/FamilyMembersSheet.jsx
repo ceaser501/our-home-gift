@@ -206,7 +206,7 @@ export default function FamilyMembersSheet({ onClose }) {
           <RenameSheet
             title="가족 이름 바꾸기"
             label="가족 이름"
-            description="가족 모두에게 보이는 이름이에요."
+            hint="가족 모두에게 보여요"
             initialValue={family.name}
             placeholder="예: 우리 가족"
             onSubmit={async (name) => {

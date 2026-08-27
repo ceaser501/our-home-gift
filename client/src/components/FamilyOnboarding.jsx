@@ -71,13 +71,13 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
             줄글로 두면 셋 다 앞으로 할 일처럼 읽혔다. */}
         <div className="flex w-full flex-col gap-3.5 rounded-[18px] bg-secondary/60 p-4">
           <div className="flex items-start gap-3">
-            <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-success/15 text-success">
+            <span className="flex size-[26px] shrink-0 items-center justify-center rounded-full bg-success/15 text-success">
               <Check className="size-3.5" strokeWidth={3} />
             </span>
             <p className="m-0 flex-1 text-[15px] text-foreground">신청을 보냈어요</p>
           </div>
           <div className="flex items-start gap-3">
-            <span className="size-6 shrink-0 rounded-full border-2 border-border bg-card" />
+            <span className="size-[26px] shrink-0 rounded-full border-2 border-border bg-card" />
             <div className="flex flex-1 flex-col gap-0.5">
               <p className="m-0 text-[15px] font-semibold text-foreground">가족 구성원이 승인하면 참여돼요</p>
               <p className="m-0 text-[13.5px] text-muted-foreground">코드를 알려준 분에게 말씀해주세요</p>
@@ -283,7 +283,12 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
                 value={code}
                 onChange={(e) => setCode(e.target.value.toUpperCase())}
                 placeholder="6자리 코드"
-                className="h-12 rounded-[13px] text-[15.5px] tracking-[0.2em] uppercase"
+                /* 고정폭 글꼴과 넓은 자간은 값이 들어온 뒤에만 쓴다. 빈 칸에 미리 걸면
+                   '6자리 코드'라는 예시 문구가 이미 적힌 코드처럼 보인다. */
+                className={cn(
+                  'h-12 rounded-[13px] text-[15.5px] uppercase',
+                  code && 'font-mono tracking-[0.12em]'
+                )}
                 maxLength={6}
                 autoComplete="off"
                 required
