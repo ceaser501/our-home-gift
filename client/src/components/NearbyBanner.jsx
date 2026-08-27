@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { MapPin, MapPinOff, X } from "lucide-react";
 import { searchNearbyStores } from "../api";
 import {
@@ -198,6 +198,25 @@ function formatDistance(meters) {
   return `${(meters / 1000).toFixed(1)}km`;
 }
 
+// 물어볼 브랜드를 고른다. 안 쓴 것 중 상호가 있는 것만, 만료가 가까운 쪽부터.
+//
+// 밖으로 꺼낸 이유는 두 곳이 같은 값을 봐야 해서다 — 실제로 찾을 때(run)와, 다시 찾을지
+// 정할 때(brandKey). 한쪽만 고치면 "목록이 바뀌었는데 띠는 그대로"가 된다.
+function topBrands(gifticons) {
+  const byBrand = new Map();
+  for (const g of gifticons) {
+    if (g.status === "used" || !g.brand?.trim()) continue;
+    const key = g.brand.trim();
+    const entry = byBrand.get(key) || { brand: key, count: 0, soonest: null };
+    entry.count += 1;
+    if (g.expires_at && (!entry.soonest || g.expires_at < entry.soonest)) entry.soonest = g.expires_at;
+    byBrand.set(key, entry);
+  }
+  return [...byBrand.values()]
+    .sort((a, b) => (a.soonest || "9999").localeCompare(b.soonest || "9999"))
+    .slice(0, MAX_BRANDS);
+}
+
 // 목록 위 띠는 이 컴포넌트 하나가 쓴다. 한때 환영 인사에게 자리를 내주는 길(yielded)이
 // 있었는데, 환영 인사를 걷어내면서 같이 걷었다 — 자리를 나눠 쓰는 상대가 없다.
 export default function NearbyBanner({ gifticons, onPick }) {
@@ -223,9 +242,9 @@ export default function NearbyBanner({ gifticons, onPick }) {
   // 설정에서 켜고 끄는 값. 꺼두면 매장을 뒤지지도 않는다 — 카카오 검색에는 하루 상한이
   // 걸려 있어서, 안 보여줄 것을 찾느라 그걸 쓰면 정작 '매장' 버튼이 막힌다.
   const [bannerOn, setBannerOn] = useState(() => isNearbyBannerOn());
-  // 목록은 검색어를 칠 때마다 다시 오는데, 그때마다 주변을 다시 뒤질 일은 아니다.
-  // 처음 목록이 채워졌을 때 한 번만 찾는다.
-  const ranRef = useRef(false);
+  // 잠긴 상태인지. 아래 리스너는 한 번만 붙어서 그때의 값을 붙잡아 두므로 따로 둔다.
+  const blockedRef = useRef(false);
+  blockedRef.current = blocked;
   // 앱이 다시 앞으로 왔을 때 쓸 최신 목록. 그때 이 효과는 이미 끝나 있어서, 그 안의
   // gifticons는 처음 값에 묶여 있다.
   const listRef = useRef(gifticons);
@@ -240,14 +259,27 @@ export default function NearbyBanner({ gifticons, onPick }) {
     return () => window.removeEventListener(NEARBY_BANNER_EVENT, onChange);
   }, []);
 
+  // 물어볼 브랜드가 바뀌면 다시 본다.
+  //
+  // 한때는 앱을 열 때 딱 한 번만 찾았다(ranRef). 그러면 전부 사용완료인 사람은 물어볼
+  // 브랜드가 없어서 검색조차 안 하고 끝나고, 사용취소로 되살려도 다시 볼 기회가 없었다.
+  // 반대로 목록을 검색어로 걸러도 그때마다 다시 찾을 일은 아니라, 목록 자체가 아니라
+  // '무엇을 물어볼 것인가'가 바뀌었을 때만 돈다.
+  //
+  // 검색 횟수는 안 는다. 10분·300m 캐시가 그대로라, 다시 돌아도 같은 자리면 카카오로
+  // 나가는 것이 없다.
+  const brandKey = useMemo(
+    () => topBrands(gifticons).map((b) => b.brand).join("|"),
+    [gifticons],
+  );
+
   useEffect(() => {
-    if (!bannerOn || ranRef.current || gifticons.length === 0) return;
-    ranRef.current = true;
+    if (!bannerOn || !brandKey) return;
     search();
     return () => stopRef.current?.();
     // search는 매번 새로 만들어지는 함수라 의존성에 넣으면 효과가 계속 다시 돈다.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gifticons, bannerOn]);
+  }, [brandKey, bannerOn]);
 
   // 앱이 다시 앞으로 오면 한 번 더 찾는다.
   //
@@ -271,6 +303,11 @@ export default function NearbyBanner({ gifticons, onPick }) {
           // 여기서는 저장된 값을 그때그때 읽는다. 이 리스너는 처음 한 번만 붙어서
           // 위 상태를 붙잡아 두면 껐다 켠 것을 못 따라간다.
           if (!isNearbyBannerOn()) return;
+          // 설정에서 켜고 돌아온 길일 수 있다. 그때는 조용한 확인으로는 못 알아낸다.
+          if (blockedRef.current) {
+            retryAfterSettings();
+            return;
+          }
           search();
         }),
       )
@@ -304,26 +341,7 @@ export default function NearbyBanner({ gifticons, onPick }) {
     const gifticons = listRef.current;
 
     async function run() {
-      // 안 쓴 것 중 상호가 있는 것만, 만료가 가까운 브랜드부터 모은다.
-      const byBrand = new Map();
-      for (const g of gifticons) {
-        if (g.status === "used" || !g.brand?.trim()) continue;
-        const key = g.brand.trim();
-        const entry = byBrand.get(key) || {
-          brand: key,
-          count: 0,
-          soonest: null,
-        };
-        entry.count += 1;
-        if (g.expires_at && (!entry.soonest || g.expires_at < entry.soonest))
-          entry.soonest = g.expires_at;
-        byBrand.set(key, entry);
-      }
-      const brands = [...byBrand.values()]
-        .sort((a, b) =>
-          (a.soonest || "9999").localeCompare(b.soonest || "9999"),
-        )
-        .slice(0, MAX_BRANDS);
+      const brands = topBrands(gifticons);
       if (brands.length === 0) return;
 
       // 위치를 기다리기 전에 먼저 그린다. 아래에서 진짜 위치를 받아 다시 판단한다.
@@ -424,7 +442,52 @@ export default function NearbyBanner({ gifticons, onPick }) {
   //   1) 찾았다 — 평소의 매장 안내
   if (best && liveCount > 0) return renderStore();
 
-  //   2) 아직 위치를 준 적이 없다 — 시스템 창을 들이밀지 않고 여기서 먼저 묻는다
+  //   2) 폰이 잠가버렸다 — '켜기'를 눌러도 창이 안 뜬다
+  //
+  // 안드로이드는 두 번 거절당하면 그다음부터 아무 말 없이 바로 거절을 돌려준다. 그러면
+  // 버튼이 고장 난 것처럼 보인다. 눌렀는데 아무 일도 안 일어나는 자리를 남겨두면 안 된다.
+  //
+  // 아래 '켜기'보다 먼저 본다. 순서가 반대였을 때, 눌러서 잠긴 걸 알아낸 직후에 조용한
+  // 확인(getPositionSilently)이 한 번 더 돌면 그쪽이 '권한 없음'을 다시 세워서 화면이
+  // '켜기'로 되돌아갔다. 아무리 눌러도 같은 자리를 맴돌게 된다.
+  //
+  // 잠겼다는 것은 눌러봐야 아는 사실이고, 조용한 확인은 그걸 알 수 없다. 알아낸 쪽이
+  // 이겨야 한다. 설정에서 켜고 돌아오면 askForLocation이 성공하며 이 표시를 걷는다.
+  //
+  // 남은 길은 폰 설정 하나뿐이라 거기까지 데려다준다. 이 자리를 그냥 비우지 않는 이유는,
+  // 마음을 바꾼 사람이 돌아올 길이 이것 말고 없어서다(매장 찾기에도 같은 버튼이 있지만
+  // 거기까지 가려면 카드 메뉴를 열어야 한다).
+  //
+  // ②와 같은 배경을 쓴다. 하려던 일이 같고, 설정에서 켜고 돌아오면 그대로 ①이 된다.
+  if (blocked && hasUsable) {
+    const canOpen = canOpenAppSettings();
+    return (
+      <div className="flex w-full items-center gap-[11px] bg-accent py-[13px] pr-3 pl-3.5">
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-[10px] bg-primary/12">
+          <MapPin className="size-[17px] text-primary" strokeWidth={2.1} />
+        </span>
+        {/* '거절하셨네요'라고 하지 않는다. 지난 일을 짚는 말이고, 지금 할 일은 그게
+            아니다. 어디서 무엇을 켜면 되는지만 적는다. 설정 화면을 못 여는 브라우저
+            에서는 어디로 가야 하는지가 이 한 줄뿐이라 조금 더 자세히 적는다. */}
+        <span className="min-w-0 flex-1 text-[13.5px] leading-normal font-medium break-keep text-foreground/80">
+          {canOpen
+            ? '설정에서 위치 권한을 켜주세요. 위치 → 앱 사용 중에만 허용.'
+            : '브라우저 주소창의 자물쇠를 눌러 위치를 허용해주세요.'}
+        </span>
+        {canOpen && (
+          <button
+            type="button"
+            onClick={openAppSettings}
+            className="flex h-[34px] shrink-0 items-center rounded-[10px] bg-primary px-3.5 text-[13.5px] font-bold whitespace-nowrap text-primary-foreground"
+          >
+            설정 열기
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  //   2-1) 아직 위치를 준 적이 없다 — 시스템 창을 들이밀지 않고 여기서 먼저 묻는다
   //
   // 안드로이드 위치 권한은 되돌리기가 어렵다. 두 번째 거절은 "다시 묻지 않음"이 되어
   // 그다음부터는 시스템 설정에 들어가야 한다. 그래서 시스템 창이 첫 질문이 되면 안 된다 —
@@ -491,44 +554,6 @@ export default function NearbyBanner({ gifticons, onPick }) {
     );
   }
 
-  //   2-1) 폰이 잠가버렸다 — '켜기'를 눌러도 창이 안 뜬다
-  //
-  // 안드로이드는 두 번 거절당하면 그다음부터 아무 말 없이 바로 거절을 돌려준다. 그러면
-  // 버튼이 고장 난 것처럼 보인다. 눌렀는데 아무 일도 안 일어나는 자리를 남겨두면 안 된다.
-  //
-  // 남은 길은 폰 설정 하나뿐이라 거기까지 데려다준다. 이 자리를 그냥 비우지 않는 이유는,
-  // 마음을 바꾼 사람이 돌아올 길이 이것 말고 없어서다(매장 찾기에도 같은 버튼이 있지만
-  // 거기까지 가려면 카드 메뉴를 열어야 한다).
-  //
-  // ②와 같은 배경을 쓴다. 하려던 일이 같고, 설정에서 켜고 돌아오면 그대로 ①이 된다.
-  if (blocked && hasUsable) {
-    const canOpen = canOpenAppSettings();
-    return (
-      <div className="flex w-full items-center gap-[11px] bg-accent py-[13px] pr-3 pl-3.5">
-        <span className="flex size-8 shrink-0 items-center justify-center rounded-[10px] bg-primary/12">
-          <MapPin className="size-[17px] text-primary" strokeWidth={2.1} />
-        </span>
-        {/* '거절하셨네요'라고 하지 않는다. 지난 일을 짚는 말이고, 지금 할 일은 그게
-            아니다. 어디서 무엇을 켜면 되는지만 적는다. 설정 화면을 못 여는 브라우저
-            에서는 어디로 가야 하는지가 이 한 줄뿐이라 조금 더 자세히 적는다. */}
-        <span className="min-w-0 flex-1 text-[13.5px] leading-normal font-medium break-keep text-foreground/80">
-          {canOpen
-            ? '설정에서 위치 권한을 켜주세요. 위치 → 앱 사용 중에만 허용.'
-            : '브라우저 주소창의 자물쇠를 눌러 위치를 허용해주세요.'}
-        </span>
-        {canOpen && (
-          <button
-            type="button"
-            onClick={openAppSettings}
-            className="flex h-[34px] shrink-0 items-center rounded-[10px] bg-primary px-3.5 text-[13.5px] font-bold whitespace-nowrap text-primary-foreground"
-          >
-            설정 열기
-          </button>
-        )}
-      </div>
-    );
-  }
-
   //   3) 허락은 받았는데 못 잡았다 — 왜 아무것도 안 뜨는지 알려준다
   //
   // 아무 말 없이 비워두면 "이 기능이 고장 났나" 하게 된다. 지하에서는 늘 그렇고, 지하는
@@ -559,10 +584,12 @@ export default function NearbyBanner({ gifticons, onPick }) {
   // 되돌렸다. 두 마디가 같은 말이라 하나면 된다.
   if (searched && !emptyClosed && hasUsable) {
     return (
-      // ③과 같은 얇은 회색. 알려줄 것이 없는 상태라 눈에 덜 걸리는 편이 맞다.
-      <div className="flex w-full items-center gap-2.5 border-b border-border bg-muted/40 py-[7px] pr-1.5 pl-3.5">
-        <MapPinOff className="size-4 shrink-0 text-muted-foreground" />
-        <span className="min-w-0 flex-1 truncate text-[12.5px] font-medium text-muted-foreground">
+      // ①(매장 안내)과 같은 틀이다. 같은 자리에 번갈아 서고 X도 같은 자리에 있어서,
+      // 모양이 다르면 다른 물건처럼 읽힌다. 얇은 회색 띠로 뒀다가 되돌렸다.
+      // 글자만 흐리게 둔다 — 알려줄 것이 있는 띠가 아니라서 무게까지 같으면 안 된다.
+      <div className="flex w-full items-center gap-2.5 bg-accent py-[9px] pr-2.5 pl-[13px]">
+        <MapPinOff className="size-[17px] shrink-0 text-muted-foreground" />
+        <span className="min-w-0 flex-1 truncate text-[13.5px] font-medium text-muted-foreground">
           500m 안에서 쓸 수 있는 기프티콘이 없어요
         </span>
         {/* ③(지하)에는 없는 X가 여기에만 있다. 지하 안내는 위치가 잡히는 순간 저절로
@@ -582,6 +609,28 @@ export default function NearbyBanner({ gifticons, onPick }) {
   }
 
   return null;
+
+  // 설정에서 켜고 돌아왔는지 직접 잡아본다.
+  //
+  // 조용한 확인(getPositionSilently)으로는 못 알아낸다. 웹뷰의 permissions.query는 권한이
+  // 있어도 'prompt'를 돌려주고, 적어둔 좌표는 권한이 없다는 걸 알았을 때 지웠다. 그래서
+  // 근거가 하나도 없는 상태로 돌아오고, 그러면 영영 '설정에서 켜주세요'가 남는다 —
+  // 설정에서 켜고 온 사람에게 다시 설정으로 가라고 하는 막다른 길이다.
+  //
+  // 여기서 잡아보는 것은 안전하다. 잠겼다는 것은 곧 창이 안 뜬다는 뜻이라, 켜져 있으면
+  // 그대로 잡히고 아직 막혀 있으면 곧장 실패한다. 어느 쪽이든 사람을 붙들지 않는다.
+  async function retryAfterSettings() {
+    try {
+      const fresh = await getFreshPosition();
+      saveCachedPosition(fresh);
+      setBlocked(false);
+      setNeedsPermission(false);
+      setStuck(false);
+      search(fresh);
+    } catch {
+      // 아직 막혀 있다. 띠를 그대로 둔다.
+    }
+  }
 
   // '켜기'를 눌렀을 때만 시스템 창이 뜬다. 여기까지 온 사람은 무엇을 위해 묻는지 이미
   // 읽었으므로, 앱을 열자마자 들이미는 것보다 훨씬 잘 허락한다.

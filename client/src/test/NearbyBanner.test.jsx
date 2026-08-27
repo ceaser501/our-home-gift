@@ -150,6 +150,58 @@ describe('NearbyBanner', () => {
     expect(await screen.findByText(/스타벅스 성수점/, {}, { timeout: 3000 })).toBeTruthy();
   });
 
+  // 전부 사용완료면 물어볼 브랜드가 없어서 검색조차 안 하고 끝난다. 한때는 앱을 열 때
+  // 딱 한 번만 찾아서, 사용취소로 되살려도 다시 볼 기회가 없었다.
+  it('사용취소로 되살리면 다시 찾는다', async () => {
+    const allUsed = GIFTICONS.map((g) => ({ ...g, status: 'used' }));
+    const { rerender } = render(<NearbyBanner gifticons={allUsed} onPick={() => {}} />);
+
+    await new Promise((r) => setTimeout(r, 200));
+    expect(searchNearbyStores).not.toHaveBeenCalled();
+
+    rerender(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
+
+    expect(await screen.findByText(/스타벅스 서울숲점/, {}, { timeout: 3000 })).toBeTruthy();
+  });
+
+  // 새로 등록한 브랜드도 마찬가지다. 그것 때문에 다시 찾아야 한다.
+  it('새 브랜드를 등록하면 다시 찾는다', async () => {
+    render(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
+    await screen.findByText(/스타벅스 서울숲점/, {}, { timeout: 3000 });
+
+    const before = searchNearbyStores.mock.calls.length;
+    localStorage.removeItem('nearby-banner:result');
+    searchNearbyStores.mockResolvedValue([{ name: 'BBQ 성수점', distance: 90 }]);
+
+    const { rerender } = render(<div />);
+    rerender(<div />);
+    // 같은 컴포넌트에 브랜드를 하나 더 얹는다.
+    render(
+      <NearbyBanner
+        gifticons={[...GIFTICONS, { id: '3', brand: 'BBQ', status: 'active', expires_at: '2026-06-30' }]}
+        onPick={() => {}}
+      />
+    );
+
+    await waitFor(() => expect(searchNearbyStores.mock.calls.length).toBeGreaterThan(before), {
+      timeout: 3000,
+    });
+  });
+
+  // 목록은 검색어를 칠 때마다 다시 온다. 그때마다 다시 뒤지면 하루 상한이 금방 닳는다.
+  it('물어볼 브랜드가 그대로면 다시 찾지 않는다', async () => {
+    const { rerender } = render(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
+    await screen.findByText(/스타벅스 서울숲점/, {}, { timeout: 3000 });
+
+    const before = searchNearbyStores.mock.calls.length;
+    localStorage.removeItem('nearby-banner:result');
+    // 같은 브랜드인데 줄 하나가 빠졌다(검색으로 걸러낸 목록이 이렇게 온다).
+    rerender(<NearbyBanner gifticons={[GIFTICONS[0]]} onPick={() => {}} />);
+
+    await new Promise((r) => setTimeout(r, 300));
+    expect(searchNearbyStores.mock.calls.length).toBe(before);
+  });
+
   it('뒤로 물러갈 때는 찾지 않는다', async () => {
     render(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
     await screen.findByText(/스타벅스 서울숲점/, {}, { timeout: 3000 });
@@ -607,6 +659,43 @@ describe('위치를 아직 안 준 사람에게', () => {
 
     await act(async () => screen.getByRole('button', { name: '설정 열기' }).click());
     expect(openAppSettings).toHaveBeenCalled();
+  });
+
+  // 눌러서 '잠겼다'를 알아낸 뒤, 조용한 확인이 한 번 더 돌면 그쪽이 '권한 없음'을 다시
+  // 세운다. 순서가 반대였을 때 화면이 '켜기'로 되돌아갔고, 아무리 눌러도 같은 자리를
+  // 맴돌았다. 잠겼다는 것은 눌러봐야 아는 사실이라 알아낸 쪽이 이겨야 한다.
+  it('잠긴 걸 알아낸 뒤에는 다시 물어보는 자리로 안 돌아간다', async () => {
+    getFreshPosition.mockRejectedValue({ code: 1 });
+
+    render(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
+    await screen.findByText(ASK, {}, { timeout: 3000 });
+    await act(async () => screen.getByRole('button', { name: '켜기' }).click());
+    expect(screen.getByText(/설정에서 위치 권한을 켜주세요/)).toBeTruthy();
+
+    // 앱이 다시 앞으로 온다. 여기서 조용한 확인이 한 번 더 돈다.
+    localStorage.removeItem('nearby-banner:result');
+    await act(async () => appStateHandler({ isActive: true }));
+
+    await new Promise((r) => setTimeout(r, 300));
+    expect(screen.getByText(/설정에서 위치 권한을 켜주세요/)).toBeTruthy();
+    expect(screen.queryByText(ASK)).toBeNull();
+  });
+
+  // 설정에서 켜고 돌아오면 그 표시를 걷어야 한다. 안 걷으면 켜놓고도 '켜주세요'가 남는다.
+  it('설정에서 켜고 돌아오면 매장 안내로 바뀐다', async () => {
+    getFreshPosition.mockRejectedValue({ code: 1 });
+
+    render(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
+    await screen.findByText(ASK, {}, { timeout: 3000 });
+    await act(async () => screen.getByRole('button', { name: '켜기' }).click());
+    await screen.findByText(/설정에서 위치 권한을 켜주세요/, {}, { timeout: 3000 });
+
+    // 설정에서 켜고 돌아왔다.
+    getFreshPosition.mockResolvedValue({ lat: 37.5, lng: 127.0 });
+    localStorage.removeItem('nearby-banner:result');
+    await act(async () => appStateHandler({ isActive: true }));
+
+    expect(await screen.findByText(/스타벅스 서울숲점/, {}, { timeout: 3000 })).toBeTruthy();
   });
 
   // 브라우저에는 열어줄 설정 화면이 없다. 버튼 대신 어디를 눌러야 하는지를 적는다.
