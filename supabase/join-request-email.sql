@@ -20,11 +20,13 @@
 --
 -- ── 가리는 규칙 ───────────────────────────────────────────────────────────────
 --
---   dau****@gmail.com     앞 세 글자 + **** + @도메인
+--   90tsk***@gmail.com     뒤 세 글자만 덮고 나머지는 그대로
 --
--- 도메인을 남기는 이유는, 그게 없으면 아는 주소인지 알아볼 근거가 사라지기 때문이다.
--- 앞 세 글자와 도메인이면 "내가 아는 그 사람"인지는 가려지고, 모르는 사람에게 주소
--- 전체를 알려주지는 않는다.
+-- 처음에는 앞 세 글자만 남겼는데(dau****@gmail.com) 너무 많이 가려서 누구인지 알아볼
+-- 수가 없었다. 가리는 목적은 '아는 사람인지 가려내되 주소를 통째로 넘기지 않는 것'이라,
+-- 알아볼 수 없으면 가리는 의미가 없다.
+--
+-- 도메인도 남긴다. 그게 없으면 아는 주소인지 알아볼 근거가 또 하나 사라진다.
 
 begin;
 
@@ -41,18 +43,24 @@ immutable
 as $$
   select case
     when addr is null or position('@' in addr) = 0 then null
-    -- 앞이 세 글자보다 짧으면 있는 만큼만 남는다. left()가 알아서 그렇게 한다.
-    else left(split_part(addr, '@', 1), 3) || '****@' || split_part(addr, '@', 2)
+    -- 짧은 주소는 가릴 것이 적다. 첫 글자만 남기고 덮는다.
+    when length(split_part(addr, '@', 1)) <= 4
+      then left(split_part(addr, '@', 1), 1)
+           || repeat('*', greatest(length(split_part(addr, '@', 1)) - 1, 1))
+           || '@' || split_part(addr, '@', 2)
+    -- 뒤 세 글자만 덮는다. 앞이 다 보여야 아는 주소인지 알아본다.
+    else left(split_part(addr, '@', 1), length(split_part(addr, '@', 1)) - 3)
+         || '***@' || split_part(addr, '@', 2)
   end;
 $$;
 
--- 이미 들어와 있는 신청 건을 채운다. 지금 승인을 기다리는 사람이 있으면 이 줄이
--- 그 사람의 이메일을 채워준다.
+-- 이미 들어와 있는 신청 건을 다시 만든다. 비어 있는 것을 채우기도 하고, 가리는 규칙이
+-- 바뀌었을 때 예전 값을 새 규칙으로 갈아 끼우기도 한다.
 update public.family_join_requests r
    set email_masked = public.mask_email(u.email)
   from auth.users u
  where u.id = r.user_id
-   and r.email_masked is null;
+   and r.email_masked is distinct from public.mask_email(u.email);
 
 -- 신청을 만들 때 함께 적는다.
 --

@@ -683,8 +683,14 @@ immutable
 as $$
   select case
     when addr is null or position('@' in addr) = 0 then null
-    -- 앞이 세 글자보다 짧으면 있는 만큼만 남는다. left()가 알아서 그렇게 한다.
-    else left(split_part(addr, '@', 1), 3) || '****@' || split_part(addr, '@', 2)
+    -- 짧은 주소는 가릴 것이 적다. 첫 글자만 남기고 덮는다.
+    when length(split_part(addr, '@', 1)) <= 4
+      then left(split_part(addr, '@', 1), 1)
+           || repeat('*', greatest(length(split_part(addr, '@', 1)) - 1, 1))
+           || '@' || split_part(addr, '@', 2)
+    -- 뒤 세 글자만 덮는다. 앞이 다 보여야 아는 주소인지 알아본다.
+    else left(split_part(addr, '@', 1), length(split_part(addr, '@', 1)) - 3)
+         || '***@' || split_part(addr, '@', 2)
   end;
 $$;
 

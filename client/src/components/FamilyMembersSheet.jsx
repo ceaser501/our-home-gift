@@ -66,51 +66,61 @@ export default function FamilyMembersSheet({ onClose }) {
             </div>
 
             {/* 신청자 줄을 흰 카드 안에 넣는다. 보라 배경 위에 바로 두면 버튼 두 개가
-                배경과 붙어서 어디까지가 누를 자리인지 흐려진다. */}
+                배경과 붙어서 어디까지가 누를 자리인지 흐려진다.
+
+                버튼은 아랫줄로 내렸다. 한 줄에 같이 두면 이메일이 그만큼 잘리는데
+                (90t****@g… 까지만 보였다), 이메일을 붙인 이유가 누구인지 알아보라는
+                것이라 잘리면 있으나 마나다. 이름과 이메일에 한 줄을 통째로 준다. */}
             {joinRequests.map((request) => (
-              <div key={request.id} className="flex items-center gap-2.5 rounded-xl bg-card px-3 py-[11px]">
-                {/* 구성원 목록과 같은 동그라미. 아직 가족이 아니라 tag_color가 없어서
-                    이름에서 색을 뽑는다(nameTagColorClass) — 같은 이름이면 언제 봐도 같은
-                    색이라, 승인하고 나서 목록에 설 때 색이 안 바뀐다. */}
-                <span
-                  className={`flex size-[30px] shrink-0 items-center justify-center rounded-full text-[11.5px] font-bold text-white ${
-                    nameTagColorClass(request.display_name) ?? OWNER_TAG_PALETTE[0]
-                  }`}
-                >
-                  {request.display_name.slice(0, 3)}
-                </span>
-                {/* 이름은 끝까지 남고 이메일만 줄어든다. 누구를 들일지 정하는 자리라
-                    이름이 잘리면 안 된다. */}
-                <div className="flex min-w-0 flex-1 items-baseline gap-[5px]">
-                  <span className="shrink-0 text-[15.5px] font-bold tracking-[-0.015em] text-foreground">
-                    {request.display_name}
+              <div key={request.id} className="flex flex-col gap-2.5 rounded-xl bg-card px-3 py-3">
+                <div className="flex items-center gap-2.5">
+                  {/* 구성원 목록과 같은 동그라미. 아직 가족이 아니라 tag_color가 없어서
+                      이름에서 색을 뽑는다(nameTagColorClass) — 같은 이름이면 언제 봐도 같은
+                      색이라, 승인하고 나서 목록에 설 때 색이 안 바뀐다. */}
+                  <span
+                    className={`flex size-[30px] shrink-0 items-center justify-center rounded-full text-[11.5px] font-bold text-white ${
+                      nameTagColorClass(request.display_name) ?? OWNER_TAG_PALETTE[0]
+                    }`}
+                  >
+                    {request.display_name.slice(0, 3)}
                   </span>
-                  {/* 이름은 신청자가 직접 적는 값이라 '딸'만 보고는 내 딸인지 남인지
-                      가릴 수 없다. 바꿀 수 없는 값을 하나 옆에 둔다.
-                      서버가 가려서 내려준다(supabase/join-request-email.sql). 아직 안
-                      돌렸으면 이 값이 없고, 그때는 괄호를 아예 안 그린다. */}
-                  {request.email_masked && (
-                    <span className="min-w-0 truncate text-[13px] font-medium text-muted-foreground">
-                      ({request.email_masked})
+                  {/* 이름은 끝까지 남고 이메일만 줄어든다. 누구를 들일지 정하는 자리라
+                      이름이 잘리면 안 된다. */}
+                  <div className="flex min-w-0 flex-1 items-baseline gap-[5px]">
+                    <span className="shrink-0 text-[15.5px] font-bold tracking-[-0.015em] text-foreground">
+                      {request.display_name}
                     </span>
-                  )}
+                    {/* 이름은 신청자가 직접 적는 값이라 '딸'만 보고는 내 딸인지 남인지
+                        가릴 수 없다. 바꿀 수 없는 값을 하나 옆에 둔다.
+                        서버가 가려서 내려준다(supabase/join-request-email.sql). 아직 안
+                        돌렸으면 이 값이 없고, 그때는 괄호를 아예 안 그린다. */}
+                    {request.email_masked && (
+                      <span className="min-w-0 truncate text-[13px] font-medium text-muted-foreground">
+                        ({request.email_masked})
+                      </span>
+                    )}
+                  </div>
                 </div>
-                {/* 되돌릴 수 없는 판단을 하는 자리라 32 → 40px. */}
-                <Button
-                  variant="outline"
-                  className="h-10 shrink-0 rounded-[11px] px-3.5 text-sm font-semibold text-muted-foreground"
-                  disabled={deciding === request.id}
-                  onClick={() => decide(request, false)}
-                >
-                  거절
-                </Button>
-                <Button
-                  className="h-10 shrink-0 rounded-[11px] px-[15px] text-sm font-bold"
-                  disabled={deciding === request.id}
-                  onClick={() => decide(request, true)}
-                >
-                  승인
-                </Button>
+                {/* 되돌릴 수 없는 판단을 하는 자리라 32 → 40px.
+                    반반으로 나누지 않는다. 승인이 훨씬 흔한 쪽이라 그쪽에 남은 자리를 준다 —
+                    반반이면 둘이 똑같이 그럴듯해 보인다. */}
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    className="h-10 shrink-0 rounded-[11px] px-5 text-sm font-semibold text-muted-foreground"
+                    disabled={deciding === request.id}
+                    onClick={() => decide(request, false)}
+                  >
+                    거절
+                  </Button>
+                  <Button
+                    className="h-10 flex-1 rounded-[11px] text-sm font-bold"
+                    disabled={deciding === request.id}
+                    onClick={() => decide(request, true)}
+                  >
+                    승인
+                  </Button>
+                </div>
               </div>
             ))}
             {error && <p className="m-0 text-[13px] font-medium text-destructive">{error}</p>}
