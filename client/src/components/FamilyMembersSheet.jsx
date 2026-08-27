@@ -5,8 +5,8 @@ import { Button } from '@/components/ui/button';
 import RenameSheet from './RenameSheet';
 import CopyButton from './CopyButton';
 import { useFamily } from '../FamilyContext';
-import { approveJoinRequest, rejectJoinRequest, renameFamily } from '../family';
-import { OWNER_TAG_PALETTE, memberTagColorClass } from '../utils/tagColor';
+import { approveJoinRequest, rejectJoinRequest, renameFamily, renameMember } from '../family';
+import { OWNER_TAG_PALETTE, memberTagColorClass, nameTagColorClass } from '../utils/tagColor';
 import { formatDate } from '../utils/date';
 import useBackClose from '../utils/useBackClose';
 
@@ -15,6 +15,7 @@ export default function FamilyMembersSheet({ onClose }) {
   useBackClose(onClose);
   const { family, members, user, joinRequests, refreshFamily } = useFamily();
   const [renameOpen, setRenameOpen] = useState(false);
+  const [myNameOpen, setMyNameOpen] = useState(false);
   const [deciding, setDeciding] = useState(null);
   const [error, setError] = useState('');
 
@@ -48,57 +49,97 @@ export default function FamilyMembersSheet({ onClose }) {
           </SheetTitle>
         </SheetHeader>
 
-        {/* 이 창을 여는 이유의 절반은 "누구 초대하려고"다. 그런데 예전에는 코드가 본문과
-            같은 크기의 회색 글씨로 적혀 있어서, 열어놓고도 뭘 해야 하는지 몰랐다.
-            상자로 떼어내고 코드를 크게 키운다 — 열자마자 "이걸 보내면 되는구나"가
-            먼저 읽혀야 한다. */}
-        <div className="mx-5 mb-3 rounded-2xl border border-primary/25 bg-primary/5 px-4 py-3.5">
-          <p className="m-0 text-xs font-semibold text-primary">가족 초대코드</p>
-          {/* 복사는 코드 옆에 둔다. 밑에 두면 무엇을 복사하는 버튼인지 한 번 짚어봐야
-              하는데, 바로 옆에 있으면 그 물음이 아예 생기지 않는다. */}
-          <div className="mt-1 flex items-center gap-3">
-            <p className="m-0 min-w-0 flex-1 font-mono text-[26px] leading-tight font-bold tracking-[0.18em] text-foreground">
-              {family.invite_code}
-            </p>
-            <CopyButton
-              value={family.invite_code}
-              label="복사"
-              copiedLabel="복사됨"
-              className="h-9 shrink-0 rounded-xl border border-border bg-card px-3 text-sm"
-            />
-          </div>
-          <p className="m-0 mt-2.5 text-xs break-keep text-muted-foreground">
-            코드를 받은 사람이 참여를 신청하면, 여기서 승인해야 들어와요.
-          </p>
-        </div>
-
-        {/* 초대 코드는 짧아서 우연히 맞힐 수도 있다. 그래서 코드가 맞아도 여기서 승인해야 들어온다. */}
+        {/* 승인이 초대 코드보다 위에 있다. 승인은 기한이 있는 일이고(상대가 기다리는 중이다)
+            초대 코드는 언제든 볼 수 있는 값이다. 코드가 위에 있던 시절에는 스크롤해야
+            승인이 나왔다.
+            초대 코드는 짧아서 우연히 맞힐 수도 있다. 그래서 코드가 맞아도 여기서 승인해야
+            들어온다. */}
         {joinRequests.length > 0 && (
-          <div className="mx-5 flex flex-col gap-2 rounded-xl border border-primary/30 bg-primary/5 p-3">
-            <p className="m-0 flex items-center gap-1.5 text-xs font-semibold text-primary">
-              <UserPlus className="size-4" />
-              참여를 기다리는 사람이 {joinRequests.length}명 있어요
-            </p>
+          <div className="mx-5 mb-3 flex flex-col gap-2.5 rounded-2xl border-[1.5px] border-primary bg-primary/4 p-3.5">
+            <div className="flex items-center gap-2">
+              <span className="flex size-[26px] shrink-0 items-center justify-center rounded-full bg-primary">
+                <UserPlus className="size-[15px] text-primary-foreground" strokeWidth={2.3} />
+              </span>
+              <p className="m-0 flex-1 text-[15px] font-bold tracking-[-0.015em] text-foreground">
+                참여를 기다리는 사람 <span className="tabular-nums">{joinRequests.length}명</span>
+              </p>
+            </div>
+
+            {/* 신청자 줄을 흰 카드 안에 넣는다. 보라 배경 위에 바로 두면 버튼 두 개가
+                배경과 붙어서 어디까지가 누를 자리인지 흐려진다. */}
             {joinRequests.map((request) => (
-              <div key={request.id} className="flex items-center gap-2">
-                <span className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground">{request.display_name}</span>
+              <div key={request.id} className="flex items-center gap-2.5 rounded-xl bg-card px-3 py-[11px]">
+                {/* 구성원 목록과 같은 동그라미. 아직 가족이 아니라 tag_color가 없어서
+                    이름에서 색을 뽑는다(nameTagColorClass) — 같은 이름이면 언제 봐도 같은
+                    색이라, 승인하고 나서 목록에 설 때 색이 안 바뀐다. */}
+                <span
+                  className={`flex size-[30px] shrink-0 items-center justify-center rounded-full text-[11.5px] font-bold text-white ${
+                    nameTagColorClass(request.display_name) ?? OWNER_TAG_PALETTE[0]
+                  }`}
+                >
+                  {request.display_name.slice(0, 3)}
+                </span>
+                {/* 이름은 끝까지 남고 이메일만 줄어든다. 누구를 들일지 정하는 자리라
+                    이름이 잘리면 안 된다. */}
+                <div className="flex min-w-0 flex-1 items-baseline gap-[5px]">
+                  <span className="shrink-0 text-[15.5px] font-bold tracking-[-0.015em] text-foreground">
+                    {request.display_name}
+                  </span>
+                  {/* 이름은 신청자가 직접 적는 값이라 '딸'만 보고는 내 딸인지 남인지
+                      가릴 수 없다. 바꿀 수 없는 값을 하나 옆에 둔다.
+                      서버가 가려서 내려준다(supabase/join-request-email.sql). 아직 안
+                      돌렸으면 이 값이 없고, 그때는 괄호를 아예 안 그린다. */}
+                  {request.email_masked && (
+                    <span className="min-w-0 truncate text-[13px] font-medium text-muted-foreground">
+                      ({request.email_masked})
+                    </span>
+                  )}
+                </div>
+                {/* 되돌릴 수 없는 판단을 하는 자리라 32 → 40px. */}
                 <Button
-                  size="sm"
                   variant="outline"
-                  className="h-8 rounded-lg px-3"
+                  className="h-10 shrink-0 rounded-[11px] px-3.5 text-sm font-semibold text-muted-foreground"
                   disabled={deciding === request.id}
                   onClick={() => decide(request, false)}
                 >
                   거절
                 </Button>
-                <Button size="sm" className="h-8 rounded-lg px-3" disabled={deciding === request.id} onClick={() => decide(request, true)}>
+                <Button
+                  className="h-10 shrink-0 rounded-[11px] px-[15px] text-sm font-bold"
+                  disabled={deciding === request.id}
+                  onClick={() => decide(request, true)}
+                >
                   승인
                 </Button>
               </div>
             ))}
-            {error && <p className="m-0 text-xs text-destructive">{error}</p>}
+            {error && <p className="m-0 text-[13px] font-medium text-destructive">{error}</p>}
           </div>
         )}
+
+        {/* 코드는 읽는 것이고 복사는 누르는 것이라 자리를 나눈다. 한 줄에 같이 두면 여섯
+            글자와 버튼이 자리를 다투는데, 떼어놓으면 그만큼 코드가 커진다(26 → 29px).
+            회색이다. 화면에 보라 카드는 하나만 — 위 승인 카드와 나란히 보라면 어느 쪽이
+            급한지 알 수 없다. 테두리도 걷었다. 이 앱에서 테두리는 누르거나 입력하는
+            것의 표시다. */}
+        <div className="mx-5 mb-3 flex flex-col gap-2.5 rounded-2xl bg-secondary/60 p-4">
+          <div className="flex items-center justify-between gap-2">
+            <p className="m-0 text-[13px] font-bold tracking-[-0.01em] text-muted-foreground">초대 코드</p>
+            {/* 이 창을 여는 가장 큰 이유가 코드를 전달하는 것이라 채운 버튼이다. */}
+            <CopyButton
+              value={family.invite_code}
+              label="복사"
+              copiedLabel="복사됨"
+              className="h-9 shrink-0 rounded-[10px] bg-primary px-3.5 text-[13.5px] font-bold text-primary-foreground"
+            />
+          </div>
+          <p className="m-0 font-mono text-[29px] leading-none font-bold tracking-[0.14em] text-foreground">
+            {family.invite_code}
+          </p>
+          <p className="m-0 text-[13px] leading-snug font-medium break-keep text-muted-foreground">
+            코드를 받은 사람이 참여를 신청하면, 여기서 승인해야 들어와요.
+          </p>
+        </div>
 
         {/* '혼자 쓰는 중/가족 N명'은 구성원 목록의 머리말이다. 한때 승인 대기 상자 위에
             있었는데, 그러면 "혼자 쓰는 중" 밑에 참여 신청이 붙어 서로 다른 이야기가 한
@@ -112,28 +153,51 @@ export default function FamilyMembersSheet({ onClose }) {
             사람이 자연히 대표가 된다. 따로 넘겨주는 기능은 없다. */}
         <ul className="m-0 flex list-none flex-col gap-1 px-5 pt-2">
           {members.map((member, index) => (
-            <li key={member.user_id} className="flex items-center gap-3 rounded-xl px-1 py-2.5">
+            <li key={member.user_id} className="flex items-center gap-3 rounded-xl px-0.5 py-3">
               <span
-                className={`flex size-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white ${
+                className={`flex size-[38px] shrink-0 items-center justify-center rounded-full text-[12.5px] font-bold text-white ${
                   memberTagColorClass(member) ?? OWNER_TAG_PALETTE[0]
                 }`}
               >
                 {member.display_name.slice(0, 3)}
               </span>
-              <span className="flex min-w-0 flex-1 flex-col">
-                <span className="truncate text-sm font-semibold text-foreground">
-                  {member.display_name}
-                  {member.user_id === user.id && <span className="ml-1.5 text-xs font-normal text-primary">나</span>}
+              <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                <div className="flex items-center gap-1.5">
+                  <span className="min-w-0 truncate text-[15.5px] font-bold tracking-[-0.015em] text-foreground">
+                    {member.display_name}
+                  </span>
+                  {/* 글자만 있으면 이름의 일부처럼 읽힌다("아들 나"). 뱃지로 떼어놓는다. */}
+                  {member.user_id === user.id && (
+                    <span className="shrink-0 rounded-[5px] bg-primary px-1.5 py-px text-xs font-bold text-primary-foreground">
+                      나
+                    </span>
+                  )}
                   {/* 권한이 더 있는 건 아니고, 누구에게 물어보면 되는지 알려주는 표시다.
                       혼자면 물어볼 사람도 나뿐이라 붙일 이유가 없다. */}
                   {index === 0 && members.length > 1 && (
-                    <span className="ml-1.5 rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-bold text-accent-foreground">
+                    <span className="shrink-0 rounded-[5px] bg-accent px-1.5 py-px text-xs font-bold text-primary">
                       대표
                     </span>
                   )}
+                </div>
+                <span className="text-[13px] font-medium tabular-nums text-muted-foreground">
+                  {formatDate(member.created_at)}부터 함께
                 </span>
-                <span className="text-xs text-muted-foreground">{formatDate(member.created_at)}부터 함께</span>
-              </span>
+              </div>
+              {/* 내 줄에만 붙는다. 남의 이름은 바꿀 수 없다 — renameMember는 이 가족에서
+                  쓰는 내 이름만 바꾼다.
+                  테두리를 두르는 이유는 글자만 있는 버튼 금지 규칙의 아이콘 판이다.
+                  아이콘만 덩그러니 있으면 장식인지 누를 것인지 알 수 없다. */}
+              {member.user_id === user.id && (
+                <button
+                  type="button"
+                  onClick={() => setMyNameOpen(true)}
+                  aria-label="내 이름 바꾸기"
+                  className="flex size-[34px] shrink-0 items-center justify-center rounded-[10px] border border-input"
+                >
+                  <Pencil className="size-4 text-muted-foreground" />
+                </button>
+              )}
             </li>
           ))}
         </ul>
@@ -150,6 +214,21 @@ export default function FamilyMembersSheet({ onClose }) {
               await refreshFamily();
             }}
             onClose={() => setRenameOpen(false)}
+          />
+        )}
+
+        {myNameOpen && (
+          <RenameSheet
+            title="내 이름 바꾸기"
+            label="내 이름"
+            description="이 가족에서 쓰는 이름이에요. 기프티콘에 적힌 이름도 함께 바뀌어요."
+            initialValue={members.find((m) => m.user_id === user.id)?.display_name || ''}
+            placeholder="예: 아빠"
+            onSubmit={async (name) => {
+              await renameMember(family.id, name);
+              await refreshFamily();
+            }}
+            onClose={() => setMyNameOpen(false)}
           />
         )}
       </SheetContent>

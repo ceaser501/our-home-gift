@@ -652,6 +652,10 @@ create table if not exists public.family_join_requests (
   family_id uuid not null references public.families(id) on delete cascade,
   user_id uuid not null references auth.users(id) on delete cascade,
   display_name text not null,
+  -- 승인 화면에서 누구인지 가릴 근거. display_name은 신청자가 직접 적는 값이라
+  -- '딸'이라고만 적혀 있으면 내 딸인지 남인지 알 수 없다.
+  -- 가린 값만 적는다(supabase/join-request-email.sql).
+  email_masked text,
   status text not null default 'pending', -- pending | approved | rejected
   created_at timestamptz not null default now(),
   decided_at timestamptz,
@@ -667,6 +671,23 @@ create policy "join_requests select" on public.family_join_requests
   for select to authenticated
   using (user_id = auth.uid() or public.is_family_member(family_id));
 
+-- 이메일을 가린다. dau****@gmail.com 꼴이다.
+--
+-- 도메인을 남기는 이유는, 그게 없으면 아는 주소인지 알아볼 근거가 사라지기 때문이다.
+-- 앞 세 글자와 도메인이면 '내가 아는 그 사람'인지는 가려지고, 모르는 사람에게 주소
+-- 전체를 알려주지는 않는다.
+create or replace function public.mask_email(addr text)
+returns text
+language sql
+immutable
+as $$
+  select case
+    when addr is null or position('@' in addr) = 0 then null
+    -- 앞이 세 글자보다 짧으면 있는 만큼만 남는다. left()가 알아서 그렇게 한다.
+    else left(split_part(addr, '@', 1), 3) || '****@' || split_part(addr, '@', 2)
+  end;
+$$;
+
 -- 초대 코드로 참여 신청. 코드가 맞아도 바로 들어가지지 않고 대기 상태가 된다.
 create or replace function public.request_join_family(code text, member_name text)
 returns json
@@ -677,6 +698,7 @@ as $$
 declare
   found_family public.families;
   clean_name text := btrim(member_name);
+  my_email text;
 begin
   if auth.uid() is null then
     raise exception '로그인이 필요해요.';
@@ -716,10 +738,13 @@ begin
     raise exception '이 가족에는 아무도 없어서 승인해줄 사람이 없어요. 새 가족을 만들어주세요.';
   end if;
 
-  insert into public.family_join_requests (family_id, user_id, display_name)
-  values (found_family.id, auth.uid(), clean_name)
+  select public.mask_email(email) into my_email from auth.users where id = auth.uid();
+
+  insert into public.family_join_requests (family_id, user_id, display_name, email_masked)
+  values (found_family.id, auth.uid(), clean_name, my_email)
   on conflict (family_id, user_id) do update
     set display_name = excluded.display_name,
+        email_masked = excluded.email_masked,
         status = 'pending',
         created_at = now(),
         decided_at = null,

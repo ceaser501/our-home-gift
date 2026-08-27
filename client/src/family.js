@@ -81,7 +81,7 @@ export async function requestJoinFamily(code, memberName) {
 export async function listPendingJoinRequests(familyId) {
   const { data, error } = await supabase
     .from('family_join_requests')
-    .select('id, user_id, display_name, created_at')
+    .select('id, user_id, display_name, created_at, email_masked')
     .eq('family_id', familyId)
     .eq('status', 'pending')
     .order('created_at');
