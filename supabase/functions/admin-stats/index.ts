@@ -66,9 +66,12 @@ Deno.serve(async (req) => {
   // 이 앱에서 사람을 가리키는 값은 원래 이메일이다 — 카카오·네이버·구글 어느 쪽으로
   // 들어와도 이메일이 같으면 같은 계정으로 본다. 관리자도 같은 기준을 쓴다.
   // (supabase/admin-by-email.sql)
+  // owner까지 함께 읽는다. 명단을 고칠 수 있는 사람인지를 화면이 알아야 '관리자 관리'
+  // 메뉴를 세울지 정할 수 있다. 다만 그 메뉴가 부르는 자리(resource=admins)에서는 이 값을
+  // 믿지 않고 다시 확인한다 — 메뉴를 감추는 것은 안 보이게 하는 일이지 막는 일이 아니다.
   const { data: row, error: adminError } = await admin
     .from('admin_users')
-    .select('email')
+    .select('email, owner')
     .eq('email_key', (auth.user.email || '').trim().toLowerCase())
     .maybeSingle();
 
@@ -237,14 +240,44 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ rows, min_age_days: minAgeDays }), { headers: jsonHeaders });
   }
 
-  // 관리자 명단 고치기. 회원 관리 화면에서 다른 사람을 관리자로 넣고 뺀다.
-  // 여기까지 온 사람은 이미 관리자다(위에서 확인했다). 자기 자신을 빼거나 마지막 한 명을
-  // 빼는 것은 admin_set_admin이 막는다. 그 판단을 함수 안에 둔 이유는 admin-stats.sql 주석 참고.
+  // 관리자 명단. 보는 것도 고치는 것도 주인 계정만 할 수 있다.
+  //
+  // 관리자면 누구나 고칠 수 있게 두면, 한 사람만 넣어줘도 그 사람이 다른 사람을 넣을 수
+  // 있고 그렇게 늘어난 명단은 되돌리기 어렵다. 명단을 쥐는 손은 하나여야 한다.
+  //
+  // 누가 부르는지는 토큰에서 꺼낸 이메일로만 판단한다. 화면이 보낸 값은 안 본다 —
+  // 그러면 아무나 자기를 주인이라고 적어 보낼 수 있다.
   if (resource === 'admins') {
+    const actorEmail = (auth.user.email || '').trim().toLowerCase();
+    const { data: isOwner, error: ownerError } = await admin.rpc('is_admin_owner', {
+      check_email: actorEmail,
+    });
+    if (ownerError) {
+      return new Response(
+        JSON.stringify({ error: `주인 계정인지 확인하지 못했어요: ${ownerError.message} (supabase/admin-users.sql을 실행했는지 확인해주세요)` }),
+        { status: 500, headers: jsonHeaders },
+      );
+    }
+    if (!isOwner) {
+      // 관리자이긴 하지만 명단을 고칠 수는 없는 사람. 무엇이 모자란지까지는 알려주지 않는다.
+      return new Response(JSON.stringify({ error: '이 화면은 주인 계정만 볼 수 있어요.', reason: 'not_owner' }), {
+        status: 403,
+        headers: jsonHeaders,
+      });
+    }
+
+    if (req.method === 'GET') {
+      const { data: rows, error } = await admin.rpc('admin_roster');
+      if (error) {
+        return new Response(JSON.stringify({ error: `명단을 읽지 못했어요: ${error.message}` }), { status: 500, headers: jsonHeaders });
+      }
+      return new Response(JSON.stringify({ rows: rows ?? [] }), { headers: jsonHeaders });
+    }
+
     if (req.method !== 'POST') {
       return new Response(JSON.stringify({ error: '알 수 없는 동작이에요.' }), { status: 400, headers: jsonHeaders });
     }
-    let payload: { action?: string; user_id?: string; memo?: string };
+    let payload: { action?: string; email?: string; memo?: string };
     try {
       payload = await req.json();
     } catch {
@@ -254,23 +287,27 @@ Deno.serve(async (req) => {
     if (payload.action !== 'add' && payload.action !== 'remove') {
       return new Response(JSON.stringify({ error: '알 수 없는 동작이에요.' }), { status: 400, headers: jsonHeaders });
     }
-    if (!payload.user_id) {
+    const target = (payload.email || '').trim().toLowerCase();
+    if (!target) {
       return new Response(JSON.stringify({ error: '어떤 계정인지 알 수 없어요.' }), { status: 400, headers: jsonHeaders });
     }
 
-    const { data: result, error: setError } = await admin.rpc('admin_set_admin', {
-      target_id: payload.user_id,
-      make_admin: payload.action === 'add',
-      actor_id: auth.user.id,
-      memo_text: payload.memo ?? null,
-    });
+    // 이메일로 넣고 뺀다. uuid로 다루던 시절에는 아직 가입하지 않은 사람을 미리 올릴 수
+    // 없었고(계정이 있어야 uuid가 있다), 계정을 지운 관리자는 목록에서 사라져서 뺄
+    // 수조차 없었다.
+    const { data: result, error: setError } = await admin.rpc(
+      payload.action === 'add' ? 'admin_add' : 'admin_drop',
+      payload.action === 'add'
+        ? { actor_email: actorEmail, target_email: target, memo_text: payload.memo ?? null }
+        : { actor_email: actorEmail, target_email: target },
+    );
     if (setError) {
       return new Response(
-        JSON.stringify({ error: `관리자 명단을 고치지 못했어요: ${setError.message} (supabase/admin-stats.sql을 다시 실행했는지 확인해주세요)` }),
+        JSON.stringify({ error: `관리자 명단을 고치지 못했어요: ${setError.message} (supabase/admin-users.sql을 실행했는지 확인해주세요)` }),
         { status: 500, headers: jsonHeaders },
       );
     }
-    // 함수가 막은 경우(자기 자신·마지막 한 명 등)는 이유를 그대로 화면에 보여준다.
+    // 함수가 막은 경우(주인은 못 뺀다, 이미 있다 등)는 이유를 그대로 화면에 보여준다.
     if (!result?.ok) {
       return new Response(JSON.stringify({ error: result?.error || '관리자 명단을 고치지 못했어요.' }), { status: 400, headers: jsonHeaders });
     }
@@ -355,7 +392,8 @@ Deno.serve(async (req) => {
     },
   };
 
-  return new Response(JSON.stringify({ ...data, pricing, viewer: { email: auth.user.email } }), {
-    headers: jsonHeaders,
-  });
+  return new Response(
+    JSON.stringify({ ...data, pricing, viewer: { email: auth.user.email, owner: Boolean(row.owner) } }),
+    { headers: jsonHeaders },
+  );
 });

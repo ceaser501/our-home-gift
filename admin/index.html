@@ -406,6 +406,8 @@ body.has-bar .auth-main{min-height:calc(100vh - 58px)}
       <a data-page="gifticons">기프티콘 관리</a>
       <a data-page="families">가족 관리</a>
       <a data-page="storage">미아 사진</a>
+      <!-- 주인 계정에만 세운다. 서버도 다시 확인하므로, 이 줄을 손으로 되살려도 못 들어간다. -->
+      <a data-page="admins" id="nav-admins" style="display:none">관리자 관리</a>
     </nav>
     <div class="side-foot"><span id="side-email"></span></div>
   </aside>
@@ -536,6 +538,42 @@ body.has-bar .auth-main{min-height:calc(100vh - 58px)}
           <thead><tr>
             <th style="width:36px"></th><th>파일</th><th>가족</th>
             <th class="num">크기</th><th>올라온 날</th><th class="num">지난 날</th><th>왜 미아인가</th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 관리자 관리. 주인 계정에만 보인다(openPage에서 세운다).
+       명단을 쥐는 손은 하나여야 해서, 관리자면 누구나 고칠 수 있게 두지 않았다. -->
+  <div id="page-admins" style="display:none">
+    <div class="card">
+      <div class="card-head"><h2>관리자 넣기</h2>
+        <span class="card-note">여기 올린 이메일로 로그인하면 이 화면에 들어옵니다</span></div>
+      <p class="muted" style="margin:0 0 12px">
+        아직 가입하지 않은 이메일도 미리 올릴 수 있어요. 그 사람이 나중에 로그인하면 그대로 이어집니다.<br>
+        <b>모아콘에서 계정을 지워도 관리자 자격은 남습니다.</b> 명단은 계정이 아니라 이메일을 기준으로 봐요.
+      </p>
+      <div class="field-row" style="align-items:flex-end">
+        <label class="field" style="max-width:280px">이메일
+          <input id="admin-email" class="search" type="email" placeholder="someone@gmail.com" autocomplete="off">
+        </label>
+        <label class="field" style="max-width:220px">메모 (없어도 됩니다)
+          <input id="admin-memo" class="search" type="text" placeholder="개발자" autocomplete="off">
+        </label>
+        <button class="save-btn" id="btn-admin-add" style="margin-bottom:2px">넣기</button>
+      </div>
+      <div class="form-actions" style="margin-top:10px">
+        <span class="form-err" id="admin-err" style="display:none"></span>
+        <span class="muted" id="admin-ok"></span>
+      </div>
+    </div>
+    <div class="card table-card" style="margin-top:16px">
+      <div class="table-wrap">
+        <table id="admin-table">
+          <thead><tr>
+            <th>이메일</th><th>메모</th><th>계정</th><th>마지막 로그인</th><th>넣은 날</th><th style="width:74px"></th>
           </tr></thead>
           <tbody></tbody>
         </table>
@@ -1064,6 +1102,9 @@ const PAGES={
   users:{
     title:'회원 관리', search:'이메일로 검색', filter:false,
     // {n:1}인 칸은 숫자라 값·머리글을 오른쪽 정렬한다.
+    // 마지막 '관리자' 칸은 보여주기만 한다. 넣고 빼는 것은 '관리자 관리' 한 곳에서만 —
+    // 같은 명단을 고치는 자리가 둘이면 규칙이 갈라진다. 여기서는 가입한 사람만 지정할 수
+    // 있었고, 계정을 지운 관리자는 이 목록에 없어서 뺄 수조차 없었다.
     columns:['이메일','가입 방법','소속 가족','가족에서 이름',{l:'등록',n:1},{l:'사용',n:1},{l:'알림',n:1},'약관','최근 로그인','가입일','관리자'],
     row:r=>{
       const fams=r.families||[];
@@ -1087,9 +1128,7 @@ const PAGES={
       <td>${r.agreed?'<span class="tag tag-unused">동의</span>':'<span class="tag tag-hidden">미동의</span>'}</td>
       <td class="muted">${dt(r.last_sign_in_at)}</td>
       <td class="muted">${dt(r.created_at)}</td>
-      <td>${r.is_admin
-        ? `<button class="row-btn" data-admin-off data-uid="${esc(r.id)}" data-email="${esc(r.email)}">해제</button>`
-        : `<button class="row-btn" data-admin-on data-uid="${esc(r.id)}" data-email="${esc(r.email)}">지정</button>`}</td>`;
+      <td>${r.is_admin?'<span class="tag tag-admin">관리자</span>':'<span class="muted">—</span>'}</td>`;
     },
   },
   gifticons:{
@@ -1136,31 +1175,6 @@ async function fetchList(){
   return callApi('?'+p.toString());
 }
 
-// 관리자 명단에 넣고 빼기. 실제 판단(자기 자신인지, 마지막 한 명인지)은 서버가 한다.
-// 여기서는 무엇을 하려는지 확인만 받는다.
-function bindAdminToggles(tbody){
-  tbody.querySelectorAll('[data-admin-on],[data-admin-off]').forEach(btn=>{
-    btn.addEventListener('click',async()=>{
-      const on=btn.hasAttribute('data-admin-on');
-      const who=btn.dataset.email||'이 계정';
-      // 관리자로 만드는 것은 통계뿐 아니라 회원 이메일·가족 구성까지 다 열어주는 일이다.
-      // 무엇을 넘기는 것인지 적어두고 확인을 받는다.
-      const ask=on
-        ? who+' 계정을 관리자로 지정할까요?\n\n통계는 물론 회원 이메일과 가족 구성까지 모두 볼 수 있게 되고, 다른 사람을 관리자로 지정할 수도 있게 됩니다.'
-        : who+' 계정을 관리자에서 뺄까요?\n\n다음부터 관리자 화면에 들어오지 못합니다.';
-      if(!confirm(ask)) return;
-      btn.disabled=true;
-      try{
-        await callApi('?resource=admins',{action:on?'add':'remove',user_id:btn.dataset.uid});
-        renderList();
-      }catch(err){
-        alert((on?'관리자로 지정하지 못했어요: ':'관리자에서 빼지 못했어요: ')+err.message);
-        btn.disabled=false;
-      }
-    });
-  });
-}
-
 async function renderList(){
   const def=PAGES[LIST.page];
   const tbody=document.querySelector('#list-table tbody');
@@ -1178,7 +1192,6 @@ async function renderList(){
     ? rows.map(r=>'<tr>'+def.row(r)+'</tr>').join('')
     : `<tr class="empty-row"><td colspan="${def.columns.length}">${LIST.q?'검색 결과가 없어요':'아직 데이터가 없어요'}</td></tr>`;
 
-  if(LIST.page==='users') bindAdminToggles(tbody);
 
   const count=document.getElementById('list-count');
   count.textContent = LIST.page==='gifticons' && data.amount_sum
@@ -1485,6 +1498,86 @@ async function handleOrphanDelete(){
   }
 }
 
+// ===================== 관리자 관리 =====================
+//
+// 명단은 계정이 아니라 이메일로 다룬다. 아직 가입하지 않은 사람을 미리 올릴 수 있고,
+// 모아콘에서 계정을 지운 관리자도 목록에 그대로 남는다 — uuid로 다루던 시절에는 그
+// 사람이 목록에서 사라져서 뺄 수조차 없었다.
+function resetAdminForm(){
+  document.getElementById('admin-email').value='';
+  document.getElementById('admin-memo').value='';
+  document.getElementById('admin-ok').textContent='';
+  hideErr('admin-err');
+}
+
+async function loadAdmins(){
+  const tbody=document.querySelector('#admin-table tbody');
+  tbody.innerHTML='<tr class="empty-row"><td colspan="6">불러오는 중…</td></tr>';
+  try{
+    const data=await callApi('?resource=admins');
+    const rows=data.rows||[];
+    if(rows.length===0){
+      tbody.innerHTML='<tr class="empty-row"><td colspan="6">아직 없어요</td></tr>';
+      return;
+    }
+    tbody.innerHTML=rows.map(r=>`
+      <tr>
+        <td class="strong">${esc(r.email)}${r.owner?' <span class="tag tag-admin">주인</span>':''}</td>
+        <td>${dash(r.memo)}</td>
+        <td>${r.joined
+          ? '<span class="muted">있음</span>'
+          : '<span class="muted">아직 없음</span>'}</td>
+        <td>${dtm(r.last_sign_in_at)}</td>
+        <td>${dt(r.created_at)}</td>
+        <td>${r.owner||r.permanent
+          ? '<span class="muted">—</span>'
+          : `<button class="row-btn" data-admin-drop="${esc(r.email)}">빼기</button>`}</td>
+      </tr>`).join('');
+    tbody.querySelectorAll('[data-admin-drop]').forEach(btn=>{
+      btn.addEventListener('click',()=>dropAdmin(btn));
+    });
+  }catch(err){
+    tbody.innerHTML='<tr class="empty-row"><td colspan="6">불러오지 못했어요</td></tr>';
+    showErr('admin-err','명단을 불러오지 못했어요: '+err.message);
+  }
+}
+
+async function addAdmin(){
+  const btn=document.getElementById('btn-admin-add');
+  const email=document.getElementById('admin-email').value.trim();
+  const memo=document.getElementById('admin-memo').value.trim();
+  hideErr('admin-err');
+  document.getElementById('admin-ok').textContent='';
+  if(!email){ showErr('admin-err','이메일을 적어주세요.'); return; }
+  btn.disabled=true;
+  try{
+    await callApi('?resource=admins',{action:'add',email,memo});
+    resetAdminForm();
+    document.getElementById('admin-ok').textContent=email+' 을(를) 넣었어요.';
+    loadAdmins();
+  }catch(err){
+    showErr('admin-err','넣지 못했어요: '+err.message);
+  }finally{
+    btn.disabled=false;
+  }
+}
+
+// 빼는 것은 되돌리기 쉬운 일이라(다시 넣으면 된다) 한 번만 확인받는다.
+async function dropAdmin(btn){
+  const email=btn.dataset.adminDrop;
+  if(!confirm(email+' 을(를) 관리자에서 뺄까요?\n\n다음부터 관리자 화면에 들어오지 못합니다.')) return;
+  btn.disabled=true;
+  hideErr('admin-err');
+  try{
+    await callApi('?resource=admins',{action:'remove',email});
+    document.getElementById('admin-ok').textContent=email+' 을(를) 뺐어요.';
+    loadAdmins();
+  }catch(err){
+    showErr('admin-err','빼지 못했어요: '+err.message);
+    btn.disabled=false;
+  }
+}
+
 let CURRENT_PAGE='dash';
 function openPage(name){
   CURRENT_PAGE=name;
@@ -1492,15 +1585,17 @@ function openPage(name){
   const isDashLike=name==='dash'||name==='sample';
   // ''로 두어 CSS의 display(flex 등)가 그대로 살게 한다. 'block'을 박으면 카드 간격(gap)이 죽는다.
   document.getElementById('page-dash').style.display=isDashLike?'':'none';
-  const ownPage=name==='notices'||name==='storage';
+  const ownPage=name==='notices'||name==='storage'||name==='admins';
   document.getElementById('page-list').style.display=(isDashLike||ownPage)?'none':'block';
   document.getElementById('page-notices').style.display=name==='notices'?'':'none';
   document.getElementById('page-storage').style.display=name==='storage'?'':'none';
+  document.getElementById('page-admins').style.display=name==='admins'?'':'none';
   document.getElementById('mode-seg').style.display=isDashLike?'':'none';
   document.getElementById('sample-note').style.display=name==='sample'?'':'none';
   document.getElementById('page-title').textContent=
     name==='dash'?'대시보드':name==='sample'?'대시보드 샘플'
-      :name==='notices'?'공지사항':name==='storage'?'미아 사진':PAGES[name].title;
+      :name==='notices'?'공지사항':name==='storage'?'미아 사진'
+      :name==='admins'?'관리자 관리':PAGES[name].title;
 
   if(isDashLike){
     LIST.page=null;
@@ -1510,6 +1605,7 @@ function openPage(name){
   }
   if(name==='notices'){ LIST.page=null; resetNoticeForm(); loadNotices(); return; }
   if(name==='storage'){ LIST.page=null; loadOrphans(); return; }
+  if(name==='admins'){ LIST.page=null; resetAdminForm(); loadAdmins(); return; }
 
   const def=PAGES[name];
   // 다른 화면으로 옮기면 검색어·페이지는 처음부터 시작한다. 회원에서 걸어둔 검색어가
@@ -1572,6 +1668,9 @@ async function connect(){
     REAL_STATS=STATS;
     show('view-dash');
     document.getElementById('side-email').textContent=STATS.viewer?.email||'';
+    // 관리자 관리는 주인 계정에만 세운다. 감추는 것은 눈에 안 띄게 하는 일이지 막는 일이
+    // 아니라서, 그 메뉴가 부르는 자리에서 서버가 다시 확인한다.
+    document.getElementById('nav-admins').style.display=STATS.viewer?.owner?'':'none';
     fillKpis();
     renderAll();
   }catch(err){
@@ -1606,6 +1705,14 @@ async function start(){
   // 새로고침은 지금 보고 있는 화면만 다시 불러온다.
   document.getElementById('orphan-days').addEventListener('change',loadOrphans);
   document.getElementById('btn-orphan-reload').addEventListener('click',loadOrphans);
+  document.getElementById('btn-admin-add').addEventListener('click',addAdmin);
+  // 이메일 칸에서 엔터로도 넣는다. 여기까지 와서 마우스를 다시 잡는 것은 번거롭다.
+  document.getElementById('admin-email').addEventListener('keydown',e=>{
+    if(e.key==='Enter'){ e.preventDefault(); addAdmin(); }
+  });
+  document.getElementById('admin-memo').addEventListener('keydown',e=>{
+    if(e.key==='Enter'){ e.preventDefault(); addAdmin(); }
+  });
   document.getElementById('btn-orphan-del').addEventListener('click',handleOrphanDelete);
   document.getElementById('btn-orphan-all').addEventListener('click',()=>{
     const all=ORPHAN_PICKED.size===ORPHANS.length&&ORPHANS.length>0;
