@@ -354,6 +354,81 @@ describe('위치를 못 잡았을 때', () => {
 });
 
 // 권한을 이미 준 사람에게만 위치를 잡는다. 문제는 "이미 줬는지"를 아는 방법이었다.
+// 찾아봤는데 근처에 없는 경우. 그냥 비워두면 '켜기'를 눌러 허락까지 해준 사람에게
+// 아무 일도 안 일어난 것으로 보인다 — 버튼이 헛돈 것인지 근처에 없는 것인지가
+// 화면에 안 적혀 있었다.
+describe('찾아봤는데 없을 때', () => {
+  // 그냥 비워두면 '켜기'를 눌러 허락까지 해준 사람에게 아무 일도 안 일어난 것으로 보인다.
+  // 버튼이 헛돈 것인지 근처에 없는 것인지가 화면에 안 적혀 있었다.
+  const EMPTY = /500m 안에서 쓸 수 있는 기프티콘이 없어요/;
+
+  it('근처에 없으면 없다고 적는다', async () => {
+    searchNearbyStores.mockResolvedValue([{ name: '스타벅스 강남점', distance: 1200 }]);
+
+    render(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
+
+    expect(await screen.findByText(EMPTY, {}, { timeout: 3000 })).toBeTruthy();
+  });
+
+  // 찾기 전에는 아무 말도 하지 않는다. best가 null인 것만으로는 '아직 안 찾았다'와
+  // '찾았는데 없다'가 갈리지 않는데, 화면에 적을 말은 그 둘이 서로 다르다.
+  it('찾기 전에는 없다고 하지 않는다', async () => {
+    searchNearbyStores.mockImplementation(() => new Promise(() => {}));
+
+    render(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
+
+    await new Promise((r) => setTimeout(r, 300));
+    expect(screen.queryByText(EMPTY)).toBeNull();
+  });
+
+  // 닫는 것은 '지금 쓸 게 없어서 치운다'는 뜻이지 '오늘 하루 안 보겠다'가 아니다.
+  // 그래서 날짜로 적어두지 않고, 다시 찾으면 다시 뜬다.
+  it('닫으면 사라지고, 다시 찾으면 다시 뜬다', async () => {
+    searchNearbyStores.mockResolvedValue([{ name: '스타벅스 강남점', distance: 1200 }]);
+
+    render(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
+    await screen.findByText(EMPTY, {}, { timeout: 3000 });
+
+    await act(async () => screen.getByRole('button', { name: '주변 안내 닫기' }).click());
+    expect(screen.queryByText(EMPTY)).toBeNull();
+    // 오늘 하루를 적어두는 그 자리는 건드리지 않는다.
+    expect(localStorage.getItem('nearby-banner-dismissed-on')).toBeNull();
+
+    // 캐시가 가로채지 않도록 비운다. 실제로는 10분이 지났거나 300m를 움직인 상황이다
+    // (여기서는 distanceBetween이 늘 0이라 좌표를 바꿔도 같은 자리로 본다).
+    localStorage.removeItem('nearby-banner:result');
+    await act(async () => appStateHandler({ isActive: true }));
+
+    expect(await screen.findByText(EMPTY, {}, { timeout: 3000 })).toBeTruthy();
+  });
+
+  // 이 앱은 계산대 앞에서 열었다 닫았다 하는 앱이다. 홈을 눌렀다 3초 뒤 돌아올 때마다
+  // 방금 치운 것이 다시 서면 성가시다. 캐시를 쓴다는 건 다시 찾지 않았다는 뜻이다.
+  it('같은 자리에서 다시 열면 닫아둔 채로 있다', async () => {
+    searchNearbyStores.mockResolvedValue([{ name: '스타벅스 강남점', distance: 1200 }]);
+
+    render(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
+    await screen.findByText(EMPTY, {}, { timeout: 3000 });
+    await act(async () => screen.getByRole('button', { name: '주변 안내 닫기' }).click());
+
+    await act(async () => appStateHandler({ isActive: true }));
+
+    await new Promise((r) => setTimeout(r, 300));
+    expect(screen.queryByText(EMPTY)).toBeNull();
+  });
+
+  // 알려줄 기프티콘이 아예 없는 사람에게는 '없어요'도 할 말이 아니다.
+  it('알려줄 기프티콘이 없으면 없다고도 하지 않는다', async () => {
+    render(
+      <NearbyBanner gifticons={[{ id: '9', brand: '스타벅스', status: 'used' }]} onPick={() => {}} />
+    );
+
+    await new Promise((r) => setTimeout(r, 300));
+    expect(screen.queryByText(EMPTY)).toBeNull();
+  });
+
+});
+
 describe('권한을 어떻게 아는가', () => {
   it("웹뷰가 'prompt'라고 해도, 적어둔 위치가 있으면 잡는다", async () => {
     // 안드로이드 웹뷰에는 사이트별 권한 설정이 없어서 앱 권한이 있어도 'prompt'가 나온다.

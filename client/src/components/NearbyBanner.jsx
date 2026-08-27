@@ -213,6 +213,12 @@ export default function NearbyBanner({ gifticons, onPick }) {
   const [asking, setAsking] = useState(false);
   // 눌렀는데 답이 안 온다. 설정으로 가는 길을 덧붙인다.
   const [stuck, setStuck] = useState(false);
+  // 위치를 잡고 매장까지 찾아본 뒤인가. best가 null인 것만으로는 '아직 안 찾았다'와
+  // '찾았는데 없다'가 갈리지 않는데, 화면에 적을 말은 그 둘이 서로 다르다.
+  const [searched, setSearched] = useState(false);
+  // '없어요' 띠를 닫았다. 아래 dismissed와 달리 날짜로 적어두지 않는다 — 오늘 하루
+  // 안 보겠다는 뜻이 아니라 지금 쓸 게 없어서 치우는 것이라, 다시 찾으면 다시 뜬다.
+  const [emptyClosed, setEmptyClosed] = useState(false);
   const [dismissed, setDismissed] = useState(() => readDismissedToday());
   // 설정에서 켜고 끄는 값. 꺼두면 매장을 뒤지지도 않는다 — 카카오 검색에는 하루 상한이
   // 걸려 있어서, 안 보여줄 것을 찾느라 그걸 쓰면 정작 '매장' 버튼이 막힌다.
@@ -343,7 +349,14 @@ export default function NearbyBanner({ gifticons, onPick }) {
       if (cached) {
         // 캐시에 "근처에 없더라"는 결과(best: null)도 담아둔다. 없다는 걸 확인하는 데도
         // 검색이 들기 때문에, 없음도 10분간 기억해야 상한이 안 샌다.
-        if (!cancelled) setBest(cached.best);
+        //
+        // 닫아둔 '없어요' 띠는 여기서 되살리지 않는다. 캐시를 쓴다는 건 다시 찾지 않았다는
+        // 뜻이고, 이 앱은 계산대 앞에서 열었다 닫았다 하는 앱이라 그때마다 방금 치운 것이
+        // 다시 서면 성가시다.
+        if (!cancelled) {
+          setBest(cached.best);
+          setSearched(true);
+        }
         return;
       }
 
@@ -382,6 +395,10 @@ export default function NearbyBanner({ gifticons, onPick }) {
         // 캐시를 못 남겨도 동작에는 지장 없다.
       }
       setBest(found);
+      setSearched(true);
+      // 진짜로 다시 찾은 자리다. 10분이 지났거나 300m를 움직였다는 뜻이라, 닫아둔
+      // '없어요' 띠를 여기서 되살린다. 같은 자리에서 여닫는 것과는 갈린다.
+      setEmptyClosed(false);
     }
 
     run();
@@ -528,6 +545,38 @@ export default function NearbyBanner({ gifticons, onPick }) {
         <span className="min-w-0 flex-1 truncate text-[12.5px] font-medium text-muted-foreground">
           지하나 실내에서는 위치가 안 잡힐 수 있어요
         </span>
+      </div>
+    );
+  }
+
+  //   4) 찾아봤는데 없다 — 왜 비어 있는지 알려준다
+  //
+  // 그냥 비워두면 '켜기'를 눌러 허락까지 해준 사람에게 아무 일도 안 일어난 것으로 보인다.
+  // 버튼이 헛돈 것인지 근처에 없는 것인지가 화면에 안 적혀 있었다.
+  //
+  // 500m라는 숫자를 그대로 적는다. 왜 안 뜨는지를 그 숫자가 설명한다 — 600m짜리 스타벅스가
+  // 있는 사람에게 '근처에 없어요'는 틀린 말로 읽힌다. '500m 이내 근처에'까지 갔다가
+  // 되돌렸다. 두 마디가 같은 말이라 하나면 된다.
+  if (searched && !emptyClosed && hasUsable) {
+    return (
+      // ③과 같은 얇은 회색. 알려줄 것이 없는 상태라 눈에 덜 걸리는 편이 맞다.
+      <div className="flex w-full items-center gap-2.5 border-b border-border bg-muted/40 py-[7px] pr-1.5 pl-3.5">
+        <MapPinOff className="size-4 shrink-0 text-muted-foreground" />
+        <span className="min-w-0 flex-1 truncate text-[12.5px] font-medium text-muted-foreground">
+          500m 안에서 쓸 수 있는 기프티콘이 없어요
+        </span>
+        {/* ③(지하)에는 없는 X가 여기에만 있다. 지하 안내는 위치가 잡히는 순간 저절로
+            사라지지만 이건 자리를 옮기기 전까지 계속 서 있어서, 치울 길이 있어야 한다.
+            닫아도 날짜로 적어두지 않는다(emptyClosed) — 오늘 하루 안 보겠다는 뜻이 아니라
+            지금 쓸 게 없어서 치우는 것이라, 다시 찾으면 다시 뜬다. */}
+        <button
+          type="button"
+          onClick={() => setEmptyClosed(true)}
+          aria-label="주변 안내 닫기"
+          className="flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground"
+        >
+          <X className="size-4" />
+        </button>
       </div>
     );
   }
