@@ -12,7 +12,6 @@ import ImageViewerModal from './components/ImageViewerModal';
 import NearbyStoresSheet from './components/NearbyStoresSheet';
 import InstallPrompt from './components/InstallPrompt';
 import GalleryScanSheet from './components/GalleryScanSheet';
-import WelcomeBanner from './components/WelcomeBanner';
 import FirstRunScreen from './components/FirstRunScreen';
 import NoticesSheet from './components/NoticesSheet';
 import NearbyBanner from './components/NearbyBanner';
@@ -30,7 +29,6 @@ import {
 } from './api';
 import { blockingNotice, importantNotices, remainingLabel } from './utils/notices';
 import { subscribeToGifticons, subscribeToFamily, subscribeToNotices } from './realtime';
-import { ensureSampleGifticon } from './sampleData';
 import { daysUntil, todayStr } from './utils/date';
 import { hasNewVersion } from './utils/version';
 import { hasSharedImages, takeSharedImages, discardSharedImages } from './utils/shareTarget';
@@ -79,8 +77,6 @@ export default function App() {
   const [error, setError] = useState('');
 
   const [search, setSearch] = useState('');
-  // 환영 인사가 목록 위 띠를 쓰고 있는지. 주변 매장 안내가 이걸 보고 자리를 비켜준다.
-  const [welcomeShown, setWelcomeShown] = useState(false);
   // 목록을 다시 읽을 때마다 오르는 수.
   const [refreshTick, setRefreshTick] = useState(0);
   // 점검 공지. 게시된 동안에는 등록을 막고, 등록을 누르면 이걸 그 자리에서 보여준다.
@@ -281,19 +277,6 @@ export default function App() {
     };
   }, [family.id]);
 
-  // ⚠️ 테스트 빌드에서만: 이 가족에 샘플 기프티콘이 없으면 하나 넣어준다.
-  // 전체 초기화를 하면 가족과 계정까지 지워져서 기프티콘이 남을 수 없기 때문에,
-  // 화면을 열 때마다 확인해서 채워 넣는다. 누가 언제 들어와도 같은 샘플을 보게 된다.
-  useEffect(() => {
-    let cancelled = false;
-    ensureSampleGifticon({ familyId: family.id, ownerName: myName, userId: user.id }).then((added) => {
-      if (added && !cancelled) refreshRef.current();
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [family.id, myName, user.id]);
-
   // 카카오톡이나 갤러리에서 "공유 → 모아콘"으로 넘어왔으면, 사용자는 이미 등록할 사진을
   // 고른 것이다. 목록을 보여주고 다시 + 를 누르게 하지 않고 등록 창을 바로 열어준다.
   useEffect(() => {
@@ -447,19 +430,18 @@ export default function App() {
 
       <InstallPrompt />
 
-      {/* 목록 위 띠는 한 자리뿐이다. 둘이 같이 뜨면 목록이 두 줄만큼 밀려서 정작 봐야 할
-          기프티콘이 화면 밖으로 나간다.
+      {/* 목록 위 띠는 주변 매장 안내 하나만 쓴다.
+          기프티콘을 못 쓰고 버리는 진짜 이유는 기한을 몰라서가 아니라 매장 앞을 지나가면서도
+          가진 걸 떠올리지 못해서라, 이 앱에서 가장 힘이 센 자리다.
 
-          그 자리는 주변 매장 안내가 갖는다. 기프티콘을 못 쓰고 버리는 진짜 이유는 기한을
-          몰라서가 아니라 매장 앞을 지나가면서도 가진 걸 떠올리지 못해서라, 이 앱에서 가장
-          힘이 센 자리다. 공지는 여기서 뺐다 — 종 안으로 들어갔고, 등록을 막는 점검 공지는
-          등록을 누르는 그 자리에서 뜬다.
+          여기에 다른 것을 번갈아 세우지 않는다. 한때 환영 인사가 이 자리를 함께 썼는데,
+          처음 열면 환영 인사 · 그다음엔 위치 켜기 · 켜고 나면 매장 안내로 같은 자리의 말이
+          계속 바뀌었다. 자리 하나가 세 가지를 말하면 무엇을 보는 자리인지가 사라진다.
+          처음 온 사람에게 할 말은 띠가 아니라 제 화면에서 해야 한다.
 
-          환영 인사만 예외로 이 자리를 쓴다. 가입하고 처음 들어온 날 한 번뿐이고, 그날은
-          기프티콘이 없어서 매장 안내가 어차피 띄울 것이 없다. */}
-      {!isFirstRun && <WelcomeBanner onShownChange={setWelcomeShown} />}
-
-      <NearbyBanner gifticons={gifticons} onPick={setSearch} yielded={welcomeShown} />
+          공지도 여기서 뺐다 — 종 안으로 들어갔고, 등록을 막는 점검 공지는 등록을 누르는
+          그 자리에서 뜬다. */}
+      <NearbyBanner gifticons={gifticons} onPick={setSearch} />
 
       {!isFirstRun && (
       <FilterBar

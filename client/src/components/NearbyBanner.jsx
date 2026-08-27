@@ -186,13 +186,9 @@ function formatDistance(meters) {
   return `${(meters / 1000).toFixed(1)}km`;
 }
 
-// yielded: 중요 공지가 위 띠를 쓰고 있다는 뜻. 앱 맨 위 띠는 하나만 둔다 — 둘이 겹치면
-// 목록이 두 줄만큼 밀린다. 급한 공지가 있는 동안에는 그쪽에 자리를 내주고, 공지가
-// 끝나거나 사용자가 그 공지를 닫으면 다시 이 자리로 돌아온다.
-//
-// 자리를 내주는 동안에도 주변 검색은 그대로 해둔다. 공지를 닫는 순간 빈 띠가 잠깐
-// 떴다가 내용이 채워지는 것보다, 이미 알아둔 것을 바로 보여주는 편이 낫다.
-export default function NearbyBanner({ gifticons, onPick, yielded = false }) {
+// 목록 위 띠는 이 컴포넌트 하나가 쓴다. 한때 환영 인사에게 자리를 내주는 길(yielded)이
+// 있었는데, 환영 인사를 걷어내면서 같이 걷었다 — 자리를 나눠 쓰는 상대가 없다.
+export default function NearbyBanner({ gifticons, onPick }) {
   const [best, setBest] = useState(null);
   // 권한은 있는데 위치를 못 잡은 상태. 지하·실내에서 그렇다.
   const [unlocatable, setUnlocatable] = useState(false);
@@ -390,7 +386,7 @@ export default function NearbyBanner({ gifticons, onPick, yielded = false }) {
   const hasUsable = gifticons.some((g) => g.status !== "used" && g.brand?.trim());
 
   // 이 자리에 무엇을 띄울지. 위에서부터 먼저 이긴다.
-  if (!bannerOn || dismissed || yielded) return null;
+  if (!bannerOn || dismissed) return null;
 
   //   1) 찾았다 — 평소의 매장 안내
   if (best && liveCount > 0) return renderStore();

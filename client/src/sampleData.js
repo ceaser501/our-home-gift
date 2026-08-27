@@ -1,11 +1,14 @@
 import { createGifticon, listGifticons } from './api';
 import { makeSampleThumb } from './sampleThumbs';
 
-// ⚠️ 테스트 전용. 가족마다 상태가 제각각인 샘플 기프티콘을 갖게 한다.
+// ⚠️ 테스트 전용. 상태가 제각각인 샘플 기프티콘을 한 벌 넣어준다.
 //
-// "전체 데이터 초기화"는 가족과 계정까지 모두 지운다. 기프티콘은 가족에 속해야만 존재할 수
-// 있어서(그 가족의 구성원에게만 보인다) 초기화를 견디는 기프티콘은 만들 수 없다. 대신 앱을
-// 열 때마다 "이 가족에 샘플이 있나?"를 보고 없으면 넣어주면, 누가 언제 들어와도 늘 보인다.
+// 넣는 것은 로고를 길게 눌러 여는 테스트 도구에서만 한다
+// (client/src/components/ResetAllDataButton.jsx). 앱이 알아서 넣지 않는다.
+//
+// "전체 데이터 초기화"는 가족과 계정까지 지우므로 초기화를 견디는 샘플은 만들 수 없다.
+// 초기화한 뒤 샘플이 필요하면 다시 눌러서 넣는다 — 한 번 더 누르는 것과, 새로 깐 사람이
+// 묻지도 않은 기프티콘 여섯 개를 보는 것을 견주면 전자가 낫다.
 //
 // 실사용 배포에는 VITE_TEST_TOOLS가 없으므로 아무 일도 일어나지 않는다.
 
@@ -146,33 +149,15 @@ export function isSampleDataEnabled() {
   return Boolean(import.meta.env.VITE_TEST_TOOLS);
 }
 
-// 테스트 도구에서 목데이터를 지웠다는 표시. 이게 없으면 앱을 열 때마다 자동으로 다시
-// 채워 넣어서, 지워도 새로고침 한 번에 되살아난다. "지웠다"는 뜻을 기기에 기억해둔다.
-// 다시 넣기를 누르면 이 표시가 풀린다.
-const OPT_OUT_KEY = 'sample-data-opt-out';
-
-export function setSampleOptOut(optedOut) {
-  try {
-    if (optedOut) localStorage.setItem(OPT_OUT_KEY, '1');
-    else localStorage.removeItem(OPT_OUT_KEY);
-  } catch {
-    /* 저장이 막힌 곳에서는 자동 채우기가 그대로 도는 것뿐이라 넘어간다 */
-  }
-}
-
-function isSampleOptedOut() {
-  try {
-    return localStorage.getItem(OPT_OUT_KEY) === '1';
-  } catch {
-    return false;
-  }
-}
-
 // 하나라도 새로 넣었으면 true. 이미 다 있거나 테스트 빌드가 아니면 false.
-// force: 테스트 도구에서 직접 "추가"를 누른 경우. 지웠다는 표시를 무시하고 넣는다.
-export async function ensureSampleGifticon({ familyId, ownerName, userId, force = false }) {
+//
+// 부르는 곳은 테스트 도구의 '목데이터 넣기' 하나뿐이다. 한때 앱을 열 때마다 저절로
+// 불렀는데, 그러면 새로 깔 때마다 묻지도 않은 샘플 여섯 개가 목록에 서 있었다.
+// 지워도 새로고침 한 번에 되살아나서 '지웠다'는 표시를 따로 기억해야 했고, 그 표시가
+// 있는 것만으로도 이 파일이 하는 일이 두 가지가 됐다.
+// 넣는 것은 누를 때만 한다. 그러면 표시도 필요 없다.
+export async function ensureSampleGifticon({ familyId, ownerName, userId }) {
   if (!isSampleDataEnabled() || !familyId) return false;
-  if (!force && isSampleOptedOut()) return false;
 
   try {
     // 샘플이 여섯이라 하나씩 물어보면 왕복이 여섯 번이다. 목록을 한 번만 읽고 맞춰본다.

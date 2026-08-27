@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { DatabaseBackup, PackagePlus, ScanEye, Trash2 } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { deleteSampleGifticons, resetAllData } from '../api';
-import { SAMPLE_PREFIX, ensureSampleGifticon, setSampleOptOut } from '../sampleData';
+import { SAMPLE_PREFIX, ensureSampleGifticon } from '../sampleData';
 import { clearScanCache, countCachedReads } from '../utils/scanCache';
 import AlertDialog from './AlertDialog';
 import useBackClose from '../utils/useBackClose';
@@ -93,9 +93,6 @@ export default function TestDataMenu({ familyId, ownerName, userId, children }) 
     setRunning('remove');
     try {
       const count = await deleteSampleGifticons(familyId, SAMPLE_PREFIX);
-      // 앱은 열릴 때마다 빠진 샘플을 자동으로 채운다. 그대로 두면 지워도 새로고침 한 번에
-      // 되살아나므로, 지웠다는 뜻을 기기에 남겨 자동 채우기를 멈춘다.
-      setSampleOptOut(true);
       setNotice({
         tone: 'success',
         title: '목데이터를 지웠어요',
@@ -114,10 +111,7 @@ export default function TestDataMenu({ familyId, ownerName, userId, children }) 
     setMenuOpen(false);
     setRunning('add');
     try {
-      // 지웠다는 표시를 풀고 넣는다. force를 주는 이유는 이 표시가 풀리는 것과
-      // 넣는 것이 같은 순간에 일어나야 하기 때문이다.
-      setSampleOptOut(false);
-      const added = await ensureSampleGifticon({ familyId, ownerName, userId, force: true });
+      const added = await ensureSampleGifticon({ familyId, ownerName, userId });
       setNotice({
         tone: 'success',
         title: added ? '목데이터를 넣었어요' : '이미 다 있어요',

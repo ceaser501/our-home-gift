@@ -26,7 +26,6 @@ vi.mock('../realtime', () => ({
   subscribeToNotices: () => () => {},
 }));
 
-vi.mock('../sampleData', () => ({ ensureSampleGifticon: vi.fn(async () => {}) }));
 vi.mock('../utils/version', () => ({ hasNewVersion: vi.fn(async () => false) }));
 vi.mock('../utils/shareTarget', () => ({
   hasSharedImages: () => false,
@@ -57,7 +56,6 @@ vi.mock('../components/Header', () => stub('header'));
 vi.mock('../components/FilterBar', () => stub('filter'));
 vi.mock('../components/GifticonList', () => stub('list'));
 vi.mock('../components/InstallPrompt', () => stub('install'));
-vi.mock('../components/WelcomeBanner', () => stub('welcome'));
 vi.mock('../components/NearbyBanner', () => stub('nearby'));
 vi.mock('../components/PullToRefresh', () => stub('pull'));
 vi.mock('../components/UploadSheet', () => stub('upload-sheet'));
