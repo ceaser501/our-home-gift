@@ -195,10 +195,12 @@ jobs:
               --notes-file notes.md
           fi
 
-      # 릴리스가 만들어지면 다운로드 링크를 메일로 보낸다.
+      # 릴리스가 만들어지면 받는 곳들을 메일로 보낸다.
       #
       # 폰에서 설치할 사람이 매번 저장소 → Releases → 새 태그를 찾아 들어가는 대신,
-      # 지메일함에서 링크 한 번으로 받게 하려는 것이다. Gmail의 SMTP로 보내므로 따로
+      # 지메일함에서 링크 한 번으로 받게 하려는 것이다. APK 하나만 적던 것을 셋으로
+      # 늘렸다 — 아이폰 쓰는 사람에게 APK만 보내면 받을 것이 없고, 관리자 화면은
+      # 주소를 아는 사람이 적어서 물어보고서야 들어갔다. Gmail의 SMTP로 보내므로 따로
       # 드는 돈이 없다. 시크릿 두 개(GMAIL_ADDRESS, GMAIL_APP_PASSWORD)가 없으면
       # 조용히 건너뛴다 — 메일은 곁가지라, 이것 때문에 빌드가 실패로 보이면 안 된다.
       # (시크릿이 있는지는 여기가 아니라 아래에서 본다 — if: 안에서는 secrets를 읽을 수 없다.)
@@ -234,17 +236,123 @@ jobs:
           echo "받는 사람 ${RCPT_N}명"
           VERSION="${{ steps.version.outputs.name }}"
           URL="https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/moacon-$VERSION.apk"
+          # 웹과 관리자 주소. 저장소 이름에서 만든다 — 이름이 바뀌어도 따라간다.
+          PAGES="https://${{ github.repository_owner }}.github.io/${GITHUB_REPOSITORY#*/}"
           # 한글 제목은 MIME으로 감싸야 안 깨진다.
-          SUBJECT="=?UTF-8?B?$(printf '모아콘 앱 %s' "$VERSION" | base64 -w0)?="
+          SUBJECT="=?UTF-8?B?$(printf '모아콘 %s — 설치해서 봐주세요' "$VERSION" | base64 -w0)?="
+          # 글자만 읽는 메일 프로그램을 위해 두 벌로 보낸다(multipart/alternative).
+          # 앞에 둔 것이 텍스트, 뒤가 HTML이다 — 뒤엣것을 읽을 수 있으면 그것을 쓴다.
+          B="=_moacon_$VERSION"
           cat > mail.txt <<MAIL
           From: moacon build <$GMAIL_ADDRESS>
           To: $TO_LINE
           Subject: $SUBJECT
+          MIME-Version: 1.0
+          Content-Type: multipart/alternative; boundary="$B"
+
+          --$B
           Content-Type: text/plain; charset=UTF-8
+          Content-Transfer-Encoding: 8bit
 
-          모아콘 $VERSION 이 나왔어요. 폰에서 아래 링크를 눌러 설치하세요.
+          모아콘 $VERSION 이 나왔어요. 설치해서 봐주세요.
 
+          안드로이드 앱 (APK)
           $URL
+
+          웹 — 아이폰·PC는 이쪽입니다
+          $PAGES/
+
+          모아콘 관리자 — 명단에 올라 있는 계정만 들어갑니다
+          $PAGES/admin/
+
+          --$B
+          Content-Type: text/html; charset=UTF-8
+          Content-Transfer-Encoding: 8bit
+
+          <meta charset="utf-8">
+          <div style="margin:0;padding:0;background:#f4f3f8;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f4f3f8;padding:26px 14px;">
+          <tr><td align="center">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:470px;width:100%;border-collapse:separate;font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;">
+
+          <tr><td style="background:#241C6B;border-radius:18px 18px 0 0;padding:28px 24px 24px;text-align:center;">
+          <img src="$PAGES/icon-192.png" width="54" height="54" alt="" style="display:block;margin:0 auto 13px;width:54px;height:54px;border:0;">
+          <div style="font-size:20px;font-weight:800;color:#ffffff;letter-spacing:-0.02em;line-height:1.3;">모아콘 $VERSION 이 나왔어요</div>
+          <div style="font-size:13.5px;color:#c9c3f0;line-height:1.6;margin-top:7px;">설치해서 한 번 봐주세요</div>
+          </td></tr>
+
+          <tr><td style="background:#ffffff;padding:24px 20px 22px;">
+
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #e7e5f0;border-radius:14px;border-collapse:separate;">
+          <tr><td style="padding:17px 17px 15px;">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"><tr>
+          <td width="44" style="padding-right:12px;vertical-align:top;">
+          <img src="$PAGES/icon-192.png" width="44" height="44" alt="" style="display:block;width:44px;height:44px;border:0;">
+          </td>
+          <td style="vertical-align:top;">
+          <div style="font-size:15.5px;font-weight:800;color:#1c1b22;letter-spacing:-0.02em;line-height:1.35;">안드로이드 앱</div>
+          <div style="font-size:12.5px;color:#6b6879;line-height:1.6;margin-top:3px;">폰에서 눌러 받으세요. 이 판 그대로입니다.</div>
+          </td></tr></table>
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:13px;">
+          <tr><td style="background:#5b4fe8;border-radius:11px;">
+          <a href="$URL" style="display:block;padding:13px 16px;text-align:center;font-size:14.5px;font-weight:700;color:#ffffff;text-decoration:none;letter-spacing:-0.01em;">APK 받기</a>
+          </td></tr></table>
+          </td></tr></table>
+
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #e7e5f0;border-radius:14px;border-collapse:separate;margin-top:11px;">
+          <tr><td style="padding:17px 17px 15px;">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"><tr>
+          <td width="44" style="padding-right:12px;vertical-align:top;">
+          <img src="$PAGES/icon-192.png" width="44" height="44" alt="" style="display:block;width:44px;height:44px;border:0;">
+          </td>
+          <td style="vertical-align:top;">
+          <div style="font-size:15.5px;font-weight:800;color:#1c1b22;letter-spacing:-0.02em;line-height:1.35;">웹</div>
+          <div style="font-size:12.5px;color:#6b6879;line-height:1.6;margin-top:3px;">아이폰과 PC는 이쪽입니다. 홈 화면에 추가하면 앱처럼 열려요.</div>
+          </td></tr></table>
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:13px;">
+          <tr><td style="border:1px solid #d9d6e6;border-radius:11px;">
+          <a href="$PAGES/" style="display:block;padding:12px 16px;text-align:center;font-size:14.5px;font-weight:700;color:#241C6B;text-decoration:none;letter-spacing:-0.01em;">웹에서 열기</a>
+          </td></tr></table>
+          </td></tr></table>
+
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #e7e5f0;border-radius:14px;border-collapse:separate;margin-top:11px;">
+          <tr><td style="padding:17px 17px 15px;">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"><tr>
+          <td width="44" style="padding-right:12px;vertical-align:top;">
+          <img src="$PAGES/admin/icon-192.png" width="44" height="44" alt="" style="display:block;width:44px;height:44px;border:0;">
+          </td>
+          <td style="vertical-align:top;">
+          <div style="font-size:15.5px;font-weight:800;color:#1c1b22;letter-spacing:-0.02em;line-height:1.35;">모아콘 관리자<span style="display:inline-block;margin-left:6px;padding:2px 7px;border-radius:6px;background:#FFF3CC;font-size:10.5px;font-weight:700;color:#7a5c00;vertical-align:2px;letter-spacing:0;">관리자 전용</span></div>
+          <div style="font-size:12.5px;color:#6b6879;line-height:1.6;margin-top:3px;">가입·등록·비용을 보는 화면이에요. 명단에 올라 있는 계정만 들어갑니다.</div>
+          </td></tr></table>
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:13px;">
+          <tr><td style="border:1px solid #d9d6e6;border-radius:11px;">
+          <a href="$PAGES/admin/" style="display:block;padding:12px 16px;text-align:center;font-size:14.5px;font-weight:700;color:#241C6B;text-decoration:none;letter-spacing:-0.01em;">관리자 열기</a>
+          </td></tr></table>
+          </td></tr></table>
+
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:18px;background:#f6f5fb;border-radius:12px;border-collapse:separate;">
+          <tr><td style="padding:14px 16px;">
+          <div style="font-size:12.5px;font-weight:800;color:#241C6B;letter-spacing:-0.01em;">설치할 때 경고가 두어 번 뜹니다. 정상이에요</div>
+          <div style="font-size:12px;color:#5f5c6e;line-height:1.8;margin-top:6px;">
+          1. "이런 유형의 파일은 기기에 위험을 줄 수 있습니다" &#8594; 그대로 받기<br>
+          2. "이 출처의 앱 설치 허용" &#8594; 켜기<br>
+          3. Play Protect 경고 &#8594; "자세히" &#8594; "무시하고 설치"
+          </div>
+          </td></tr></table>
+
+          </td></tr>
+
+          <tr><td style="background:#ffffff;border-radius:0 0 18px 18px;border-top:1px solid #eeecf4;padding:15px 20px 19px;text-align:center;">
+          <div style="font-size:11px;color:#9a97a8;line-height:1.7;">모아콘 &middot; 우리 집 기프티콘함</div>
+          </td></tr>
+
+          </table>
+          </td></tr>
+          </table>
+          </div>
+
+          --$B--
           MAIL
           # 히어독 들여쓰기를 걷어낸다(메일 헤더는 줄 앞 공백을 허용하지 않는다).
           sed -i 's/^          //' mail.txt
