@@ -80,6 +80,38 @@ fi
 
 if [ -n "$tracked_dirty" ] && [ -z "$allow_dirty" ]; then
   printf '%s\n' "$tracked_dirty" | sed 's/^/  /'
+
+  # 고쳐진 것이 package-lock.json뿐이면 대개 진짜 작업이 아니다.
+  #
+  # npm install은 lockfile을 그때 그 환경에 맞춰 다시 쓴다. 리눅스에서 라이브러리를
+  # 하나 넣으면 모든 플랫폼의 바이너리 목록이 적히고, 그걸 맥에서 npm install 하면
+  # 맥에 필요 없는 줄을 걷어낸다. 내용이 달라진 게 아니라 환경이 달라서 나는 차이다.
+  #
+  # 커밋하면 다음 사람이 반대 방향으로 또 고치게 되고, --allow-dirty로 밀면 빌드가
+  # 쓰는 파일을 빼고 나가는 셈이다. 되돌리는 것이 맞다 — 무엇을 하면 되는지 여기서
+  # 그대로 적어준다. 이 말을 몰라서 매번 물어보게 되는 자리였다.
+  locks_only=1
+  while IFS= read -r line; do
+    case "${line#???}" in
+      *package-lock.json) ;;
+      *) locks_only=0 ;;
+    esac
+  done <<EOF
+$tracked_dirty
+EOF
+
+  if [ "$locks_only" = 1 ]; then
+    paths="$(printf '%s\n' "$tracked_dirty" | awk '{print $2}' | tr '\n' ' ')"
+    die "고쳐진 것이 package-lock.json뿐입니다. 대개 npm install이 이 기기에 맞춰
+   다시 쓴 것이지, 진짜 작업이 아닙니다. 되돌리고 다시 해주세요:
+
+     git checkout -- $paths
+     npm run release
+
+   다음부터는 npm ci 를 쓰시면 이 파일이 안 바뀝니다(적힌 그대로 설치합니다).
+   npm install 은 라이브러리를 새로 넣을 때만 쓰면 됩니다."
+  fi
+
   die "위 파일이 고쳐진 채로 커밋되지 않았습니다. 빌드는 태그만 보므로 이대로 밀면 빠집니다.
    커밋하고 다시 하시거나, 정말 빼고 나가려면 --allow-dirty 를 주세요:
      npm run release -- --allow-dirty"
