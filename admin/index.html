@@ -52,7 +52,11 @@ h2{font-size:13.5px;font-weight:650;color:var(--ink)}
 .main{padding:24px 32px 48px;display:flex;flex-direction:column;gap:24px;min-width:0}
 .top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:4px 0 6px}
 .brand{display:flex;align-items:center;gap:10px}
-.logo-mark{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:9px;background:var(--accent);color:var(--accent-ink);font-weight:800;font-size:15px}
+/* 로고. 예전에는 보라 네모에 '모' 한 글자를 찍어 대신했는데, 파비콘과 홈 화면 아이콘은
+   진짜 로고인데 정작 화면 안에서만 글자였다.
+   배경도 모서리도 걸지 않는다 — icon.svg가 제 배경(딥 퍼플)과 굴린 모서리(rx 22.3%)를
+   갖고 있어서, 그 위에 또 깎으면 굴린 자리가 잘려 각져 보인다. 앱에서 두 번 겪었다. */
+.logo-mark{display:block;width:30px;height:30px;flex:none}
 .controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .updated{font-size:11.5px;color:var(--muted)}
 .seg{display:inline-flex;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--card)}
@@ -248,7 +252,7 @@ body.has-bar .auth-main{min-height:calc(100vh - 58px)}
 .auth-brand{display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;margin-bottom:28px}
 /* 로고를 헤더의 30px 그대로 쓰면 첫 화면에서 존재감이 없다. 여기서는 이것 말고
    볼 것이 없으니 크게 둔다. */
-.auth-mark{display:inline-flex;align-items:center;justify-content:center;width:54px;height:54px;border-radius:17px;background:var(--accent);color:var(--accent-ink);font-weight:800;font-size:25px}
+.auth-mark{display:block;width:54px;height:54px;flex:none}
 .auth-title{font-size:19px;font-weight:750;letter-spacing:-0.02em}
 .auth-sub{font-size:12.5px;color:var(--muted);line-height:1.65}
 .auth-label{font-size:12px;color:var(--ink2);font-weight:600;margin-bottom:7px}
@@ -310,7 +314,7 @@ body.has-bar .auth-main{min-height:calc(100vh - 58px)}
   <div class="auth-main">
     <div class="auth">
       <div class="auth-brand">
-        <span class="auth-mark">모</span>
+        <img class="auth-mark" src="icon.svg?v=2" alt="">
         <div class="auth-title">모아콘 관리자</div>
         <div class="auth-sub">운영 현황을 보는 화면이에요.<br>앱에서 쓰는 계정으로 들어옵니다.</div>
       </div>
@@ -359,7 +363,7 @@ body.has-bar .auth-main{min-height:calc(100vh - 58px)}
   <div class="auth-main">
     <div class="auth">
       <div class="auth-brand">
-        <span class="auth-mark">모</span>
+        <img class="auth-mark" src="icon.svg?v=2" alt="">
         <div class="auth-title">들어올 수 없는 계정이에요</div>
         <div class="auth-sub"><b id="denied-email"></b> 계정은<br>관리자 명단에 없어요.<br>
           로그인은 됐지만 통계는 명단에 올라 있는 계정만 볼 수 있어요.</div>
@@ -373,7 +377,7 @@ body.has-bar .auth-main{min-height:calc(100vh - 58px)}
 <!-- Supabase 접속 정보가 없을 때(로컬 파일로 열었을 때)만 나온다. -->
 <div id="view-config" style="display:none">
   <div class="setup">
-    <h1><span class="logo-mark">모</span>모아콘 관리자</h1>
+    <h1><img class="logo-mark" src="icon.svg?v=2" alt="">모아콘 관리자</h1>
     <div class="hint">
       배포된 주소로 열면 이 화면은 나오지 않아요. 로컬 파일로 열었을 때만
       접속 정보를 한 번 넣어주세요(둘 다 앱이 쓰는 공개 값이라 비밀이 아니에요).
@@ -393,7 +397,7 @@ body.has-bar .auth-main{min-height:calc(100vh - 58px)}
 
 <div id="view-dash" class="shell" style="display:none">
   <aside class="side">
-    <div class="side-logo"><span class="logo-mark">모</span><span>모아콘 관리자</span></div>
+    <div class="side-logo"><img class="logo-mark" src="icon.svg?v=2" alt=""><span>모아콘 관리자</span></div>
     <nav>
       <a data-page="notices">공지사항</a>
       <a data-page="dash" class="on">대시보드</a>
