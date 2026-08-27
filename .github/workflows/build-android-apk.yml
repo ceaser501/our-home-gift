@@ -162,10 +162,31 @@ jobs:
       # 태그로 돌렸을 때만 Release를 만든다. 수동 실행은 시험 삼아 돌려보는 경우라
       # 위 첨부까지만 하고, 나눠줄 링크는 만들지 않는다.
       - name: Publish release
+        id: release
         if: startsWith(github.ref, 'refs/tags/app-v')
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # 이 판이 어느 가지에서 나왔는지 알아둔다.
+          #
+          # 사람이 둘 이상 태그를 따면 번호가 뒤섞인다 — 130은 이 사람 브랜치, 131은 저
+          # 사람 브랜치가 된다. 받은 쪽에서 "이게 뭐였지"를 알 길이 노트뿐인데, 거기에는
+          # 설치 안내만 있었다.
+          #
+          # 브랜치 이름은 태그에서 알 수 없어서(github.ref_name은 태그다) API에 물어본다.
+          # 태그는 대개 브랜치 끝에 달리므로 이 물음이 답을 준다. 끝이 아닌 자리에 달았으면
+          # 빈 값이 오고, 그때는 커밋만 적는다.
+          SHORT="$(git rev-parse --short HEAD)"
+          SUBJECT="$(git log -1 --pretty=%s)"
+          BRANCH="$(gh api "repos/${{ github.repository }}/commits/$(git rev-parse HEAD)/branches-where-head" \
+                      --jq '[.[].name] | join(", ")' 2>/dev/null || true)"
+          [ -z "$BRANCH" ] && BRANCH='(브랜치 끝이 아닌 커밋)'
+          {
+            echo "branch=$BRANCH"
+            echo "subject=$SUBJECT"
+            echo "short=$SHORT"
+          } >> "$GITHUB_OUTPUT"
+
           cat > notes.md <<'NOTES'
           안드로이드용 설치 파일입니다. 아래 `.apk`를 **폰에서** 받아 설치해주세요.
 
@@ -178,6 +199,12 @@ jobs:
           아이폰은 이 파일을 쓸 수 없습니다.
           https://ceaser501.github.io/our-home-gift/ 로 접속해서 홈 화면에 추가해주세요.
           NOTES
+          # 무엇이 든 판인지. 위 안내는 매번 같은 글이라, 다른 것은 여기뿐이다.
+          {
+            printf '\n---\n\n'
+            printf '**%s** · `%s`\n\n' "$BRANCH" "$SHORT"
+            printf '> %s\n' "$SUBJECT"
+          } >> notes.md
           # 이미 있으면 만들지 않고 파일만 갈아 끼운다.
           #
           # gh release create는 같은 이름이 있으면 그냥 실패한다. 빌드가 다 끝난 뒤 마지막
@@ -215,6 +242,10 @@ jobs:
           GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
           MAIL_TO_EXTRA: ${{ secrets.MAIL_TO_EXTRA }}
+          # 값으로 넘긴다. 스크립트 안에 글자로 박으면 커밋 제목에 든 따옴표가 셸을 깬다.
+          BUILD_BRANCH: ${{ steps.release.outputs.branch }}
+          BUILD_SUBJECT: ${{ steps.release.outputs.subject }}
+          BUILD_SHORT: ${{ steps.release.outputs.short }}
         run: |
           if [ -z "$GMAIL_ADDRESS" ] || [ -z "$GMAIL_APP_PASSWORD" ]; then
             echo "메일 시크릿이 없어 건너뜁니다."
@@ -240,6 +271,11 @@ jobs:
           PAGES="https://${{ github.repository_owner }}.github.io/${GITHUB_REPOSITORY#*/}"
           # 한글 제목은 MIME으로 감싸야 안 깨진다.
           SUBJECT="=?UTF-8?B?$(printf '모아콘 %s — 설치해서 봐주세요' "$VERSION" | base64 -w0)?="
+          # 커밋 제목에는 <, &, > 가 들어올 수 있다. HTML 쪽에 그대로 넣으면 화면이 깨진다.
+          esc_html() { printf '%s' "$1" | sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g'; }
+          BRANCH_HTML="$(esc_html "$BUILD_BRANCH")"
+          SUBJECT_HTML="$(esc_html "$BUILD_SUBJECT")"
+
           # 글자만 읽는 메일 프로그램을 위해 두 벌로 보낸다(multipart/alternative).
           # 앞에 둔 것이 텍스트, 뒤가 HTML이다 — 뒤엣것을 읽을 수 있으면 그것을 쓴다.
           B="=_moacon_$VERSION"
@@ -255,6 +291,9 @@ jobs:
           Content-Transfer-Encoding: 8bit
 
           모아콘 $VERSION 이 나왔어요. 설치해서 봐주세요.
+
+          $BUILD_BRANCH · $BUILD_SHORT
+          $BUILD_SUBJECT
 
           안드로이드 앱 (APK)
           $URL
@@ -279,6 +318,12 @@ jobs:
           <img src="$PAGES/icon-192.png" width="54" height="54" alt="" style="display:block;margin:0 auto 13px;width:54px;height:54px;border:0;">
           <div style="font-size:20px;font-weight:800;color:#ffffff;letter-spacing:-0.02em;line-height:1.3;">모아콘 $VERSION 이 나왔어요</div>
           <div style="font-size:13.5px;color:#c9c3f0;line-height:1.6;margin-top:7px;">설치해서 한 번 봐주세요</div>
+          </td></tr>
+
+          <!-- 무엇이 든 판인가. 사람이 둘 이상 태그를 따면 번호만으로는 알 수 없다. -->
+          <tr><td style="background:#2E2578;padding:11px 24px;text-align:center;">
+          <div style="font-size:12px;color:#ffffff;font-weight:700;letter-spacing:-0.01em;line-height:1.5;">$BRANCH_HTML <span style="color:#a49ce0;font-weight:400;">·</span> $BUILD_SHORT</div>
+          <div style="font-size:12px;color:#c9c3f0;line-height:1.6;margin-top:3px;word-break:keep-all;">$SUBJECT_HTML</div>
           </td></tr>
 
           <tr><td style="background:#ffffff;padding:24px 20px 22px;">
