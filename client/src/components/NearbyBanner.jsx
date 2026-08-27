@@ -2,11 +2,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { MapPin, MapPinOff, X } from "lucide-react";
 import { searchNearbyStores } from "../api";
 import {
+  checkLocationPermission,
   forgetCachedPosition,
   getFreshPosition,
-  hasSavedPosition,
   isNearbyBannerOn,
   readCachedPosition,
+  requestLocationPermission,
   saveCachedPosition,
   distanceBetween,
   NEARBY_BANNER_EVENT,
@@ -56,29 +57,6 @@ const DISMISS_KEY = "nearby-banner-dismissed-on";
 // 거절한 그날 또 물으면 조르는 것이 된다. 하루 쉬고 다음 날 다시 묻는다.
 const REFUSED_KEY = "nearby-permission-refused-on";
 
-// 시스템 창이 아예 안 뜬 것을 알아내는 문턱.
-//
-// 안드로이드는 두 번 거절당하면 그때부터 창을 띄우지 않고 곧장 거절을 돌려준다. 그러면
-// '켜기'를 눌러도 아무 일이 안 일어나서, 사용자 눈에는 버튼이 고장 난 것으로 보인다.
-// 창이 떴다면 사람이 읽고 누르는 시간이 드니 최소 몇백 밀리초는 걸린다. 눈 깜짝할 사이에
-// 거절이 돌아왔다면 창 자체가 없었던 것이다.
-//
-// 400ms로 둔다. 사람이 창을 보고 누르는 데 이보다 빠를 수는 없고, 창이 없을 때는 대개
-// 50ms 안에 돌아온다. 사이가 넓어서 어느 쪽으로든 잘못 볼 일이 드물다.
-const NO_DIALOG_MS = 400;
-
-// 눌렀는데 아무 답도 안 올 때, 설정으로 가는 길을 내주기까지 기다리는 시간.
-//
-// 위 400ms가 잡는 것은 '즉시 거절'이다. 그런데 폰 설정에서 위치 권한을 '허용 안 함'으로
-// 바꿔두면 웹뷰가 거절조차 안 돌려준다 — 성공도 실패도 안 부른다. 그러면 벽시계(10초)가
-// 칠 때까지 화면에 아무 변화가 없어서, 누른 사람 눈에는 버튼이 죽은 것이다. 실제로
-// "켜기가 눌리지 않는다"는 말이 여기서 나왔다.
-//
-// 시스템 창이 떴는지는 이쪽에서 알 길이 없다. 그래서 띠를 바꿔치우지 않고 한 줄을
-// 덧붙인다 — 창이 떠 있으면 그 창이 화면을 덮고 있어 안 보이고, 창이 안 떴다면
-// 이 한 줄이 유일한 길이다. 어느 쪽으로 틀려도 잃는 것이 없다.
-const SHOW_SETTINGS_MS = 1500;
-
 // 위치 권한을 새로 묻지 않는다. 앱을 열자마자 권한 창부터 들이밀면 거절당하기 딱 좋고,
 // 한 번 거절되면 매장 찾기까지 같이 막힌다. 이미 허용된 경우에만 현재 위치를 잡고,
 // 권한 상태를 알 수 없는 브라우저에서는 지난번 위치(매장 찾기를 써봤다면 남아 있다)로만 맞춰본다.
@@ -89,47 +67,32 @@ const SHOW_SETTINGS_MS = 1500;
 // 쓸 게 있어요"라고 먼저 말을 거는 자리다. 틀린 채로 말을 걸면 안 하느니만 못하다.
 const CACHE_MAX_AGE_MS = 30 * 60 * 1000;
 
-// 이 앱은 위치 권한을 새로 묻지 않는다. 앱을 열자마자 권한 창부터 들이밀면 거절당하기
-// 딱 좋고, 한 번 거절되면 매장 찾기까지 같이 막힌다. 그래서 "이미 준 사람"에게만 잡는다.
+// 이 앱은 위치 권한을 스스로 묻지 않는다. 앱을 열자마자 권한 창부터 들이밀면 거절당하기
+// 딱 좋고, 한 번 거절되면 매장 찾기까지 같이 막힌다. 그래서 상태를 먼저 물어보고, 아직
+// 안 준 사람에게는 이 자리에서 우리가 먼저 묻는다('켜기' 띠).
 //
-// 문제는 "이미 줬는지"를 아는 방법이었다. 한때 navigator.permissions.query만 봤는데,
-// 안드로이드 웹뷰에서는 앱 권한이 있어도 'prompt'를 돌려주는 일이 잦다 — 크롬과 달리
-// 웹뷰에는 사이트별 권한 설정이 없고 허용은 앱 권한으로 처리되기 때문이다. 그래서 이 띠는
-// 위치를 잡아본 적이 아예 없었고, 매장 찾기가 적어둔 옛 좌표만 계속 읽고 있었다.
-// 서울숲에서 매장 찾기를 한 번 쓴 뒤로 여의도에서도 서울숲이 떴던 게 이것이다.
-//
-// 그래서 근거를 하나 더 둔다 — 적어둔 위치가 있으면 매장 찾기가 한 번은 잡았다는 뜻이고,
-// 그건 곧 권한을 줬다는 뜻이다. 그러면 다시 잡아도 권한 창이 뜨지 않는다.
+// 상태를 어떻게 아는지는 checkLocationPermission에 적어뒀다. 한때는 알 길이 없어서
+// 눌러보고 되짚었는데(거절이 몇 밀리초 만에 왔나, 답이 아예 없나), 그 짐작이 다섯 판을
+// 잡아먹었다. 이제는 안드로이드에게 그대로 물어본다.
 async function getPositionSilently() {
-  let allowed = hasSavedPosition();
+  const permission = await checkLocationPermission();
 
-  try {
-    if (navigator.permissions?.query) {
-      const status = await navigator.permissions.query({ name: "geolocation" });
-      // 거절은 확실하다. 이때는 잡아보지 않는다 — 권한 창을 다시 띄우게 된다.
-      if (status.state === "denied") return { at: null };
-      if (status.state === "granted") allowed = true;
-    }
-  } catch {
-    // permissions API가 없으면 위의 "적어둔 위치가 있는가"로만 판단한다.
+  // 막혔다. 잡아봐야 창도 안 뜨고 실패만 한다.
+  if (permission === "denied") {
+    forgetCachedPosition();
+    return { at: null, blocked: true };
   }
+  // 아직 안 물어봤다. 시스템 창은 '켜기'를 눌렀을 때만 띄운다.
+  if (permission === "prompt") return { at: null, needsPermission: true };
 
-  // 한 번도 위치를 준 적이 없는 사람. 여기서 시스템 창을 띄우지는 않는다 — 대신 이
-  // 자리에서 우리가 먼저 물어본다(아래 '켜기' 띠).
-  if (!allowed) return { at: null, needsPermission: true };
-
+  // granted이거나, 물어볼 길이 없는 곳(옛 브라우저)이다. 후자는 예전처럼 잡아보고 판단한다.
   try {
     const fresh = await getFreshPosition();
     saveCachedPosition(fresh);
     return { at: fresh };
   } catch (err) {
-    // 권한이 없다. 거절(code 1)이거나, 웹뷰가 아무 답도 안 한 경우(no_answer)다.
-    //
-    // 예전에는 여기서 조용히 넘어갔는데, 그러면 폰 설정에서 위치를 끄고 앱을 연 사람에게
-    // 아무 안내도 안 떴다. 적어둔 좌표가 남아 있어 위에서 '권한 있음'으로 통과한 뒤,
-    // 여기서 실패하고는 입을 다무는 자리였다.
-    //
-    // 그 좌표를 지워야 한다. 안 지우면 다음에 앱을 열어도 같은 길로 또 들어온다.
+    // 상태를 못 물어보는 곳에서 권한이 없으면 여기로 온다. 적어둔 좌표는 '권한을 준 적이
+    // 있다'는 증거로도 쓰이므로 같이 지운다 — 안 지우면 다음에도 같은 길로 들어온다.
     if (err?.code === 1 || err?.code === "no_answer") {
       forgetCachedPosition();
       return { at: null, needsPermission: true };
@@ -226,12 +189,14 @@ export default function NearbyBanner({ gifticons, onPick }) {
   // 아직 위치를 준 적이 없는 상태. 이 자리에서 먼저 물어본다.
   const [needsPermission, setNeedsPermission] = useState(false);
   const [refused, setRefused] = useState(() => readRefusedToday());
-  // 폰이 아예 잠가버린 상태. '켜기'를 눌러도 창이 안 뜬다.
+  // 폰이 잠가버린 상태. 설정에서만 풀 수 있다.
+  //
+  // 설정에서 켜고 돌아오면 저절로 걷힌다 — 앱이 앞으로 올 때 다시 도는 조용한 확인이
+  // 이제 'granted'를 제대로 읽는다. 한때는 그걸 못 읽어서, 켜고 왔는데도 '설정에서
+  // 켜주세요'가 남는 막다른 길이 있었고 그것만 따로 다시 잡아보는 길을 뒀었다.
   const [blocked, setBlocked] = useState(false);
   // '켜기'를 눌러 답을 기다리는 중. 누른 것이 그 자리에서 보여야 한다.
   const [asking, setAsking] = useState(false);
-  // 눌렀는데 답이 안 온다. 설정으로 가는 길을 덧붙인다.
-  const [stuck, setStuck] = useState(false);
   // 위치를 잡고 매장까지 찾아본 뒤인가. best가 null인 것만으로는 '아직 안 찾았다'와
   // '찾았는데 없다'가 갈리지 않는데, 화면에 적을 말은 그 둘이 서로 다르다.
   const [searched, setSearched] = useState(false);
@@ -242,9 +207,6 @@ export default function NearbyBanner({ gifticons, onPick }) {
   // 설정에서 켜고 끄는 값. 꺼두면 매장을 뒤지지도 않는다 — 카카오 검색에는 하루 상한이
   // 걸려 있어서, 안 보여줄 것을 찾느라 그걸 쓰면 정작 '매장' 버튼이 막힌다.
   const [bannerOn, setBannerOn] = useState(() => isNearbyBannerOn());
-  // 잠긴 상태인지. 아래 리스너는 한 번만 붙어서 그때의 값을 붙잡아 두므로 따로 둔다.
-  const blockedRef = useRef(false);
-  blockedRef.current = blocked;
   // 앱이 다시 앞으로 왔을 때 쓸 최신 목록. 그때 이 효과는 이미 끝나 있어서, 그 안의
   // gifticons는 처음 값에 묶여 있다.
   const listRef = useRef(gifticons);
@@ -303,11 +265,6 @@ export default function NearbyBanner({ gifticons, onPick }) {
           // 여기서는 저장된 값을 그때그때 읽는다. 이 리스너는 처음 한 번만 붙어서
           // 위 상태를 붙잡아 두면 껐다 켠 것을 못 따라간다.
           if (!isNearbyBannerOn()) return;
-          // 설정에서 켜고 돌아온 길일 수 있다. 그때는 조용한 확인으로는 못 알아낸다.
-          if (blockedRef.current) {
-            retryAfterSettings();
-            return;
-          }
           search();
         }),
       )
@@ -354,12 +311,13 @@ export default function NearbyBanner({ gifticons, onPick }) {
       if (cancelled) return;
       setUnlocatable(Boolean(located.unlocatable));
       setNeedsPermission(Boolean(located.needsPermission));
+      setBlocked(Boolean(located.blocked));
       const at = located.at;
       if (!at) {
-        // 권한이 없어진 것이면 먼저 그려둔 것을 걷는다. 그대로 두면 '켜기' 띠가 그 뒤에
-        // 가려져서, 권한을 켤 길이 화면에서 사라진다.
+        // 권한이 없어진 것이면 먼저 그려둔 것을 걷는다. 그대로 두면 권한을 켜라는 띠가
+        // 그 뒤에 가려져서, 켤 길이 화면에서 사라진다.
         // 지하라서 못 잡은 것(unlocatable)은 그대로 둔다 — 아까 알아둔 것은 여전히 맞다.
-        if (located.needsPermission && !cancelled) setBest(null);
+        if ((located.needsPermission || located.blocked) && !cancelled) setBest(null);
         return;
       }
 
@@ -519,29 +477,13 @@ export default function NearbyBanner({ gifticons, onPick }) {
             '켜야 합니다'가 아니라 '켜면 알려드려요'다. 앞은 조건을 내미는 말이고 뒤는
             무엇을 받는지를 보여주는 말인데, 여기는 승낙을 받아야 하는 자리다.
             안드로이드는 두 번 거절당하면 다시 묻지도 못한다. */}
-        <span className="flex min-w-0 flex-1 flex-col gap-[3px]">
-          <span className="text-[13.5px] leading-normal font-medium break-keep text-foreground/80">
-            위치 권한을 켜면 근처에서 쓸 수 있는 기프티콘을 알려드려요.
-          </span>
-          {/* 답이 안 올 때만 나온다. 띠를 바꿔치우지 않고 덧붙이는 이유는 위 SHOW_SETTINGS_MS
-              주석에 적어뒀다 — 시스템 창이 떴는지를 이쪽에서 모르기 때문이다. */}
-          {stuck &&
-            (canOpenAppSettings() ? (
-              <button
-                type="button"
-                onClick={openAppSettings}
-                className="self-start text-[12.5px] font-bold text-primary underline underline-offset-[3px]"
-              >
-                창이 안 뜨면 설정에서 켜주세요
-              </button>
-            ) : (
-              <span className="text-[12.5px] font-medium break-keep text-muted-foreground">
-                주소창의 자물쇠를 눌러 허용해주세요.
-              </span>
-            ))}
+        <span className="min-w-0 flex-1 text-[13.5px] leading-normal font-medium break-keep text-foreground/80">
+          위치 권한을 켜면 근처에서 쓸 수 있는 기프티콘을 알려드려요.
         </span>
-        {/* 누른 것이 그 자리에서 보여야 한다. 답이 늦는 경우가 있어서(웹뷰가 아무 답도 안 줄
-            때가 있다) 아무 변화가 없으면 눌리지 않은 것으로 읽힌다. */}
+        {/* 누른 것이 그 자리에서 보여야 한다. 시스템 창이 뜨기까지 잠깐 걸리는데, 그동안
+            아무 변화가 없으면 눌리지 않은 것으로 읽힌다.
+            여기 덧붙던 '창이 안 뜨면 설정에서 켜주세요' 한 줄은 걷었다. 창이 뜰지 안 뜰지
+            몰라서 두던 줄인데, 이제 이 띠는 창이 뜨는 사람에게만 선다. */}
         <button
           type="button"
           onClick={askForLocation}
@@ -614,62 +556,25 @@ export default function NearbyBanner({ gifticons, onPick }) {
 
   return null;
 
-  // 설정에서 켜고 돌아왔는지 직접 잡아본다.
-  //
-  // 조용한 확인(getPositionSilently)으로는 못 알아낸다. 웹뷰의 permissions.query는 권한이
-  // 있어도 'prompt'를 돌려주고, 적어둔 좌표는 권한이 없다는 걸 알았을 때 지웠다. 그래서
-  // 근거가 하나도 없는 상태로 돌아오고, 그러면 영영 '설정에서 켜주세요'가 남는다 —
-  // 설정에서 켜고 온 사람에게 다시 설정으로 가라고 하는 막다른 길이다.
-  //
-  // 여기서 잡아보는 것은 안전하다. 잠겼다는 것은 곧 창이 안 뜬다는 뜻이라, 켜져 있으면
-  // 그대로 잡히고 아직 막혀 있으면 곧장 실패한다. 어느 쪽이든 사람을 붙들지 않는다.
-  async function retryAfterSettings() {
-    try {
-      const fresh = await getFreshPosition();
-      saveCachedPosition(fresh);
-      setBlocked(false);
-      setNeedsPermission(false);
-      setStuck(false);
-      search(fresh);
-    } catch {
-      // 아직 막혀 있다. 띠를 그대로 둔다.
-    }
-  }
-
   // '켜기'를 눌렀을 때만 시스템 창이 뜬다. 여기까지 온 사람은 무엇을 위해 묻는지 이미
   // 읽었으므로, 앱을 열자마자 들이미는 것보다 훨씬 잘 허락한다.
+  //
+  // 이 자리에 오는 사람은 상태가 'prompt'인 사람뿐이다(위 갈래에서 그렇게 갈랐다).
+  // 그러니 창은 반드시 뜬다 — 눌렀는데 아무 일도 안 일어나는 경우가 없다.
+  //
+  // 한때는 여기서 시간을 재고 있었다. 거절이 400ms 안에 오면 창이 안 뜬 것으로 보고,
+  // 1.5초가 지나도록 답이 없으면 설정으로 가는 줄을 덧붙이고. 상태를 물어볼 길이 없어서
+  // 되짚던 것인데, 이제 물어볼 수 있으니 짐작이 필요 없다.
   async function askForLocation() {
-    const startedAt = Date.now();
     setAsking(true);
-    // 답이 안 오면 설정으로 가는 길을 덧붙인다. 지우는 것이 아니라 더하는 것이라,
-    // 시스템 창이 떠 있는 동안 이것이 돌아도 그 창에 가려 안 보인다.
-    const nudge = setTimeout(() => setStuck(true), SHOW_SETTINGS_MS);
     try {
-      const fresh = await getFreshPosition();
-      saveCachedPosition(fresh);
-      setNeedsPermission(false);
-      setBlocked(false);
-      setStuck(false);
-      search(fresh);
-    } catch (err) {
-      // no_answer는 아예 답이 없었던 것이라, 창이 뜨지 않았다는 뜻으로 곧장 본다.
-      if (err?.code === "no_answer") {
-        setBlocked(true);
-        setNeedsPermission(false);
-        return;
-      }
-      if (err?.code === 1) {
-        // 창이 안 뜬 채로 거절이 돌아왔다. 폰이 이미 잠근 것이라 앱이 더 물어볼 길이
-        // 없다. 남은 길은 설정 화면 하나뿐이니 그리로 데려다준다.
-        if (Date.now() - startedAt < NO_DIALOG_MS) {
-          setBlocked(true);
-          setNeedsPermission(false);
-          return;
-        }
-        // 사람이 거절했다. 그날은 다시 묻지 않는다.
+      const answer = await requestLocationPermission();
+
+      if (answer === "denied") {
+        // 창을 보고 거절했다. 그날은 다시 묻지 않는다.
         //
-        // 잠긴 것이 아니라 사람이 고른 것이라 blocked를 걷는다. 안 걷으면 창을 보고
-        // 거절한 사람에게 '설정에서 켜주세요'가 남는데, 그건 방금 고른 것을 무르라는 말이다.
+        // 잠긴 것으로 치지 않는다. 방금 사람이 고른 것이라, 여기에 '설정에서 켜주세요'를
+        // 세우면 고른 것을 무르라는 말이 된다. 다음 날 이 자리에서 한 번 더 묻는다.
         try {
           localStorage.setItem(REFUSED_KEY, todayStr());
         } catch {
@@ -680,24 +585,32 @@ export default function NearbyBanner({ gifticons, onPick }) {
         setBlocked(false);
         return;
       }
-      // 눌렀는데 거절도 아니고 못 잡았다. 설정으로 데려다준다.
-      //
-      // 폰 설정에서 앱 권한을 '허용 안 함'으로 두면 안드로이드 웹뷰는 거절(code 1)이
-      // 아니라 '위치를 못 구했다'(code 2)를 돌려준다. 그러면 여기로 오는데, 예전에는
-      // 이 자리에서 '지하나 실내에서는…' 회색 띠로 넘겼다. 실제로는 지하가 아니라
-      // 권한이 막힌 것이었고, 그 띠에는 누를 것이 없어서 막다른 길이었다.
-      //
-      // 지하와 잠긴 것을 이 값만으로는 못 가른다. 다만 여기까지 온 사람은 방금 '켜기'를
-      // 눌렀고 아무 일도 안 일어난 것을 봤다. 그 사람에게 필요한 것은 '지하일 수도
-      // 있어요'가 아니라 눌러서 확인할 자리다. 지하가 맞았더라도 설정에 가보면 켜져
-      // 있는 것이 보이고, 다음에 위치가 잡히면 이 띠는 저절로 사라진다.
-      //
-      // 묻지 않고 도는 조용한 확인에서는 그대로 지하 안내로 간다. 거기서는 사람이
-      // 아무것도 안 눌렀으니 설정으로 보낼 이유가 없다.
+
+      // 허락받았거나(granted), 물어볼 길이 없는 곳이다. 어느 쪽이든 잡아본다 —
+      // 웹에서는 이 잡는 일 자체가 브라우저의 물음이다.
+      const fresh = await getFreshPosition();
+      saveCachedPosition(fresh);
       setNeedsPermission(false);
-      setBlocked(true);
+      setBlocked(false);
+      search(fresh);
+    } catch (err) {
+      // 여기까지 오는 것은 허락은 받았는데 좌표를 못 잡은 경우다.
+      // 브라우저에서 거절한 것(code 1)만 갈라내고, 나머지는 지하·실내로 본다.
+      if (err?.code === 1) {
+        try {
+          localStorage.setItem(REFUSED_KEY, todayStr());
+        } catch {
+          // 못 적어도 이번 화면에서는 접힌다.
+        }
+        setRefused(true);
+        setNeedsPermission(false);
+        setBlocked(false);
+        return;
+      }
+      setNeedsPermission(false);
+      setBlocked(false);
+      setUnlocatable(true);
     } finally {
-      clearTimeout(nudge);
       setAsking(false);
     }
   }

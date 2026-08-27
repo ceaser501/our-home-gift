@@ -35,6 +35,10 @@ vi.mock('@capacitor/app', () => ({
 const getFreshPosition = vi.fn();
 const readCachedPosition = vi.fn();
 const hasSavedPosition = vi.fn();
+// 안드로이드에게 권한 상태를 그대로 물어본다. 짐작하던 시절의 문턱들(400ms·1.5초)이
+// 이 둘로 대체됐다.
+const checkLocationPermission = vi.fn();
+const requestLocationPermission = vi.fn();
 
 const isNearbyBannerOn = vi.fn(() => true);
 const forgetCachedPosition = vi.fn();
@@ -43,6 +47,8 @@ vi.mock('../utils/geolocation', () => ({
   getFreshPosition: (...a) => getFreshPosition(...a),
   readCachedPosition: (...a) => readCachedPosition(...a),
   hasSavedPosition: (...a) => hasSavedPosition(...a),
+  checkLocationPermission: (...a) => checkLocationPermission(...a),
+  requestLocationPermission: (...a) => requestLocationPermission(...a),
   saveCachedPosition: () => {},
   // 권한이 없다는 걸 알게 되면 적어둔 좌표를 지운다. 안 지우면 다음에 앱을 열어도
   // '권한 있음'으로 알고 또 조용해진다.
@@ -72,6 +78,9 @@ beforeEach(() => {
   });
   // 매장 찾기를 한 번 써서 위치를 적어둔 사람. 곧 권한을 준 사람이다.
   hasSavedPosition.mockReturnValue(true);
+  // 권한을 이미 준 사람. 여기서 볼 것은 '언제 다시 찾는가'다.
+  checkLocationPermission.mockResolvedValue('granted');
+  requestLocationPermission.mockResolvedValue('granted');
   isNearbyBannerOn.mockReturnValue(true);
   canOpenAppSettings.mockReturnValue(true);
   searchNearbyStores.mockResolvedValue([{ name: '스타벅스 서울숲점', distance: 120 }]);
@@ -481,10 +490,15 @@ describe('찾아봤는데 없을 때', () => {
 
 });
 
+// 권한 상태를 안드로이드에게 그대로 물어본다.
+//
+// 한때는 물어볼 길이 없어서 되짚었다 — navigator.permissions는 웹뷰에서 권한이 있어도
+// 'prompt'를 돌려주고, 그래서 '적어둔 좌표가 있으면 준 적이 있는 것'이라는 근거를 덧댔다.
+// 그것도 부족해서 눌러보고 시간을 쟀다(400ms·1.5초). 다섯 판을 그 짐작에 썼다.
 describe('권한을 어떻게 아는가', () => {
-  it("웹뷰가 'prompt'라고 해도, 적어둔 위치가 있으면 잡는다", async () => {
-    // 안드로이드 웹뷰에는 사이트별 권한 설정이 없어서 앱 권한이 있어도 'prompt'가 나온다.
-    // 이것만 믿었더니 띠가 위치를 한 번도 안 잡고, 매장 찾기가 적어둔 옛 좌표만 읽었다.
+  it('허락한 사람은 바로 잡는다', async () => {
+    checkLocationPermission.mockResolvedValue('granted');
+
     render(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
 
     await waitFor(() => expect(getFreshPosition).toHaveBeenCalled(), { timeout: 3000 });
@@ -492,28 +506,38 @@ describe('권한을 어떻게 아는가', () => {
   });
 
   // 한 번도 위치를 준 적이 없는 사람에게 앱 열자마자 권한 창을 띄우면 거절당하기 딱 좋고,
-  // 한 번 거절되면 매장 찾기까지 같이 막힌다.
+  // 한 번 거절되면 매장 찾기까지 같이 막힌다. 그래서 잡아보지 않는다 — 잡아보는 것 자체가
+  // 창을 띄우는 일이다.
   it('한 번도 준 적이 없으면 잡아보지 않는다', async () => {
-    hasSavedPosition.mockReturnValue(false);
-    readCachedPosition.mockReturnValue(null);
+    checkLocationPermission.mockResolvedValue('prompt');
 
     render(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
     await new Promise((resolve) => setTimeout(resolve, 300));
 
     expect(getFreshPosition).not.toHaveBeenCalled();
-    expect(screen.queryByText(/스타벅스/)).toBeNull();
+    expect(screen.queryByText(/스타벅스 서울숲점/)).toBeNull();
   });
 
-  it('거절한 사람에게는 다시 묻지 않는다', async () => {
-    Object.defineProperty(navigator, 'permissions', {
-      configurable: true,
-      value: { query: async () => ({ state: 'denied' }) },
-    });
+  // 막힌 사람에게도 잡아보지 않는다. 창도 안 뜨고 실패만 하는데, 그 실패가 code 1로 올지
+  // code 2로 올지가 기기마다 달라서 거기서 상태를 되짚으려던 것이 계속 어긋났다.
+  it('막힌 사람에게는 잡아보지 않고 설정으로 보낸다', async () => {
+    checkLocationPermission.mockResolvedValue('denied');
 
     render(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
-    await new Promise((resolve) => setTimeout(resolve, 300));
 
+    expect(await screen.findByText(/설정에서 위치 권한을 켜주세요/, {}, { timeout: 3000 })).toBeTruthy();
     expect(getFreshPosition).not.toHaveBeenCalled();
+    // 눌러도 아무 일 없는 버튼을 두지 않는다. 여기에는 '켜기'가 아예 없다.
+    expect(screen.queryByRole('button', { name: '켜기' })).toBeNull();
+  });
+
+  // 물어볼 길이 없는 곳(옛 브라우저)에서는 예전처럼 잡아보고 판단한다.
+  it('상태를 못 물어보는 곳에서는 잡아보고 판단한다', async () => {
+    checkLocationPermission.mockResolvedValue('unknown');
+
+    render(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
+
+    await waitFor(() => expect(getFreshPosition).toHaveBeenCalled(), { timeout: 3000 });
   });
 });
 
@@ -528,6 +552,8 @@ describe('위치를 아직 안 준 사람에게', () => {
   beforeEach(() => {
     hasSavedPosition.mockReturnValue(false);
     readCachedPosition.mockReturnValue(null);
+    // 아직 안 물어본 상태. 이 사람에게만 '켜기'가 선다.
+    checkLocationPermission.mockResolvedValue('prompt');
   });
 
   it('이 자리에서 먼저 물어본다', async () => {
@@ -556,7 +582,8 @@ describe('위치를 아직 안 준 사람에게', () => {
   // 실패도 안 부른다. 그러면 벽시계(10초)가 칠 때까지 화면에 아무 변화가 없어서 누른 사람
   // 눈에는 버튼이 죽은 것이다. "켜기가 눌리지 않는다"는 말이 여기서 나왔다.
   it('누른 것이 그 자리에서 보인다', async () => {
-    getFreshPosition.mockImplementation(() => new Promise(() => {}));
+    // 시스템 창이 떠 있는 동안이다. 사람이 누르기 전까지 답이 안 온다.
+    requestLocationPermission.mockImplementation(() => new Promise(() => {}));
 
     render(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
     await screen.findByText(ASK, {}, { timeout: 3000 });
@@ -566,60 +593,20 @@ describe('위치를 아직 안 준 사람에게', () => {
     expect(button.disabled).toBe(true);
   });
 
-  // 시스템 창이 떴는지는 이쪽에서 알 길이 없다. 그래서 띠를 바꿔치우지 않고 덧붙인다 —
-  // 창이 떠 있으면 그 창에 가려 안 보이고, 창이 안 떴다면 이 한 줄이 유일한 길이다.
-  it('답이 안 오면 설정으로 가는 길을 덧붙인다', async () => {
-    getFreshPosition.mockImplementation(() => new Promise(() => {}));
-
-    render(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
-    await screen.findByText(ASK, {}, { timeout: 3000 });
-    await act(async () => screen.getByRole('button', { name: '켜기' }).click());
-
-    const way = await screen.findByRole(
-      'button',
-      { name: '창이 안 뜨면 설정에서 켜주세요' },
-      { timeout: 3000 }
-    );
-    // 덧붙이는 것이라 원래 문장은 그대로 있어야 한다.
-    expect(screen.queryByText(ASK)).toBeTruthy();
-
-    await act(async () => way.click());
-    expect(openAppSettings).toHaveBeenCalled();
-  });
-
-  // 사람이 창을 보고 거절한 것은 잠긴 것과 다르다. 덧붙였던 길을 걷지 않으면 방금 고른
-  // 것을 무르라는 말이 화면에 남는다.
-  it('사람이 거절하면 설정 안내를 남기지 않는다', async () => {
-    getFreshPosition.mockImplementation(
-      () => new Promise((_, reject) => setTimeout(() => reject({ code: 1 }), 1800))
-    );
-
-    render(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
-    await screen.findByText(ASK, {}, { timeout: 3000 });
-    await act(async () => screen.getByRole('button', { name: '켜기' }).click());
-
-    // 거절이 오기 전에 길이 먼저 덧붙는다(창을 읽는 동안이다).
-    await screen.findByRole('button', { name: '창이 안 뜨면 설정에서 켜주세요' }, { timeout: 3000 });
-
-    await waitFor(() => expect(screen.queryByText(ASK)).toBeNull(), { timeout: 3000 });
-    expect(screen.queryByText(/설정에서 위치 권한을 켜주세요/)).toBeNull();
-    expect(screen.queryByRole('button', { name: '설정 열기' })).toBeNull();
-  });
-
   // 시스템 창은 한 번뿐이라 아껴야 하지만, 우리 띠는 몇 번이든 다시 물을 수 있다.
   // 그렇다고 거절한 그날 또 물으면 조르는 것이 된다.
-  // 사람이 창을 보고 거절한 경우. 즉시 돌아오는 거절은 뜻이 달라서(창이 아예 안 뜬 것)
-  // 여기서는 사람이 누르는 시간만큼 늦춰 흉내낸다.
+  //
+  // 거절을 잠긴 것으로 치지 않는다. 방금 사람이 고른 것이라, 여기에 '설정에서 켜주세요'를
+  // 세우면 고른 것을 무르라는 말이 된다.
   it('거절하면 그날은 다시 묻지 않는다', async () => {
-    getFreshPosition.mockImplementation(
-      () => new Promise((_, reject) => setTimeout(() => reject({ code: 1 }), 450))
-    );
+    requestLocationPermission.mockResolvedValue('denied');
 
     const { unmount } = render(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
     await screen.findByText(ASK, {}, { timeout: 3000 });
     await act(async () => screen.getByRole('button', { name: '켜기' }).click());
-    // 거절이 450ms 뒤에 온다(사람이 창을 읽고 누르는 시간). 그때까지 기다린다.
+
     await waitFor(() => expect(screen.queryByText(ASK)).toBeNull(), { timeout: 2000 });
+    expect(screen.queryByText(/설정에서 위치 권한을 켜주세요/)).toBeNull();
 
     unmount();
     render(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
@@ -644,85 +631,32 @@ describe('위치를 아직 안 준 사람에게', () => {
 
   // 거절한 뒤 앱을 뒤로 보냈다 다시 여는 것은 흔한 일이다. 그때 다시 찾으면서 물음이
   // 되살아나면, 방금 거절한 사람에게 같은 것을 또 들이미는 셈이다.
-  // 안드로이드는 두 번 거절당하면 그때부터 창을 안 띄우고 곧장 거절을 돌려준다.
-  // 그러면 '켜기'가 눌러도 아무 일이 없는 버튼이 된다 — 고장으로 읽힌다.
-  // 남은 길은 폰 설정 하나뿐이라 그리로 데려다준다.
-  it('창이 안 뜨고 거절이 돌아오면 설정으로 데려다준다', async () => {
-    getFreshPosition.mockRejectedValue({ code: 1 });
+  // 브라우저에는 열어줄 설정 화면이 없다. 버튼 대신 어디를 눌러야 하는지를 적는다.
+  it('설정 화면을 못 여는 곳에서는 버튼 없이 길만 알려준다', async () => {
+    canOpenAppSettings.mockReturnValue(false);
+    checkLocationPermission.mockResolvedValue('denied');
 
     render(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
-    await screen.findByText(ASK, {}, { timeout: 3000 });
-    await act(async () => screen.getByRole('button', { name: '켜기' }).click());
 
-    expect(screen.queryByText(ASK)).toBeNull();
-    expect(screen.getByText(/설정에서 위치 권한을 켜주세요/)).toBeTruthy();
-
-    await act(async () => screen.getByRole('button', { name: '설정 열기' }).click());
-    expect(openAppSettings).toHaveBeenCalled();
+    expect(await screen.findByText(/자물쇠를 눌러 위치를 허용/, {}, { timeout: 3000 })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: '설정 열기' })).toBeNull();
   });
 
-  // 눌러서 '잠겼다'를 알아낸 뒤, 조용한 확인이 한 번 더 돌면 그쪽이 '권한 없음'을 다시
-  // 세운다. 순서가 반대였을 때 화면이 '켜기'로 되돌아갔고, 아무리 눌러도 같은 자리를
-  // 맴돌았다. 잠겼다는 것은 눌러봐야 아는 사실이라 알아낸 쪽이 이겨야 한다.
-  it('잠긴 걸 알아낸 뒤에는 다시 물어보는 자리로 안 돌아간다', async () => {
-    getFreshPosition.mockRejectedValue({ code: 1 });
-
-    render(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
-    await screen.findByText(ASK, {}, { timeout: 3000 });
-    await act(async () => screen.getByRole('button', { name: '켜기' }).click());
-    expect(screen.getByText(/설정에서 위치 권한을 켜주세요/)).toBeTruthy();
-
-    // 앱이 다시 앞으로 온다. 여기서 조용한 확인이 한 번 더 돈다.
-    localStorage.removeItem('nearby-banner:result');
-    await act(async () => appStateHandler({ isActive: true }));
-
-    await new Promise((r) => setTimeout(r, 300));
-    expect(screen.getByText(/설정에서 위치 권한을 켜주세요/)).toBeTruthy();
-    expect(screen.queryByText(ASK)).toBeNull();
-  });
-
-  // 설정에서 켜고 돌아오면 그 표시를 걷어야 한다. 안 걷으면 켜놓고도 '켜주세요'가 남는다.
+  // 설정에서 켜고 돌아오는 길. 한때 여기가 막다른 길이었다 — 조용한 확인이 권한이 생긴
+  // 것을 못 읽어서, 켜고 왔는데도 '설정에서 켜주세요'가 그대로 남았다.
   it('설정에서 켜고 돌아오면 매장 안내로 바뀐다', async () => {
-    getFreshPosition.mockRejectedValue({ code: 1 });
+    checkLocationPermission.mockResolvedValue('denied');
 
     render(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
-    await screen.findByText(ASK, {}, { timeout: 3000 });
-    await act(async () => screen.getByRole('button', { name: '켜기' }).click());
     await screen.findByText(/설정에서 위치 권한을 켜주세요/, {}, { timeout: 3000 });
 
     // 설정에서 켜고 돌아왔다.
-    getFreshPosition.mockResolvedValue({ lat: 37.5, lng: 127.0 });
+    checkLocationPermission.mockResolvedValue('granted');
     localStorage.removeItem('nearby-banner:result');
     await act(async () => appStateHandler({ isActive: true }));
 
     expect(await screen.findByText(/스타벅스 서울숲점/, {}, { timeout: 3000 })).toBeTruthy();
-  });
-
-  // 폰 설정에서 앱 권한을 '허용 안 함'으로 두면 웹뷰는 거절(code 1)이 아니라 '위치를 못
-  // 구했다'(code 2)를 돌려준다. 예전에는 그걸 지하로 보고 회색 띠를 세웠는데, 실제로는
-  // 권한이 막힌 것이었고 그 띠에는 누를 것이 없어 막다른 길이었다.
-  it('눌렀는데 거절도 아니고 못 잡으면 설정으로 데려다준다', async () => {
-    getFreshPosition.mockRejectedValue({ code: 2 });
-
-    render(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
-    await screen.findByText(ASK, {}, { timeout: 3000 });
-    await act(async () => screen.getByRole('button', { name: '켜기' }).click());
-
-    expect(await screen.findByText(/설정에서 위치 권한을 켜주세요/, {}, { timeout: 3000 })).toBeTruthy();
-    expect(screen.queryByText(/지하나 실내에서는/)).toBeNull();
-  });
-
-  // 브라우저에는 열어줄 설정 화면이 없다. 버튼 대신 어디를 눌러야 하는지를 적는다.
-  it('설정 화면을 못 여는 곳에서는 버튼 없이 길만 알려준다', async () => {
-    canOpenAppSettings.mockReturnValue(false);
-    getFreshPosition.mockRejectedValue({ code: 1 });
-
-    render(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
-    await screen.findByText(ASK, {}, { timeout: 3000 });
-    await act(async () => screen.getByRole('button', { name: '켜기' }).click());
-
-    expect(screen.getByText(/자물쇠를 눌러 위치를 허용/)).toBeTruthy();
-    expect(screen.queryByRole('button', { name: '설정 열기' })).toBeNull();
+    expect(screen.queryByText(/설정에서 위치 권한을 켜주세요/)).toBeNull();
   });
 
   it('거절한 뒤 앱을 다시 열어도 그날은 안 묻는다', async () => {
@@ -745,7 +679,7 @@ describe('위치를 아직 안 준 사람에게', () => {
 
   // 매장 찾기에서 이미 허락을 받았으면 물어볼 것이 없다. 그때부터는 바로 띠가 돈다.
   it('매장 찾기에서 이미 허락했으면 묻지 않고 바로 띄운다', async () => {
-    hasSavedPosition.mockReturnValue(true);
+    checkLocationPermission.mockResolvedValue('granted');
 
     render(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
     expect(await screen.findByText(/스타벅스 서울숲점/, {}, { timeout: 3000 })).toBeTruthy();

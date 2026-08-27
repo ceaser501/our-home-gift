@@ -4,6 +4,8 @@
 // 보이면 앱이 멈춘 것처럼 느껴진다. 그래서 지난번 위치를 적어뒀다가 곧바로 그걸로
 // 검색을 시작하고, 새 위치는 뒤에서 받아 크게 달라졌을 때만 다시 검색한다.
 
+import { isNativeApp } from './browser';
+
 const STORE_KEY = 'moacon:last-position';
 // 이보다 오래된 위치는 쓰지 않는다. 하루가 지나면 다른 도시에 있을 수도 있다.
 const MAX_CACHE_AGE_MS = 24 * 60 * 60 * 1000;
@@ -75,6 +77,60 @@ export function getFreshPosition() {
     if (err?.code === 1 || err?.code === 'no_answer' || err?.code === 'unsupported') throw err;
     return locate({ enableHighAccuracy: false, timeout: 20000, maximumAge: 0 });
   });
+}
+
+// 위치 권한이 지금 어떤 상태인지 묻는다. 'granted' | 'denied' | 'prompt' | 'unknown'.
+//
+// 이걸 알기 전에는 눌러봐야 알았다. 그래서 짐작이 붙었다 — 거절이 400ms 안에 오면 창이
+// 안 뜬 것으로 보고, 1.5초가 지나도록 답이 없으면 설정으로 가는 줄을 덧붙이고. 그 짐작이
+// 다섯 판을 잡아먹었고, 마지막에는 웹뷰가 거절(code 1) 대신 '위치를 못 구했다'(code 2)를
+// 돌려주는 바람에 권한이 막힌 사람이 '지하나 실내에서는…' 안내로 빠졌다.
+//
+// 앱에서는 Capacitor 플러그인이 안드로이드의 진짜 상태를 그대로 돌려준다. 웹에서는
+// navigator.permissions를 쓴다 — 거짓말하는 것은 웹뷰뿐이고 브라우저는 제대로 답한다.
+//
+// 'unknown'은 물어볼 길이 없다는 뜻이다(옛 브라우저). 그때는 예전처럼 잡아보고 판단한다.
+export async function checkLocationPermission() {
+  if (isNativeApp()) {
+    try {
+      const { Geolocation } = await import('@capacitor/geolocation');
+      const status = await Geolocation.checkPermissions();
+      // coarse만 있어도 500m 판단에는 넘친다. 둘 중 하나라도 있으면 있는 것으로 본다.
+      const state = status.location === 'granted' || status.coarseLocation === 'granted'
+        ? 'granted'
+        : status.location;
+      // 'prompt-with-rationale'은 한 번 거절했지만 다시 물어볼 수는 있는 상태다.
+      // 우리에게는 'prompt'와 할 일이 같다 — 눌렀을 때 창이 뜬다.
+      return state === 'prompt-with-rationale' ? 'prompt' : state || 'unknown';
+    } catch {
+      return 'unknown';
+    }
+  }
+
+  try {
+    if (!navigator.permissions?.query) return 'unknown';
+    const status = await navigator.permissions.query({ name: 'geolocation' });
+    return status.state || 'unknown';
+  } catch {
+    return 'unknown';
+  }
+}
+
+// 권한을 달라고 묻는다. 앱에서는 여기서 시스템 창이 뜬다.
+//
+// 웹에는 따로 묻는 길이 없어서(브라우저는 위치를 실제로 요청할 때 묻는다) 잡아보는 것으로
+// 대신한다. 부르는 쪽은 어느 쪽이든 돌아온 상태만 보면 된다.
+export async function requestLocationPermission() {
+  if (isNativeApp()) {
+    try {
+      const { Geolocation } = await import('@capacitor/geolocation');
+      const status = await Geolocation.requestPermissions({ permissions: ['location', 'coarseLocation'] });
+      return status.location === 'granted' || status.coarseLocation === 'granted' ? 'granted' : 'denied';
+    } catch {
+      return 'unknown';
+    }
+  }
+  return 'unknown';
 }
 
 // 위치 권한이 없다는 것을 알게 됐을 때 적어둔 좌표를 지운다.
