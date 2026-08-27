@@ -90,8 +90,10 @@
 - [x] `supabase/purge-cron.sql` — 30일 지난 알림 자동 삭제
 - [x] `supabase/push-cron.sql` — 유효기한 임박 푸시
 - [ ] `supabase/gifticon-uses.sql` — 쓴 사건 표, 사용취소 함수, 지난 기록 옮기기
+- [ ] `supabase/admin-permanent.sql` — 최초 관리자 영구 고정(자물쇠·uuid 자동 연결)
 - [x] `supabase functions deploy admin-stats`
 - [x] `supabase functions deploy delete-account`
+- [ ] `supabase functions deploy reset-all-data` — 관리자 확인을 이메일 기준으로
 - [ ] `select jobname, schedule from cron.job;`으로 예약이 다 살아 있는지 한 번 확인
 
 ---

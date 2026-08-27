@@ -44,10 +44,14 @@ Deno.serve(async (req) => {
 
   // 2) 관리자 명단 확인. 로그인만으로는 부족하다 — 앱 사용자는 누구나 로그인할 수 있고,
   //    이 함수는 모두의 데이터를 지운다.
+  //
+  // 이메일로 본다. uuid로 보던 시절에는 계정을 한 번 지운 관리자가(탈퇴·초기화·대시보드)
+  // 다시 로그인해도 명단에 없는 사람이 됐다. 명단은 이미 이메일이 열쇠다
+  // (supabase/admin-permanent.sql).
   const { data: adminRow, error: adminError } = await admin
     .from('admin_users')
-    .select('user_id')
-    .eq('user_id', auth.user.id)
+    .select('email')
+    .eq('email_key', (auth.user.email || '').trim().toLowerCase())
     .maybeSingle();
   if (adminError) {
     return new Response(
@@ -87,19 +91,22 @@ Deno.serve(async (req) => {
 
     // 가입 계정 삭제 — 단, 관리자 명단에 있는 계정은 남긴다.
     //
-    // admin_users.user_id는 auth.users를 on delete cascade로 참조한다
-    // (supabase/admin-stats.sql:22). 그래서 계정을 지우면 관리자 명단까지 함께
-    // 사라지고, 초기화 한 번에 아무도 관리자 화면에 들어오지 못하게 된다.
-    // 다시 넣으려면 SQL editor를 열어야 한다 — 초기화는 자주 누르는 버튼이라
-    // 그때마다 그 일을 반복하게 된다.
+    // 관리자 계정까지 지우면 초기화 한 번에 아무도 관리자 화면에 들어오지 못한다. 명단은
+    // 이제 표에서 지켜지지만(supabase/admin-permanent.sql) 계정이 없으면 로그인부터 다시
+    // 해야 하고, 초기화는 자주 누르는 버튼이라 그 일이 매번 반복된다.
     //
     // 계정만 남기고 그 계정이 만든 가족·기프티콘은 위에서 이미 지웠다. 다시 로그인하면
     // 가족을 새로 만드는 화면부터 시작한다 — 초기화의 뜻은 그대로 지켜진다.
-    const { data: admins } = await admin.from('admin_users').select('user_id');
-    const keep = new Set((admins || []).map((row) => row.user_id));
+    //
+    // 남길 사람도 이메일로 고른다. uuid로 고르던 것은 명단의 uuid가 비어 있을 때
+    // (탈퇴한 뒤 다시 로그인한 관리자가 그렇다) 그 사람을 못 알아보고 지웠다.
+    const { data: admins } = await admin.from('admin_users').select('email_key');
+    const keep = new Set((admins || []).map((row) => row.email_key).filter(Boolean));
 
     const { data: usersData } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
-    const users = (usersData?.users || []).filter((user) => !keep.has(user.id));
+    const users = (usersData?.users || []).filter(
+      (user) => !keep.has((user.email || '').trim().toLowerCase()),
+    );
     for (const user of users) {
       await admin.auth.admin.deleteUser(user.id);
     }
