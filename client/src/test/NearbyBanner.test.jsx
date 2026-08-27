@@ -698,6 +698,20 @@ describe('위치를 아직 안 준 사람에게', () => {
     expect(await screen.findByText(/스타벅스 서울숲점/, {}, { timeout: 3000 })).toBeTruthy();
   });
 
+  // 폰 설정에서 앱 권한을 '허용 안 함'으로 두면 웹뷰는 거절(code 1)이 아니라 '위치를 못
+  // 구했다'(code 2)를 돌려준다. 예전에는 그걸 지하로 보고 회색 띠를 세웠는데, 실제로는
+  // 권한이 막힌 것이었고 그 띠에는 누를 것이 없어 막다른 길이었다.
+  it('눌렀는데 거절도 아니고 못 잡으면 설정으로 데려다준다', async () => {
+    getFreshPosition.mockRejectedValue({ code: 2 });
+
+    render(<NearbyBanner gifticons={GIFTICONS} onPick={() => {}} />);
+    await screen.findByText(ASK, {}, { timeout: 3000 });
+    await act(async () => screen.getByRole('button', { name: '켜기' }).click());
+
+    expect(await screen.findByText(/설정에서 위치 권한을 켜주세요/, {}, { timeout: 3000 })).toBeTruthy();
+    expect(screen.queryByText(/지하나 실내에서는/)).toBeNull();
+  });
+
   // 브라우저에는 열어줄 설정 화면이 없다. 버튼 대신 어디를 눌러야 하는지를 적는다.
   it('설정 화면을 못 여는 곳에서는 버튼 없이 길만 알려준다', async () => {
     canOpenAppSettings.mockReturnValue(false);

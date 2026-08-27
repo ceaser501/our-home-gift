@@ -562,12 +562,16 @@ export default function NearbyBanner({ gifticons, onPick }) {
   // 순간 저절로 사라진다.
   if (unlocatable && hasUsable) {
     return (
-      // ①②보다 얇고 회색이다. 알려줄 것이 없는 상태라 눈에 덜 걸리는 편이 맞다.
-      // 두 문장을 하나로 줄였다 — '지금은 위치를 확인할 수 없어요'는 뒤 문장이 이미
-      // 설명하고 있었고, 지우니 한 줄에 들어간다(예전에는 잘렸다).
-      <div className="flex w-full items-center gap-2.5 border-b border-border bg-muted/40 px-3.5 py-[11px]">
-        <MapPinOff className="size-4 shrink-0 text-muted-foreground" />
-        <span className="min-w-0 flex-1 truncate text-[12.5px] font-medium text-muted-foreground">
+      // 다른 띠들과 같은 틀이다. 얇은 회색 띠로 뒀다가 되돌렸다 — 같은 자리에 번갈아
+      // 서는 것들이라 모양이 다르면 다른 물건처럼 읽힌다.
+      // 글자만 흐리게 둔다. 알려줄 것이 있는 띠가 아니라서 무게까지 같으면 안 된다.
+      //
+      // X는 안 붙인다. 닫으면 그날 하루 안 뜨는 규칙에 걸리는데, 지하에서 한 번 닫았다고
+      // 밖에 나온 뒤 진짜 안내까지 못 받으면 손해가 훨씬 크다. 위치가 잡히는 순간
+      // 저절로 사라진다.
+      <div className="flex w-full items-center gap-2.5 bg-accent py-[9px] pr-2.5 pl-[13px]">
+        <MapPinOff className="size-[17px] shrink-0 text-muted-foreground" />
+        <span className="min-w-0 flex-1 truncate text-[13.5px] font-medium text-muted-foreground">
           지하나 실내에서는 위치가 안 잡힐 수 있어요
         </span>
       </div>
@@ -676,10 +680,22 @@ export default function NearbyBanner({ gifticons, onPick }) {
         setBlocked(false);
         return;
       }
-      // 허락은 했는데 못 잡았다. 지하·실내다.
+      // 눌렀는데 거절도 아니고 못 잡았다. 설정으로 데려다준다.
+      //
+      // 폰 설정에서 앱 권한을 '허용 안 함'으로 두면 안드로이드 웹뷰는 거절(code 1)이
+      // 아니라 '위치를 못 구했다'(code 2)를 돌려준다. 그러면 여기로 오는데, 예전에는
+      // 이 자리에서 '지하나 실내에서는…' 회색 띠로 넘겼다. 실제로는 지하가 아니라
+      // 권한이 막힌 것이었고, 그 띠에는 누를 것이 없어서 막다른 길이었다.
+      //
+      // 지하와 잠긴 것을 이 값만으로는 못 가른다. 다만 여기까지 온 사람은 방금 '켜기'를
+      // 눌렀고 아무 일도 안 일어난 것을 봤다. 그 사람에게 필요한 것은 '지하일 수도
+      // 있어요'가 아니라 눌러서 확인할 자리다. 지하가 맞았더라도 설정에 가보면 켜져
+      // 있는 것이 보이고, 다음에 위치가 잡히면 이 띠는 저절로 사라진다.
+      //
+      // 묻지 않고 도는 조용한 확인에서는 그대로 지하 안내로 간다. 거기서는 사람이
+      // 아무것도 안 눌렀으니 설정으로 보낼 이유가 없다.
       setNeedsPermission(false);
-      setBlocked(false);
-      setUnlocatable(true);
+      setBlocked(true);
     } finally {
       clearTimeout(nudge);
       setAsking(false);
