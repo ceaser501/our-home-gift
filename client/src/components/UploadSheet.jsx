@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
+import { OWNER_TAG_PALETTE, memberTagColorClass, nameTagColorClass } from '../utils/tagColor';
 import AlertDialog from './AlertDialog';
 import { readableCode, wrapCode } from '../utils/code';
 import useBackClose from '../utils/useBackClose';
@@ -91,26 +92,23 @@ function formatAmount(value) {
   return digits ? Number(digits).toLocaleString('ko-KR') : '';
 }
 
-// 칸 묶음의 머리. 이름 한 마디와 오른쪽으로 뻗는 선.
-//
-// 물음말로 적는다("무엇인가요"). '상품 정보'처럼 명사로 적으면 무엇을 적으라는
-// 것인지 한 번 더 생각해야 하는데, 물어보면 답을 적으면 된다.
-function FieldGroup({ title, children }) {
-  return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center gap-2.5">
-        <span className="shrink-0 text-xs font-semibold text-muted-foreground">{title}</span>
-        <span className="h-px flex-1 bg-border" />
-      </div>
-      {children}
-    </div>
-  );
-}
-
 // 안 적어도 되는 칸에만 붙는다. 반대로 별표를 붙이면 일곱 칸 중 넷에 별이 생겨서,
 // 별이 규칙이 아니라 무늬가 된다.
 function Optional() {
   return <span className="font-normal text-muted-foreground">선택</span>;
+}
+
+// 받는 사람 칸에 찍는 색 점.
+//
+// 그 사람의 tag_color를 쓴다 — 목록 카드가 쓰는 것과 같은 색이라야 등록할 때 본 색과
+// 목록에서 보는 색이 같다. 색은 가입 순서로 붙는 값이지 이름에서 나오는 값이 아니다.
+//
+// 가족에 없는 이름일 때는 이름에서 뽑는다. 예전에 가족을 나간 사람 것을 고쳐 쓰는
+// 경우가 여기 든다.
+function ownerDotClass(members, owner) {
+  const found = members.find((m) => m.display_name === owner);
+  if (found) return memberTagColorClass(found) ?? OWNER_TAG_PALETTE[0];
+  return nameTagColorClass(owner) ?? 'bg-border';
 }
 
 // 내가 받은 기프티콘을 올리는 경우가 가장 많아서 내 이름을 맨 위에 둔다.
@@ -650,15 +648,22 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
   // 넘겨줄 곳(onBulk)이 없을 때도 마찬가지다.
   const showBulkHint = mode === 'create' && Boolean(onBulk) && thumbs.length === 0;
 
+  // 지울 것이 있는가. 받는 사람은 처음부터 내 이름이 들어 있어서 세지 않는다 —
+  // 그것만 있는 화면은 아직 아무것도 안 적은 화면이다.
+  const hasAnything =
+    thumbs.length > 0 ||
+    Boolean(form.name.trim() || form.brand.trim() || form.code.trim() || form.amount || form.expires_at || form.memo.trim());
+
   return (
     <Sheet open onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="max-h-[92dvh] gap-0 overflow-y-auto pb-[var(--safe-bottom)]">
-        <SheetHeader className="flex-row items-center justify-between gap-2 pr-14 pb-3">
-          <SheetTitle>{mode === 'create' ? '기프티콘 추가' : '기프티콘 수정'}</SheetTitle>
-          <Button type="button" variant="ghost" size="sm" onClick={handleReset} className="text-muted-foreground">
-            <RotateCcw className="size-3.5" />
-            초기화
-          </Button>
+        {/* 초기화를 뺐다. 닫기 ✕ 바로 옆이라 손이 미끄러지면 적던 것이 다 날아갔고,
+            글자만 있는 버튼이기도 했다. 폼 맨 아래로 옮겼다 — 다 적은 뒤에야 필요한
+            동작이라 적기 시작하는 자리에 있을 이유가 없다. */}
+        <SheetHeader className="pr-14 pb-3">
+          <SheetTitle className="text-[19px] font-bold tracking-[-0.026em]">
+            {mode === 'create' ? '기프티콘 추가' : '기프티콘 수정'}
+          </SheetTitle>
         </SheetHeader>
 
         <form className="flex flex-col gap-4 px-5" onSubmit={handleSubmit}>
@@ -666,46 +671,35 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
               여는 순간 읽어야 할 글부터 나오는데, 그 말이 가리키는 것은 바로 아래
               상자다. 상자 안에 두면 무엇에 대한 말인지 짚어줄 것이 없다. */}
 
-          {/* 아직 아무 사진도 없는 등록 화면에서는 사진 자리를 세 칸으로 벌려 둔다.
-              여러 장을 골라도 알아서 나눠 담는 기능이 이미 있는데, 그 사실이 화면
-              어디에도 없어서 해보기 전에는 알 수가 없었다. 그리고 대부분은 안 해본다.
-              (+ 를 누르면 한 건짜리 폼이 뜨니, 한 장 넣는 자리로 읽히는 게 당연하다.)
-              칸이 여럿인 것은 글을 안 읽어도 눈에 들어오고, 아래 한 줄이 그게 무슨
-              뜻인지 마무리한다. 셋은 "여기까지"라는 뜻이 아니라 모양일 뿐이다.
-              사진이 한 장이라도 붙으면 평소의 격자로 돌아간다. 그때는 이미 알고
-              있는 사람이고, 빈 칸 둘은 자리만 차지한다. */}
+          {/* 아직 아무 사진도 없을 때는 큰 + 하나만 둔다.
+              한때 빈 칸 '2' '3'을 나란히 그려뒀다. 여러 장을 골라도 알아서 나눠 담는다는
+              것을 모양으로 알리려던 것인데, 두 가지가 어긋났다 — 그 숫자가 무슨 뜻인지
+              알 수 없었고(두 번째 사진인지, 최대 세 장인지), 한 장만 올리려는 사람에게는
+              두 장을 더 올려야 하는 것처럼 보였다. 대부분은 한 장으로 끝난다.
+              큰 버튼 하나로 합치니 이 상자가 화면의 1/3에서 1/6로 줄고, 폼이 그만큼
+              위로 올라온다. 여러 장을 골라도 된다는 말은 아래 한 줄이 한다. */}
           {showBulkHint ? (
-            <div className="flex flex-col gap-2.5 rounded-xl border border-dashed border-primary/40 bg-primary/5 px-3 py-3">
-              <div className="grid grid-cols-3 gap-2">
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="flex aspect-square flex-col items-center justify-center gap-0.5 rounded-xl border border-dashed border-primary/50 bg-primary/10 text-xs font-semibold text-primary"
-                >
-                  <Plus className="size-5" />
-                  <span>사진 고르기</span>
-                </button>
-                {/* 눌리지 않는 모양뿐인 칸. 화면을 읽어주는 기기에는 "2", "3"이 아무
-                    뜻도 없어서 빼둔다 — 아래 한 줄이 같은 말을 하고 있다. */}
-                {[2, 3].map((n) => (
-                  <div
-                    key={n}
-                    aria-hidden="true"
-                    className="grid aspect-square place-items-center rounded-xl border border-dashed border-border bg-muted/40 text-sm font-semibold text-muted-foreground"
-                  >
-                    {n}
-                  </div>
-                ))}
-              </div>
-              {/* 두 줄이 하는 말이 다르다. 앞은 사진을 올리면 무슨 일이 생기는지,
-                  뒤는 여러 장을 골라도 된다는 것. 뒤엣것만 있을 때는 "그래서 사진을
-                  왜 올리나"가 화면 어디에도 없었다. */}
-              <p className="m-0 text-center text-xs leading-relaxed break-keep text-muted-foreground">
-                사진을 올리면 <b className="font-semibold text-foreground">정보를 자동으로 채워요</b>
-                <br />
-                여러 장을 고르면 <b className="font-semibold text-foreground">기프티콘별로 나눠 담아요</b>
-              </p>
-            </div>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="flex w-full flex-col items-center gap-[11px] rounded-[15px] border-[1.5px] border-dashed border-primary/60 bg-primary/4 px-3.5 py-4"
+            >
+              <span className="flex size-[52px] items-center justify-center rounded-[15px] bg-primary">
+                <Plus className="size-[26px] text-primary-foreground" strokeWidth={2.1} />
+              </span>
+              <span className="flex flex-col items-center gap-1">
+                <span className="text-base font-bold tracking-[-0.015em] text-foreground">사진 고르기</span>
+                {/* 두 줄이 하는 말이 다르다. 앞은 사진을 올리면 무슨 일이 생기는지,
+                    뒤는 여러 장을 골라도 된다는 것.
+                    뒷줄을 고쳤다. 예전에는 '기프티콘별로 나눠 담아요'였는데, 지금은
+                    정보성 화면은 버리고 기프티콘만 골라 담는다. */}
+                <span className="text-center text-[13px] leading-relaxed font-medium break-keep text-muted-foreground">
+                  사진을 올리면 <b className="font-bold text-foreground">정보를 자동으로 채워요</b>
+                  <br />
+                  여러 장을 올리면 기프티콘만 골라서 등록해요
+                </span>
+              </span>
+            </button>
           ) : (
           <div className="grid grid-cols-3 gap-2">
             {thumbs.map((thumb) => (
@@ -781,34 +775,62 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
           )}
           {error && <p className="text-sm text-destructive">{error}</p>}
 
-          {/* 칸을 성격별로 묶는다. 예전에는 일곱 칸이 줄줄이 이어져서, 어디까지 적어야
-              끝인지가 스크롤을 내려봐야 보였다. 묶어두면 덩어리가 셋이라 한눈에 잡힌다.
+          {/* 질문형 구역 제목 셋(무엇인가요 · 언제까지, 얼마인가요 · 누구 것인가요)을
+              걷었다. 칸마다 라벨이 있어서 같은 말을 두 번 하고 있었다 — '무엇인가요'
+              아래에 상호·상품명이 있고, '누구 것인가요'는 칸 하나짜리 구역이었다.
+              묶음은 여백이 만든다. 칸 사이를 13 → 16px로 벌리고, 사진과 정보 사이에만
+              선을 하나 둔다.
 
-              별표(*)는 걷어냈다. 일곱 칸 중 넷에 별이 붙어 있으면 별이 규칙이 아니라
-              무늬가 된다. 안 적어도 되는 것에만 '선택'이라고 적는 편이 짧고, 읽는 사람이
-              세어야 할 것도 적다. */}
-          <FieldGroup title="무엇인가요">
+              별표(*)도 없다. 일곱 칸 중 넷에 별이 붙으면 별이 규칙이 아니라 무늬가 된다.
+              안 적어도 되는 것에만 '선택'이라고 적는 편이 짧다. */}
+          <div className="my-1 h-px bg-border/60" />
+
+          <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="f-name">상품명</Label>
-              <Input id="f-name" value={form.name} onChange={(e) => updateField('name', e.target.value)} required />
+              <Label htmlFor="f-name" className="text-[14px] font-semibold text-foreground/80">상품명</Label>
+              <Input
+                id="f-name"
+                value={form.name}
+                onChange={(e) => updateField('name', e.target.value)}
+                required
+                className="h-[52px] rounded-[13px] text-[15.5px]"
+              />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="f-brand">상호</Label>
-                <Input id="f-brand" value={form.brand} onChange={(e) => updateField('brand', e.target.value)} />
+                <Label htmlFor="f-brand" className="text-[14px] font-semibold text-foreground/80">상호</Label>
+                <Input
+                  id="f-brand"
+                  value={form.brand}
+                  onChange={(e) => updateField('brand', e.target.value)}
+                  className="h-[52px] rounded-[13px] text-[15.5px]"
+                />
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <Label>카테고리</Label>
+                <Label className="text-[14px] font-semibold text-foreground/80">카테고리</Label>
+                {/* 고르는 칸은 배경을 채운다. 적는 칸(흰 배경)과 갈라 보이게 하려는 것이다 —
+                    테두리는 둘 다 갖는다. 둘 다 조작하는 자리라서.
+                    아이콘은 목록에서 쓰는 것과 같다(constants의 CATEGORIES). 같은 분류가
+                    화면마다 다른 그림이면 그림이 이름을 대신하지 못한다. */}
                 <Select value={form.category} onValueChange={(v) => updateField('category', v)}>
-                  <SelectTrigger className="w-full">
+                  {/* 위의 Label은 htmlFor로 묶을 수가 없다 — 이 칸은 input이 아니라 button이다.
+                      그래서 이름을 따로 붙인다. 없으면 읽어주는 프로그램에는 값만 들리고
+                      ("카페"), 무엇을 고르는 칸인지가 안 들린다. */}
+                  <SelectTrigger
+                    aria-label="카테고리"
+                    className="flex h-[52px] w-full items-center gap-2.5 rounded-[13px] border border-input bg-secondary/50 px-[15px] text-[15.5px]"
+                  >
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     {CATEGORIES.map((c) => (
                       <SelectItem key={c.key} value={c.key}>
-                        {c.label}
+                        <span className="flex items-center gap-2">
+                          {c.Icon && <c.Icon className="size-[18px] shrink-0 text-muted-foreground" strokeWidth={1.9} />}
+                          {c.label}
+                        </span>
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -829,43 +851,56 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
                 한때 아래에 "매장에서 부를 번호는 …" 한 줄을 달아뒀는데, 그건 화면이 왜
                 이상한지를 변명하는 줄이었다. 이상하지 않게 만드는 편이 맞다. */}
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="f-code">바코드 번호</Label>
+              <Label htmlFor="f-code" className="text-[14px] font-semibold text-foreground/80">바코드 번호</Label>
               <Input
                 id="f-code"
                 value={readableCode(form.code)}
                 onChange={(e) => updateField('code', wrapCode(form.code, e.target.value))}
                 placeholder="사진에서 읽거나 직접 입력"
+                className="h-[52px] rounded-[13px] text-[15.5px]"
               />
             </div>
-          </FieldGroup>
 
-          {/* 둘 다 카드에 적힌 숫자이되 안 적혀 있을 수도 있는 것들이다. '언제까지
-              쓰나요'로는 금액이 덮이지 않았다. */}
-          <FieldGroup title="언제까지, 얼마인가요">
+
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="f-expires">
+                <Label htmlFor="f-expires" className="text-[14px] font-semibold text-foreground/80">
                   사용기한 <Optional />
                 </Label>
-                <Input id="f-expires" type="date" value={form.expires_at} onChange={(e) => updateField('expires_at', e.target.value)} />
+                {/* 폰이 들고 있는 날짜 고르개를 그대로 쓴다. 직접 만든 달력으로 바꾸면
+                    폰마다 익숙한 조작을 버리게 되고, 60대에게는 그 손해가 크다. */}
+                <Input
+                  id="f-expires"
+                  type="date"
+                  value={form.expires_at}
+                  onChange={(e) => updateField('expires_at', e.target.value)}
+                  className="h-[52px] rounded-[13px] bg-secondary/50 text-[15.5px]"
+                />
               </div>
 
               {/* 금액은 길어야 여섯 자리라 한 줄을 통째로 쓸 이유가 없다. */}
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="f-amount">
+                <Label htmlFor="f-amount" className="text-[14px] font-semibold text-foreground/80">
                   금액 <Optional />
                 </Label>
-                <Input
-                  id="f-amount"
-                  type="text"
-                  inputMode="numeric"
-                  value={formatAmount(form.amount)}
-                  onChange={(e) => {
-                    updateField('amount', onlyDigits(e.target.value));
-                    setPriceSearchNote('');
-                  }}
-                  placeholder="원"
-                />
+                {/* '원'을 예시 문구로 두면 한 글자만 적어도 사라져서, 무엇을 적는 칸인지가
+                    적는 순간 없어진다. 오른쪽에 붙박이로 둔다. */}
+                <div className="relative">
+                  <Input
+                    id="f-amount"
+                    type="text"
+                    inputMode="numeric"
+                    value={formatAmount(form.amount)}
+                    onChange={(e) => {
+                      updateField('amount', onlyDigits(e.target.value));
+                      setPriceSearchNote('');
+                    }}
+                    className="h-[52px] rounded-[13px] pr-9 text-[15.5px] font-semibold tabular-nums"
+                  />
+                  <span className="pointer-events-none absolute inset-y-0 right-[15px] flex items-center text-[15px] font-semibold text-muted-foreground">
+                    원
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -883,58 +918,109 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
                 무엇을 켜는 건지는 스위치 옆에 붙여 적는다 — 켠 뒤에 한 줄을 더
                 띄우면 같은 말을 두 번 하는 셈이고, 그만큼 화면이 길어진다. */}
             {onlyDigits(form.amount) && (
-              <label className="flex cursor-pointer items-center gap-2 rounded-xl bg-muted px-3 py-2.5">
+              <label className="flex cursor-pointer items-center gap-2.5 rounded-xl border border-input bg-card px-3.5 py-3">
                 <input
                   type="checkbox"
                   checked={Boolean(form.is_voucher)}
                   onChange={(e) => updateField('is_voucher', e.target.checked)}
                   className="size-4.5 shrink-0 accent-primary"
                 />
-                <span className="text-sm break-keep text-foreground">금액권 — 쓴 만큼 깎여요</span>
+                <span className="text-[15px] font-medium break-keep text-foreground">금액권 — 쓴 만큼 깎여요</span>
               </label>
             )}
 
             {/* 켜주지 않고 물어만 본다. 잘못 켜두면 쓸 때마다 금액을 묻고 잔액이 남아
                 목록에서 사라지지 않아서, 사람이 확인하고 켜는 쪽이 안전하다. */}
             {voucherHint && !form.is_voucher && onlyDigits(form.amount) && (
-              <p className="m-0 text-sm break-keep text-muted-foreground">금액권 같아 보여요. 맞으면 켜주세요.</p>
+              <p className="m-0 text-sm break-keep text-muted-foreground">금액권 같아 보여요. 맞으면 체크해주세요.</p>
             )}
-          </FieldGroup>
 
-          <FieldGroup title="누구 것인가요">
-            {/* 고르는 목록이었는데 단추로 바꿨다. 가족은 서넛이라 목록을 열어 고를 만큼
-                많지 않은데, 열기 전에는 누가 골라져 있는지 말고는 아무것도 안 보였다.
-                단추로 두면 누구누구가 있는지가 함께 보이고, 바꾸는 데 한 번이면 된다.
-                지금 로그인한 사람이 처음부터 골라져 있다(buildEmptyForm의 myName). */}
-            <div className="grid grid-cols-3 gap-2">
-              {membersWithMeFirst(members, myName).map((m) => (
-                <button
-                  key={m.user_id}
-                  type="button"
-                  onClick={() => updateField('owner', m.display_name)}
-                  className={cn(
-                    'truncate rounded-xl border py-2.5 text-sm font-semibold transition-colors',
-                    form.owner === m.display_name
-                      ? 'border-primary bg-primary/5 text-primary'
-                      : 'border-border text-muted-foreground'
-                  )}
+            {/* 다시 고르는 칸으로 돌아왔다. 단추를 늘어놓던 때는 가족이 서넛일 때를 보고
+                정한 것인데, 다섯이 되면 두 줄을 먹고 화면에서 가장 큰 덩어리가 된다.
+                지금 로그인한 사람이 처음부터 골라져 있어서(buildEmptyForm의 myName)
+                대개 손대지 않는 칸이다. 접어두면 52px 한 줄이라 위 칸들과 높이가 같고,
+                사람이 늘어도 화면이 안 변한다.
+
+                접힌 채로도 색 점과 '나'를 남긴다. 목록에서 이름표 색으로 누구 것인지
+                가리는 앱이라 등록할 때부터 그 색이 보여야 한다.
+                동그란 아바타는 안 쓴다 — 옆에 이름이 그대로 있어서 '아들아들'처럼 두 번
+                읽힌다. 아바타는 이름이 안 보이는 자리에서 쓰는 것이다. */}
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-[14px] font-semibold text-foreground/80">받는 사람</Label>
+              <Select value={form.owner} onValueChange={(v) => updateField('owner', v)}>
+                <SelectTrigger
+                  aria-label="받는 사람"
+                  className="h-[52px] w-full gap-2.5 rounded-[13px] border border-input bg-card px-[15px] text-[15.5px]"
                 >
-                  {m.display_name}
-                </button>
-              ))}
+                  <span className="flex min-w-0 flex-1 items-center gap-2.5">
+                    <span
+                      aria-hidden="true"
+                      className={cn('size-2 shrink-0 rounded-full', ownerDotClass(members, form.owner))}
+                    />
+                    <span className="min-w-0 flex-1 truncate text-left font-semibold text-foreground">
+                      {form.owner || '골라주세요'}
+                    </span>
+                    {form.owner && form.owner === myName && (
+                      <span className="shrink-0 rounded-[5px] bg-accent px-1.5 py-0.5 text-[12.5px] font-semibold text-primary">
+                        나
+                      </span>
+                    )}
+                  </span>
+                </SelectTrigger>
+                <SelectContent>
+                  {membersWithMeFirst(members, myName).map((m) => (
+                    <SelectItem key={m.user_id} value={m.display_name}>
+                      <span className="flex items-center gap-2.5">
+                        <span
+                          aria-hidden="true"
+                          className={cn('size-2 shrink-0 rounded-full', memberTagColorClass(m) ?? OWNER_TAG_PALETTE[0])}
+                        />
+                        {m.display_name}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="f-memo">
-                메모 <Optional />
-              </Label>
-              <Textarea id="f-memo" value={form.memo} onChange={(e) => updateField('memo', e.target.value)} rows={2} />
+              {/* 바코드 창에서 '○○님의 메모'로 크게 보이는 값인데, 여기서는 그걸 알 수
+                  없었다. 칸 안 예시 문구로는 안 된다 — 적기 시작하면 사라진다. */}
+              <div className="flex items-baseline gap-1.5">
+                <Label htmlFor="f-memo" className="text-[14px] font-semibold text-foreground/80">메모</Label>
+                <span className="text-[12.5px] font-medium text-muted-foreground">선택 · 가족이 같이 봐요</span>
+              </div>
+              <Textarea
+                id="f-memo"
+                value={form.memo}
+                onChange={(e) => updateField('memo', e.target.value)}
+                className="h-[76px] rounded-[13px] text-[15.5px]"
+              />
             </div>
-          </FieldGroup>
+          </div>
 
-          <Button type="submit" size="lg" className={cn('w-full rounded-xl')} disabled={submitting || analyzing}>
-            {submitting ? '저장 중…' : '저장하기'}
-          </Button>
+          <div className="flex flex-col gap-2 pt-1">
+            <Button
+              type="submit"
+              className="h-[52px] w-full rounded-[13px] text-[15.5px] font-bold"
+              disabled={submitting || analyzing}
+            >
+              {submitting ? '저장 중…' : '저장하기'}
+            </Button>
+            {/* 헤더에서 옮겨온 자리. 다 적은 뒤에야 필요한 동작이라 여기가 맞고, 적은
+                것이 하나도 없으면 지울 것도 없으니 아예 안 그린다. */}
+            {hasAnything && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleReset}
+                className="h-11 w-full rounded-[11px] text-sm font-semibold text-muted-foreground"
+              >
+                <RotateCcw className="size-4" />
+                적은 내용 지우기
+              </Button>
+            )}
+          </div>
         </form>
 
         {/* 다른 기프티콘 사진을 더했을 때. 그냥 더하면 사진과 정보가 뒤섞이고, 그냥

@@ -68,26 +68,46 @@ beforeEach(() => {
   });
 });
 
-// 받은 사람은 고르는 목록이 아니라 단추다. 가족은 서넛이라 열어 고를 만큼 많지 않은데,
-// 열기 전에는 누가 있는지가 아예 안 보였다.
-describe('받은 사람', () => {
-  it('로그인한 사람이 처음부터 골라져 있고, 나머지 가족도 함께 보인다', () => {
+// 받은 사람은 접어둔 칸이다. 단추를 늘어놓던 때는 가족이 서넛일 때를 보고 정한 것인데,
+// 다섯이 되면 두 줄을 먹고 화면에서 가장 큰 덩어리가 된다. 로그인한 사람이 기본값이라
+// 대개 손대지 않는 칸이기도 하다.
+describe('받는 사람', () => {
+  // 카테고리도 같은 모양의 칸이라, 이름으로 집는다. 이름이 붙어 있어야 읽어주는
+  // 프로그램에도 무엇을 고르는 칸인지 들린다.
+  const ownerBox = () => screen.getByRole('combobox', { name: '받는 사람' });
+
+  it('로그인한 사람이 처음부터 골라져 있다', () => {
     open();
 
-    const me = screen.getByRole('button', { name: '아들' });
-    const mom = screen.getByRole('button', { name: '엄마' });
-    // 골라진 것만 테두리가 진하다. 색 이름 대신 클래스로 본다 — 화면에서 갈리는 것이
-    // 그것이라서다.
-    expect(me.className).toContain('border-primary');
-    expect(mom.className).not.toContain('border-primary');
+    // 접힌 칸에 내 이름이 그대로 적혀 있다. 열어보지 않아도 누구 것인지 보여야 한다.
+    const trigger = ownerBox();
+    expect(trigger.textContent).toContain('아들');
+    // 기본값이 나라는 것을 뱃지가 말한다.
+    expect(trigger.textContent).toContain('나');
+  });
+
+  // 목록에서 이름표 색으로 누구 것인지 가리는 앱이라, 등록할 때부터 그 색이 보여야 한다.
+  it('접힌 채로도 그 사람의 색 점이 보인다', () => {
+    open();
+
+    const trigger = ownerBox();
+    const dot = trigger.querySelector('[aria-hidden="true"].rounded-full');
+    expect(dot).toBeTruthy();
+    // tag_color가 없는 구성원이라 팔레트의 첫 색으로 떨어진다.
+    expect(dot.className).toContain('bg-[#4b7bec]');
   });
 });
 
 describe('UploadSheet 여러 장 안내', () => {
-  it('새로 등록할 때 사진 자리가 여러 칸으로 보이고 한 줄로 설명한다', () => {
+  // 빈 칸 '2' '3'을 나란히 그려두던 자리다. 한 장만 올리려는 사람에게 두 장을 더
+  // 올려야 하는 것처럼 보였고, 대부분은 한 장으로 끝난다.
+  it('새로 등록할 때 큰 버튼 하나와 한 줄 설명이 보인다', () => {
     open();
-    expect(screen.getByText(/기프티콘별로 나눠 담아요/)).toBeTruthy();
+    expect(screen.getByText(/기프티콘만 골라서 등록해요/)).toBeTruthy();
     expect(screen.getByRole('button', { name: /사진 고르기/ })).toBeTruthy();
+    // 뜻을 알 수 없던 빈 칸은 없다.
+    expect(screen.queryByText('2')).toBeNull();
+    expect(screen.queryByText('3')).toBeNull();
   });
 
   // 안내는 화면에 적힌 약속이다. 고르는 창이 한 장만 받으면 그 약속이 거짓말이 된다.
@@ -100,7 +120,7 @@ describe('UploadSheet 여러 장 안내', () => {
   // 사실이 아니다.
   it('수정 화면에서는 안내하지 않는다', () => {
     open({ mode: 'edit', initial: { id: 'g1', name: '아메리카노', image_paths: [], image_urls: [] }, onBulk: undefined });
-    expect(screen.queryByText(/기프티콘별로 나눠 담아요/)).toBeNull();
+    expect(screen.queryByText(/기프티콘만 골라서 등록해요/)).toBeNull();
   });
 
   // 한 번 넣고 나면 이미 아는 사람이다. 빈 칸 둘은 그때부터 자리만 차지한다.
