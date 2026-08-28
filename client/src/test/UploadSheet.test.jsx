@@ -248,6 +248,48 @@ describe('여러 장을 올렸을 때 한 건인지 가르는 기준', () => {
     expect(lastCall[0]).toHaveLength(2);
   });
 
+  // 열한 장을 한 번에 올렸는데 한 건으로 읽혔다. 스타벅스 라떼의 바코드 번호에
+  // 썬키스트의 상품명이 붙어 저장 직전까지 갔다 — 서로 다른 열한 건을 한꺼번에 보여주니
+  // 모델이 이 사진의 이름과 저 사진의 번호를 섞었다. 화면상 멀쩡해서 아무도 안 고친다.
+  it('여러 장인데 한 건도 못 알아봤으면 한 건으로 우기지 않는다', async () => {
+    groupImages.mockResolvedValue({ candidates: [], missed: [], scanned: 5, tally: {} });
+
+    const onBulk = vi.fn();
+    open({ onBulk });
+    fireEvent.change(document.querySelector('#gifticon-image'), {
+      target: {
+        files: Array.from(
+          { length: 5 },
+          (_, i) => new File(['x'], `${i}.jpg`, { type: 'image/jpeg' })
+        ),
+      },
+    });
+
+    await waitFor(() => expect(onBulk).toHaveBeenCalled());
+    // 섞일 자리에 아예 안 보낸다. 다건 화면이 정밀하게 다시 읽는다.
+    expect(prepareImages).not.toHaveBeenCalled();
+  });
+
+  // 묶는 일이 넘어졌을 때도 같다. 무엇이 들었는지 못 본 것이라, 한 건으로 우길 근거가
+  // 더 없다.
+  it('묶다가 넘어져도 여러 장이면 다건 화면으로 넘긴다', async () => {
+    groupImages.mockRejectedValue(new Error('메모리가 모자라요'));
+
+    const onBulk = vi.fn();
+    open({ onBulk });
+    fireEvent.change(document.querySelector('#gifticon-image'), {
+      target: {
+        files: Array.from(
+          { length: 5 },
+          (_, i) => new File(['x'], `${i}.jpg`, { type: 'image/jpeg' })
+        ),
+      },
+    });
+
+    await waitFor(() => expect(onBulk).toHaveBeenCalled());
+    expect(prepareImages).not.toHaveBeenCalled();
+  });
+
   it('바코드가 두 종류면 다건 화면으로 넘긴다', async () => {
     groupImages.mockResolvedValue({
       candidates: [{ id: 'pick-0', code: '111' }, { id: 'pick-1', code: '222' }],

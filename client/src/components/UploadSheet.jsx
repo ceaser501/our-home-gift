@@ -24,6 +24,15 @@ import { todayStr } from '../utils/date';
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 
+// 바코드를 한 건도 못 알아봤을 때, 몇 장까지를 '한 기프티콘'으로 볼 것인가.
+//
+// 한 기프티콘을 여러 장 갖고 있는 경우는 대개 셋이다 — 받은 원본, 계산대에서 쓰려고
+// 바코드만 크게 띄운 캡처, 금액이나 기한이 적힌 정보 캡처. 그 셋이라면 막대가 뭉개져
+// 안 읽혀도 한 건으로 보고 서버에 눈으로 읽혀도 된다.
+//
+// 그보다 많으면 아니다. 자세한 사연은 아래 acceptFiles에 적어뒀다.
+const SOLO_MAX_SHOTS = 3;
+
 function buildEmptyForm(defaultOwner) {
   return {
     name: '',
@@ -247,8 +256,9 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
     // 중이라는 뜻이고, 지금까지 채워둔 것을 버릴 수 없다.
     const adding = existingImages.length + newFiles.length > 0;
     if (onBulk && selected.length > 1 && !adding) {
+      let grouped = null;
       try {
-        let grouped = await groupImages(selected, { quick: true });
+        grouped = await groupImages(selected, { quick: true });
 
         // 얕은 판이 "한 건"이라고 했는데 못 읽은 사진이 남아 있으면, 그건 한 건이라는
         // 뜻이 아니라 **아직 모른다**는 뜻이다.
@@ -286,7 +296,33 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
           onBulk(selected);
           return;
         }
+      } catch {
+        // 묶어보지 못했다. 아래에서 장수를 보고 정한다.
+      }
 
+      // 한 건도 못 알아봤을 때.
+      //
+      // 여기서 그냥 아래로 내려가면 고른 사진 전부가 한 건의 사진이 된다. 그게 맞는
+      // 날도 있다 — 한 기프티콘을 원본·바코드 캡처·정보 캡처로 서너 장 갖고 있는데
+      // 막대가 뭉개져 안 읽히는 경우다. 그때는 서버가 사진을 눈으로 읽어 채워준다.
+      //
+      // 그런데 열한 장을 골라 온 사람에게는 그 짐작이 맞을 수가 없다. 실제로 스타벅스
+      // 라떼의 바코드 번호에 썬키스트의 상품명이 붙어 저장 직전까지 갔다 — 서로 다른
+      // 열한 건을 한꺼번에 보여주니 모델이 이 사진의 이름과 저 사진의 번호를 섞었다.
+      // 화면상 멀쩡해서 아무도 안 고치는 값이라, 빈칸보다 나쁘다.
+      //
+      // 그래서 장수로 가른다. 서넛까지는 한 건으로 보고 아래로 내려가고, 그보다 많으면
+      // 다건 화면으로 넘긴다. 거기서 정밀하게 다시 읽고, 그래도 없으면 없다고 말한다.
+      // 묶다가 넘어진 경우(catch)도 같은 길이다 — 무엇이 들었는지 못 본 것이라,
+      // 열한 장을 한 건으로 우길 근거가 더 없다.
+      if (!grouped?.candidates.length && selected.length > SOLO_MAX_SHOTS) {
+        setAnalyzing(false);
+        setProgress(null);
+        onBulk(selected);
+        return;
+      }
+
+      if (grouped?.candidates.length === 1) {
         // 한 건이면 그 건의 사진만 데리고 간다. 못 읽은 사진은 여기서 놓는다.
         //
         // 붙일 곳이 하나뿐이라 해서 그게 그 건의 사진이라는 뜻은 아니다. 금액이 적힌
@@ -312,8 +348,6 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
             selected = kept;
           }
         }
-      } catch {
-        // 묶어보지 못했으면 예전 길로 간다. 한 건으로 읽히면 그것대로 맞다.
       }
     }
 
