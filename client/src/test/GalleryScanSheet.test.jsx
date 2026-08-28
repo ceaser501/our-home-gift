@@ -138,6 +138,28 @@ describe('GalleryScanSheet', () => {
     await waitFor(() => expect(scanGallery).toHaveBeenCalled(), { timeout: 3000 });
     expect(await screen.findByText('상품 111', {}, { timeout: 3000 })).toBeTruthy();
     expect(await screen.findByText('상품 222')).toBeTruthy();
+    // 다 끝난 화면이라 제목이 진행형일 이유가 없다. 몇 개를 찾았는지가 소식이다.
+    expect(await screen.findByText('기프티콘 2개를 찾았어요')).toBeTruthy();
+  });
+
+  // 기한이 비었다고만 적으면 어느 것인지 알 수가 없다. 여럿일 수 있어 특정 화면으로
+  // 보낼 수도 없어서, 이름을 보여주고 목록에서 그것만 찾아 고치게 한다.
+  it('기한이 빈 채로 들어간 것은 이름을 보여준다', async () => {
+    readGifticonInfo.mockImplementation(async (_prepared, opts) => ({
+      ...info(opts?.knownCode, `상품 ${opts?.knownCode}`),
+      expiresAt: opts?.knownCode === '222' ? null : '2026-12-31',
+    }));
+
+    render(<GalleryScanSheet onRegistered={() => {}} onClose={() => {}} />);
+    (await screen.findByRole('button', { name: /사진 허용하고 찾기/ })).click();
+    (await screen.findByRole('button', { name: /2개 등록/ }, { timeout: 3000 })).click();
+
+    expect(await screen.findByText('2개를 등록했어요', {}, { timeout: 3000 })).toBeTruthy();
+
+    // 접혀 있을 때는 위 목록에 한 번 나오는 것이 전부다.
+    expect(screen.getAllByText('상품 222')).toHaveLength(1);
+    fireEvent.click(screen.getByText('등록했지만 사용기한이 비었어요 1개'));
+    expect(screen.getAllByText('상품 222')).toHaveLength(2);
   });
 
   // 오늘 이것 때문에 같은 기프티콘이 두 번 들어갔다. 훑기는 A로 묻고 등록은 B로 했다.
@@ -175,17 +197,17 @@ describe('GalleryScanSheet', () => {
     (await screen.findByRole('button', { name: /1개 등록/ }, { timeout: 3000 })).click();
 
     expect(await screen.findByText('1개를 등록했어요', {}, { timeout: 3000 })).toBeTruthy();
-    expect(screen.getByText('1개는 등록하지 못했어요')).toBeTruthy();
-    // 접혀 있을 때는 이유가 요약 한 줄로만 있고, 넣은 것은 카드로 서 있다.
-    expect(screen.getByText('모두 사용기한이 지났어요')).toBeTruthy();
+    // 접혀 있을 때는 무엇을 하면 되는지 한 줄로만 있고, 넣은 것은 목록에 서 있다.
+    expect(screen.getByText('등록하지 못한 것 1개')).toBeTruthy();
+    expect(screen.getByText('기한이 지난 건 등록할 수 없어요')).toBeTruthy();
     expect(screen.getByText('상품 111')).toBeTruthy();
 
-    // 못 넣은 쪽을 펼치면 넣은 쪽은 한 줄로 접힌다. 둘 다 펼쳐두면 아래 버튼까지
-    // 스크롤을 두 번 내려야 한다.
-    fireEvent.click(screen.getByText('1개는 등록하지 못했어요'));
-    expect(screen.getByText('등록한 기프티콘 1개')).toBeTruthy();
-    expect(screen.queryByText('상품 111')).toBeNull();
+    // 펼쳐도 넣은 목록은 그대로 있다. 목록만 스크롤하므로 둘 다 펼쳐도 버튼이 안 밀린다.
+    fireEvent.click(screen.getByText('등록하지 못한 것 1개'));
+    expect(screen.getByText('상품 111')).toBeTruthy();
+    // 이유는 펼친 안에서 한 번만 적는다.
     expect(screen.getByText('사용기한이 지났어요')).toBeTruthy();
+    expect(screen.getByText('상품 222')).toBeTruthy();
   });
 
   // 빠진 칸이 하나 있다고 그 건만 따로 처음부터 다시 하게 할 이유가 없다.
@@ -229,8 +251,10 @@ describe('GalleryScanSheet', () => {
     render(<GalleryScanSheet onRegistered={() => {}} onClose={() => {}} />);
     (await screen.findByRole('button', { name: /사진 허용하고 찾기/ })).click();
 
-    // 접은 제목에 한 번, 줄마다 한 번씩 — 셋 다 같은 사연이라 같은 말이 나온다.
-    expect(await screen.findAllByText(/사용기한이 지났어요/, {}, { timeout: 3000 })).toHaveLength(3);
+    // 사연은 상자 제목이 한 번만 말한다. 줄마다 되풀이하면 읽어도 새로 아는 것이 없다.
+    expect(await screen.findAllByText(/사용기한이 지났어요/, {}, { timeout: 3000 })).toHaveLength(1);
+    // 대신 줄에는 며칠 지났는지가 적힌다 — 어제 지난 것과 반년 전 것은 다른 이야기다.
+    expect(screen.getAllByText(/일 지남/)).toHaveLength(2);
     expect(screen.queryByText(/정보를 못 읽었어요/)).toBeNull();
     // 채워봐야 그대로 막힌다. 채우라고 하지 않는다.
     expect(screen.queryByRole('button', { name: /채우기/ })).toBeNull();
@@ -251,8 +275,10 @@ describe('GalleryScanSheet', () => {
     render(<GalleryScanSheet onRegistered={() => {}} onClose={() => {}} />);
     (await screen.findByRole('button', { name: /사진 허용하고 찾기/ })).click();
 
-    // 서버가 보낸 말이 그대로 남는다. 카드와 위쪽 안내 두 곳에 나온다.
-    expect((await screen.findAllByText('오늘은 여기까지예요', {}, { timeout: 3000 })).length).toBeGreaterThan(0);
+    // 넣을 수 없는 것은 접혀 있다. 제목이 무슨 일인지 말하고, 펼치면 서버가 보낸 말이
+    // 그대로 남아 있다.
+    fireEvent.click(await screen.findByText(/읽다가 막혔어요/, {}, { timeout: 3000 }));
+    expect((await screen.findAllByText('오늘은 여기까지예요')).length).toBeGreaterThan(0);
 
     (await screen.findByRole('button', { name: /다시 읽기/ })).click();
     expect(await screen.findByText('상품 111', {}, { timeout: 3000 })).toBeTruthy();

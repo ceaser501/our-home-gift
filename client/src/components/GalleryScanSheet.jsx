@@ -3,12 +3,10 @@ import {
   CalendarClock,
   Check,
   ChevronDown,
-  ChevronRight,
   EyeOff,
   Image as ImageIcon,
   ImageOff,
   ImagePlus,
-  Images,
   Info,
   Loader2,
   Pencil,
@@ -173,9 +171,12 @@ function folderLabel(bucket) {
 // 처음에는 다섯 줄이었다. 줄여서 셋이다 — 어차피 두 줄쯤 읽고 지나가는 자리라,
 // 다섯을 두면 무엇이 중요한지가 흐려진다. 남긴 셋은 '어디를 보는가 / 나머지는
 // 어떻게 되는가 / 언제부터인가'로, 사진 권한을 망설이게 하는 물음 그 자체다.
+//
+// 아이콘은 안 붙인다. 문구가 셋인데 아이콘이 하나면 어긋나고, 아이콘 자리만큼 문구 폭이
+// 줄어든다 — 그 폭이 곧 '한 줄에 들어가나'를 가른다.
 const HINTS = [
   // FOLDERS — 이 셋 말고는 listImages에 넘기지도 않는다.
-  { icon: Images, text: `사진첩은 ${KOREAN_BUCKETS}, 이 세 곳만 봐요` },
+  `사진첩은 ${KOREAN_BUCKETS}, 이 세 곳만 봐요`,
   // collect() — 바코드가 읽힌 것만 후보가 되고, 서버로는 그 후보만 간다.
   // 나머지는 폰 안에서 걸러져 NO_BARCODE로만 남는다(사진이 아니라 id만).
   //
@@ -183,9 +184,9 @@ const HINTS = [
   // 열어 바코드가 있는지 본다 — 안 보는 것이 아니다. 사실이 아닌 말로 안심시키면
   // 그건 안심이 아니라 속인 것이 된다. 지금 문구는 실제로 하는 일과 정확히 같고,
   // 사람들이 진짜 걱정하는 것("내 사진이 어디로 가나")에도 더 곧바로 답한다.
-  { icon: EyeOff, text: '기프티콘이 아닌 사진은 폰 밖으로 나가지도 저장되지도 않아요' },
+  '기프티콘이 아닌 사진은 폰 밖으로 나가지도 저장되지도 않아요',
   // listImages({ since: '0' }) — 네이티브가 설치일 0시를 바닥으로 삼는다.
-  { icon: CalendarClock, text: '앱을 설치한 날 이후에 담긴 사진만 봐요' },
+  '앱을 설치한 날 이후에 담긴 사진만 봐요',
 ];
 
 // 받아 온 사진(수기등록)일 때의 안내. 위 HINTS는 사진첩 훑기의 이야기라(어느 폴더를
@@ -193,11 +194,11 @@ const HINTS = [
 // 무슨 일이 일어나는지만 적는다 — 역시 다 사실이어야 한다.
 const PICKED_HINTS = [
   // collect() — 같은 바코드 번호끼리 한 후보로 모인다.
-  { icon: Images, text: '같은 기프티콘을 찍은 사진은 한 건으로 모아요' },
+  '같은 기프티콘을 찍은 사진은 한 건으로 모아요',
   // 바코드를 못 찾은 사진은 후보가 되지 않고, 뺐다고 알려준다.
-  { icon: EyeOff, text: '바코드를 찾은 사진만 기프티콘으로 넣어요' },
+  '바코드를 찾은 사진만 기프티콘으로 넣어요',
   // readGifticonInfo — 상품명·금액·기한은 서버가 사진에서 읽어 채운다.
-  { icon: ScanSearch, text: '상품명과 금액, 기한은 사진에서 읽어 채워요' },
+  '상품명과 금액, 기한은 사진에서 읽어 채워요',
 ];
 
 // 한 줄이 머무는 시간. 짧으면 읽기 전에 넘어가고, 길면 두 번째 줄을 못 보고 끝난다.
@@ -281,8 +282,10 @@ const SHOW_MISSED_DETAILS = false;
 
 // 결과 화면에서 카드로 세워 보여줄 등록 건수. 나머지는 'N개 더 보기'로 접는다.
 //
-// 둘이면 "무엇이 들어갔는지"는 충분히 보이고, 아래 버튼도 화면 안에 남는다.
-const DONE_PREVIEW = 2;
+// 둘이었다. 여덟 개를 넣은 사람에게 둘만 보여주면 나머지가 들어갔는지 확인하려고 매번
+// 펼쳐야 한다. 늘릴 수 있게 된 것은 목록만 스크롤하게 바꾼 뒤부터다 — 버튼이 흐름에
+// 같이 있던 때는 미리 보기를 늘리면 버튼이 화면 밖으로 밀려났다.
+const DONE_PREVIEW = 5;
 
 function reasonOf(candidate) {
   if (candidate.readError) return candidate.readError;
@@ -305,6 +308,51 @@ const BLOCK_TITLES = {
   error: '읽다가 막혔어요',
   missing: '정보를 못 읽었어요',
 };
+
+// 갈래마다 아이콘과 색. 상자 모양은 같게 두고 아이콘 색으로 가른다 — 할 일은
+// destructive, 참고는 회색이다. 상세내역 상자도 이 회색을 쓴다.
+//
+// 둘이 똑같이 생겼던 때는 어느 쪽을 열어야 하는지 알 수가 없었다.
+const BLOCK_TONES = {
+  dismissed: { Icon: EyeOff, bg: 'bg-muted', fg: 'text-muted-foreground' },
+  // 기한은 잘못된 것이 아니라 지나간 것이다. 빨강까지 갈 일은 아니어서 주의색을 쓴다.
+  expired: { Icon: CalendarClock, bg: 'bg-[#f4f0e6]', fg: 'text-[#a8842c]' },
+  error: { Icon: TriangleAlert, bg: 'bg-destructive/12', fg: 'text-destructive' },
+  missing: { Icon: Info, bg: 'bg-destructive/12', fg: 'text-destructive' },
+};
+
+/**
+ * 접히는 상자.
+ *
+ * 회색 접힘 줄이던 것을 테두리 상자로 바꿨다. 펼쳤을 때 내용이 테두리 안에 남아야 위
+ * 후보 카드와 섞이지 않는다 — 예전에는 펼치면 줄들이 목록에 그냥 풀려서 흐림(60%)만으로
+ * 구분해야 했다.
+ */
+function FoldBox({ tone, title, open, onToggle, children }) {
+  const { Icon, bg, fg } = tone;
+  return (
+    <div className="overflow-hidden rounded-[14px] border border-border">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={open}
+        className="flex w-full items-center gap-2.5 bg-muted/40 px-3 py-2.5"
+      >
+        <span className={cn('flex size-6 shrink-0 items-center justify-center rounded-full', bg)}>
+          <Icon className={cn('size-[13px]', fg)} strokeWidth={2.2} />
+        </span>
+        <span className="min-w-0 flex-1 text-left text-[13.5px] font-bold tracking-[-0.015em] break-keep text-foreground">
+          {title}
+        </span>
+        <ChevronDown
+          className={cn('size-4 shrink-0 text-muted-foreground transition-transform', open && 'rotate-180')}
+          strokeWidth={2.2}
+        />
+      </button>
+      {open && <div className="px-3 pb-2.5">{children}</div>}
+    </div>
+  );
+}
 
 function blockKind(candidate, isDismissed) {
   if (isDismissed) return 'dismissed';
@@ -377,34 +425,62 @@ function ScannerArt() {
  */
 function CandidateSlot({ at, hints = HINTS }) {
   return (
-    <li className="relative flex items-start gap-3 overflow-hidden rounded-xl border border-border bg-card p-3">
-      {/* 들어올 카드의 뼈대. 안내에 자리를 내주느라 옅게 깔아둔다 — 무엇이 들어올
-          자리인지는 보이되, 읽어야 할 글자와 다투지는 않아야 한다. */}
-      <span className="size-14 shrink-0 animate-pulse rounded-lg bg-secondary opacity-40" />
-      <div className="flex min-w-0 flex-1 flex-col gap-2 opacity-40">
-        <span className="h-2.5 w-16 animate-pulse rounded bg-secondary" />
-        <span className="h-4 w-3/4 animate-pulse rounded bg-secondary" />
-        <span className="h-3 w-2/5 animate-pulse rounded bg-secondary" />
-      </div>
+    <li className="flex items-start gap-3 overflow-hidden rounded-xl border border-border bg-card p-3">
+      {/* 들어올 카드의 뼈대.
+          한때 빈 회색 사각형이었다. 아래 카드들의 56px 썸네일 자리에 회색 네모가 있으면
+          '채워지는 중'이 아니라 '사진이 안 뜬 칸'으로 읽힌다 — 눈은 그걸 '없다'로 본다.
+          글자 두 줄과 바코드를 옅게 그려두고 흰 띠를 지나가게 하면 무엇이 들어올
+          자리인지 보인다. */}
+      <span className="relative size-14 shrink-0 overflow-hidden rounded-[11px] bg-secondary">
+        <i className="absolute top-3 left-[9px] h-[3px] w-[22px] rounded-sm bg-border" />
+        <i className="absolute top-5 left-[9px] h-[3px] w-[15px] rounded-sm bg-border" />
+        <i
+          className="absolute inset-x-[9px] bottom-[11px] h-3.5"
+          style={{ background: 'repeating-linear-gradient(90deg,#c8c8d0 0 1.5px,transparent 1.5px 4px)' }}
+        />
+        <i
+          className="absolute inset-0 animate-[moacon-shimmer_1.4s_ease-in-out_infinite]"
+          style={{ background: 'linear-gradient(105deg,transparent 30%,rgba(255,255,255,.85) 50%,transparent 70%)' }}
+        />
+      </span>
 
-      <div className="absolute inset-0 flex items-center px-3.5">
-        {hints.map((item, i) => {
-          const Icon = item.icon;
-          const on = i === at % hints.length;
-          return (
-            <span
-              key={item.text}
-              aria-hidden={!on}
-              className={cn(
-                'absolute inset-x-3.5 flex items-center gap-2.5 transition-all duration-500 ease-out',
-                on ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-1 opacity-0'
-              )}
-            >
-              <Icon className="size-4 shrink-0 text-primary" />
-              <span className="text-sm leading-snug break-keep text-muted-foreground">{item.text}</span>
-            </span>
-          );
-        })}
+      <div className="flex min-w-0 flex-1 flex-col gap-2">
+        {/* 문구 자리를 44px로 고정한다. 두 줄짜리 문구가 와도 아래 표시가 안 흔들린다. */}
+        <div className="relative h-11">
+          {hints.map((text, i) => {
+            const on = i === at % hints.length;
+            return (
+              <span
+                key={text}
+                aria-hidden={!on}
+                className={cn(
+                  'absolute inset-x-0 top-0 text-sm leading-snug break-keep text-muted-foreground',
+                  'transition-all duration-500 ease-out',
+                  on ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-[9px] opacity-0'
+                )}
+              >
+                {text}
+              </span>
+            );
+          })}
+        </div>
+
+        {/* 점 세 개는 '몇 번째'만 말한다. 차오르는 칸은 '곧 넘어간다'까지 말해서,
+            다 읽지 못했을 때 기다릴지 정할 수 있다. */}
+        <div className="flex gap-[5px]" aria-hidden="true">
+          {hints.map((text, i) =>
+            i === at % hints.length ? (
+              <span key={text} className="relative h-1 w-[22px] overflow-hidden rounded-sm bg-secondary">
+                <i
+                  className="absolute inset-y-0 left-0 rounded-sm bg-primary animate-[moacon-hint-fill_2600ms_linear]"
+                  style={{ width: '100%' }}
+                />
+              </span>
+            ) : (
+              <span key={text} className="h-1 w-[5px] rounded-sm bg-secondary" />
+            )
+          )}
+        </div>
       </div>
     </li>
   );
@@ -493,6 +569,19 @@ function formatDate(iso) {
   return iso.replaceAll('-', '.');
 }
 
+// 기한이 지난 줄에 적는 값. 날짜만으로는 어제 지난 것과 반년 전 것이 같아 보인다.
+//
+//   2026.07.31 · 28일 지남
+//
+// 이 줄에 '사용기한이 지났어요'를 되풀이하지 않는 대신 이걸 적는다. 그 말은 상자
+// 제목이 이미 하고 있어서, 줄마다 또 적으면 읽어도 새로 아는 것이 없다.
+function expiredLabel(iso) {
+  if (!iso) return null;
+  const day = Math.floor((new Date(`${todayStr()}T00:00:00`) - new Date(`${iso}T00:00:00`)) / 86400000);
+  if (!Number.isFinite(day) || day <= 0) return formatDate(iso);
+  return `${formatDate(iso)} · ${day}일 지남`;
+}
+
 function formatWon(amount) {
   if (amount === null || amount === undefined || amount === '') return null;
   return `${Number(amount).toLocaleString('ko-KR')}원`;
@@ -568,6 +657,12 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
   // 한 화면에 둘 다 펼쳐두면 스크롤을 두 번 내려야 버튼에 닿는다.
   const [showAllDone, setShowAllDone] = useState(false);
   const [failOpen, setFailOpen] = useState(false);
+  // 기한이 빈 채로 들어간 것들. 어느 기프티콘인지 이름을 보여준다.
+  const [noExpiryOpen, setNoExpiryOpen] = useState(false);
+  // 목록 화면의 두 상자. 기본값은 상황이 정하고(넣을 것이 하나도 없으면 펼친 채로
+  // 시작한다), 사람이 한 번 누르면 그 뒤로는 누른 대로 둔다.
+  const [blockedOpen, setBlockedOpen] = useState(null);
+  const [panelOpen, setPanelOpen] = useState(false);
   const abortRef = useRef(null);
   // 얕은 판에서 잡은 후보. 깊은 판이 같은 번호를 또 만들지 않게 넘겨준다.
   const found0Ref = useRef([]);
@@ -1039,7 +1134,6 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
     setError('');
     const done = [];
     const failed = [];
-    const noExpiry = targets.filter((c) => !c.info?.expiresAt).length;
 
     async function save(candidate) {
       const { prepared, info } = candidate;
@@ -1124,10 +1218,16 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
     const unreadable = candidates
       .filter((c) => !dismissedIds.includes(c.id) && !isPickable(c))
       .map((c) => ({ candidate: c, reason: reasonOf(c), expired: isExpired(c) }));
-    setResult({ done, failed: [...unreadable, ...failed], noExpiry });
+    // 기한이 빈 것은 넣은 것 중에서 센다. 넣으려던 것으로 세면, 다른 이유로 못 들어간
+    // 건까지 "등록했지만 기한이 비었어요"에 얹힌다.
+    // 개수만으로는 어느 것인지 알 수가 없어서 후보를 그대로 들고 있는다 — 여럿일 수
+    // 있어 특정 화면으로 보낼 수가 없고, 이름을 보여주면 목록에서 그것만 찾아 고친다.
+    const noExpiryItems = done.filter((candidate) => !candidate.info?.expiresAt);
+    setResult({ done, failed: [...unreadable, ...failed], noExpiry: noExpiryItems.length, noExpiryItems });
     setShowAllDone(false);
     // 하나도 못 넣은 날에는 못 넣은 쪽을 펼친 채로 시작한다. 그때는 그게 전부다.
     setFailOpen(done.length === 0);
+    setNoExpiryOpen(false);
     setStage('registered');
     // 목록을 다시 읽게 한다. 방금 넣은 것이 뒤에 보여야 한다.
     if (done.length > 0) onRegistered?.();
@@ -1362,12 +1462,13 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
         ? '고른 사진에서 기프티콘을 찾고 있어요'
         : '사진첩에서 기프티콘을 찾고 있어요'
       : '기프티콘 정보를 읽고 있어요';
+  // 앞에 '사진'을 붙이지 않는다. 왼쪽 문장이 이미 무엇을 세는 중인지 말한다.
   const workingCount =
     stage === 'scanning'
       ? progress?.total
-        ? `사진 ${progress.scanned}/${progress.total}`
+        ? `${progress.scanned} / ${progress.total}`
         : '잠시만요'
-      : `${progress?.scanned ?? 0}/${progress?.total ?? 0}개`;
+      : `${progress?.scanned ?? 0} / ${progress?.total ?? 0}`;
 
 
   const alive = candidates.filter((candidate) => !dismissedIds.includes(candidate.id));
@@ -1410,6 +1511,8 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
   // 섞여 있을 때만 '등록할 수 없어요'로 뭉친다.
   const blockKinds = [...new Set(blocked.map((c) => blockKind(c, dismissedIds.includes(c.id))))];
   const blockedTitle = blockKinds.length === 1 ? BLOCK_TITLES[blockKinds[0]] : '등록할 수 없어요';
+  // 섞여 있으면 가장 급한 쪽 색으로 둔다. 갈래가 하나면 그 갈래의 색이다.
+  const blockedTone = blockKinds.length === 1 ? BLOCK_TONES[blockKinds[0]] : BLOCK_TONES.error;
 
   // 결과 화면에서 못 넣은 것을 이유별로 묶는다.
   //
@@ -1434,43 +1537,49 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
   // 세는 단위를 섞지 않는다. 사진 수는 사진첩 줄에서만 말하고, 그 아래는 기프티콘 수만
   // 말한다. '확인한 사진 4장 / 이미 등록됨 3장'을 나란히 뒀더니 아래 숫자가 기프티콘
   // 세 개로 읽혔다.
+  //
+  // 이름이 '상세내역'이던 자리다. 안에 든 것은 사진 목록이 아니라 개수 표이고, 명사
+  // 하나만으로는 열어볼 이유가 생기지 않는다. 무엇을 알려주는지를 그대로 적는다.
   const panelBody = tally ? (
-    <details className="group rounded-xl bg-muted/60">
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3 text-sm font-semibold text-foreground">
-        상세내역
-        <ChevronDown className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
-      </summary>
-
-      <div className="flex flex-col gap-2.5 px-4 pb-3.5">
-        {/* 사진첩 이름과 장수를 한 덩어리로 묶어 보여준다 — 줄글로 늘어놓으면
+    <FoldBox
+      tone={BLOCK_TONES.dismissed}
+      title="어디서 몇 장을 봤는지 알려드려요"
+      open={panelOpen}
+      onToggle={() => setPanelOpen((open) => !open)}
+    >
+      <div className="flex flex-col gap-2.5 pt-2.5">
+        {/* 사진첩 이름과 장수를 한 칸에 위아래로 둔다 — 한 문장으로 이으면
             '다운로드 1 카카오톡 1'에서 1이 어디에 붙는지 한 번 더 읽어야 한다.
+            이름 위·숫자 아래로 두면 숫자끼리 세로로 줄이 맞는다.
             사진이 없어도 0으로 남긴다. 목록에서 빠지면 "걸러진 건가" 하고 의심하게
             되는데, 실제로는 볼 게 없었던 것이다. 기기에 있는 다른 사진첩은 적지 않는다 —
             안 보는 것을 늘어놓으면 그걸 뒤진다는 뜻으로 읽힌다. */}
         {/* 받아 온 사진은 어느 폴더에서 왔는지 모른다. 그 줄 대신 몇 장을 봤는지만 적는다. */}
         {picked ? (
-          <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
-            <Images className="size-3.5 shrink-0" />
-            고른 사진 <b className="font-semibold tabular-nums text-foreground">{scanned}장</b>
-          </span>
+          <div className="flex flex-col gap-0.5 rounded-[10px] bg-muted/50 px-2.5 py-2.5">
+            <span className="text-xs font-medium text-muted-foreground">고른 사진</span>
+            <span className="text-base font-bold tracking-[-0.02em] tabular-nums text-foreground">{scanned}</span>
+          </div>
         ) : (
-          <div className="flex flex-col gap-1.5">
-            <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
-              <Images className="size-3.5 shrink-0" />
-              사진첩 별 확인 사진
-            </span>
-            <div className="flex flex-wrap gap-1.5">
-              {summary.watched.map((folder) => (
-                <span key={folder.label} className="rounded-lg bg-card px-2.5 py-1 text-sm text-foreground">
-                  {folder.label} <b className="font-semibold tabular-nums">{folder.count}</b>
+          <div className="flex gap-[7px]">
+            {summary.watched.map((folder) => (
+              <div
+                key={folder.label}
+                className="flex flex-1 flex-col gap-0.5 rounded-[10px] bg-muted/50 px-2.5 py-2.5"
+              >
+                <span className="truncate text-xs font-medium text-muted-foreground">{folder.label}</span>
+                <span className="text-base font-bold tracking-[-0.02em] tabular-nums text-foreground">
+                  {folder.count}
                 </span>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
         )}
 
-        <dl className="m-0 grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 border-t border-border pt-2.5 text-sm">
-          <dt className="text-muted-foreground">발견한 기프티콘</dt>
+        {/* 세는 단위를 섞지 않는다. 위 칸은 사진 수, 아래 줄은 기프티콘 수다.
+            나란히 뒀더니 아래 숫자가 사진 장수로 읽혔다. */}
+        <dl className="m-0 grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 border-t border-border/60 pt-2.5 text-sm">
+          <dt className="text-muted-foreground">찾은 기프티콘</dt>
           <dd className="m-0 font-semibold tabular-nums text-foreground">{tally.found}개</dd>
           <dt className="text-muted-foreground">이미 등록된 기프티콘</dt>
           <dd className="m-0 tabular-nums text-foreground">{tally.alreadyHave}개</dd>
@@ -1486,12 +1595,12 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
         {/* 셋 다 0장이면 사진첩 이름이 우리 목록과 다를 수 있다. 그때만 기기에 있는
             이름을 보여준다 — 그게 유일한 단서다. */}
         {!picked && summary.watched.every((folder) => folder.count === 0) && summary.others.length > 0 && (
-          <p className="m-0 border-t border-border pt-2.5 text-sm break-keep text-muted-foreground">
+          <p className="m-0 border-t border-border/60 pt-2.5 text-sm break-keep text-muted-foreground">
             폰에 있는 사진첩: {summary.others.map((f) => `${f.name} ${f.count}`).join(' · ')}
           </p>
         )}
       </div>
-    </details>
+    </FoldBox>
   ) : null;
 
   /**
@@ -1527,41 +1636,83 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
             <img
               src={`data:image/jpeg;base64,${candidate.images[0]}`}
               alt=""
-              className="size-14 shrink-0 rounded-lg bg-secondary object-cover"
+              className="size-14 shrink-0 rounded-[11px] bg-secondary object-cover"
             />
             <div className="flex min-w-0 flex-1 flex-col">
               {/* 맨 윗줄은 상호와 어느 사진첩에서 나왔는지. 상호를 작게 위에 올려두면
                   아래 상품명이 한 덩어리로 읽힌다. 어디서 나왔는지를 함께 적는 건,
                   같은 기프티콘이 여러 사진첩에 있을 때 무엇을 집었는지 알기 위해서다. */}
               <div className="flex items-baseline gap-2">
-                <span className="truncate text-xs font-bold tracking-wider text-primary uppercase">
+                <span className="truncate text-[12.5px] font-medium text-muted-foreground">
                   {info?.brand || candidate.bucket}
                 </span>
                 {info?.brand && (
-                  <span className="shrink-0 text-xs text-muted-foreground">{candidate.bucket}</span>
+                  <span className="shrink-0 text-[12.5px] text-muted-foreground/70">{candidate.bucket}</span>
                 )}
               </div>
-              <span className="mt-1 text-base leading-snug font-semibold break-keep text-foreground">
+              <span className="mt-0.5 truncate text-[15.5px] leading-snug font-semibold tracking-[-0.015em] text-foreground">
                 {info?.name || (broken ? '못 읽었어요' : candidate.code)}
               </span>
-              <span className="mt-1.5 truncate text-sm tabular-nums text-muted-foreground">
-                {broken
-                  ? reasonOf(candidate)
-                  : formatDate(info?.expiresAt)
-                    ? `${formatDate(info.expiresAt)} 까지`
-                    : '사용기한 없음'}
-              </span>
-
+              {/* 기한과 금액을 세로선으로 나눈다(목록·등록 창과 같은 형태). 가운뎃점으로
+                  이으면 한 문장으로 읽혀서 어디가 날짜고 어디가 금액인지 한 번 더 봐야
+                  한다. 금액은 한때 오른쪽 칸에 따로 있었는데, 그 자리를 아래 금액권
+                  칩에 내줬다 — 두 값이 한 줄에 있어도 선이 갈라준다. */}
+              {broken ? (
+                <span className="mt-1 truncate text-[13px] text-muted-foreground">{reasonOf(candidate)}</span>
+              ) : (
+                <div className="mt-1 flex items-center gap-[7px]">
+                  <span className="shrink-0 text-[13px] font-semibold tabular-nums text-foreground/80">
+                    {formatDate(info?.expiresAt) ? `${formatDate(info.expiresAt)}까지` : '사용기한 없음'}
+                  </span>
+                  {formatWon(info?.amount) && (
+                    <>
+                      <span className="h-2.5 w-px shrink-0 bg-border" />
+                      <span className="text-[13px] font-bold tabular-nums text-foreground">
+                        {formatWon(info.amount)}
+                      </span>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
 
-            {/* 오른쪽은 금액과, 이 후보를 치우는 자리. 시안에는 '확인됨' 같은 상태 글자가
-                있었는데 빼뒀다 — 아래에서 성격별로 나눠 보여주므로 카드마다 또 적으면
-                같은 말이 두 번 된다. */}
-            <div className="flex shrink-0 flex-col items-end gap-1">
-              {formatWon(info?.amount) && (
-                <span className="text-base font-bold tabular-nums text-foreground">
-                  {formatWon(info.amount)}
-                </span>
+            {/* 오른쪽은 이 후보를 어떻게 넣을지(금액권 칩)와, 넣을지 말지(✕)다.
+                둘은 다른 판단이라 나란히 둔다.
+                시안에는 '확인됨' 같은 상태 글자가 있었는데 빼뒀다 — 아래에서 성격별로
+                나눠 보여주므로 카드마다 또 적으면 같은 말이 두 번 된다. */}
+            <div className="flex shrink-0 items-center gap-1">
+              {/* 금액권 여부는 사람이 정한다. 사진의 글자로 짐작하는 것이라 확실할 수가
+                  없는데, 틀렸을 때의 결과가 한쪽으로 치우친다 — 교환권을 금액권으로
+                  켜두면 쓸 때마다 얼마를 썼는지 묻고 잔액이 남아 목록에서 사라지지 않는다.
+                  반대로 꺼두면 잔액을 못 따라갈 뿐 쓰는 데는 지장이 없다.
+
+                  한때 카드 아래 별도 줄이었다. 그러면 이 카드만 한 줄 더 높아져 위
+                  카드들과 리듬이 어긋난다. 칩으로 옮기면 높이가 같아지고, 껐다 켜는
+                  것임이 형태로 보인다. */}
+              {voucher && !isDismissed && (
+                <button
+                  type="button"
+                  onClick={() => toggleVoucher(candidate)}
+                  aria-pressed={voucherIds.includes(candidate.id)}
+                  className={cn(
+                    'flex h-9 shrink-0 items-center gap-1.5 rounded-[10px] px-[11px] text-[13px] font-bold',
+                    voucherIds.includes(candidate.id)
+                      ? 'border-[1.5px] border-primary bg-primary/6 text-primary'
+                      : 'border border-input text-muted-foreground'
+                  )}
+                >
+                  <span
+                    className={cn(
+                      'flex size-[18px] items-center justify-center rounded-md',
+                      voucherIds.includes(candidate.id)
+                        ? 'bg-primary text-primary-foreground'
+                        : 'border-[1.5px] border-input'
+                    )}
+                  >
+                    {voucherIds.includes(candidate.id) && <Check className="size-[11px]" strokeWidth={3.6} />}
+                  </span>
+                  금액권
+                </button>
               )}
               {isDismissed ? (
                 <button
@@ -1572,33 +1723,19 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                   되돌리기
                 </button>
               ) : (
+                /* 실수로 치워도 그 자리에서 되돌릴 수 있지만, 애초에 안 눌리게 하는
+                   편이 낫다. 24 → 34px. */
                 <button
                   type="button"
                   onClick={() => handleDismiss(candidate)}
                   aria-label="기프티콘 아님"
-                  className="-mr-1 flex size-8 items-center justify-center rounded-lg text-muted-foreground"
+                  className="-mr-1 flex size-[34px] items-center justify-center rounded-[10px] text-muted-foreground"
                 >
-                  <X className="size-4.5" />
+                  <X className="size-[18px]" />
                 </button>
               )}
             </div>
           </div>
-
-          {/* 금액권 여부는 사람이 정한다. 사진의 글자로 짐작하는 것이라 확실할 수가 없는데,
-              틀렸을 때의 결과가 한쪽으로 치우친다 — 교환권을 금액권으로 켜두면 쓸 때마다
-              얼마를 썼는지 묻고 잔액이 남아 목록에서 사라지지 않는다. 반대로 꺼두면 잔액을
-              못 따라갈 뿐 쓰는 데는 지장이 없다. */}
-          {voucher && !isDismissed && (
-            <label className="flex cursor-pointer items-center gap-2 rounded-lg bg-muted px-2.5 py-2">
-              <input
-                type="checkbox"
-                checked={voucherIds.includes(candidate.id)}
-                onChange={() => toggleVoucher(candidate)}
-                className="size-4.5 shrink-0 accent-primary"
-              />
-              <span className="text-sm break-keep text-foreground">금액권 — 쓴 만큼 깎여요</span>
-            </label>
-          )}
 
           {/* 빠진 칸이 있는 카드에만 나온다. 다 읽힌 카드에까지 붙이면, 고칠 것이 없는데도
               뭔가 확인해야 할 것처럼 보인다 — 대부분의 날은 다 읽힌다.
@@ -1690,19 +1827,32 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
     const fillable = kind === 'missing' && candidate.prepared;
 
     return (
-      <li key={candidate.id} className="list-none border-t border-border first:border-t-0">
-        <div className="flex items-center gap-2.5 py-2">
-          <img
-            src={`data:image/jpeg;base64,${candidate.images[0]}`}
-            alt=""
-            className="size-9 shrink-0 rounded-md bg-secondary object-cover opacity-70"
-          />
+      /* 흐림(opacity-60)을 걷었다. 글씨까지 흐려져서 60대에게는 안 읽힌다. 상자 안에
+         들어 있어 이미 위 카드들과 갈라지므로 흐릴 이유가 없고, 못 쓰는 것이라는 표시는
+         썸네일에만 얹는다. 카드 테두리도 걷고 구분선으로 — 상자가 이미 테두리다. */
+      <li key={candidate.id} className="list-none border-t border-border/40 first:border-t-0">
+        <div className="flex items-center gap-[11px] py-2.5">
+          <span className="relative size-9 shrink-0 overflow-hidden rounded-[9px] bg-secondary">
+            <img
+              src={`data:image/jpeg;base64,${candidate.images[0]}`}
+              alt=""
+              className="size-full object-cover"
+            />
+            <span className="absolute inset-0 bg-black/40" />
+          </span>
           {/* 이유가 14px, 상품명이 13px이다. 위아래가 뒤집힌 것 같지만 맞다 — 이 줄들은
               넣을 수 없는 것들이라, 여기서 읽어야 할 것은 무엇이 못 들어갔는지가 아니라
-              왜 못 들어갔는지다. 이유를 12px로 줄여봤다가 되돌렸다. 이 앱은 60대도 쓴다. */}
+              왜 못 들어갔는지다. 이유를 12px로 줄여봤다가 되돌렸다. 이 앱은 60대도 쓴다.
+
+              기한이 지난 줄만 다르다. 그 사연은 상자 제목이 이미 말하므로, 여기서는
+              며칠 지났는지를 적는다 — 어제 지난 것과 반년 전 것은 다른 이야기다. */}
           <div className="flex min-w-0 flex-1 flex-col">
-            <span className="truncate text-sm text-muted-foreground">
-              {isDismissed ? '기프티콘이 아니라고 하셨어요' : reasonOf(candidate)}
+            <span className="truncate text-sm tabular-nums text-muted-foreground">
+              {isDismissed
+                ? '기프티콘이 아니라고 하셨어요'
+                : kind === 'expired'
+                  ? expiredLabel(candidate.info?.expiresAt)
+                  : reasonOf(candidate)}
             </span>
             <span className="truncate text-[13px] font-semibold text-foreground">
               {candidate.info?.name || candidate.info?.brand || candidate.code || '상품명 없음'}
@@ -1771,9 +1921,57 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
 
   return (
     <Sheet open onOpenChange={(open) => !open && onClose()}>
-      <SheetContent className="max-h-[92dvh] gap-0 overflow-y-auto pb-[var(--safe-bottom)]">
-        <SheetHeader className="pr-14 pb-1">
-          <SheetTitle>{picked ? '기프티콘 등록' : '기프티콘 찾기'}</SheetTitle>
+      {/* 결과 화면에서만 시트가 스크롤을 놓고, 안의 목록이 대신 맡는다. 다섯 줄을
+          미리 보여주면서도 아래 버튼이 늘 화면에 남아 있으려면 그래야 한다.
+          나머지 단계는 예전 그대로 시트가 통째로 흐른다 — 목록이 쌓이는 것을 눈으로
+          좇다가 마지막에 등록 버튼 앞에 서는 흐름이 거기에 걸려 있다. */}
+      <SheetContent
+        className={cn(
+          'max-h-[92dvh] gap-0 pb-[var(--safe-bottom)]',
+          stage === 'registered' ? 'overflow-hidden' : 'overflow-y-auto'
+        )}
+      >
+        <SheetHeader className="shrink-0 pr-14 pb-1">
+          {/* 이 화면은 이미 끝난 뒤라 제목이 진행형일 이유가 없다. 소식이 가장 커야
+              하는 자리인데, 한때 '사진첩에서 찾기'가 닫기 버튼 옆 라벨처럼 앉아
+              있었다. */}
+          {stage === 'registered' && result ? (
+            <div className="flex items-center gap-[11px]">
+              {/* 아무것도 못 넣었을 때는 초록 동그라미가 거짓말이 된다. */}
+              {registered.length > 0 ? (
+                <span className="flex size-[38px] shrink-0 items-center justify-center rounded-full bg-success/12">
+                  <Check className="size-5 text-success" strokeWidth={2.6} />
+                </span>
+              ) : (
+                <span className="flex size-[38px] shrink-0 items-center justify-center rounded-full bg-warning/15">
+                  <TriangleAlert className="size-[18px] text-warning" />
+                </span>
+              )}
+              <div className="flex min-w-0 flex-col gap-px">
+                <SheetTitle className="text-[19px] font-bold tracking-[-0.026em] break-keep">
+                  {registered.length > 0 ? `${registered.length}개를 등록했어요` : '등록할 게 없었어요'}
+                </SheetTitle>
+                {/* 이 앱에서 등록은 곧 공유다. 그 말을 여기서 한 번 해둔다. */}
+                <p className="m-0 text-[13px] font-medium break-keep text-muted-foreground">
+                  {registered.length > 0 ? '가족 모두가 볼 수 있어요' : '아래에서 무엇이 막혔는지 볼 수 있어요'}
+                </p>
+              </div>
+            </div>
+          ) : stage === 'done' && !picked && keptCount > 0 ? (
+            <>
+              <SheetTitle className="text-[19px] font-bold tracking-[-0.026em] break-keep">
+                기프티콘 {keptCount}개를 찾았어요
+              </SheetTitle>
+              {/* ✕가 무슨 뜻인지 여기서 한 번 말해둔다. 카드마다 적을 자리가 없다. */}
+              <p className="m-0 text-[13px] font-medium tabular-nums break-keep text-muted-foreground">
+                사진 {scanned}장에서 · 빼려면 ✕
+              </p>
+            </>
+          ) : (
+            <SheetTitle className="text-[19px] font-bold tracking-[-0.026em]">
+              {picked ? '기프티콘 등록' : '기프티콘 찾기'}
+            </SheetTitle>
+          )}
         </SheetHeader>
 
         {/* 어디까지 보는지는 결과보다 먼저 알아야 한다. 아래에 뒀을 때는 "왜 예전 사진이
@@ -1807,7 +2005,13 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
           </div>
         )}
 
-        <div ref={contentRef} className="flex flex-col gap-4 px-5 pt-2">
+        <div
+          ref={contentRef}
+          className={cn(
+            'flex flex-col gap-4 px-5 pt-2',
+            stage === 'registered' && 'min-h-0 flex-1'
+          )}
+        >
           {stage === 'intro' && (
             <>
               {/* 폴더 이름을 한 줄로 몰아둔다. 그냥 흘려 쓰면 "…스크린샷 폴더에서 새 /
@@ -1861,14 +2065,19 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
             <div className="flex flex-col">
               <ScannerArt />
               <div className="flex flex-col gap-2">
+                {/* 하는 일과 숫자가 같은 무게면 어느 쪽을 읽어야 할지 정해지지 않는다.
+                    숫자만 보라로 둔다 — 계속 바뀌는 값이라, 색으로 잡아두면 눈이
+                    그것만 따라간다. */}
                 <div className="flex items-baseline justify-between gap-2.5">
-                  <span className="text-base font-semibold text-foreground">{workingLabel}</span>
-                  <span className="text-sm tabular-nums text-muted-foreground">{workingCount}</span>
+                  <span className="min-w-0 truncate text-[15px] font-semibold tracking-[-0.015em] text-foreground">
+                    {workingLabel}
+                  </span>
+                  <span className="shrink-0 text-[13.5px] font-bold tabular-nums text-primary">{workingCount}</span>
                 </div>
                 {/* 막대 위로 빛이 한 번씩 지나간다. 막대가 잠시 멈춰 보이는 순간에도
                     무언가 돌고 있다는 게 보인다. 진행률은 그대로 막대가 말한다 —
                     움직임만 얹었지 정보를 대신하지 않는다. */}
-                <div className="moacon-sweep relative h-1.5 w-full overflow-hidden rounded-full bg-primary/15">
+                <div className="moacon-sweep relative h-[7px] w-full overflow-hidden rounded-[4px] bg-primary/15">
                   {/* 찾기는 앞의 몫(SCAN_SHARE)만 채운다. 여기서 100%까지 갔다가 읽기에서
                       다시 0으로 떨어지면, 다 온 줄 알았다가 처음으로 돌아간다. */}
                   <div
@@ -1908,215 +2117,241 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
               펼치면 이유마다 몇 개인지와 그림이 나온다. */}
           {stage === 'registered' && result && (
             <>
-              <div className="flex flex-col items-center gap-3.5 pt-2 pb-1 text-center">
-                {/* 아무것도 못 넣었을 때는 초록 동그라미가 거짓말이 된다. */}
-                {registered.length > 0 ? (
-                  <span className="flex size-16 items-center justify-center rounded-full bg-success/12">
-                    <Check className="size-8 text-success" strokeWidth={3} />
-                  </span>
-                ) : (
-                  <span className="flex size-16 items-center justify-center rounded-full bg-warning/15">
-                    <TriangleAlert className="size-7 text-warning" />
-                  </span>
-                )}
-                <div className="flex flex-col gap-1.5">
-                  <p className="m-0 text-2xl font-bold break-keep text-foreground">
-                    {registered.length > 0 ? `${registered.length}개를 등록했어요` : '등록할 게 없었어요'}
-                  </p>
-                  {/* 줄바꿈을 글자에 담아 넘긴다(whitespace-pre-line). '찾은 5개는 모두 /
-                      사용기한이 지났어요'는 그 자리에서 끊어야 한 문장으로 읽힌다. */}
-                  <p className="m-0 text-[15px] leading-relaxed break-keep whitespace-pre-line text-muted-foreground">
-                    {registered.length === 0
-                      ? failGroups.length === 1
-                        ? `찾은 ${result.failed.length}개는 모두\n${failGroups[0].reason}`
-                        : `찾은 ${result.failed.length}개를 넣지 못했어요`
-                      : result.failed.length === 0
-                        ? '모두 문제없이 등록했어요'
-                        : `${myName || '내'} 이름으로 저장했어요`}
-                  </p>
-                </div>
-              </div>
-
-              {/* 넣은 것을 카드로 하나씩 세운다. 무엇이 들어갔는지는 이 화면에서 봐야
-                  하는 것이고, 그림 몇 장을 겹쳐 개수만 적으면 "9개 들어갔다"는 말만
-                  남는다. 대신 두 장까지만 세우고 나머지는 접는다 — 아홉 개를 넣은 날에
-                  화면이 아홉 칸이 될 이유는 없다. */}
-              {/* 못 넣은 쪽을 펼치면 넣은 쪽은 한 줄로 접힌다. 지금 보려는 것은 아래
-                  이고, 위는 "넷은 잘 들어갔다"는 사실만 남으면 된다. 이 줄을 누르면
-                  목록으로 간다. */}
-              {registered.length > 0 && failOpen && (
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="flex items-center gap-3 rounded-2xl bg-muted px-3.5 py-3 text-left"
-                >
-                  <span className="flex shrink-0 items-center">
-                    {registered.slice(0, 3).map((candidate, at) => (
-                      <img
+              {/* 목록만 흐른다. 버튼은 아래에 남는다.
+                  미리 보기를 다섯 줄로 늘릴 수 있게 된 것이 여기서 나왔다 — 전부 한
+                  흐름에 있던 때는 줄이 늘어난 만큼 버튼이 화면 밖으로 밀렸다.
+                  못 넣은 것과 기한이 빈 것 상자도 여기 안에 둔다. 펼치면 이름이 여럿
+                  나오는 자리라, 밖에 고정해두면 그때 넘친다. */}
+              <div className="-mx-1 flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto px-1">
+                {/* 넣은 것을 한 줄씩 세운다. 무엇이 들어갔는지는 이 화면에서 봐야 하는
+                    것이고, 그림 몇 장을 겹쳐 개수만 적으면 "9개 들어갔다"는 말만 남는다.
+                    테두리는 없다 — 목록에서 쓰는 것과 같은 구분선이면 충분하다. */}
+                {registered.length > 0 && (
+                  <div className="flex flex-col">
+                    {(showAllDone ? registered : registered.slice(0, DONE_PREVIEW)).map((candidate) => (
+                      <div
                         key={candidate.id}
-                        src={`data:image/jpeg;base64,${candidate.images[0]}`}
-                        alt=""
-                        className={cn(
-                          'size-10 rounded-lg border-2 border-card bg-secondary object-cover',
-                          at > 0 && '-ml-3.5'
-                        )}
-                      />
-                    ))}
-                  </span>
-                  <span className="min-w-0 flex-1 text-[15px] font-semibold text-foreground">
-                    등록한 기프티콘 {registered.length}개
-                  </span>
-                  <ChevronRight className="size-4.5 shrink-0 text-muted-foreground" />
-                </button>
-              )}
-
-              {registered.length > 0 && !failOpen && (
-                <div className="flex flex-col gap-2">
-                  {(showAllDone ? registered : registered.slice(0, DONE_PREVIEW)).map((candidate) => (
-                    <div key={candidate.id} className="flex items-center gap-3 rounded-2xl bg-muted px-3.5 py-3">
-                      <img
-                        src={`data:image/jpeg;base64,${candidate.images[0]}`}
-                        alt=""
-                        className="size-11 shrink-0 rounded-lg bg-secondary object-cover"
-                      />
-                      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                        <span className="truncate text-[15px] font-semibold text-foreground">
-                          {candidate.info?.name}
-                        </span>
-                        <span className="truncate text-[13px] text-muted-foreground">
-                          {[candidate.info?.brand, formatDate(candidate.info?.expiresAt) && `${formatDate(candidate.info.expiresAt)}까지`]
-                            .filter(Boolean)
-                            .join(' · ') || '사용기한 없음'}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                  {registered.length > DONE_PREVIEW && !showAllDone && (
-                    <button
-                      type="button"
-                      onClick={() => setShowAllDone(true)}
-                      className="flex items-center justify-center gap-1.5 py-2 text-sm font-semibold text-muted-foreground"
-                    >
-                      {registered.length - DONE_PREVIEW}개 더 보기
-                      <ChevronDown className="size-4" />
-                    </button>
-                  )}
-                </div>
-              )}
-
-              {/* 유효기한은 없어도 넣는다. 대신 비었다는 걸 알려준다 — 말해주지 않으면
-                  빠진 줄 모르고 지나가고, 그러면 만료 전에 알려줄 수가 없다. */}
-              {result.noExpiry > 0 && (
-                <p className="m-0 text-sm leading-relaxed break-keep text-muted-foreground">
-                  사용기한이 빈 게 {result.noExpiry}개 있어요. 목록에서 수정으로 채워주세요.
-                </p>
-              )}
-
-              {/* 바코드가 없어 뺀 사진. 등록이 끝난 뒤에 한 번만 여쭤본다.
-                  막대 없이 번호만 인쇄된 기프티콘(파인트 아이스크림 쿠폰)이 여기 섞여
-                  있을 수 있는데, 그건 서버가 눈으로 읽어야 안다. 미리 다 물어보면 정보
-                  캡처까지 물어보게 돼서 느려진다 — 누를 때만 읽는다. */}
-              {leftovers.length > 0 && onNext && (
-                <div className="flex flex-col gap-2.5 rounded-2xl border border-border px-3.5 py-3">
-                  <p className="m-0 text-sm leading-relaxed break-keep text-muted-foreground">
-                    바코드가 없어서 빼둔 사진이에요. 기프티콘이면 이어서 올려드릴게요.
-                  </p>
-                  <PhotoStrip files={leftovers} />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => onNext(leftovers)}
-                    className="h-11 w-full rounded-xl text-sm font-semibold"
-                  >
-                    <ImageIcon className="size-4 text-muted-foreground" />이 사진도 기프티콘인가요?
-                  </Button>
-                </div>
-              )}
-
-              {/* 못 넣은 것. 개수만 적으면 어느 것이 빠졌는지 알 수 없고, 아예 말하지
-                  않으면 다 들어간 줄 안다. 이 앱은 기프티콘을 놓치지 않겠다는 약속으로
-                  서 있다. 그래서 접되, 없애지는 않는다.
-
-                  하나도 못 넣은 날에는 펼친 채로 시작한다. 그때는 이 상자가 화면에서
-                  볼 수 있는 전부다. */}
-              {result.failed.length > 0 && (
-                <div className="rounded-2xl border border-border px-3.5 py-3">
-                  <button
-                    type="button"
-                    onClick={() => setFailOpen((open) => !open)}
-                    aria-expanded={failOpen}
-                    className="flex w-full items-center gap-3 text-left"
-                  >
-                    <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-warning/15">
-                      <TriangleAlert className="size-4.5 text-warning" />
-                    </span>
-                    <span className="flex min-w-0 flex-1 flex-col">
-                      <span className="text-[15px] font-semibold break-keep text-foreground">
-                        {result.failed.length}개는 등록하지 못했어요
-                      </span>
-                      {/* 접혀 있을 때도 무슨 일인지는 알아야 한다. 이유가 하나뿐인 날이
-                          대부분이라, 그 한 줄이면 펼칠 일도 없다. */}
-                      {!failOpen && (
-                        <span className="text-[13px] break-keep text-muted-foreground">
-                          {failGroups.length === 1
-                            ? `모두 ${failGroups[0].reason}`
-                            : `${failGroups[0].reason} 외 ${failGroups.length - 1}가지`}
-                        </span>
-                      )}
-                    </span>
-                    <ChevronDown
-                      className={cn(
-                        'size-4 shrink-0 text-muted-foreground transition-transform',
-                        failOpen && 'rotate-180'
-                      )}
-                    />
-                  </button>
-
-                  {failOpen && (
-                  <div className="mt-3 flex flex-col gap-3 border-t border-border pt-3">
-                    {failGroups.map((group) => (
-                      <div key={group.reason} className="flex flex-col gap-2">
-                        <p className="m-0 flex items-baseline gap-1.5 break-keep">
-                          <span className="text-sm font-bold text-foreground">{group.reason}</span>
-                          <span className="text-[13px] font-semibold tabular-nums text-muted-foreground">
-                            {group.items.length}개
+                        className="flex items-center gap-[11px] border-b border-border/50 py-2.5 last:border-b-0"
+                      >
+                        <img
+                          src={`data:image/jpeg;base64,${candidate.images[0]}`}
+                          alt=""
+                          className="size-11 shrink-0 rounded-[10px] bg-secondary object-cover"
+                        />
+                        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                          <span className="truncate text-[15px] font-semibold tracking-[-0.015em] text-foreground">
+                            {candidate.info?.name}
                           </span>
-                        </p>
-                        <div className="flex flex-wrap gap-2">
-                          {group.items.map(({ candidate }) => (
-                            <img
-                              key={candidate.id}
-                              src={`data:image/jpeg;base64,${candidate.images[0]}`}
-                              alt=""
-                              className="size-13 rounded-lg bg-secondary object-cover"
-                            />
-                          ))}
+                          <span className="truncate text-[13px] font-medium tabular-nums text-muted-foreground">
+                            {[
+                              candidate.info?.brand,
+                              formatDate(candidate.info?.expiresAt) &&
+                                `${formatDate(candidate.info.expiresAt)}까지`,
+                            ]
+                              .filter(Boolean)
+                              .join(' · ') || '사용기한 없음'}
+                          </span>
                         </div>
                       </div>
                     ))}
-
-                    {/* 다음에도 올라온다는 걸 못 박아둔다. 여기서 사라졌다고 생각하면
-                        그 기프티콘은 영영 안 들어간다.
-
-                        기한이 지난 것에는 이 말을 붙이지 않는다. + 로 올려도 똑같이
-                        막히는데 올려보라고 하면, 시키는 대로 하고 나서 같은 자리에서
-                        또 막힌다. 살릴 수 있는 것이 하나라도 있을 때만 적는다. */}
-                    {result.failed.some((item) => !item.expired) && (
-                      <p className="m-0 text-[13px] break-keep text-muted-foreground">
-                        다음에 찾을 때 다시 보여드려요. + 로 직접 올려도 돼요.
-                      </p>
+                    {registered.length > DONE_PREVIEW && !showAllDone && (
+                      <button
+                        type="button"
+                        onClick={() => setShowAllDone(true)}
+                        className="flex items-center justify-center gap-1.5 py-2.5 text-sm font-semibold text-muted-foreground"
+                      >
+                        {registered.length - DONE_PREVIEW}개 더 보기
+                        <ChevronDown className="size-4" />
+                      </button>
                     )}
                   </div>
-                  )}
-                </div>
-              )}
+                )}
 
-              <div className="flex flex-col gap-2 pt-1">
-                <Button type="button" size="lg" className="w-full rounded-xl" onClick={onClose}>
-                  목록으로
+                {/* 바코드가 없어 뺀 사진. 등록이 끝난 뒤에 한 번만 여쭤본다.
+                    막대 없이 번호만 인쇄된 기프티콘(파인트 아이스크림 쿠폰)이 여기 섞여
+                    있을 수 있는데, 그건 서버가 눈으로 읽어야 안다. 미리 다 물어보면 정보
+                    캡처까지 물어보게 돼서 느려진다 — 누를 때만 읽는다. */}
+                {leftovers.length > 0 && onNext && (
+                  <div className="flex flex-col gap-2.5 rounded-[14px] border border-border px-3.5 py-3">
+                    <p className="m-0 text-sm leading-relaxed break-keep text-muted-foreground">
+                      바코드가 없어서 빼둔 사진이에요. 기프티콘이면 이어서 올려드릴게요.
+                    </p>
+                    <PhotoStrip files={leftovers} />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => onNext(leftovers)}
+                      className="h-11 w-full rounded-xl text-sm font-semibold"
+                    >
+                      <ImageIcon className="size-4 text-muted-foreground" />이 사진도 기프티콘인가요?
+                    </Button>
+                  </div>
+                )}
+
+                {/* ── 확인이 필요해요 ──────────────────────────────────────────
+                    한때 붉은 테두리 상자와 회색 문단이 나란히 떠 있었다. 모양도 무게도
+                    다른 것이 같은 일을 말하고 있었고, 하나는 누르는 것이고 하나는 그냥
+                    글이라 어느 쪽을 눌러야 하는지도 알 수 없었다.
+
+                    한 상자에 두 줄로 둔다. 모양은 같게(30px 아이콘 원 · 제목과 부제 ·
+                    오른쪽 ⌄) 하고, 성격은 색으로 가른다 — 못 넣은 것은 destructive,
+                    기한이 빈 것은 주의색이다.
+
+                    둘 다 여기서 펼친다. 기한이 빈 건은 여럿일 수 있어서 특정 화면으로
+                    보낼 수가 없다(2개면 어디로 갈지 정해지지 않는다). 대신 어느
+                    기프티콘인지 이름을 보여준다 — 목록에서 그것만 찾아 고치면 된다. */}
+                {(result.failed.length > 0 || result.noExpiry > 0) && (
+                  <div className="overflow-hidden rounded-[14px] border border-border">
+                    <div className="flex items-center gap-[7px] border-b border-border bg-muted/40 px-3.5 py-2.5">
+                      <span className="text-[13px] font-bold tracking-[-0.01em] text-foreground/80">
+                        확인이 필요해요
+                      </span>
+                      <span className="rounded-[9px] bg-muted-foreground px-1.5 py-px text-xs font-bold tabular-nums text-background">
+                        {result.failed.length + result.noExpiry}
+                      </span>
+                    </div>
+
+                    {result.failed.length > 0 && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => setFailOpen((open) => !open)}
+                          aria-expanded={failOpen}
+                          className={cn(
+                            'flex w-full items-center gap-[11px] px-3.5 py-3',
+                            result.noExpiry > 0 && 'border-b border-border/60'
+                          )}
+                        >
+                          <span className="flex size-[30px] shrink-0 items-center justify-center rounded-full bg-destructive/12">
+                            <Info className="size-4 text-destructive" strokeWidth={2.2} />
+                          </span>
+                          <span className="flex min-w-0 flex-1 flex-col gap-px text-left">
+                            <span className="text-[14.5px] font-semibold break-keep text-foreground">
+                              등록하지 못한 것 {result.failed.length}개
+                            </span>
+                            {/* 다음에도 올라온다는 걸 못 박아둔다. 여기서 사라졌다고
+                                생각하면 그 기프티콘은 영영 안 들어간다.
+                                기한이 지난 것에는 이 말을 안 한다 — + 로 올려도 똑같이
+                                막히는데 올려보라고 하면 시키는 대로 하고 나서 같은
+                                자리에서 또 막힌다. */}
+                            <span className="text-[12.5px] font-medium break-keep text-muted-foreground">
+                              {result.failed.some((item) => !item.expired)
+                                ? '기프티콘이면 + 로 직접 등록해주세요'
+                                : '기한이 지난 건 등록할 수 없어요'}
+                            </span>
+                          </span>
+                          <ChevronDown
+                            className={cn(
+                              'size-[17px] shrink-0 text-muted-foreground/70 transition-transform',
+                              failOpen && 'rotate-180'
+                            )}
+                            strokeWidth={2.2}
+                          />
+                        </button>
+
+                        {/* 아이콘 원 아래로 들여쓰고 왼쪽에 얇은 세로선을 둔다. 그냥
+                            아래로 이으면 위 줄과 같은 단으로 보인다. */}
+                        {failOpen && (
+                          <div
+                            className={cn(
+                              'mt-1 mr-3 mb-2.5 ml-[54px] border-l-[1.5px] border-border/40 pt-1 pl-3',
+                              result.noExpiry > 0 && 'border-b border-border/60 pb-2.5'
+                            )}
+                          >
+                            {failGroups.map((group) => (
+                              <div key={group.reason} className="flex flex-col">
+                                <p className="m-0 flex items-baseline gap-1.5 py-1 break-keep">
+                                  <span className="text-[13px] font-bold text-foreground/80">{group.reason}</span>
+                                  <span className="text-[12.5px] font-semibold tabular-nums text-muted-foreground">
+                                    {group.items.length}개
+                                  </span>
+                                </p>
+                                {group.items.map(({ candidate }) => (
+                                  <div key={candidate.id} className="flex items-center gap-2.5 py-1.5">
+                                    <img
+                                      src={`data:image/jpeg;base64,${candidate.images[0]}`}
+                                      alt=""
+                                      className="size-8 shrink-0 rounded-lg bg-secondary object-cover"
+                                    />
+                                    <span className="min-w-0 flex-1 truncate text-[13.5px] font-semibold tracking-[-0.015em] text-muted-foreground">
+                                      {candidate.info?.name || candidate.info?.brand || candidate.code || '상품명 없음'}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </>
+                    )}
+
+                    {/* 유효기한은 없어도 넣는다. 대신 비었다는 걸 알려준다 — 말해주지
+                        않으면 빠진 줄 모르고 지나가고, 그러면 만료 전에 알려줄 수가 없다.
+                        '등록했지만'으로 시작해 상자 제목('확인이 필요해요')과 어긋나지
+                        않게 스스로 밝힌다. */}
+                    {result.noExpiry > 0 && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => setNoExpiryOpen((open) => !open)}
+                          aria-expanded={noExpiryOpen}
+                          className="flex w-full items-center gap-[11px] px-3.5 py-3"
+                        >
+                          <span className="flex size-[30px] shrink-0 items-center justify-center rounded-full bg-[#f4f0e6]">
+                            <CalendarClock className="size-4 text-[#a8842c]" strokeWidth={2.2} />
+                          </span>
+                          <span className="flex min-w-0 flex-1 flex-col gap-px text-left">
+                            <span className="text-[14.5px] font-semibold break-keep text-foreground">
+                              등록했지만 사용기한이 비었어요 {result.noExpiry}개
+                            </span>
+                            <span className="text-[12.5px] font-medium break-keep text-muted-foreground">
+                              목록에서 수정으로 채워주세요
+                            </span>
+                          </span>
+                          <ChevronDown
+                            className={cn(
+                              'size-[17px] shrink-0 text-muted-foreground/70 transition-transform',
+                              noExpiryOpen && 'rotate-180'
+                            )}
+                            strokeWidth={2.2}
+                          />
+                        </button>
+
+                        {/* 기한 값이 없으니 부가 정보 줄도 없다. 이름만 있으면 목록에서
+                            찾을 수 있다. */}
+                        {noExpiryOpen && (
+                          <div className="mt-1 mr-3 mb-2.5 ml-[54px] border-l-[1.5px] border-border/40 pt-1 pl-3">
+                            {(result.noExpiryItems ?? []).map((candidate) => (
+                              <div key={candidate.id} className="flex items-center gap-2.5 py-1.5">
+                                <img
+                                  src={`data:image/jpeg;base64,${candidate.images[0]}`}
+                                  alt=""
+                                  className="size-8 shrink-0 rounded-lg bg-secondary object-cover"
+                                />
+                                <span className="min-w-0 flex-1 truncate text-[13.5px] font-semibold tracking-[-0.015em] text-muted-foreground">
+                                  {candidate.info?.name}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex shrink-0 flex-col gap-2 pt-1">
+                <Button type="button" className="h-[52px] w-full rounded-[14px] text-[15.5px]" onClick={onClose}>
+                  목록으로 가기
                 </Button>
                 {!picked && (
-                  <Button type="button" variant="outline" size="lg" className="w-full rounded-xl" onClick={() => start()}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-[46px] w-full rounded-[13px] text-[14.5px]"
+                    onClick={() => start()}
+                  >
                     <ScanSearch className="size-4.5" />
                     새 기프티콘 찾기
                   </Button>
@@ -2162,10 +2397,14 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                 <>
                   {plains.length > 0 && (
                     <>
-                      <p className="m-0 text-base break-keep text-foreground">
-                        <b className="font-semibold">{plains.length}개</b>
-                        {picked ? '를 넣을 수 있어요.' : ' 찾았어요.'}
-                      </p>
+                      {/* 사진첩을 훑은 판에서는 제목이 이미 '기프티콘 N개를 찾았어요'라고
+                          말한다. 여기서 또 적으면 같은 숫자가 두 줄 연달아 나온다.
+                          받아 온 사진은 제목이 '기프티콘 등록'이라 이 줄이 필요하다. */}
+                      {picked && (
+                        <p className="m-0 text-base break-keep text-foreground">
+                          <b className="font-semibold">{plains.length}개</b>를 넣을 수 있어요.
+                        </p>
+                      )}
                       <ul className="m-0 flex list-none flex-col gap-2 p-0">
                         {plains.map((candidate) => renderCandidate(candidate))}
                       </ul>
@@ -2175,10 +2414,12 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                   {/* 금액권은 아래에 따로 묶는다. 확인할 것이 하나 더 있는 무리라, 위에
                       섞여 있으면 그 하나를 매번 찾아내야 한다. 나눠 두면 위는 그냥 넘기고
                       아래만 보면 된다. */}
+                  {/* 구분선은 붙이지 않는다. 문장형 제목에 선을 두르면 제목이 잘린
+                      것처럼 보인다. 무리를 가르는 일은 제목 한 줄이 이미 한다. */}
                   {vouchers.length > 0 && (
-                    <div className="flex flex-col gap-2 border-t border-border pt-4">
-                      <p className="m-0 text-base break-keep text-foreground">
-                        <b className="font-semibold">금액권 {vouchers.length}개</b> 같아요. 맞는지 봐주세요.
+                    <div className="flex flex-col gap-2">
+                      <p className="m-0 pt-[7px] pb-px text-[14.5px] font-bold tracking-[-0.015em] break-keep text-foreground">
+                        <span className="tabular-nums">금액권 {vouchers.length}개</span> 같아요. 맞는지 봐주세요.
                       </p>
                       <ul className="m-0 flex list-none flex-col gap-2 p-0">
                         {vouchers.map((candidate) => renderCandidate(candidate, { voucher: true }))}
@@ -2193,27 +2434,23 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                       넣을 것이 하나도 없을 때만 펼친 채로 시작한다. 그때는 이 목록이
                       화면에서 볼 수 있는 전부다. */}
                   {blocked.length > 0 && (
-                    <details open={keptCount === 0} className="group border-t border-border pt-2">
-                      {/* 글자는 한 덩어리로 묶어둔다. 낱개로 두면 flex가 '3개'와 '는'
-                          사이까지 벌려서 '3개 는 사용기한이 지났어요'가 된다. */}
-                      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 py-2 text-base break-keep text-foreground">
-                        <span>
-                          <b className="font-semibold">{blocked.length}개</b>는 {blockedTitle}
-                        </span>
-                        <ChevronDown className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
-                      </summary>
-
+                    <FoldBox
+                      tone={blockedTone}
+                      title={`${blocked.length}개는 ${blockedTitle}`}
+                      open={blockedOpen ?? keptCount === 0}
+                      onToggle={() => setBlockedOpen((open) => !(open ?? keptCount === 0))}
+                    >
                       {/* 하루 한도처럼 다 같은 이유로 막혔을 때만. 그 사연은 줄마다
                           되풀이하기에는 길어서 위에 한 번만 적는다. */}
                       {commonBlock && (
-                        <p className="m-0 mb-1 rounded-xl bg-warning/10 px-3.5 py-3 text-sm leading-relaxed break-keep text-foreground">
+                        <p className="m-0 mt-2.5 rounded-xl bg-warning/10 px-3.5 py-3 text-sm leading-relaxed break-keep text-foreground">
                           {commonBlock}
                         </p>
                       )}
                       <ul className="m-0 flex list-none flex-col p-0">
                         {blocked.map((candidate) => renderBlockedRow(candidate))}
                       </ul>
-                    </details>
+                    </FoldBox>
                   )}
                 </>
               )}
@@ -2337,9 +2574,13 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                 )}
 
                 {stage === 'done' && keptCount > 0 && (
-                  <Button type="button" size="lg" className="w-full rounded-xl" onClick={registerAll}>
+                  <Button
+                    type="button"
+                    className="h-[52px] w-full rounded-[14px] text-[15.5px]"
+                    onClick={registerAll}
+                  >
                     <Check className="size-4.5" />
-                    {keptCount}개 등록
+                    {keptCount}개 등록하기
                   </Button>
                 )}
 
@@ -2347,8 +2588,12 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                   <Button
                     type="button"
                     variant={keptCount > 0 ? 'outline' : 'default'}
-                    size="lg"
-                    className="w-full rounded-xl"
+                    className={cn(
+                      'w-full',
+                      keptCount > 0
+                        ? 'h-[46px] rounded-[13px] text-[14.5px]'
+                        : 'h-[52px] rounded-[14px] text-[15.5px]'
+                    )}
                     onClick={() => start()}
                   >
                     <ScanSearch className="size-4.5" />
@@ -2358,8 +2603,8 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
 
                 {/* 받아 온 사진은 다시 찾을 것이 없다. 닫는 길만 둔다. */}
                 {stage === 'done' && picked && keptCount === 0 && (
-                  <Button type="button" size="lg" className="w-full rounded-xl" onClick={onClose}>
-                    목록으로
+                  <Button type="button" className="h-[52px] w-full rounded-[14px] text-[15.5px]" onClick={onClose}>
+                    목록으로 가기
                   </Button>
                 )}
 
@@ -2367,8 +2612,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                   <Button
                     type="button"
                     variant="outline"
-                    size="lg"
-                    className="w-full rounded-xl text-muted-foreground"
+                    className="h-[46px] w-full rounded-[13px] text-[14.5px] text-muted-foreground"
                     onClick={() => start({ forgetHistory: true })}
                   >
                     <RotateCcw className="size-4.5" />

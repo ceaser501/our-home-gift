@@ -585,6 +585,32 @@ html.is-native-android {
 
    왼쪽 세로줄과 한 번 스치는 빛은 "이게 방금 들어온 것"을 짚는다. 목록이 길어지면
    어디에 새로 붙었는지 눈으로 찾아야 하는데, 그걸 대신해준다. */
+/* 아직 아무것도 안 들어온 자리에서 도는 두 움직임.
+
+   빈 회색 사각형은 "사진이 안 뜬 칸"으로 읽힌다. 눈은 그걸 '없다'로 본다. 기프티콘
+   뼈대를 옅게 그려두고 흰 띠를 대각선으로 지나가게 하면 '채워지는 중'이 된다.
+   전체가 깜빡이는 것(animate-pulse)보다 방향이 있는 움직임이 "읽고 있다"에 가깝다. */
+@keyframes moacon-shimmer {
+  from {
+    transform: translateX(-120%);
+  }
+  to {
+    transform: translateX(120%);
+  }
+}
+
+/* 안내 세 줄 중 지금 줄이 차오른다. 점 세 개는 '몇 번째'만 말하는데, 차오르는 칸은
+   '곧 넘어간다'까지 말해서 다 못 읽었을 때 기다릴지 정할 수 있다.
+   시간은 GalleryScanSheet.jsx의 HINT_MS와 같아야 한다. */
+@keyframes moacon-hint-fill {
+  from {
+    width: 0;
+  }
+  to {
+    width: 100%;
+  }
+}
+
 @keyframes moacon-card-open {
   from {
     grid-template-rows: 0fr;
