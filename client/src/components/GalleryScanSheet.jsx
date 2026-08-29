@@ -2408,14 +2408,13 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                 <>
                   {plains.length > 0 && (
                     <>
-                      {/* 사진첩을 훑은 판에서는 제목이 이미 '기프티콘 N개를 찾았어요'라고
-                          말한다. 여기서 또 적으면 같은 숫자가 두 줄 연달아 나온다.
-                          받아 온 사진은 제목이 '기프티콘 등록'이라 이 줄이 필요하다. */}
-                      {picked && (
-                        <p className="m-0 text-base break-keep text-foreground">
-                          <b className="font-semibold">{plains.length}개</b>를 넣을 수 있어요.
-                        </p>
-                      )}
+                      {/* 아래 금액권 무리에는 제목이 있는데 이 무리에만 없으면, 위쪽
+                          카드들이 무엇인지 말해주는 자리가 사라진다. 한 줄로 붙여둔다.
+                          제목('기프티콘 N개를 찾았어요')과 숫자가 갈릴 수 있다 — 제목은
+                          넣을 수 있는 것 전부를 세고, 이 줄은 금액권을 뺀 나머지다. */}
+                      <p className="m-0 pt-[7px] pb-px text-[14.5px] font-bold tracking-[-0.015em] break-keep text-foreground">
+                        <span className="tabular-nums">{plains.length}개</span>는 바로 등록할 수 있어요.
+                      </p>
                       <ul className="m-0 flex list-none flex-col gap-2 p-0">
                         {plains.map((candidate) => renderCandidate(candidate))}
                       </ul>

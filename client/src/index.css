@@ -593,6 +593,21 @@ html.is-native-android {
 /* 날짜 칸이 스스로 그리는 달력 아이콘을 감춘다. 굵기도 색도 우리 화살표와 달라서,
    옆의 카테고리 칸과 나란히 두면 그 자리만 깨져 보인다. 누르는 자리는 칸 전체라
    아이콘이 없어도 달력은 그대로 열린다. */
+/* 안드로이드 웹뷰는 날짜 칸을 고르는 칸처럼 그린다 — 칸 자체가 삼각형을 하나 달고
+   나온다. 아래에서 감추는 달력 아이콘과는 다른 물건이라 따로 꺼야 한다.
+   두 번 고치고 나서야 알았다. 화살표가 둘 보인 것이 이것이다. */
+.moacon-date {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: none;
+}
+
+.moacon-date::-webkit-inner-spin-button,
+.moacon-date::-webkit-clear-button {
+  display: none;
+  -webkit-appearance: none;
+}
+
 .moacon-date::-webkit-calendar-picker-indicator {
   opacity: 0;
   position: absolute;

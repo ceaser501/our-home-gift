@@ -4,8 +4,93 @@ import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 
-function Select({ ...props }) {
-  return <SelectPrimitive.Root data-slot="select" {...props} />;
+// 열어둔 칸을 다시 눌러 닫는 일을 우리가 맡는다.
+//
+// 라딕스는 목록을 열 때 body의 pointer-events를 꺼버린다. 그래서 트리거는 그때부터
+// 눌림을 못 받고, 라딕스도 '트리거를 다시 눌렀다'를 닫는 신호로 치지 않는다. 화면
+// 가운데의 칸을 눌렀는데 아무 일도 안 일어나면, 쓰는 사람에게는 그냥 고장이다.
+// (아래 사람 이름을 눌러야만 닫힌다는 이야기가 이것이었다.)
+//
+// 눌림은 못 받아도 어디를 눌렀는지는 알 수 있다. 목록이 열려 있는 동안만 document에서
+// 눌림을 듣고, 그 자리가 트리거 위면 닫는다. 시트의 검은 막이 그 눌림을 먼저 가로채지
+// 않도록 index.css에서 함께 손봤다 — 둘이 같이 있어야 동작한다.
+const TriggerRefContext = React.createContext(null);
+
+function useCloseOnTriggerPress(open, triggerRef, close) {
+  // 삼킬 click 하나를 효과 바깥에 둔다. 닫으면 open이 false가 되면서 아래 효과가 정리되는데,
+  // 정리에서 이걸 같이 거두면 정작 뒤따라오는 click이 그대로 통과해 도로 열린다.
+  // 한 번 겪고 나서야 알았다 — 닫히자마자 다시 열리고 있었다.
+  const swallowRef = React.useRef(null);
+
+  const clearSwallow = React.useCallback(() => {
+    if (!swallowRef.current) return;
+    document.removeEventListener('click', swallowRef.current, true);
+    swallowRef.current = null;
+  }, []);
+
+  React.useEffect(() => {
+    if (!open) return undefined;
+
+    const onDown = (event) => {
+      const el = triggerRef.current;
+      if (!el) return;
+      const box = el.getBoundingClientRect();
+      const inside =
+        event.clientX >= box.left &&
+        event.clientX <= box.right &&
+        event.clientY >= box.top &&
+        event.clientY <= box.bottom;
+      if (!inside) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      // 손가락에서는 눌림 뒤에 click이 한 번 더 온다. 라딕스는 마우스가 아닐 때 그 click을
+      // '열기'로 받는다 — 눌림만 막으면 닫았다가 같은 손짓에 도로 열린다.
+      clearSwallow();
+      const swallow = (next) => {
+        next.preventDefault();
+        next.stopPropagation();
+        clearSwallow();
+      };
+      swallowRef.current = swallow;
+      document.addEventListener('click', swallow, true);
+      // click이 끝내 안 오는 경우(손가락을 끌어서 뗀 경우)에 대비해 곧 거둔다.
+      setTimeout(clearSwallow, 400);
+
+      close();
+    };
+
+    document.addEventListener('pointerdown', onDown, true);
+    return () => document.removeEventListener('pointerdown', onDown, true);
+  }, [open, triggerRef, close, clearSwallow]);
+
+  // 창이 통째로 사라질 때만 거둔다.
+  React.useEffect(() => clearSwallow, [clearSwallow]);
+}
+
+function Select({ open, defaultOpen, onOpenChange, ...props }) {
+  const controlled = open !== undefined;
+  const [selfOpen, setSelfOpen] = React.useState(defaultOpen ?? false);
+  const isOpen = controlled ? open : selfOpen;
+  const triggerRef = React.useRef(null);
+
+  const setOpen = React.useCallback(
+    (next) => {
+      if (!controlled) setSelfOpen(next);
+      onOpenChange?.(next);
+    },
+    [controlled, onOpenChange]
+  );
+
+  const close = React.useCallback(() => setOpen(false), [setOpen]);
+  useCloseOnTriggerPress(isOpen, triggerRef, close);
+
+  return (
+    <TriggerRefContext.Provider value={triggerRef}>
+      <SelectPrimitive.Root data-slot="select" open={isOpen} onOpenChange={setOpen} {...props} />
+    </TriggerRefContext.Provider>
+  );
 }
 
 function SelectValue({ ...props }) {
@@ -13,8 +98,10 @@ function SelectValue({ ...props }) {
 }
 
 function SelectTrigger({ className, size = 'default', children, ...props }) {
+  const triggerRef = React.useContext(TriggerRefContext);
   return (
     <SelectPrimitive.Trigger
+      ref={triggerRef}
       data-slot="select-trigger"
       data-size={size}
       className={cn(
