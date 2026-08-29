@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { Pencil, UserPlus } from 'lucide-react';
+import { Pencil, UserMinus, UserPlus } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
+import AlertDialog from './AlertDialog';
 import RenameSheet from './RenameSheet';
 import CopyButton from './CopyButton';
 import { useFamily } from '../FamilyContext';
-import { approveJoinRequest, rejectJoinRequest, renameFamily, renameMember } from '../family';
+import { approveJoinRequest, kickMember, rejectJoinRequest, renameFamily, renameMember } from '../family';
 import { OWNER_TAG_PALETTE, memberTagColorClass, nameTagColorClass } from '../utils/tagColor';
 import { formatDate } from '../utils/date';
 import useBackClose from '../utils/useBackClose';
@@ -17,7 +18,25 @@ export default function FamilyMembersSheet({ onClose }) {
   const [renameOpen, setRenameOpen] = useState(false);
   const [myNameOpen, setMyNameOpen] = useState(false);
   const [deciding, setDeciding] = useState(null);
+  // 내보내려고 물어보는 중인 구성원. 되돌릴 수 없는 일이라 한 번 여쭙는다.
+  const [kicking, setKicking] = useState(null);
   const [error, setError] = useState('');
+
+  // 대표는 "가장 먼저 들어온 사람"이다. 목록이 들어온 순서로 오므로 첫 줄이 그 사람이고,
+  // 서버(kick_member)도 같은 규칙으로 정한다 — 둘이 다르면 버튼은 보이는데 눌러도
+  // 안 되는 일이 생긴다.
+  const iAmLeader = members[0]?.user_id === user.id;
+
+  async function kick(member) {
+    setKicking(null);
+    setError('');
+    try {
+      await kickMember(family.id, member.user_id);
+      await refreshFamily();
+    } catch (err) {
+      setError(err.message || '내보내지 못했어요.');
+    }
+  }
 
   async function decide(request, approve) {
     setDeciding(request.id);
@@ -208,9 +227,45 @@ export default function FamilyMembersSheet({ onClose }) {
                   <Pencil className="size-4 text-muted-foreground" />
                 </button>
               )}
+              {/* 내보내기는 대표에게만, 남의 줄에만 붙는다.
+                  초대 코드는 여섯 자리라 단톡방에 잘못 붙기도 하고, 승인은 한 번 누르면
+                  그것으로 끝이었다. 되돌릴 수 없는 결정에 되돌리는 문이 없으면 승인
+                  자체가 무서운 일이 된다.
+                  내 줄에는 연필이 있고, 스스로 빠지는 것은 '가족 나가기'가 한다. */}
+              {iAmLeader && member.user_id !== user.id && (
+                <button
+                  type="button"
+                  onClick={() => setKicking(member)}
+                  aria-label={`${member.display_name} 내보내기`}
+                  className="flex size-[34px] shrink-0 items-center justify-center rounded-[10px] border border-input"
+                >
+                  <UserMinus className="size-4 text-muted-foreground" />
+                </button>
+              )}
             </li>
           ))}
         </ul>
+
+        {error && <p className="m-0 px-5 pt-2 text-[13px] font-medium text-destructive">{error}</p>}
+
+        {/* 되돌릴 수 없다. 무엇이 사라지는지 미리 다 적어둔다 — 누르고 나서 알게 되면
+            그때는 이미 늦다. */}
+        {kicking && (
+          <AlertDialog
+            tone="warning"
+            icon={UserMinus}
+            title="이 가족에서 내보낼까요?"
+            subject={kicking.display_name}
+            details={[
+              '올린 기프티콘이 목록에서 사라져요',
+              '남긴 메모와 기록에서도 이름이 지워져요',
+              '다시 들이려면 초대 코드로 새로 신청해야 해요',
+            ]}
+            confirmLabel="내보내기"
+            onConfirm={() => kick(kicking)}
+            onClose={() => setKicking(null)}
+          />
+        )}
 
         {renameOpen && (
           <RenameSheet

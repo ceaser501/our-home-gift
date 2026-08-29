@@ -58,6 +58,15 @@ export async function renameMember(familyId, newName) {
   if (error) throw new Error(error.message || '이름을 바꾸지 못했어요.');
 }
 
+// 대표가 구성원을 내보낸다. 잘못 승인해준 사람을 되돌리는 문이다.
+//
+// 그 사람이 올린 기프티콘은 감춰지고, 메모와 기록에서 이름도 지워진다. 무엇이 사라지는지는
+// supabase/kick-member.sql에 적어뒀다.
+export async function kickMember(familyId, userId) {
+  const { error } = await supabase.rpc('kick_member', { fid: familyId, target: userId });
+  if (error) throw new Error(error.message || '내보내지 못했어요.');
+}
+
 export async function renameFamily(familyId, newName) {
   const { error } = await supabase.rpc('rename_family', { fid: familyId, new_name: newName });
   if (error) throw new Error(error.message || '가족 이름을 바꾸지 못했어요.');
