@@ -590,24 +590,24 @@ html.is-native-android {
    빈 회색 사각형은 "사진이 안 뜬 칸"으로 읽힌다. 눈은 그걸 '없다'로 본다. 기프티콘
    뼈대를 옅게 그려두고 흰 띠를 대각선으로 지나가게 하면 '채워지는 중'이 된다.
    전체가 깜빡이는 것(animate-pulse)보다 방향이 있는 움직임이 "읽고 있다"에 가깝다. */
+/* 날짜 칸이 스스로 그리는 달력 아이콘을 감춘다. 굵기도 색도 우리 화살표와 달라서,
+   옆의 카테고리 칸과 나란히 두면 그 자리만 깨져 보인다. 누르는 자리는 칸 전체라
+   아이콘이 없어도 달력은 그대로 열린다. */
+.moacon-date::-webkit-calendar-picker-indicator {
+  opacity: 0;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+
 @keyframes moacon-shimmer {
   from {
     transform: translateX(-120%);
   }
   to {
     transform: translateX(120%);
-  }
-}
-
-/* 안내 세 줄 중 지금 줄이 차오른다. 점 세 개는 '몇 번째'만 말하는데, 차오르는 칸은
-   '곧 넘어간다'까지 말해서 다 못 읽었을 때 기다릴지 정할 수 있다.
-   시간은 GalleryScanSheet.jsx의 HINT_MS와 같아야 한다. */
-@keyframes moacon-hint-fill {
-  from {
-    width: 0;
-  }
-  to {
-    width: 100%;
   }
 }
 

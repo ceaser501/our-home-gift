@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Image as ImageIcon, Loader2, Plus, RotateCcw, Search, X } from 'lucide-react';
+import { ChevronDown, Image as ImageIcon, Loader2, Plus, RotateCcw, Search, X } from 'lucide-react';
 import { CATEGORIES } from '../constants';
 import { prepareImages, readGifticonInfo, SMALL_BARCODE_COVERAGE } from '../utils/imageAnalyze';
 import { createGifticon, updateGifticon, searchPrice, findGifticonByCode, findLookalikeGifticon } from '../api';
@@ -502,12 +502,26 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
     }
   }
 
+  // 마지막 사진을 뗐으면 적힌 것도 함께 지운다.
+  //
+  // 이 칸들은 사람이 적은 것이 아니라 그 사진에서 읽어온 값이다. 사진을 뗐는데 상품명과
+  // 기한이 그대로 남아 있으면, 어느 사진에서 나온 값인지 알 수 없는 폼이 된다.
+  // 새로 등록하는 중일 때만 그렇게 한다 — 고치는 중이면 사진만 빼고 나머지는 그대로
+  // 두는 것이 맞다.
+  function clearedByLastPhoto(remaining) {
+    if (mode !== 'create' || remaining > 0) return false;
+    handleReset();
+    return true;
+  }
+
   function removeExisting(path) {
+    if (clearedByLastPhoto(existingImages.length - 1 + newFiles.length)) return;
     setExistingImages((prev) => prev.filter((img) => img.path !== path));
     setRemovedPaths((prev) => [...prev, path]);
   }
 
   function removeNewFile(index) {
+    if (clearedByLastPhoto(existingImages.length + newFiles.length - 1)) return;
     URL.revokeObjectURL(newPreviews[index]);
     setNewFiles((prev) => prev.filter((_, i) => i !== index));
     setNewPreviews((prev) => prev.filter((_, i) => i !== index));
@@ -852,9 +866,12 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
                   {/* 위의 Label은 htmlFor로 묶을 수가 없다 — 이 칸은 input이 아니라 button이다.
                       그래서 이름을 따로 붙인다. 없으면 읽어주는 프로그램에는 값만 들리고
                       ("카페"), 무엇을 고르는 칸인지가 안 들린다. */}
+                  {/* 이름이 길면 두 줄로 감기면서 칸 밖으로 잘렸다('생활·편의' 같은 것).
+                      한 줄로 붙들고 넘치면 …으로 자른다 — 아이콘이 무엇인지 이미 말한다. */}
                   <SelectTrigger
+                    size="lg"
                     aria-label="카테고리"
-                    className="flex h-[52px] w-full items-center gap-2.5 rounded-[13px] border border-input bg-secondary/50 px-[15px] text-[15.5px]"
+                    className="w-full gap-2.5 rounded-[13px] border border-input bg-secondary/50 px-[15px] text-[15.5px] [&>span]:min-w-0 [&>span]:truncate [&>span]:whitespace-nowrap"
                   >
                     <SelectValue />
                   </SelectTrigger>
@@ -902,14 +919,24 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
                   사용기한 <Optional />
                 </Label>
                 {/* 폰이 들고 있는 날짜 고르개를 그대로 쓴다. 직접 만든 달력으로 바꾸면
-                    폰마다 익숙한 조작을 버리게 되고, 60대에게는 그 손해가 크다. */}
-                <Input
-                  id="f-expires"
-                  type="date"
-                  value={form.expires_at}
-                  onChange={(e) => updateField('expires_at', e.target.value)}
-                  className="h-[52px] rounded-[13px] bg-secondary/50 text-[15.5px]"
-                />
+                    폰마다 익숙한 조작을 버리게 되고, 60대에게는 그 손해가 크다.
+
+                    다만 웹뷰가 그려주는 달력 아이콘은 우리 화살표와 굵기도 색도 달라서
+                    옆 카테고리 칸과 나란히 두면 깨져 보인다. 그것만 감추고 같은 화살표를
+                    직접 그린다. 누르는 자리는 칸 전체라 화살표는 그림일 뿐이다. */}
+                <div className="relative">
+                  <Input
+                    id="f-expires"
+                    type="date"
+                    value={form.expires_at}
+                    onChange={(e) => updateField('expires_at', e.target.value)}
+                    className="moacon-date h-[52px] w-full rounded-[13px] bg-secondary/50 pr-9 text-[15.5px]"
+                  />
+                  <ChevronDown
+                    aria-hidden="true"
+                    className="pointer-events-none absolute top-1/2 right-[15px] size-4 -translate-y-1/2 opacity-50"
+                  />
+                </div>
               </div>
 
               {/* 금액은 길어야 여섯 자리라 한 줄을 통째로 쓸 이유가 없다. */}
@@ -983,10 +1010,15 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
               <Label className="text-[14px] font-semibold text-foreground/80">받는 사람</Label>
               <Select value={form.owner} onValueChange={(v) => updateField('owner', v)}>
                 <SelectTrigger
+                  size="lg"
                   aria-label="받는 사람"
-                  className="h-[52px] w-full gap-2.5 rounded-[13px] border border-input bg-card px-[15px] text-[15.5px]"
+                  className="w-full gap-2.5 rounded-[13px] border border-input bg-card px-[15px] text-[15.5px]"
                 >
-                  <span className="flex min-w-0 flex-1 items-center gap-2.5">
+                  {/* pointer-events를 끈다. 안 끄면 이 span이 눌림을 먼저 받아서, 열려
+                      있을 때 다시 눌러도 닫히지 않는다 — 라딕스는 밖을 눌러 닫고 트리거를
+                      눌러 여는데, 그 둘이 같은 한 번의 눌림에서 잇달아 일어난다.
+                      기본 SelectValue가 하는 일과 같다. */}
+                  <span className="pointer-events-none flex min-w-0 flex-1 items-center gap-2.5">
                     <span
                       aria-hidden="true"
                       className={cn('size-2 shrink-0 rounded-full', ownerDotClass(members, form.owner))}

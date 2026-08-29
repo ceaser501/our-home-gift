@@ -444,43 +444,28 @@ function CandidateSlot({ at, hints = HINTS }) {
         />
       </span>
 
-      <div className="flex min-w-0 flex-1 flex-col gap-2">
-        {/* 문구 자리를 44px로 고정한다. 두 줄짜리 문구가 와도 아래 표시가 안 흔들린다. */}
-        <div className="relative h-11">
-          {hints.map((text, i) => {
-            const on = i === at % hints.length;
-            return (
-              <span
-                key={text}
-                aria-hidden={!on}
-                className={cn(
-                  'absolute inset-x-0 top-0 text-sm leading-snug break-keep text-muted-foreground',
-                  'transition-all duration-500 ease-out',
-                  on ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-[9px] opacity-0'
-                )}
-              >
-                {text}
-              </span>
-            );
-          })}
-        </div>
-
-        {/* 점 세 개는 '몇 번째'만 말한다. 차오르는 칸은 '곧 넘어간다'까지 말해서,
-            다 읽지 못했을 때 기다릴지 정할 수 있다. */}
-        <div className="flex gap-[5px]" aria-hidden="true">
-          {hints.map((text, i) =>
-            i === at % hints.length ? (
-              <span key={text} className="relative h-1 w-[22px] overflow-hidden rounded-sm bg-secondary">
-                <i
-                  className="absolute inset-y-0 left-0 rounded-sm bg-primary animate-[moacon-hint-fill_2600ms_linear]"
-                  style={{ width: '100%' }}
-                />
-              </span>
-            ) : (
-              <span key={text} className="h-1 w-[5px] rounded-sm bg-secondary" />
-            )
-          )}
-        </div>
+      {/* 문구만 둔다. 아래에 몇 번째인지 표시하는 칸 셋을 뒀었는데, 읽을 것 밑에 붙은
+          작은 표시가 무엇을 세는 것인지 알 수 없어서 눈만 끌었다. 세 줄이 돌아가는 것은
+          문구가 바뀌는 것으로 이미 보인다.
+          자리는 뼈대(56px)와 같은 높이로 잡고 가운데에 세운다. 문구가 한 줄일 때와 두 줄일
+          때 글자가 위아래로 튀지 않는다. */}
+      <div className="relative flex h-14 min-w-0 flex-1 items-center">
+        {hints.map((text, i) => {
+          const on = i === at % hints.length;
+          return (
+            <span
+              key={text}
+              aria-hidden={!on}
+              className={cn(
+                'absolute inset-x-0 text-sm leading-snug break-keep text-muted-foreground',
+                'transition-all duration-500 ease-out',
+                on ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-[9px] opacity-0'
+              )}
+            >
+              {text}
+            </span>
+          );
+        })}
       </div>
     </li>
   );
@@ -629,6 +614,12 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
   const [leftovers, setLeftovers] = useState([]);
   // 금액권으로 넣을 후보. 판정이 확실하지 않아서 켜는 건 사람이 한다.
   const [voucherIds, setVoucherIds] = useState([]);
+  // 금액권처럼 보인다고 서버가 읽어낸 후보. 아래 무리를 가르는 것은 이쪽이다.
+  //
+  // 한때 voucherIds(켜짐 여부)로 갈랐다. 그러면 체크를 끄는 순간 이 후보가 윗 무리로
+  // 옮겨가고, 윗 무리에는 체크가 안 그려져서 다시 켤 방법이 없어졌다. 무엇으로 보이는가
+  // (안 바뀜)와 무엇으로 넣을 것인가(사람이 바꿈)는 다른 값이다.
+  const [voucherLooks, setVoucherLooks] = useState([]);
   const [scanned, setScanned] = useState(0);
   // 실제로 어느 시각 이후를 봤는지(초). 화면에 적어주기 위한 값이다.
   const [since, setSince] = useState(0);
@@ -742,6 +733,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
     setMissedShots([]);
     setLeftovers([]);
     setVoucherIds([]);
+    setVoucherLooks([]);
     setResult(null);
     setDigging(false);
     setReadBar(0);
@@ -976,6 +968,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
     // 읽어낸 것이 금액권으로 보이면 그 자리에서 켜준다. 확실하지 않으니 끌 수 있게
     // 두되, 열 개 중 여덟이 맞는 판단을 매번 손으로 켜게 하는 것도 일이다.
     if (read.info?.isVoucher && read.info?.amount) {
+      setVoucherLooks((prev) => (prev.includes(candidate.id) ? prev : [...prev, candidate.id]));
       setVoucherIds((prev) => (prev.includes(candidate.id) ? prev : [...prev, candidate.id]));
     }
 
@@ -1474,8 +1467,8 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
   const alive = candidates.filter((candidate) => !dismissedIds.includes(candidate.id));
   // 금액권은 따로 묶는다. 확인할 것이 하나 더 있는 무리라, 섞여 있으면 그 하나를
   // 매번 찾아내야 한다. 나눠 두면 위는 그냥 넘기고 아래만 보면 된다.
-  const vouchers = alive.filter((c) => isPickable(c) && voucherIds.includes(c.id));
-  const plains = alive.filter((c) => isPickable(c) && !voucherIds.includes(c.id));
+  const vouchers = alive.filter((c) => isPickable(c) && voucherLooks.includes(c.id));
+  const plains = alive.filter((c) => isPickable(c) && !voucherLooks.includes(c.id));
   // 넣을 수 없는 것. 빠진 칸이 있거나, 기한이 지났거나, 읽다가 막혔거나, 치운 것이다.
   //
   // 치운 것까지 여기 함께 담는다. 예전에는 목록 맨 아래에 따로 큰 카드로 세워뒀는데,
@@ -1676,44 +1669,10 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
               )}
             </div>
 
-            {/* 오른쪽은 이 후보를 어떻게 넣을지(금액권 칩)와, 넣을지 말지(✕)다.
-                둘은 다른 판단이라 나란히 둔다.
+            {/* 오른쪽은 이 후보를 치우는 자리다.
                 시안에는 '확인됨' 같은 상태 글자가 있었는데 빼뒀다 — 아래에서 성격별로
                 나눠 보여주므로 카드마다 또 적으면 같은 말이 두 번 된다. */}
             <div className="flex shrink-0 items-center gap-1">
-              {/* 금액권 여부는 사람이 정한다. 사진의 글자로 짐작하는 것이라 확실할 수가
-                  없는데, 틀렸을 때의 결과가 한쪽으로 치우친다 — 교환권을 금액권으로
-                  켜두면 쓸 때마다 얼마를 썼는지 묻고 잔액이 남아 목록에서 사라지지 않는다.
-                  반대로 꺼두면 잔액을 못 따라갈 뿐 쓰는 데는 지장이 없다.
-
-                  한때 카드 아래 별도 줄이었다. 그러면 이 카드만 한 줄 더 높아져 위
-                  카드들과 리듬이 어긋난다. 칩으로 옮기면 높이가 같아지고, 껐다 켜는
-                  것임이 형태로 보인다. */}
-              {voucher && !isDismissed && (
-                <button
-                  type="button"
-                  onClick={() => toggleVoucher(candidate)}
-                  aria-pressed={voucherIds.includes(candidate.id)}
-                  className={cn(
-                    'flex h-9 shrink-0 items-center gap-1.5 rounded-[10px] px-[11px] text-[13px] font-bold',
-                    voucherIds.includes(candidate.id)
-                      ? 'border-[1.5px] border-primary bg-primary/6 text-primary'
-                      : 'border border-input text-muted-foreground'
-                  )}
-                >
-                  <span
-                    className={cn(
-                      'flex size-[18px] items-center justify-center rounded-md',
-                      voucherIds.includes(candidate.id)
-                        ? 'bg-primary text-primary-foreground'
-                        : 'border-[1.5px] border-input'
-                    )}
-                  >
-                    {voucherIds.includes(candidate.id) && <Check className="size-[11px]" strokeWidth={3.6} />}
-                  </span>
-                  금액권
-                </button>
-              )}
               {isDismissed ? (
                 <button
                   type="button"
@@ -1736,6 +1695,53 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
               )}
             </div>
           </div>
+
+          {/* 금액권 여부는 사람이 정한다. 사진의 글자로 짐작하는 것이라 확실할 수가 없는데,
+              틀렸을 때의 결과가 한쪽으로 치우친다 — 교환권을 금액권으로 켜두면 쓸 때마다
+              얼마를 썼는지 묻고 잔액이 남아 목록에서 사라지지 않는다. 반대로 꺼두면 잔액을
+              못 따라갈 뿐 쓰는 데는 지장이 없다.
+
+              카드 오른쪽 칩으로 올려봤다가 되돌렸다. 390px 화면에서 56px 그림과 34px ✕
+              사이에 끼우니 상품명이 들어갈 자리가 없어서 이름이 통째로 잘렸다. 이름을
+              읽을 수 없으면 무엇을 금액권으로 켜는지도 알 수 없다.
+
+              한 줄을 통째로 쓴다. 그러면 이 카드만 한 줄 높아지지만, 확인할 것이 하나 더
+              있는 무리라 그게 맞다 — 위 카드들과 리듬이 어긋나 보이는 것이 곧 표시가 된다. */}
+          {voucher && !isDismissed && (
+            <button
+              type="button"
+              onClick={() => toggleVoucher(candidate)}
+              aria-pressed={voucherIds.includes(candidate.id)}
+              className={cn(
+                'flex w-full items-center gap-2.5 rounded-[11px] px-3 py-2.5 text-left',
+                voucherIds.includes(candidate.id)
+                  ? 'border-[1.5px] border-primary bg-primary/6'
+                  : 'border border-input'
+              )}
+            >
+              <span
+                className={cn(
+                  'flex size-[19px] shrink-0 items-center justify-center rounded-md',
+                  voucherIds.includes(candidate.id)
+                    ? 'bg-primary text-primary-foreground'
+                    : 'border-[1.5px] border-input'
+                )}
+              >
+                {voucherIds.includes(candidate.id) && <Check className="size-[12px]" strokeWidth={3.6} />}
+              </span>
+              <span
+                className={cn(
+                  'text-[13.5px] font-bold',
+                  voucherIds.includes(candidate.id) ? 'text-primary' : 'text-muted-foreground'
+                )}
+              >
+                금액권
+              </span>
+              <span className="min-w-0 flex-1 truncate text-[12.5px] font-medium text-muted-foreground">
+                쓴 만큼 깎여요
+              </span>
+            </button>
+          )}
 
           {/* 빠진 칸이 있는 카드에만 나온다. 다 읽힌 카드에까지 붙이면, 고칠 것이 없는데도
               뭔가 확인해야 할 것처럼 보인다 — 대부분의 날은 다 읽힌다.
@@ -2121,13 +2127,18 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                   미리 보기를 다섯 줄로 늘릴 수 있게 된 것이 여기서 나왔다 — 전부 한
                   흐름에 있던 때는 줄이 늘어난 만큼 버튼이 화면 밖으로 밀렸다.
                   못 넣은 것과 기한이 빈 것 상자도 여기 안에 둔다. 펼치면 이름이 여럿
-                  나오는 자리라, 밖에 고정해두면 그때 넘친다. */}
+                  나오는 자리라, 밖에 고정해두면 그때 넘친다.
+
+                  안에 든 것들에 shrink-0을 준다. 세로 flex 안에서는 자식이 기본으로
+                  줄어드는데, 그 자리가 스크롤 상자라 넘치는 만큼 아래 것들이 눌려
+                  사라졌다 — '더 보기'를 눌러 목록이 길어지면 그 아래 '확인이 필요해요'
+                  상자가 통째로 안 보였다. jsdom 시험은 자리를 재지 않아서 이걸 못 잡는다. */}
               <div className="-mx-1 flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto px-1">
                 {/* 넣은 것을 한 줄씩 세운다. 무엇이 들어갔는지는 이 화면에서 봐야 하는
                     것이고, 그림 몇 장을 겹쳐 개수만 적으면 "9개 들어갔다"는 말만 남는다.
                     테두리는 없다 — 목록에서 쓰는 것과 같은 구분선이면 충분하다. */}
                 {registered.length > 0 && (
-                  <div className="flex flex-col">
+                  <div className="flex shrink-0 flex-col">
                     {(showAllDone ? registered : registered.slice(0, DONE_PREVIEW)).map((candidate) => (
                       <div
                         key={candidate.id}
@@ -2172,7 +2183,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                     있을 수 있는데, 그건 서버가 눈으로 읽어야 안다. 미리 다 물어보면 정보
                     캡처까지 물어보게 돼서 느려진다 — 누를 때만 읽는다. */}
                 {leftovers.length > 0 && onNext && (
-                  <div className="flex flex-col gap-2.5 rounded-[14px] border border-border px-3.5 py-3">
+                  <div className="flex shrink-0 flex-col gap-2.5 rounded-[14px] border border-border px-3.5 py-3">
                     <p className="m-0 text-sm leading-relaxed break-keep text-muted-foreground">
                       바코드가 없어서 빼둔 사진이에요. 기프티콘이면 이어서 올려드릴게요.
                     </p>
@@ -2201,7 +2212,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                     보낼 수가 없다(2개면 어디로 갈지 정해지지 않는다). 대신 어느
                     기프티콘인지 이름을 보여준다 — 목록에서 그것만 찾아 고치면 된다. */}
                 {(result.failed.length > 0 || result.noExpiry > 0) && (
-                  <div className="overflow-hidden rounded-[14px] border border-border">
+                  <div className="shrink-0 overflow-hidden rounded-[14px] border border-border">
                     <div className="flex items-center gap-[7px] border-b border-border bg-muted/40 px-3.5 py-2.5">
                       <span className="text-[13px] font-bold tracking-[-0.01em] text-foreground/80">
                         확인이 필요해요
@@ -2419,7 +2430,8 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                   {vouchers.length > 0 && (
                     <div className="flex flex-col gap-2">
                       <p className="m-0 pt-[7px] pb-px text-[14.5px] font-bold tracking-[-0.015em] break-keep text-foreground">
-                        <span className="tabular-nums">금액권 {vouchers.length}개</span> 같아요. 맞는지 봐주세요.
+                        <span className="tabular-nums">{vouchers.length}개</span>는 금액권 같아요. 맞는지
+                        확인해주세요.
                       </p>
                       <ul className="m-0 flex list-none flex-col gap-2 p-0">
                         {vouchers.map((candidate) => renderCandidate(candidate, { voucher: true }))}

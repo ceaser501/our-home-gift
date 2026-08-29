@@ -19,7 +19,10 @@ function SelectTrigger({ className, size = 'default', children, ...props }) {
       data-size={size}
       className={cn(
         "flex w-full items-center justify-between gap-2 rounded-md border border-input bg-card px-3 py-2 text-sm shadow-xs transition-colors",
-        'data-[size=default]:h-10 data-[size=sm]:h-9',
+        // 높이는 variant로 붙는다. 그래서 className에 h-[52px]를 줘도 이쪽이 이긴다 —
+        // tailwind-merge는 variant가 다르면 같은 속성으로 안 보고 둘 다 남긴다.
+        // 큰 칸이 필요하면 size="lg"를 쓴다. 등록 창의 52px 칸들이 그것이다.
+        'data-[size=default]:h-10 data-[size=sm]:h-9 data-[size=lg]:h-[52px]',
         'focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:outline-none',
         'disabled:cursor-not-allowed disabled:opacity-50',
         "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg]:opacity-50",
