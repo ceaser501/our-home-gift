@@ -23,10 +23,8 @@ import {
   FOLDERS,
   canOpenAppSettings,
   candidateToFiles,
-  countSkipped,
   deepScan,
   dismissImages,
-  forgetSkipped,
   getGalleryStatus,
   groupImages,
   openAppSettings,
@@ -715,9 +713,8 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function start({ forgetHistory = false } = {}) {
+  async function start() {
     setError('');
-    if (forgetHistory) forgetSkipped();
     if (!picked) {
       const status = await requestGalleryAccess();
       if (!status.granted && !status.partial) {
@@ -1296,8 +1293,6 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
   }
 
   const summary = summarizeFolders(folders);
-  // 지금까지 건너뛰기로 감춰둔 사진 수. 훑기가 끝난 뒤에만 쓰므로 그때 세면 된다.
-  const skipped = complete ? countSkipped() : 0;
 
   // 막대로 보이는데 못 읽은 사진을 폴더별로 센다.
   //
@@ -2349,21 +2344,13 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                 )}
               </div>
 
+              {/* '새 기프티콘 찾기'를 뺐다. 방금 훑고 나온 자리라 그 사이에 새로 담긴
+                  사진이 있을 리 없고, 눌러도 같은 목록이 다시 나온다. 나가는 길 하나면
+                  된다. */}
               <div className="flex shrink-0 flex-col gap-2 pt-1">
                 <Button type="button" className="h-[52px] w-full rounded-[14px] text-[15.5px]" onClick={onClose}>
                   목록으로 가기
                 </Button>
-                {!picked && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-[46px] w-full rounded-[13px] text-[14.5px]"
-                    onClick={() => start()}
-                  >
-                    <ScanSearch className="size-4.5" />
-                    새 기프티콘 찾기
-                  </Button>
-                )}
               </div>
             </>
           )}
@@ -2592,39 +2579,16 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                   </Button>
                 )}
 
-                {stage === 'done' && !picked && (
-                  <Button
-                    type="button"
-                    variant={keptCount > 0 ? 'outline' : 'default'}
-                    className={cn(
-                      'w-full',
-                      keptCount > 0
-                        ? 'h-[46px] rounded-[13px] text-[14.5px]'
-                        : 'h-[52px] rounded-[14px] text-[15.5px]'
-                    )}
-                    onClick={() => start()}
-                  >
-                    <ScanSearch className="size-4.5" />
-                    새 기프티콘 찾기
-                  </Button>
-                )}
-
-                {/* 받아 온 사진은 다시 찾을 것이 없다. 닫는 길만 둔다. */}
-                {stage === 'done' && picked && keptCount === 0 && (
+                {/* 버튼이 셋이던 자리다.
+                    '새 기프티콘 찾기'는 방금 훑고 나온 자리라 누를 이유가 없었다 —
+                    그 사이에 새로 담긴 사진이 있을 리 없다.
+                    '전부 다시 찾기'는 설정으로 옮겼다(ProfileMenu). 한 번 아니라고
+                    해둔 것을 되살리는 일이라 자주 쓸 것이 아니고, 여기 두면 등록
+                    버튼 바로 밑에서 128장을 다시 읽는 버튼이 손에 닿는다.
+                    넣거나, 나가거나. 둘이면 된다. */}
+                {stage === 'done' && keptCount === 0 && (
                   <Button type="button" className="h-[52px] w-full rounded-[14px] text-[15.5px]" onClick={onClose}>
                     목록으로 가기
-                  </Button>
-                )}
-
-                {stage === 'done' && !picked && skipped > 0 && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-[46px] w-full rounded-[13px] text-[14.5px] text-muted-foreground"
-                    onClick={() => start({ forgetHistory: true })}
-                  >
-                    <RotateCcw className="size-4.5" />
-                    전부 다시 찾기
                   </Button>
                 )}
               </div>

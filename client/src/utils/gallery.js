@@ -335,6 +335,12 @@ export function rememberNoBarcode(missed) {
   }
 }
 
+// '바코드 없음'을 몇 장 모아서 적을지.
+//
+// 한 장마다 적으면 목록 통째를 그만큼 다시 쓴다. 다 끝나고 한 번만 적으면 중간에
+// 그만뒀을 때 한 장도 안 남는다. 그 사이 어딘가다 — 최악이라도 일곱 장을 잃는다.
+const MARK_BATCH = 8;
+
 // 앱을 열 때 자동으로 훑을지. 기본은 꺼둔다 — 사진을 보는 일이라 사용자가 켜는 게 맞다.
 const AUTO_SCAN_KEY = 'moacon:gallery-auto-scan';
 
@@ -1053,7 +1059,7 @@ function readFromGallery(image) {
  *                 묶는 규칙은 같아서, 그 한 걸음만 밖에서 넘겨받는다.
  *                 사진첩은 네이티브에게 묻고, 직접 고른 사진은 브라우저에서 줄인다.
  */
-async function collect({ images, read: readImage, pass, isRegistered, skipCodes, onProgress, onCandidate, signal, rescueMissed = false }) {
+async function collect({ images, read: readImage, pass, isRegistered, skipCodes, onProgress, onCandidate, onMissed, signal, rescueMissed = false }) {
   const candidates = [];
   // 바코드 값 → 그 값을 가진 후보. 같은 기프티콘의 사진 여러 장을 한 후보로 모은다.
   const seenCodes = new Map();
@@ -1119,7 +1125,11 @@ async function collect({ images, read: readImage, pass, isRegistered, skipCodes,
       const withShot = bars && diagShots < DIAG_SHOTS;
       if (withShot) diagShots += 1;
       // hint는 진단용이다(왜 못 읽었는지 재둔 치수). 출시 때 함께 뺀다.
-      missed.push({ ...image, bars, hint: found?.hint || null, ...(withShot ? { data: read.data } : null) });
+      const shot = { ...image, bars, hint: found?.hint || null, ...(withShot ? { data: read.data } : null) };
+      missed.push(shot);
+      // 한 장씩 알려준다. 부르는 쪽이 '이 사진은 봤다'를 그때그때 적어두기 위해서다 —
+      // 다 끝난 뒤에 한꺼번에 적으면 중간에 그만뒀을 때 한 장도 안 남는다.
+      onMissed?.(shot);
       continue;
     }
 
@@ -1331,20 +1341,45 @@ export async function scanGallery({ isRegistered, onProgress, onCandidate, signa
 export async function deepScan({ pending, isRegistered, skipCodes, onProgress, onCandidate, signal } = {}) {
   if (!pending?.length) return { candidates: [] };
 
-  const { candidates, missed } = await collect({
-    images: pending,
+  // 막대처럼 보이는 사진을 앞에 세운다.
+  //
+  // 거르지는 않는다. 한때 이 자를 문으로 썼다가 QR 기프티콘이 통째로 사라진 적이 있다 —
+  // looksLikeBarcode는 세로줄을 보는데 QR은 네모 격자라서 그 자를 못 통과한다.
+  // 순서만 바꾼다. 총 시간은 같지만, 건질 것이 있으면 앞쪽에서 나온다.
+  const ordered = [...pending].sort((a, b) => Number(Boolean(b.bars)) - Number(Boolean(a.bars)));
+
+  // '바코드 없음'을 한 장씩 남긴다.
+  //
+  // 예전에는 이 판이 끝까지 돌았을 때만 한꺼번에 적었다. 그런데 이 판이 제일 느린
+  // 자리다 — 첫 훑기에서는 밥 사진 수백 장을 원본 크기로 다시 본다. 그게 끝나기 전에
+  // 창을 닫거나 앱을 끄면 한 장도 안 남고, 다음에 켜면 또 처음부터 128장을 읽었다.
+  //
+  // 이제 본 만큼 남는다. 매 장 쓰지는 않고 모아서 쓴다 — localStorage에 넣는 값이
+  // 목록 통째라, 장마다 쓰면 그 값이 개수만큼 곱해진다.
+  let batch = [];
+  const flush = () => {
+    if (batch.length === 0) return;
+    rememberNoBarcode(batch);
+    batch = [];
+  };
+
+  const { candidates } = await collect({
+    images: ordered,
     read: readFromGallery,
     pass: DEEP,
     isRegistered,
     skipCodes,
     onProgress,
     onCandidate,
+    onMissed: (image) => {
+      batch.push(image);
+      if (batch.length >= MARK_BATCH) flush();
+    },
     signal,
   });
 
-  if (!signal?.aborted) {
-    rememberNoBarcode(missed);
-  }
+  // 중간에 그만둔 경우에도 적는다. 여기까지는 실제로 정밀하게 본 사진들이다.
+  flush();
 
   return { candidates };
 }

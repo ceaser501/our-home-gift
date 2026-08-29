@@ -34,6 +34,9 @@ vi.mock('../utils/gallery', () => ({
   isGalleryScanSupported: () => true,
   isAutoScanOn: () => false,
   setAutoScanOn: vi.fn(),
+  // 아니라고 해둔 사진이 있어야 되살리기 줄이 그려진다.
+  countSkipped: () => 3,
+  forgetSkipped: vi.fn(),
 }));
 vi.mock('../FamilyContext', () => ({
   useFamily: () => ({

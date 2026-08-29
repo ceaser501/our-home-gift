@@ -16,7 +16,10 @@ let barcodes = new Map();
 // 안 적으면 못 보는 사진으로 둔다 — 실제 앱에서도 캔버스를 못 읽으면 그렇게 넘어간다.
 let pixels = new Map();
 
-vi.mock('@capacitor/core', () => ({ registerPlugin: () => ({}) }));
+// 사진첩(네이티브)은 여기 없다. 훑기 쪽 판을 시험하려면 이 문 하나가 열려 있어야
+// 해서, registerPlugin이 늘 같은 객체를 주게 해두고 시험에서 채워 넣는다.
+const nativeGallery = vi.hoisted(() => ({}));
+vi.mock('@capacitor/core', () => ({ registerPlugin: () => nativeGallery }));
 
 vi.mock('@zxing/browser', () => ({
   BrowserMultiFormatReader: class {
@@ -108,7 +111,13 @@ beforeEach(() => {
       // (아래 'QR은 원본에서 읽는다' 참고).
       if (value.startsWith('data:')) copyLoads += 1;
       this._url = value;
-      this._name = value.startsWith('blob:') ? value.slice(5) : loading;
+      // 사진첩에서 온 사진은 base64 문자열 하나로 온다. 시험에서는 그 자리에 파일
+      // 이름을 넣어두고(gallery/이름.jpg) 여기서 되찾는다.
+      this._name = value.startsWith('blob:')
+        ? value.slice(5)
+        : value.includes('base64,gallery/')
+          ? value.slice(value.indexOf('base64,gallery/') + 'base64,gallery/'.length)
+          : loading;
       setTimeout(() => this.onload?.(), 0);
     }
     get naturalWidth() {
@@ -457,6 +466,92 @@ describe('마지막 판으로 넘어가는 문', () => {
     await deepScan({ pending: [{ id: 1, name: 'food.jpg', bucket: null, addedAt: 1 }] });
 
     expect(wasmCalls).toBe(0);
+  });
+});
+
+// 정밀 판이 본 것을 그때그때 적어둔다.
+//
+// 예전에는 이 판이 끝까지 돌았을 때만 한꺼번에 적었다. 그런데 이 판이 제일 느린 자리라
+// (첫 훑기에서는 밥 사진 수백 장을 원본 크기로 다시 본다) 사람들은 그 전에 창을 닫는다.
+// 그러면 한 장도 안 남고, 다음에 켜면 또 처음부터 128장을 읽는다.
+describe('정밀 판이 본 사진을 기억하는 시점', () => {
+  const shot = (id) => ({ id, name: `${id}.jpg`, bucket: null, addedAt: 1 });
+
+  // 사진첩이 사진 하나를 내주는 자리. id를 파일 이름으로 되돌려, 위 가짜 판독기가
+  // 그 이름으로 답을 고르게 한다.
+  beforeEach(() => {
+    nativeGallery.readImage = async ({ id }) => ({ data: `gallery/${id}.jpg` });
+  });
+  const marked = () => {
+    const saved = JSON.parse(localStorage.getItem('moacon:gallery-no-barcode') || 'null');
+    return new Set(saved?.ids ?? []);
+  };
+
+  it('중간에 그만둬도 본 만큼은 남는다', async () => {
+    const ids = Array.from({ length: 12 }, (_, i) => `p${i}`);
+    ids.forEach((id) => pixels.set(`${id}.jpg`, { ink: 0.3, color: 0.1 }));
+
+    // 여덟 장을 본 시점에 그만둔다. 모아서 적는 단위가 여덟이라 그 한 묶음이 남는다.
+    const controller = new AbortController();
+    let seen = 0;
+    const onProgress = () => {
+      seen += 1;
+      if (seen >= 9) controller.abort();
+    };
+
+    await deepScan({ pending: ids.map(shot), signal: controller.signal, onProgress });
+
+    const kept = marked();
+    expect(kept.size).toBeGreaterThan(0);
+    expect(kept.size).toBeLessThan(ids.length);
+  });
+
+  it('끝까지 돌면 다 남는다', async () => {
+    const ids = ['a', 'b', 'c'];
+    ids.forEach((id) => pixels.set(`${id}.jpg`, { ink: 0.3, color: 0.1 }));
+
+    await deepScan({ pending: ids.map(shot) });
+
+    expect(marked()).toEqual(new Set(ids));
+  });
+
+  // 바코드가 읽힌 사진은 적지 않는다. 적어버리면 그 기프티콘을 지웠을 때 다시 찾아줄
+  // 길이 없어진다.
+  it('읽힌 사진은 안 적는다', async () => {
+    barcodes.set('yes.jpg', { code: '111', coverage: 0.6 });
+    pixels.set('no.jpg', { ink: 0.3, color: 0.1 });
+
+    await deepScan({ pending: [shot('yes'), shot('no')] });
+
+    expect(marked()).toEqual(new Set(['no']));
+  });
+
+  // 막대처럼 보이는 사진을 앞에 세운다. 거르지는 않는다 — 한때 이 자를 문으로 썼다가
+  // QR 기프티콘이 통째로 사라진 적이 있다(looksLikeBarcode는 세로줄을 본다).
+  it('막대처럼 보이는 것을 먼저 보되, 나머지도 본다', async () => {
+    pixels.set('food.jpg', { ink: 0.3, color: 0.1 });
+    pixels.set('bar.jpg', { bars: true });
+    barcodes.set('bar.jpg', { code: '222', coverage: 0.6 });
+
+    const order = [];
+    nativeGallery.readImage = async ({ id }) => {
+      order.push(id);
+      return { data: `gallery/${id}.jpg` };
+    };
+
+    const { candidates } = await deepScan({
+      // 목록에는 밥 사진이 먼저 있는데,
+      pending: [
+        { id: 'food', name: 'food.jpg', bucket: null, addedAt: 1, bars: false },
+        { id: 'bar', name: 'bar.jpg', bucket: null, addedAt: 1, bars: true },
+      ],
+    });
+
+    // 막대 쪽을 먼저 본다.
+    expect(order).toEqual(['bar', 'food']);
+    expect(candidates.map((c) => c.code)).toEqual(['222']);
+    // 그러면서 밥 사진도 건너뛰지 않는다 — 거르면 QR 기프티콘이 사라진다.
+    expect(marked()).toEqual(new Set(['food']));
   });
 });
 

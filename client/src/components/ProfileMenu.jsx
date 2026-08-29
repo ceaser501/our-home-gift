@@ -6,6 +6,7 @@ import {
   MapPin,
   Megaphone,
   Receipt,
+  RotateCcw,
   Scale,
   ScanSearch,
   ShieldCheck,
@@ -25,7 +26,7 @@ import { useFamily } from '../FamilyContext';
 import { leaveFamily, renameMember } from '../family';
 import { OWNER_TAG_PALETTE, memberTagColorClass } from '../utils/tagColor';
 import useBackClose from '../utils/useBackClose';
-import { isGalleryScanSupported, isAutoScanOn, setAutoScanOn } from '../utils/gallery';
+import { isGalleryScanSupported, isAutoScanOn, setAutoScanOn, countSkipped, forgetSkipped } from '../utils/gallery';
 import { isNearbyBannerOn, setNearbyBannerOn } from '../utils/geolocation';
 
 export default function ProfileMenu({ onClose }) {
@@ -48,6 +49,9 @@ export default function ProfileMenu({ onClose }) {
   // 갤러리 자동 스캔은 앱에서만 있다. 브라우저에는 폴더를 볼 방법이 없어서 줄 자체를 감춘다.
   const [scanSupported] = useState(() => isGalleryScanSupported());
   const [autoScan, setAutoScan] = useState(() => isAutoScanOn());
+  // 찾기에서 '아니다'라고 해둔 사진 수. 되살릴 것이 있을 때만 줄을 그린다.
+  const [skipped, setSkipped] = useState(() => countSkipped());
+  const [forgetAsking, setForgetAsking] = useState(false);
   // 목록 위 '내 주변' 띠. 여기는 앱·브라우저 둘 다 있어서 줄을 감추지 않는다.
   const [nearby, setNearby] = useState(() => isNearbyBannerOn());
   /* 알림 테스트와 짝인 것들. 줄을 접어둔 동안 함께 접어둔다(아래 블록 참고).
@@ -194,6 +198,20 @@ export default function ProfileMenu({ onClose }) {
                 }}
               />
             )}
+
+            {/* 찾기 결과 화면 아래에 있던 '전부 다시 찾기'를 여기로 옮겼다.
+                거기서는 등록 버튼 바로 밑이라, 넣으려고 연 사람 손에 128장을 다시 읽는
+                버튼이 닿았다. 실제로 쓰는 때는 '기프티콘 아님'을 잘못 눌렀을 때뿐이라
+                자주 올 자리가 아니다.
+                여기서는 기록만 지운다. 다음에 찾기를 열면 처음부터 다시 본다 —
+                설정에서 갑자기 사진첩을 훑기 시작하면 무슨 일인지 알 수가 없다. */}
+            {isGalleryScanSupported() && skipped > 0 && (
+              <SettingLinkRow
+                icon={RotateCcw}
+                label="아니라고 해둔 사진 되살리기"
+                onClick={() => setForgetAsking(true)}
+              />
+            )}
           </SettingSection>
 
           {/* 배너를 닫아도 여기서는 늘 다시 볼 수 있어야 한다. 배너에만 있으면
@@ -328,6 +346,33 @@ export default function ProfileMenu({ onClose }) {
         {reportOpen && <UsageReportSheet onClose={() => setReportOpen(false)} />}
 
         {noticesOpen && <NoticesSheet onClose={() => setNoticesOpen(false)} />}
+
+        {/* 되살리는 일이라 위험하지는 않다. 다만 다음 찾기가 처음부터 다시 도는 것은
+            폰이 한동안 뜨거운 일이라, 그건 미리 말해둔다. */}
+        {forgetAsking && (
+          <AlertDialog
+            tone="info"
+            icon={RotateCcw}
+            title="아니라고 해둔 사진을 되살릴까요?"
+            details={[
+              `${skipped}장을 다음 찾기에서 다시 봐요`,
+              '기프티콘 아님을 잘못 눌렀을 때 쓰는 거예요',
+              '처음 한 번은 오래 걸려요',
+            ]}
+            confirmLabel="되살리기"
+            onConfirm={() => {
+              forgetSkipped();
+              setSkipped(0);
+              setForgetAsking(false);
+              setNotice({
+                tone: 'success',
+                title: '되살렸어요',
+                description: '다음에 기프티콘 찾기를 열면 처음부터 다시 봐요.',
+              });
+            }}
+            onClose={() => setForgetAsking(false)}
+          />
+        )}
 
         {leaveAsking && (
           <AlertDialog
