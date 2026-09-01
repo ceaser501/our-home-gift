@@ -81,14 +81,14 @@ describe('구성원 내보내기', () => {
 
   // 이름은 본인이 적는 값이라 '딸'만 보고는 누구인지 가릴 수 없다. 되돌릴 수 없는 일을
   // 누르는 자리라, 바꿀 수 없는 값이 옆에 있어야 한다.
-  it('누구를 내보내는지 이메일로 한 번 더 짚는다', () => {
+  it('내보낼 때만 이메일로 한 번 더 짚는다', () => {
     viewer = 'leader';
     render(<FamilyMembersSheet onClose={() => {}} />);
 
-    // 목록 줄에도,
-    expect(screen.getByText(/stran\*\*\*@gmail\.com/)).toBeTruthy();
+    // 목록 줄에는 안 적는다. 날짜와 한 줄에 두면 날짜가 잘린다.
+    expect(screen.queryByText(/stran\*\*\*@gmail\.com/)).toBeNull();
 
-    // 물어보는 창에도.
+    // 물어보는 창에서만 보여준다.
     fireEvent.click(screen.getByRole('button', { name: '낯선사람 내보내기' }));
     expect(screen.getByText('낯선사람 (stran***@gmail.com)')).toBeTruthy();
   });
