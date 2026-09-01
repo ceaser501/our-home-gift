@@ -289,9 +289,9 @@ export default function FamilyMembersSheet({ onClose }) {
                   type="button"
                   onClick={() => setMyNameOpen(true)}
                   aria-label="내 이름 바꾸기"
-                  className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-input bg-card"
+                  className="flex size-[34px] shrink-0 items-center justify-center rounded-[10px] border border-input"
                 >
-                  <Pencil className="size-[18px] text-muted-foreground" />
+                  <Pencil className="size-4 text-muted-foreground" />
                 </button>
               )}
               {/* 내보내기는 대표에게만, 남의 줄에만 붙는다.
@@ -304,9 +304,9 @@ export default function FamilyMembersSheet({ onClose }) {
                   type="button"
                   onClick={() => setKicking(member)}
                   aria-label={`${member.display_name} 내보내기`}
-                  className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-input bg-card"
+                  className="flex size-[34px] shrink-0 items-center justify-center rounded-[10px] border border-input"
                 >
-                  <UserMinus className="size-[18px] text-muted-foreground" />
+                  <UserMinus className="size-4 text-muted-foreground" />
                 </button>
               )}
             </li>
