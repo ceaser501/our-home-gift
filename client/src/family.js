@@ -23,14 +23,29 @@ export async function getMyFamilies(userId) {
   return families ?? [];
 }
 
+// 구성원 목록을 못 읽으면 앱이 통째로 안 열린다(AuthGate가 '연결이 고르지 않아요'로
+// 간다). 그래서 여기서 요구하는 칸은 있는지 없는지가 곧 앱이 열리느냐가 된다.
+//
+// email_masked를 붙였다가 실제로 그렇게 막혔다. 화면은 새것이 나갔는데 데이터베이스에는
+// supabase/member-email.sql이 아직 안 돌아간 상태였고, 없는 칸을 달라고 하니 목록 읽기가
+// 통째로 실패했다. 인터넷은 멀쩡한데 "연결이 고르지 않아요"만 떴다.
+//
+// 이메일은 있으면 좋은 값이지 없으면 못 여는 값이 아니다. 없으면 없는 대로 연다.
+const MEMBER_COLUMNS = 'user_id, display_name, created_at, tag_color';
+
 export async function getFamilyMembers(familyId) {
-  const { data, error } = await supabase
-    .from('family_members')
-    .select('user_id, display_name, created_at, tag_color, email_masked')
-    .eq('family_id', familyId)
-    .order('created_at');
-  if (error) throw new Error(error.message);
-  return data ?? [];
+  const read = (columns) =>
+    supabase.from('family_members').select(columns).eq('family_id', familyId).order('created_at');
+
+  const { data, error } = await read(`${MEMBER_COLUMNS}, email_masked`);
+  if (!error) return data ?? [];
+  // 그 칸이 없다는 말일 때만 물러선다. 진짜로 못 읽은 것까지 삼키면 '연결이 고르지
+  // 않아요'가 있어야 할 자리에 빈 목록이 뜬다.
+  if (!String(error.message || '').includes('email_masked')) throw new Error(error.message);
+
+  const { data: plain, error: plainError } = await read(MEMBER_COLUMNS);
+  if (plainError) throw new Error(plainError.message);
+  return plain ?? [];
 }
 
 export async function createFamily(familyName, memberName) {
