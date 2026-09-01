@@ -13,12 +13,15 @@ import { formatDate } from '../utils/date';
 import useBackClose from '../utils/useBackClose';
 import { prefersKakao, shareInvite, shareToKakao } from '../utils/inviteLink';
 
-// 카톡 카드에 실릴 그림.
+// 카톡 카드에 실릴 그림. 원본은 assets/marketing/kakao-share-800x400.png 이고,
+// 웹에 올라가야 해서 client/public/ 에 사본을 둔다.
 //
-// 받는 사람 폰에서 카카오 서버가 가져가는 주소라, 앱 안의 파일(https://localhost/…)을
-// 가리키면 안 된다. 웹에 이미 올라가 있는 아이콘을 쓴다.
-// 나중에 초대 전용 그림이 나오면 이 한 줄만 갈아 끼우면 된다.
-const INVITE_IMAGE = 'https://ceaser501.github.io/our-home-gift/icon-512.png';
+// 웹 주소를 그대로 적는다. 받는 사람 폰에서 카카오 서버가 가져가는 주소라, 앱 안의
+// 파일(https://localhost/…)을 가리키면 아무 데도 안 닿는다.
+//
+// 800×400은 카카오 피드 템플릿이 쓰는 2:1이다. 정사각형 아이콘을 넣었더니 카드가 그걸
+// 가로로 잘라서 글자가 반쯤 날아갔다.
+const INVITE_IMAGE = 'https://ceaser501.github.io/our-home-gift/kakao-share-800x400.png';
 
 export default function FamilyMembersSheet({ onClose }) {
   // 뒤로가기로 이 창을 닫는다. 안 그러면 설치해서 쓸 때 앱이 통째로 꺼진다.
