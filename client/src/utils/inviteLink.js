@@ -143,11 +143,36 @@ function loadKakao() {
 }
 
 /**
+ * 카톡이 실제로 앞으로 나왔는지 본다.
+ *
+ * 카카오 SDK는 실패를 알려주지 않는다. 보내는 데까지만 하고 조용히 끝나서, 앱 안에서
+ * 아무 일도 안 일어나도 오류 하나 없이 지나간다 — 눌러도 무반응인 버튼이 그것이었다.
+ *
+ * 그래서 결과를 화면으로 잰다. 카톡이 뜨면 우리 화면이 가려지고(visibilitychange),
+ * 안 뜨면 그대로 있다. 잠깐 기다려보고 그대로면 안 열린 것으로 친다.
+ */
+function wentToKakao(ms = 1400) {
+  return new Promise((resolve) => {
+    if (document.hidden) {
+      resolve(true);
+      return;
+    }
+    const done = (value) => {
+      clearTimeout(timer);
+      document.removeEventListener('visibilitychange', onHide);
+      resolve(value);
+    };
+    const onHide = () => document.hidden && done(true);
+    const timer = setTimeout(() => done(false), ms);
+    document.addEventListener('visibilitychange', onHide);
+  });
+}
+
+/**
  * 카톡으로 초대 카드를 보낸다.
  *
- * 앱 안에서도 된다. 카카오 SDK는 kakaolink:// 로 넘어가는데, 캐패시터의 웹뷰가 우리
- * 주소가 아닌 것을 안드로이드에 그대로 넘겨주기 때문이다(BridgeWebViewClient →
- * Bridge.launchIntent). 안드로이드 SDK를 따로 붙일 필요가 없다.
+ * 열렸는지 아닌지를 돌려준다. 웹뷰가 카카오 SDK의 창 열기를 막는 경우가 있어서, 부르는
+ * 쪽이 그때 다른 길로 물러설 수 있어야 한다.
  */
 export async function shareToKakao({ familyName, code, image }) {
   const kakao = await loadKakao();
@@ -177,6 +202,8 @@ export async function shareToKakao({ familyName, code, image }) {
     // 온다 — '안 됐어요'로 뭉개면 무엇을 고쳐야 하는지 알 수가 없다.
     throw new Error(err?.message || '카톡으로 보내지 못했어요.');
   }
+
+  return wentToKakao();
 }
 
 /**
@@ -188,6 +215,23 @@ export async function shareToKakao({ familyName, code, image }) {
 export async function shareInvite({ familyName, code }) {
   const url = inviteUrl(code);
   const text = `${familyName} 가족에 초대합니다. 초대 코드 ${code}`;
+
+  // 앱에서는 폰의 공유 창을 네이티브로 연다.
+  //
+  // 안드로이드 웹뷰에는 navigator.share가 없다. 그래서 앱에서는 아래 웹 길이 통째로
+  // 건너뛰어지고 '복사했어요'로 끝났는데, 초대는 보내는 일이지 복사하는 일이 아니다.
+  // 이 창에는 카톡도 들어 있어서, 카카오 SDK가 막힌 날에도 카톡으로 보낼 수 있다.
+  if (isNativeApp()) {
+    try {
+      const { Share } = await import('@capacitor/share');
+      await Share.share({ title: '모아콘 가족 초대', text, url, dialogTitle: '초대 링크 보내기' });
+      return 'shared';
+    } catch (err) {
+      // 사용자가 창을 닫은 것은 실패가 아니다.
+      if (/cancel/i.test(err?.message || '')) return 'cancelled';
+      // 그 밖의 실패는 아래 복사로 물러선다.
+    }
+  }
 
   if (navigator.share) {
     try {

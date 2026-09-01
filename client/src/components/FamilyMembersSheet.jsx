@@ -38,25 +38,38 @@ export default function FamilyMembersSheet({ onClose }) {
   // 알 수가 없다 — 도메인이 안 맞는 것과 인터넷이 끊긴 것은 할 일이 다르다.
   // 어느 쪽이든 위의 코드는 그대로 있으니 길이 막히지는 않는다.
   const [shareNote, setShareNote] = useState('');
+  // 카톡이 열렸는지 재는 동안 잠깐 기다린다. 그 사이 또 누르면 창이 둘 열린다.
+  const [sending, setSending] = useState(false);
 
   async function invite() {
+    if (sending) return;
+    setSending(true);
     setShareNote('');
     const invitation = { familyName: family.name, code: family.invite_code };
+
+    // 카카오 카드를 먼저 해본다. 그 카드가 제일 알아보기 쉽다.
+    //
+    // 다만 열렸는지를 믿지 않고 잰다. 카카오 SDK는 실패를 알려주지 않아서, 웹뷰가
+    // 창 열기를 막으면 오류 하나 없이 조용히 끝난다 — 눌러도 무반응인 버튼이 그것이었다.
     try {
-      await shareToKakao({ ...invitation, image: INVITE_IMAGE });
-      return;
+      if (await shareToKakao({ ...invitation, image: INVITE_IMAGE })) {
+        setSending(false);
+        return;
+      }
     } catch (err) {
-      setShareNote(err.message || '카톡으로 보내지 못했어요.');
+      setShareNote(err.message || '');
     }
 
-    // 카카오가 막혔다고 버튼이 아무것도 안 하면 안 된다. 폰의 공유 창으로 물러선다 —
-    // 거기 카톡도 들어 있고, 문자로 보내도 링크는 그대로 동작한다.
+    // 안 열렸으면 폰의 공유 창으로 물러선다. 거기 카톡도 들어 있고, 문자로 보내도
+    // 링크는 그대로 동작한다.
     try {
       const how = await shareInvite(invitation);
       if (how === 'copied') setShareNote('초대 링크를 복사했어요. 붙여넣어 보내주세요.');
-      else if (how === 'shared') setShareNote('');
-    } catch {
-      setShareNote((note) => `${note} 위 코드를 알려주셔도 돼요.`);
+      else setShareNote('');
+    } catch (err) {
+      setShareNote(`${err.message || '보내지 못했어요.'} 위 코드를 알려주셔도 돼요.`);
+    } finally {
+      setSending(false);
     }
   }
 
@@ -222,10 +235,11 @@ export default function FamilyMembersSheet({ onClose }) {
             <Button
               type="button"
               onClick={invite}
-              className="h-[52px] w-full rounded-[13px] border border-[#E3B800] bg-[#FEE500] text-[16px] font-bold text-[#191600] hover:bg-[#FEE500]/90"
+              disabled={sending}
+              className="h-[52px] w-full rounded-[13px] border border-[#E3B800] bg-[#FEE500] text-[16px] font-bold text-[#191600] hover:bg-[#FEE500]/90 disabled:opacity-70"
             >
               <MessageCircle className="size-[19px]" />
-              카카오톡으로 초대
+              {sending ? '여는 중…' : '카카오톡으로 초대'}
             </Button>
           </div>
 
