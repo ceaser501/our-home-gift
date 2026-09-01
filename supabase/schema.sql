@@ -272,6 +272,70 @@ begin
 end;
 $$;
 
+-- 이메일을 가린다. 90tsk***@gmail.com 꼴이다.
+--
+-- 처음에는 앞 세 글자만 남겼는데(dau****@gmail.com) 너무 많이 가려서 누구인지 알아볼
+-- 수가 없었다. 가리는 목적이 '아는 사람인지 가려내되 주소를 통째로 넘기지 않는 것'이라,
+-- 알아볼 수 없으면 가리는 의미가 없다. 지금은 뒤 세 글자만 덮는다.
+--
+-- 도메인을 남기는 이유도 같다. 그게 없으면 아는 주소인지 알아볼 근거가 또 하나 사라진다.
+create or replace function public.mask_email(addr text)
+returns text
+language sql
+immutable
+as $$
+  select case
+    when addr is null or position('@' in addr) = 0 then null
+    -- 짧은 주소는 가릴 것이 적다. 첫 글자만 남기고 덮는다.
+    when length(split_part(addr, '@', 1)) <= 4
+      then left(split_part(addr, '@', 1), 1)
+           || repeat('*', greatest(length(split_part(addr, '@', 1)) - 1, 1))
+           || '@' || split_part(addr, '@', 2)
+    -- 뒤 세 글자만 덮는다. 앞이 다 보여야 아는 주소인지 알아본다.
+    else left(split_part(addr, '@', 1), length(split_part(addr, '@', 1)) - 3)
+         || '***@' || split_part(addr, '@', 2)
+  end;
+$$;
+
+-- 구성원 목록에도 가려진 이메일을 둔다.
+--
+-- 이름은 본인이 적는 값이라 '딸'이라고만 적혀 있으면 내 딸인지 남인지 가릴 수 없다.
+-- 승인 화면에 이메일을 붙인 것과 같은 사연인데(join-request-email.sql), 판단이 더
+-- 무거운 자리는 내보내기다 — 그 사람의 기프티콘과 메모를 함께 걷어내는 일이라 이름만
+-- 보고 누를 자리가 아니다.
+--
+-- 줄이 만들어질 때 트리거가 채운다. 구성원이 되는 길이 여럿이라(가족 만들기, 참여 승인)
+-- 길마다 적어 넣으면 언젠가 한 길을 빠뜨린다.
+alter table public.family_members
+  add column if not exists email_masked text;
+
+-- 구성원이 될 때 채운다.
+create or replace function public.family_members_fill_email()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  select public.mask_email(email) into new.email_masked
+  from auth.users
+  where id = new.user_id;
+  return new;
+end;
+$$;
+
+drop trigger if exists family_members_fill_email on public.family_members;
+create trigger family_members_fill_email
+  before insert on public.family_members
+  for each row execute function public.family_members_fill_email();
+
+-- 이미 들어와 있는 사람들을 채운다. 가리는 규칙이 바뀌었을 때 갈아 끼우기도 한다.
+update public.family_members m
+   set email_masked = public.mask_email(u.email)
+  from auth.users u
+ where u.id = m.user_id
+   and m.email_masked is distinct from public.mask_email(u.email);
+
 -- 대표가 구성원을 내보낸다.
 --
 -- 초대 코드는 여섯 자리라 단톡방에 잘못 붙거나 새어 나갈 수 있고, 승인 버튼은 한 번
@@ -757,29 +821,6 @@ drop policy if exists "join_requests select" on public.family_join_requests;
 create policy "join_requests select" on public.family_join_requests
   for select to authenticated
   using (user_id = auth.uid() or public.is_family_member(family_id));
-
--- 이메일을 가린다. dau****@gmail.com 꼴이다.
---
--- 도메인을 남기는 이유는, 그게 없으면 아는 주소인지 알아볼 근거가 사라지기 때문이다.
--- 앞 세 글자와 도메인이면 '내가 아는 그 사람'인지는 가려지고, 모르는 사람에게 주소
--- 전체를 알려주지는 않는다.
-create or replace function public.mask_email(addr text)
-returns text
-language sql
-immutable
-as $$
-  select case
-    when addr is null or position('@' in addr) = 0 then null
-    -- 짧은 주소는 가릴 것이 적다. 첫 글자만 남기고 덮는다.
-    when length(split_part(addr, '@', 1)) <= 4
-      then left(split_part(addr, '@', 1), 1)
-           || repeat('*', greatest(length(split_part(addr, '@', 1)) - 1, 1))
-           || '@' || split_part(addr, '@', 2)
-    -- 뒤 세 글자만 덮는다. 앞이 다 보여야 아는 주소인지 알아본다.
-    else left(split_part(addr, '@', 1), length(split_part(addr, '@', 1)) - 3)
-         || '***@' || split_part(addr, '@', 2)
-  end;
-$$;
 
 -- 초대 코드로 참여 신청. 코드가 맞아도 바로 들어가지지 않고 대기 상태가 된다.
 create or replace function public.request_join_family(code text, member_name text)

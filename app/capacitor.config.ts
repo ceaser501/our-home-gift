@@ -26,6 +26,20 @@ const config: CapacitorConfig = {
   android: {
     allowMixedContent: false,
   },
+  plugins: {
+    // 앱을 보고 있는 중에도 알림을 띄운다.
+    //
+    // 안드로이드는 앱이 앞에 나와 있으면 알림을 안 그린다. 앱이 이미 보이니 굳이
+    // 띄울 것 없다는 판단인데, 이 앱에서는 그게 아니다 — 참여 신청이 오면 승인할
+    // 사람은 대개 앱을 켜둔 채 딴 화면을 보고 있고, 그때 아무것도 안 뜨면 신청한
+    // 쪽이 하염없이 기다린다.
+    //
+    // 'alert'가 안드로이드에서 실제로 그리는 열쇠다(banner·list는 아이폰 말). 캐패시터
+    // 플러그인이 이 값을 보고 앞에 있을 때도 직접 알림을 만든다.
+    PushNotifications: {
+      presentationOptions: ['alert', 'sound', 'badge'],
+    },
+  },
   ...(devServerUrl
     ? {
         server: {

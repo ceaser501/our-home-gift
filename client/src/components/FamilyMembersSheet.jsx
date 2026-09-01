@@ -209,8 +209,15 @@ export default function FamilyMembersSheet({ onClose }) {
                     </span>
                   )}
                 </div>
-                <span className="text-[13px] font-medium tabular-nums text-muted-foreground">
-                  {formatDate(member.created_at)}부터 함께
+                {/* 이름은 본인이 적는 값이라 '딸'만 보고는 누구인지 가릴 수 없다. 바꿀 수
+                    없는 값을 하나 옆에 둔다 — 특히 대표에게는 이 줄이 내보내기를 누를
+                    근거가 된다.
+                    서버가 가려서 내려준다(supabase/member-email.sql). 아직 안 돌렸으면
+                    이 값이 없고, 그때는 예전처럼 들어온 날짜만 나온다. */}
+                <span className="truncate text-[13px] font-medium tabular-nums text-muted-foreground">
+                  {member.email_masked
+                    ? `${member.email_masked} · ${formatDate(member.created_at)}부터`
+                    : `${formatDate(member.created_at)}부터 함께`}
                 </span>
               </div>
               {/* 내 줄에만 붙는다. 남의 이름은 바꿀 수 없다 — renameMember는 이 가족에서
@@ -255,7 +262,9 @@ export default function FamilyMembersSheet({ onClose }) {
             tone="warning"
             icon={UserMinus}
             title="이 가족에서 내보낼까요?"
-            subject={kicking.display_name}
+            subject={
+              kicking.email_masked ? `${kicking.display_name} (${kicking.email_masked})` : kicking.display_name
+            }
             details={[
               '올린 기프티콘이 목록에서 사라져요',
               '남긴 메모와 기록에서도 이름이 지워져요',

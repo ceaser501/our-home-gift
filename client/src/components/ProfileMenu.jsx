@@ -208,7 +208,8 @@ export default function ProfileMenu({ onClose }) {
             {isGalleryScanSupported() && skipped > 0 && (
               <SettingLinkRow
                 icon={RotateCcw}
-                label="아니라고 해둔 사진 되살리기"
+                label="전부 다시 찾기"
+                hint="아니라고 해둔 사진까지 다시 봐요"
                 onClick={() => setForgetAsking(true)}
               />
             )}
@@ -353,21 +354,21 @@ export default function ProfileMenu({ onClose }) {
           <AlertDialog
             tone="info"
             icon={RotateCcw}
-            title="아니라고 해둔 사진을 되살릴까요?"
+            title="전부 다시 찾을까요?"
             details={[
-              `${skipped}장을 다음 찾기에서 다시 봐요`,
+              `아니라고 해둔 ${skipped}장을 다음 찾기에서 다시 봐요`,
               '기프티콘 아님을 잘못 눌렀을 때 쓰는 거예요',
               '처음 한 번은 오래 걸려요',
             ]}
-            confirmLabel="되살리기"
+            confirmLabel="다시 찾기"
             onConfirm={() => {
               forgetSkipped();
               setSkipped(0);
               setForgetAsking(false);
               setNotice({
                 tone: 'success',
-                title: '되살렸어요',
-                description: '다음에 기프티콘 찾기를 열면 처음부터 다시 봐요.',
+                title: '다음 찾기부터 전부 봐요',
+                description: '기프티콘 찾기를 열면 처음부터 다시 봐요.',
               });
             }}
             onClose={() => setForgetAsking(false)}

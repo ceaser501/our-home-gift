@@ -26,7 +26,7 @@ export async function getMyFamilies(userId) {
 export async function getFamilyMembers(familyId) {
   const { data, error } = await supabase
     .from('family_members')
-    .select('user_id, display_name, created_at, tag_color')
+    .select('user_id, display_name, created_at, tag_color, email_masked')
     .eq('family_id', familyId)
     .order('created_at');
   if (error) throw new Error(error.message);

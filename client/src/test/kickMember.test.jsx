@@ -19,9 +19,9 @@ vi.mock('../family', () => ({
 }));
 
 const MEMBERS = [
-  { user_id: 'leader', display_name: '아빠', created_at: '2026-01-01T00:00:00Z', tag_color: 0 },
-  { user_id: 'me', display_name: '아들', created_at: '2026-01-02T00:00:00Z', tag_color: 1 },
-  { user_id: 'guest', display_name: '낯선사람', created_at: '2026-01-03T00:00:00Z', tag_color: 2 },
+  { user_id: 'leader', display_name: '아빠', created_at: '2026-01-01T00:00:00Z', tag_color: 0, email_masked: '90tsk***@gmail.com' },
+  { user_id: 'me', display_name: '아들', created_at: '2026-01-02T00:00:00Z', tag_color: 1, email_masked: 'son***@gmail.com' },
+  { user_id: 'guest', display_name: '낯선사람', created_at: '2026-01-03T00:00:00Z', tag_color: 2, email_masked: 'stran***@gmail.com' },
 ];
 
 let viewer = 'leader';
@@ -77,6 +77,20 @@ describe('구성원 내보내기', () => {
     fireEvent.click(screen.getByRole('button', { name: '내보내기' }));
     await waitFor(() => expect(kickMember).toHaveBeenCalledWith('fam-1', 'guest'));
     await waitFor(() => expect(refreshFamily).toHaveBeenCalled());
+  });
+
+  // 이름은 본인이 적는 값이라 '딸'만 보고는 누구인지 가릴 수 없다. 되돌릴 수 없는 일을
+  // 누르는 자리라, 바꿀 수 없는 값이 옆에 있어야 한다.
+  it('누구를 내보내는지 이메일로 한 번 더 짚는다', () => {
+    viewer = 'leader';
+    render(<FamilyMembersSheet onClose={() => {}} />);
+
+    // 목록 줄에도,
+    expect(screen.getByText(/stran\*\*\*@gmail\.com/)).toBeTruthy();
+
+    // 물어보는 창에도.
+    fireEvent.click(screen.getByRole('button', { name: '낯선사람 내보내기' }));
+    expect(screen.getByText('낯선사람 (stran***@gmail.com)')).toBeTruthy();
   });
 
   it('막히면 그 자리에서 말한다', async () => {
