@@ -175,6 +175,23 @@ function wentToKakao(ms = 1400) {
  * 쪽이 그때 다른 길로 물러설 수 있어야 한다.
  */
 export async function shareToKakao({ familyName, code, image }) {
+  // 앱에서는 크롬 탭으로 넘긴다.
+  //
+  // 웹뷰 안에서는 카카오 SDK가 카톡을 못 연다. kakaolink:// 로 창을 여는데 안드로이드
+  // 웹뷰가 그 창 열기를 막아서, 오류 하나 없이 아무 일도 안 일어난다.
+  //
+  // 같은 SDK가 크롬에서는 멀쩡히 돈다. 그래서 카톡 여는 일만 크롬 탭에 맡긴다
+  // (client/public/kakao-share.html). 로그인이 크롬 탭을 쓰는 것과 같은 방식이다.
+  //
+  // 열었다고 바로 참으로 돌려준다. 그 뒤 무슨 일이 있었는지는 그 페이지가 직접 말한다 —
+  // 여기서 또 재면 크롬 탭이 뜬 것을 '카톡이 열렸다'로 잘못 읽는다.
+  if (isNativeApp()) {
+    const { Browser } = await import('@capacitor/browser');
+    const url = `${WEB_ORIGIN}kakao-share.html?code=${encodeURIComponent(code)}&family=${encodeURIComponent(familyName)}`;
+    await Browser.open({ url });
+    return true;
+  }
+
   const kakao = await loadKakao();
   const url = inviteUrl(code);
   const link = { mobileWebUrl: url, webUrl: url };

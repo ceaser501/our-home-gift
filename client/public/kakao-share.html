@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="only light" />
+    <title>모아콘 · 카카오톡으로 초대</title>
+
+    <!--
+      카카오톡 공유를 여는 작은 페이지.
+
+      ── 왜 페이지가 따로 있나 ────────────────────────────────────────────────
+      앱 안(웹뷰)에서는 카카오 SDK가 카톡을 못 연다. SDK가 kakaolink:// 로 창을 여는데
+      안드로이드 웹뷰가 그 창 열기를 막아서, 오류 하나 없이 아무 일도 안 일어난다.
+      눌러도 무반응이던 버튼이 그것이었다.
+
+      같은 SDK가 크롬에서는 멀쩡히 돈다. 그래서 앱은 이 페이지를 크롬 탭으로 열고
+      (@capacitor/browser), 카톡 여는 일은 거기서 한다.
+
+      웹에서는 이 페이지가 필요 없다. 화면이 SDK를 바로 부른다.
+
+      ── 왜 앱 화면이 아니라 여기인가 ──────────────────────────────────────────
+      앱 화면은 https://localhost 에서 열린다. 크롬 탭으로 여는 주소는 웹이어야 하고,
+      카카오에 등록해둔 도메인(ceaser501.github.io)이어야 SDK가 먹는다.
+
+      값은 주소에 실어 보낸다. 보내는 사람 자기 가족의 이름과 코드라, 남의 것을 볼 수
+      있는 자리가 아니다.
+    -->
+    <style>
+      :root { color-scheme: only light; }
+      body {
+        margin: 0;
+        min-height: 100dvh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #fbfbfd;
+        color: #1c1e27;
+        font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Segoe UI', Roboto, sans-serif;
+      }
+      main {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 14px;
+        padding: 32px 24px;
+        text-align: center;
+        max-width: 340px;
+      }
+      img { width: 64px; height: 64px; }
+      h1 { margin: 0; font-size: 19px; font-weight: 700; letter-spacing: -0.026em; }
+      p { margin: 0; font-size: 14.5px; line-height: 1.6; color: #71717f; word-break: keep-all; }
+      button {
+        margin-top: 6px;
+        height: 50px;
+        padding: 0 22px;
+        border: 1px solid #e3b800;
+        border-radius: 13px;
+        background: #fee500;
+        color: #191600;
+        font-size: 16px;
+        font-weight: 700;
+        font-family: inherit;
+      }
+      .quiet { font-size: 13px; color: #9b9ba6; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <img src="icon.svg" alt="모아콘" />
+      <h1 id="title">카카오톡을 여는 중…</h1>
+      <p id="note">잠시만 기다려주세요.</p>
+      <button id="again" hidden>다시 보내기</button>
+      <p class="quiet" id="hint" hidden>보내고 나면 이 창은 닫으셔도 돼요.</p>
+    </main>
+
+    <script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.4/kakao.min.js"></script>
+    <script>
+      (function () {
+        var params = new URLSearchParams(location.search);
+        var code = (params.get('code') || '').trim();
+        var family = (params.get('family') || '가족').trim();
+        var origin = location.origin + location.pathname.replace(/kakao-share\.html$/, '');
+        var link = origin + '?join=' + encodeURIComponent(code);
+
+        var title = document.getElementById('title');
+        var note = document.getElementById('note');
+        var again = document.getElementById('again');
+        var hint = document.getElementById('hint');
+
+        function fail(message) {
+          title.textContent = '카카오톡을 열지 못했어요';
+          note.textContent = message;
+          again.hidden = false;
+        }
+
+        if (!code) {
+          fail('초대 코드가 없어요. 앱에서 다시 눌러주세요.');
+          return;
+        }
+
+        // 화면 코드가 쓰는 것과 같은 키다. 감추는 값이 아니라, 카카오에 등록해둔
+        // 도메인에서만 먹히는 값이다.
+        if (!window.Kakao) {
+          fail('카카오를 불러오지 못했어요. 인터넷을 확인해주세요.');
+          return;
+        }
+        Kakao.init('2142934889b97f43cfc8c5cd69690f32');
+
+        function send() {
+          try {
+            Kakao.Share.sendDefault({
+              objectType: 'feed',
+              content: {
+                title: family + ' 가족에 초대받았어요',
+                description: '초대 코드 ' + code + '\n코드를 입력하면 가족이 모아둔 기프티콘을 함께 볼 수 있어요.',
+                imageUrl: origin + 'kakao-share-800x400.png',
+                link: { mobileWebUrl: link, webUrl: link },
+              },
+              buttons: [{ title: '모아콘 시작하기', link: { mobileWebUrl: link, webUrl: link } }],
+            });
+            title.textContent = '카카오톡으로 보냈어요';
+            note.textContent = '보낼 사람을 골라주세요.';
+            hint.hidden = false;
+            again.hidden = false;
+          } catch (err) {
+            fail((err && err.message) || '다시 시도해주세요.');
+          }
+        }
+
+        again.addEventListener('click', send);
+        send();
+      })();
+    </script>
+  </body>
+</html>
