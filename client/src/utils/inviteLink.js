@@ -86,9 +86,30 @@ export function forgetInviteCode() {
 //   https://ceaser501.github.io   웹
 //   https://localhost             앱(화면을 안에 담아 여는 주소)
 const KAKAO_KEY = '2142934889b97f43cfc8c5cd69690f32';
-const SDK_SRC = 'https://t1.kakaocdn.net/kakao_js_sdk/2.7.2/kakao.min.js';
+
+// 판을 여럿 적어두고 되는 것을 쓴다.
+//
+// 카카오 CDN에는 '최신'을 가리키는 주소가 없다. 판 번호를 주소에 박아야 하는데, 한
+// 번호만 적어두면 그게 없어진 날 초대가 통째로 멈춘다. 화면에는 아무 일도 안 일어난
+// 것처럼 보이고, 무엇이 문제인지도 안 보인다 — 실제로 그렇게 한 번 막혔다.
+const SDK_VERSIONS = ['2.7.5', '2.7.4', '2.7.2', '2.6.0'];
+const sdkUrl = (version) => `https://t1.kakaocdn.net/kakao_js_sdk/${version}/kakao.min.js`;
 
 let loading = null;
+
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = src;
+    script.async = true;
+    script.onload = () => resolve();
+    script.onerror = () => {
+      script.remove();
+      reject(new Error(src));
+    };
+    document.head.appendChild(script);
+  });
+}
 
 /**
  * 카카오 SDK를 처음 쓸 때 한 번만 받아온다.
@@ -100,21 +121,19 @@ function loadKakao() {
   if (window.Kakao?.isInitialized?.()) return Promise.resolve(window.Kakao);
   if (loading) return loading;
 
-  loading = new Promise((resolve, reject) => {
-    const script = document.createElement('script');
-    script.src = SDK_SRC;
-    script.async = true;
-    script.onload = () => {
+  loading = (async () => {
+    for (const version of SDK_VERSIONS) {
       try {
-        if (!window.Kakao.isInitialized()) window.Kakao.init(KAKAO_KEY);
-        resolve(window.Kakao);
-      } catch (err) {
-        reject(err);
+        await loadScript(sdkUrl(version));
+      } catch {
+        continue;
       }
-    };
-    script.onerror = () => reject(new Error('카카오를 불러오지 못했어요.'));
-    document.head.appendChild(script);
-  }).catch((err) => {
+      if (!window.Kakao) continue;
+      if (!window.Kakao.isInitialized()) window.Kakao.init(KAKAO_KEY);
+      return window.Kakao;
+    }
+    throw new Error('카카오를 불러오지 못했어요. 인터넷을 확인해주세요.');
+  })().catch((err) => {
     // 다음에 다시 해볼 수 있게 놓아준다. 한 번 실패했다고 영영 막아둘 이유가 없다.
     loading = null;
     throw err;
@@ -133,19 +152,31 @@ function loadKakao() {
 export async function shareToKakao({ familyName, code, image }) {
   const kakao = await loadKakao();
   const url = inviteUrl(code);
+  const link = { mobileWebUrl: url, webUrl: url };
 
-  kakao.Share.sendDefault({
-    objectType: 'feed',
-    content: {
-      title: `${familyName} 가족에 초대합니다`,
-      // 코드를 설명에도 적는다. 카톡 미리보기에서 링크를 안 누르고 코드만 옮겨 적는
-      // 사람이 있고, 그 길도 막을 이유가 없다.
-      description: `초대 코드 ${code}\n눌러서 이름만 적으면 신청이 끝나요.`,
-      imageUrl: image,
-      link: { mobileWebUrl: url, webUrl: url },
-    },
-    buttons: [{ title: '가족 참여하기', link: { mobileWebUrl: url, webUrl: url } }],
-  });
+  // 판마다 이름이 다르다. 2판은 Share, 1판은 Link다.
+  const send = kakao.Share?.sendDefault || kakao.Link?.sendDefault;
+  if (!send) throw new Error('카카오 공유를 쓸 수 없어요. 아래 코드를 알려주세요.');
+
+  try {
+    send.call(kakao.Share || kakao.Link, {
+      objectType: 'feed',
+      content: {
+        // 단톡방에서 보는 사람에게는 어느 가족인지가 먼저다. 그게 없으면 광고로 읽힌다.
+        title: `${familyName} 가족에 초대받았어요`,
+        // 코드를 첫 줄에 둔다. 카톡은 설명을 서너 줄에서 자르는데, 코드가 뒤에 있으면
+        // '…'에 먹힌다. 링크를 안 누르고 코드만 옮겨 적는 사람도 있다.
+        description: `초대 코드 ${code}\n코드를 입력하면 가족이 모아둔 기프티콘을 함께 볼 수 있어요.`,
+        imageUrl: image,
+        link,
+      },
+      buttons: [{ title: '모아콘 시작하기', link }],
+    });
+  } catch (err) {
+    // 카카오가 내는 말을 그대로 올린다. 도메인이 안 맞거나 그림이 안 열릴 때 여기로
+    // 온다 — '안 됐어요'로 뭉개면 무엇을 고쳐야 하는지 알 수가 없다.
+    throw new Error(err?.message || '카톡으로 보내지 못했어요.');
+  }
 }
 
 /**

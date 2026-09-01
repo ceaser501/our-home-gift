@@ -87,6 +87,21 @@ export async function renameFamily(familyId, newName) {
   if (error) throw new Error(error.message || '가족 이름을 바꾸지 못했어요.');
 }
 
+// 초대 코드로 가족 이름만 미리 물어본다. 링크를 눌러 온 사람에게 어느 가족인지
+// 보여주려는 것이다 — 이름을 링크에 실으면 보내는 사람이 마음대로 적을 수 있다.
+//
+// 못 물어봐도 넘어간다(null). 아직 SQL을 안 돌렸거나 인터넷이 끊긴 경우인데, 그 한 줄
+// 때문에 참여 자체가 막히면 안 된다. 그때는 이름 없이 '가족에 초대받았어요'로 연다.
+export async function peekFamilyByCode(code) {
+  try {
+    const { data, error } = await supabase.rpc('peek_family_by_code', { code });
+    if (error) return null;
+    return data?.family_name || null;
+  } catch {
+    return null;
+  }
+}
+
 // 초대 코드로 참여 신청. 코드가 맞아도 바로 들어가지지 않고, 기존 구성원이 승인해야 한다.
 // { status: 'pending' | 'joined', family_id, family_name }을 돌려준다.
 export async function requestJoinFamily(code, memberName) {

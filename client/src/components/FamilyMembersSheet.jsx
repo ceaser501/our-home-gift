@@ -1,8 +1,7 @@
 import { useState } from 'react';
-import { Link2, MessageCircle, Pencil, UserMinus, UserPlus } from 'lucide-react';
+import { MessageCircle, Pencil, UserMinus, UserPlus } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
 import AlertDialog from './AlertDialog';
 import RenameSheet from './RenameSheet';
 import CopyButton from './CopyButton';
@@ -11,7 +10,7 @@ import { approveJoinRequest, kickMember, rejectJoinRequest, renameFamily, rename
 import { OWNER_TAG_PALETTE, memberTagColorClass, nameTagColorClass } from '../utils/tagColor';
 import { formatDate } from '../utils/date';
 import useBackClose from '../utils/useBackClose';
-import { prefersKakao, shareInvite, shareToKakao } from '../utils/inviteLink';
+import { shareToKakao } from '../utils/inviteLink';
 
 // 카톡 카드에 실릴 그림. 원본은 assets/marketing/kakao-share-800x400.png 이고,
 // 웹에 올라가야 해서 client/public/ 에 사본을 둔다.
@@ -33,21 +32,19 @@ export default function FamilyMembersSheet({ onClose }) {
   // 내보내려고 물어보는 중인 구성원. 되돌릴 수 없는 일이라 한 번 여쭙는다.
   const [kicking, setKicking] = useState(null);
   const [error, setError] = useState('');
-  // 링크를 보내고 나서 무슨 일이 있었는지. 공유 창이 뜨는 폰에서는 굳이 말하지 않고,
-  // 복사로 물러선 경우에만 알려준다 — 아무 일도 안 일어난 것처럼 보이기 때문이다.
+  // 카톡으로 보내다 막혔을 때 하는 말.
+  //
+  // 카카오가 낸 말을 그대로 올린다. '보내지 못했어요'로 뭉개면 무엇을 고쳐야 하는지
+  // 알 수가 없다 — 도메인이 안 맞는 것과 인터넷이 끊긴 것은 할 일이 다르다.
+  // 어느 쪽이든 위의 코드는 그대로 있으니 길이 막히지는 않는다.
   const [shareNote, setShareNote] = useState('');
 
-  async function invite(viaKakao) {
+  async function invite() {
     setShareNote('');
     try {
-      if (viaKakao) {
-        await shareToKakao({ familyName: family.name, code: family.invite_code, image: INVITE_IMAGE });
-        return;
-      }
-      const how = await shareInvite({ familyName: family.name, code: family.invite_code });
-      if (how === 'copied') setShareNote('초대 링크를 복사했어요. 붙여넣어 보내주세요.');
+      await shareToKakao({ familyName: family.name, code: family.invite_code, image: INVITE_IMAGE });
     } catch (err) {
-      setShareNote(err.message || '보내지 못했어요. 아래 코드를 알려주세요.');
+      setShareNote(`${err.message || '카톡으로 보내지 못했어요.'} 위 코드를 알려주셔도 돼요.`);
     }
   }
 
@@ -181,19 +178,20 @@ export default function FamilyMembersSheet({ onClose }) {
             급한지 알 수 없다. 테두리도 걷었다. 이 앱에서 테두리는 누르거나 입력하는
             것의 표시다. */}
         <div className="mx-5 mb-3 flex flex-col gap-2.5 rounded-2xl bg-secondary/60 p-4">
-          <div className="flex items-center justify-between gap-2">
-            <p className="m-0 text-[13px] font-bold tracking-[-0.01em] text-muted-foreground">초대 코드</p>
-            {/* 이 창을 여는 가장 큰 이유가 코드를 전달하는 것이라 채운 버튼이다. */}
+          <p className="m-0 text-[13px] font-bold tracking-[-0.01em] text-muted-foreground">초대 코드</p>
+          {/* 복사 버튼을 코드 옆에 붙인다. 머리말 오른쪽에 떠 있던 때는 무엇을 복사하는
+              버튼인지 눈으로 이어야 했다 — 복사할 것 바로 옆이 그 자리다. */}
+          <div className="flex items-center gap-3">
+            <p className="m-0 min-w-0 flex-1 font-mono text-[29px] leading-none font-bold tracking-[0.14em] text-foreground">
+              {family.invite_code}
+            </p>
             <CopyButton
               value={family.invite_code}
               label="복사"
               copiedLabel="복사됨"
-              className="h-9 shrink-0 rounded-[10px] bg-primary px-3.5 text-[13.5px] font-bold text-primary-foreground"
+              className="h-11 shrink-0 rounded-[12px] bg-primary px-4 text-[15px] font-bold text-primary-foreground"
             />
           </div>
-          <p className="m-0 font-mono text-[29px] leading-none font-bold tracking-[0.14em] text-foreground">
-            {family.invite_code}
-          </p>
           <p className="m-0 text-[13px] leading-snug font-medium break-keep text-muted-foreground">
             코드를 받은 사람이 참여를 신청하면, 여기서 승인해야 들어와요.
           </p>
@@ -208,28 +206,14 @@ export default function FamilyMembersSheet({ onClose }) {
 
               링크가 새도 대표가 승인해야 들어온다 — 서버가 하는 일은 코드를 손으로 적었을
               때와 똑같다(request_join_family). */}
-          <div className="flex gap-2 pt-0.5">
-            {prefersKakao() && (
-              <Button
-                type="button"
-                onClick={() => invite(true)}
-                className="h-11 flex-1 rounded-[11px] bg-[#FEE500] text-[14px] font-bold text-[#191600] hover:bg-[#FEE500]/90"
-              >
-                <MessageCircle className="size-4" />
-                카톡으로 초대
-              </Button>
-            )}
+          <div className="pt-0.5">
             <Button
               type="button"
-              variant="outline"
-              onClick={() => invite(false)}
-              className={cn(
-                'h-11 rounded-[11px] bg-card text-[14px] font-semibold',
-                prefersKakao() ? 'shrink-0 px-4' : 'flex-1'
-              )}
+              onClick={invite}
+              className="h-[52px] w-full rounded-[13px] border border-[#E3B800] bg-[#FEE500] text-[16px] font-bold text-[#191600] hover:bg-[#FEE500]/90"
             >
-              <Link2 className="size-4 text-muted-foreground" />
-              {prefersKakao() ? '링크' : '초대 링크 보내기'}
+              <MessageCircle className="size-[19px]" />
+              카카오톡으로 초대
             </Button>
           </div>
 
@@ -293,9 +277,9 @@ export default function FamilyMembersSheet({ onClose }) {
                   type="button"
                   onClick={() => setMyNameOpen(true)}
                   aria-label="내 이름 바꾸기"
-                  className="flex size-[34px] shrink-0 items-center justify-center rounded-[10px] border border-input"
+                  className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-input bg-card"
                 >
-                  <Pencil className="size-4 text-muted-foreground" />
+                  <Pencil className="size-[18px] text-muted-foreground" />
                 </button>
               )}
               {/* 내보내기는 대표에게만, 남의 줄에만 붙는다.
@@ -308,9 +292,9 @@ export default function FamilyMembersSheet({ onClose }) {
                   type="button"
                   onClick={() => setKicking(member)}
                   aria-label={`${member.display_name} 내보내기`}
-                  className="flex size-[34px] shrink-0 items-center justify-center rounded-[10px] border border-input"
+                  className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-input bg-card"
                 >
-                  <UserMinus className="size-4 text-muted-foreground" />
+                  <UserMinus className="size-[18px] text-muted-foreground" />
                 </button>
               )}
             </li>

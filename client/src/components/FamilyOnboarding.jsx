@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Check, ChevronRight, Clock, Mail, Users } from 'lucide-react';
-import { createFamily, requestJoinFamily } from '../family';
+import { createFamily, peekFamilyByCode, requestJoinFamily } from '../family';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,6 +14,10 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
   // 만들기'가 먼저 열려 있으면, 링크로 줄여준 걸음을 도로 늘리는 셈이 된다.
   const invited = pendingInviteCode();
   const [mode, setMode] = useState(invited ? 'join' : 'create');
+  // 초대한 가족의 이름. 서버에 물어봐서 채운다 — 링크에 실어 보내면 보내는 사람이
+  // 마음대로 적을 수 있어서, 화면이 거짓말을 하게 된다.
+  // 못 물어보면 빈 채로 둔다. 그때는 이름 없이 '가족에 초대받았어요'로 연다.
+  const [invitedFamily, setInvitedFamily] = useState('');
   // 빈칸으로 시작한다. '우리집'을 미리 적어두면 그대로 두고 넘어가는 사람이 많은데,
   // 이 이름은 가족 모두가 매일 보는 이름이라 자기 말로 짓게 하는 편이 낫다.
   const [familyName, setFamilyName] = useState('');
@@ -23,6 +27,17 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
   const [error, setError] = useState('');
   const [created, setCreated] = useState(null);
   const [pendingFor, setPendingFor] = useState(null);
+
+  useEffect(() => {
+    if (!invited) return undefined;
+    let cancelled = false;
+    peekFamilyByCode(invited).then((name) => {
+      if (!cancelled && name) setInvitedFamily(name);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [invited]);
 
   async function handleCreate(e) {
     e.preventDefault();
@@ -59,6 +74,76 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
     } finally {
       setSubmitting(false);
     }
+  }
+
+  // ── 링크를 눌러 들어온 사람 ───────────────────────────────────────────────
+  //
+  // 갈 곳이 이미 정해져 있다. '새로 만들기 / 초대 코드로 참여' 탭을 그대로 두면 잘못
+  // 누를 여지만 생기고, 코드 칸을 또 보여주면 링크로 줄여준 걸음이 도로 늘어난다.
+  //
+  // 적는 칸은 이름 하나다. 코드는 확인만 시킨다 — 링크에 실려 왔으니 옮겨 적을 것이
+  // 없고, 잘못된 링크였다면 이 화면이 아니라 오류가 나와야 한다.
+  if (invited && !pendingFor) {
+    const who = invitedFamily ? `'${invitedFamily}' 가족에` : '가족에';
+    return (
+      <div className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col bg-background">
+        <div className="flex flex-col items-center gap-4 bg-accent px-6 pt-[max(34px,var(--safe-top))] pb-7">
+          <img src={`${import.meta.env.BASE_URL}icon.svg`} alt="모아콘" className="size-16" />
+          <h1 className="m-0 text-center text-[22px] leading-[1.4] font-extrabold tracking-[-0.02em] break-keep text-foreground">
+            {who}
+            <br />
+            초대받았어요
+          </h1>
+          {/* 코드는 읽고 넘어가는 값이다. 맞게 들고 왔다는 표시(체크)까지 붙여서
+              '이제 이름만 적으면 된다'가 눈에 들어오게 한다. */}
+          <div className="flex items-center gap-2.5 rounded-xl border border-primary/25 bg-card px-3.5 py-2.5">
+            <span className="text-[13.5px] font-semibold text-primary/80">초대 코드</span>
+            <span className="font-mono text-[16px] font-bold tracking-[0.12em] text-foreground">{code}</span>
+            <Check className="size-4 shrink-0 text-success" strokeWidth={2.4} />
+          </div>
+        </div>
+
+        <form onSubmit={handleJoin} className="flex flex-1 flex-col gap-5 px-6 pt-6 pb-[max(24px,var(--safe-bottom))]">
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="invited-name" className="text-base font-bold tracking-[-0.015em]">
+              가족에게 어떻게 보일 이름인가요?
+            </Label>
+            <Input
+              id="invited-name"
+              value={memberName}
+              onChange={(e) => setMemberName(e.target.value)}
+              placeholder="예) 아빠, 엄마, 아들, 딸"
+              className="h-14 rounded-[14px] text-[17px]"
+              autoComplete="off"
+              autoFocus
+              required
+            />
+            {/* 어느 계정으로 들어와 있는지 짚어준다. 로그인 수단을 여럿 두고 있어서,
+                지난번과 다른 것으로 들어오면 같은 사람이 둘로 갈린다. */}
+            <p className="m-0 text-[13.5px] leading-relaxed font-medium break-keep text-muted-foreground">
+              {userEmail ? `${userEmail}으로 로그인했어요. ` : ''}이름은 나중에 바꿀 수 있어요.
+            </p>
+          </div>
+
+          {error && <p className="m-0 text-sm text-destructive">{error}</p>}
+
+          <div className="mt-auto flex flex-col gap-3">
+            <Button
+              type="submit"
+              className="h-14 w-full rounded-[14px] text-[17px] font-bold"
+              disabled={submitting}
+            >
+              {submitting ? '신청하는 중…' : '참여 신청하기'}
+            </Button>
+            {/* 눌러도 바로 안 들어간다는 것을 미리 말해둔다. 안 말하면 신청하고 나서
+                "왜 아직 안 보이지" 하고 다시 누른다. */}
+            <p className="m-0 text-center text-[13.5px] leading-relaxed font-medium break-keep text-muted-foreground">
+              {invitedFamily ? `'${invitedFamily}' 가족이` : '가족이'} 승인하면 함께 볼 수 있어요.
+            </p>
+          </div>
+        </form>
+      </div>
+    );
   }
 
   if (pendingFor) {
