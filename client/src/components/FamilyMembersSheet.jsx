@@ -10,7 +10,7 @@ import { approveJoinRequest, kickMember, rejectJoinRequest, renameFamily, rename
 import { OWNER_TAG_PALETTE, memberTagColorClass, nameTagColorClass } from '../utils/tagColor';
 import { formatDate } from '../utils/date';
 import useBackClose from '../utils/useBackClose';
-import { shareToKakao } from '../utils/inviteLink';
+import { shareInvite, shareToKakao } from '../utils/inviteLink';
 
 // 카톡 카드에 실릴 그림. 원본은 assets/marketing/kakao-share-800x400.png 이고,
 // 웹에 올라가야 해서 client/public/ 에 사본을 둔다.
@@ -41,10 +41,22 @@ export default function FamilyMembersSheet({ onClose }) {
 
   async function invite() {
     setShareNote('');
+    const invitation = { familyName: family.name, code: family.invite_code };
     try {
-      await shareToKakao({ familyName: family.name, code: family.invite_code, image: INVITE_IMAGE });
+      await shareToKakao({ ...invitation, image: INVITE_IMAGE });
+      return;
     } catch (err) {
-      setShareNote(`${err.message || '카톡으로 보내지 못했어요.'} 위 코드를 알려주셔도 돼요.`);
+      setShareNote(err.message || '카톡으로 보내지 못했어요.');
+    }
+
+    // 카카오가 막혔다고 버튼이 아무것도 안 하면 안 된다. 폰의 공유 창으로 물러선다 —
+    // 거기 카톡도 들어 있고, 문자로 보내도 링크는 그대로 동작한다.
+    try {
+      const how = await shareInvite(invitation);
+      if (how === 'copied') setShareNote('초대 링크를 복사했어요. 붙여넣어 보내주세요.');
+      else if (how === 'shared') setShareNote('');
+    } catch {
+      setShareNote((note) => `${note} 위 코드를 알려주셔도 돼요.`);
     }
   }
 
