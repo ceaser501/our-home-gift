@@ -60,6 +60,7 @@ vi.mock('../components/NearbyBanner', () => stub('nearby'));
 vi.mock('../components/PullToRefresh', () => stub('pull'));
 vi.mock('../components/UploadSheet', () => stub('upload-sheet'));
 vi.mock('../components/GalleryScanSheet', () => stub('scan-sheet'));
+vi.mock('../components/FamilySwitcherSheet', () => stub('switcher'));
 
 const { default: App } = await import('../App');
 

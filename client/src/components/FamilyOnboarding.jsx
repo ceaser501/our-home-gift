@@ -7,14 +7,18 @@ import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import CopyButton from './CopyButton';
 import { signOut } from '../auth';
+import { forgetInviteCode, pendingInviteCode } from '../utils/inviteLink';
 
 export default function FamilyOnboarding({ userEmail, onDone }) {
-  const [mode, setMode] = useState('create');
+  // 초대 링크를 눌러 온 사람은 참여하러 온 것이다. 코드를 이미 들고 있는데 '가족
+  // 만들기'가 먼저 열려 있으면, 링크로 줄여준 걸음을 도로 늘리는 셈이 된다.
+  const invited = pendingInviteCode();
+  const [mode, setMode] = useState(invited ? 'join' : 'create');
   // 빈칸으로 시작한다. '우리집'을 미리 적어두면 그대로 두고 넘어가는 사람이 많은데,
   // 이 이름은 가족 모두가 매일 보는 이름이라 자기 말로 짓게 하는 편이 낫다.
   const [familyName, setFamilyName] = useState('');
   const [memberName, setMemberName] = useState('');
-  const [code, setCode] = useState('');
+  const [code, setCode] = useState(invited);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [created, setCreated] = useState(null);
@@ -43,6 +47,8 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
     try {
       // 코드가 맞아도 바로 들어가지지 않는다. 기존 구성원이 승인해야 한다.
       const result = await requestJoinFamily(code.trim(), memberName.trim());
+      // 다 썼다. 남겨두면 다음에 앱을 열 때 또 참여 화면이 열린다.
+      forgetInviteCode();
       if (result.status === 'joined') {
         onDone();
         return;

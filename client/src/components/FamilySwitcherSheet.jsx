@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useFamily } from '../FamilyContext';
 import { createFamily, requestJoinFamily } from '../family';
+import { forgetInviteCode } from '../utils/inviteLink';
 import { cn } from '@/lib/utils';
 import useBackClose from '../utils/useBackClose';
 
@@ -14,16 +15,19 @@ import useBackClose from '../utils/useBackClose';
 //
 // 새 가족을 만들거나 초대 코드로 들어가는 것도 이 창 안에서 화면만 바꿔 처리한다.
 // 창을 하나 더 띄우면 목록 위에 창이 두 겹 쌓여서, 어디까지 닫아야 하는지 헷갈린다.
-export default function FamilySwitcherSheet({ onClose }) {
+export default function FamilySwitcherSheet({ onClose, initialCode = '' }) {
   // 뒤로가기로 이 창을 닫는다. 안 그러면 설치해서 쓸 때 앱이 통째로 꺼진다.
   useBackClose(onClose);
   const { families, family, members, user, switchFamily } = useFamily();
   const myName = members.find((m) => m.user_id === user.id)?.display_name || '';
 
-  const [mode, setMode] = useState('list'); // list | create | join
+  // 초대 링크를 눌러 온 사람에게는 참여 칸을 이미 열어 코드까지 채워서 보여준다.
+  // 그러라고 링크를 만든 것이다 — 목록을 보여주고 '가족 추가하기'를 찾게 하면 걸음이
+  // 도로 늘어난다.
+  const [mode, setMode] = useState(initialCode ? 'join' : 'list'); // list | create | join
   const [familyName, setFamilyName] = useState('우리집');
   const [memberName, setMemberName] = useState(myName);
-  const [code, setCode] = useState('');
+  const [code, setCode] = useState(initialCode);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [pendingFor, setPendingFor] = useState(null);
@@ -52,6 +56,8 @@ export default function FamilySwitcherSheet({ onClose }) {
 
       // 초대 코드가 맞아도 바로 들어가지지 않는다. 기존 구성원이 승인해야 한다.
       const result = await requestJoinFamily(code.trim(), memberName.trim());
+      // 링크로 들고 온 코드는 다 썼다. 남겨두면 다음에 앱을 열 때 또 이 창이 열린다.
+      forgetInviteCode();
       if (result.status === 'joined') {
         await switchFamily(result.family_id);
         onClose();

@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Pencil, UserMinus, UserPlus } from 'lucide-react';
+import { Link2, MessageCircle, Pencil, UserMinus, UserPlus } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import AlertDialog from './AlertDialog';
 import RenameSheet from './RenameSheet';
 import CopyButton from './CopyButton';
@@ -10,6 +11,14 @@ import { approveJoinRequest, kickMember, rejectJoinRequest, renameFamily, rename
 import { OWNER_TAG_PALETTE, memberTagColorClass, nameTagColorClass } from '../utils/tagColor';
 import { formatDate } from '../utils/date';
 import useBackClose from '../utils/useBackClose';
+import { prefersKakao, shareInvite, shareToKakao } from '../utils/inviteLink';
+
+// 카톡 카드에 실릴 그림.
+//
+// 받는 사람 폰에서 카카오 서버가 가져가는 주소라, 앱 안의 파일(https://localhost/…)을
+// 가리키면 안 된다. 웹에 이미 올라가 있는 아이콘을 쓴다.
+// 나중에 초대 전용 그림이 나오면 이 한 줄만 갈아 끼우면 된다.
+const INVITE_IMAGE = 'https://ceaser501.github.io/our-home-gift/icon-512.png';
 
 export default function FamilyMembersSheet({ onClose }) {
   // 뒤로가기로 이 창을 닫는다. 안 그러면 설치해서 쓸 때 앱이 통째로 꺼진다.
@@ -21,6 +30,23 @@ export default function FamilyMembersSheet({ onClose }) {
   // 내보내려고 물어보는 중인 구성원. 되돌릴 수 없는 일이라 한 번 여쭙는다.
   const [kicking, setKicking] = useState(null);
   const [error, setError] = useState('');
+  // 링크를 보내고 나서 무슨 일이 있었는지. 공유 창이 뜨는 폰에서는 굳이 말하지 않고,
+  // 복사로 물러선 경우에만 알려준다 — 아무 일도 안 일어난 것처럼 보이기 때문이다.
+  const [shareNote, setShareNote] = useState('');
+
+  async function invite(viaKakao) {
+    setShareNote('');
+    try {
+      if (viaKakao) {
+        await shareToKakao({ familyName: family.name, code: family.invite_code, image: INVITE_IMAGE });
+        return;
+      }
+      const how = await shareInvite({ familyName: family.name, code: family.invite_code });
+      if (how === 'copied') setShareNote('초대 링크를 복사했어요. 붙여넣어 보내주세요.');
+    } catch (err) {
+      setShareNote(err.message || '보내지 못했어요. 아래 코드를 알려주세요.');
+    }
+  }
 
   // 대표는 "가장 먼저 들어온 사람"이다. 목록이 들어온 순서로 오므로 첫 줄이 그 사람이고,
   // 서버(kick_member)도 같은 규칙으로 정한다 — 둘이 다르면 버튼은 보이는데 눌러도
@@ -168,6 +194,45 @@ export default function FamilyMembersSheet({ onClose }) {
           <p className="m-0 text-[13px] leading-snug font-medium break-keep text-muted-foreground">
             코드를 받은 사람이 참여를 신청하면, 여기서 승인해야 들어와요.
           </p>
+
+          {/* 링크로 보내면 걸음이 하나로 줄어든다.
+              코드만 알려주던 때는 받는 사람이 앱을 깔고, 로그인하고, '참여하기'를 찾아
+              들어가서, 여섯 글자를 옮겨 적어야 했다. 걸음마다 사람이 샌다. 링크를 누르면
+              코드가 이미 박힌 화면이 뜨고 이름만 적으면 끝난다.
+
+              코드는 그대로 위에 남겨둔다. 카톡을 안 쓰는 분도 있고, 여섯 글자는 전화로도
+              불러줄 수 있다. 링크는 빠른 길이지 유일한 길이 아니다.
+
+              링크가 새도 대표가 승인해야 들어온다 — 서버가 하는 일은 코드를 손으로 적었을
+              때와 똑같다(request_join_family). */}
+          <div className="flex gap-2 pt-0.5">
+            {prefersKakao() && (
+              <Button
+                type="button"
+                onClick={() => invite(true)}
+                className="h-11 flex-1 rounded-[11px] bg-[#FEE500] text-[14px] font-bold text-[#191600] hover:bg-[#FEE500]/90"
+              >
+                <MessageCircle className="size-4" />
+                카톡으로 초대
+              </Button>
+            )}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => invite(false)}
+              className={cn(
+                'h-11 rounded-[11px] bg-card text-[14px] font-semibold',
+                prefersKakao() ? 'shrink-0 px-4' : 'flex-1'
+              )}
+            >
+              <Link2 className="size-4 text-muted-foreground" />
+              {prefersKakao() ? '링크' : '초대 링크 보내기'}
+            </Button>
+          </div>
+
+          {shareNote && (
+            <p className="m-0 text-[13px] leading-snug font-medium break-keep text-primary">{shareNote}</p>
+          )}
         </div>
 
         {/* '혼자 쓰는 중/가족 N명'은 구성원 목록의 머리말이다. 한때 승인 대기 상자 위에

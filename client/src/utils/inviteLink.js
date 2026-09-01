@@ -1,0 +1,182 @@
+import { isNativeApp } from './browser';
+
+// 초대 링크. 카톡으로 보내고, 눌러서 들어온 사람을 참여 화면까지 데려간다.
+//
+// ── 왜 링크인가 ──────────────────────────────────────────────────────────────
+//
+// 지금까지는 초대 코드 여섯 자리를 복사해서 불러주는 것이 전부였다. 받는 사람은 앱을
+// 깔고, 로그인하고, '참여하기'를 찾아 들어가서, 여섯 글자를 옮겨 적어야 했다.
+// 걸음마다 사람이 샌다.
+//
+// 링크는 그 걸음을 한 번으로 줄인다. 누르면 코드가 이미 박힌 참여 화면이 뜨고, 이름만
+// 적으면 끝난다.
+//
+// 코드 복사는 그대로 둔다. 카톡을 안 쓰는 사람도 있고, 여섯 글자는 전화로도 불러줄 수
+// 있다.
+//
+// ── 링크가 새면 ──────────────────────────────────────────────────────────────
+//
+// 단톡방에 잘못 붙을 수 있다. 그래서 링크는 '신청서를 대신 써주는 것'까지만 한다 —
+// 들어오는 것은 여전히 대표가 승인해야 한다(request_join_family). 링크로 들어왔든
+// 코드를 손으로 적었든 서버가 하는 일은 똑같다.
+
+const PENDING_KEY = 'moacon:invite-code';
+export const INVITE_PARAM = 'join';
+
+// 앱은 화면을 안에 담아 https://localhost/ 로 연다. 그 주소로 초대 링크를 만들면 받는
+// 사람 폰에서는 아무 데도 닿지 않는다. 링크에 쓸 주소는 늘 웹이다.
+const WEB_ORIGIN = 'https://ceaser501.github.io/our-home-gift/';
+
+/** 초대 링크. 받는 사람이 이 주소를 누르면 코드가 박힌 참여 화면으로 간다. */
+export function inviteUrl(code) {
+  return `${WEB_ORIGIN}?${INVITE_PARAM}=${encodeURIComponent(String(code || '').trim())}`;
+}
+
+/**
+ * 주소에 실려 온 초대 코드를 꺼내 적어둔다.
+ *
+ * 적어두는 이유는 로그인 때문이다. 링크를 눌러 온 사람은 대개 로그인 전인데, 로그인은
+ * 카카오·구글 화면을 다녀오는 길이라 그 사이에 주소가 통째로 갈린다. 여기서 붙들어두지
+ * 않으면 돌아왔을 때 무엇 때문에 왔는지가 사라진다.
+ *
+ * 주소에서는 지운다(replaceState). 남겨두면 새로고침할 때마다 다시 참여 화면이 뜨고,
+ * 이미 들어간 가족에 또 신청하려 든다.
+ */
+export function catchInviteFromUrl() {
+  try {
+    const url = new URL(window.location.href);
+    const code = url.searchParams.get(INVITE_PARAM);
+    if (!code) return null;
+
+    const clean = code.trim().toUpperCase().slice(0, 12);
+    if (clean) sessionStorage.setItem(PENDING_KEY, clean);
+
+    url.searchParams.delete(INVITE_PARAM);
+    window.history.replaceState({}, '', url.toString());
+    return clean || null;
+  } catch {
+    return null;
+  }
+}
+
+/** 붙들어둔 초대 코드. 없으면 빈 문자열. */
+export function pendingInviteCode() {
+  try {
+    return sessionStorage.getItem(PENDING_KEY) || '';
+  } catch {
+    return '';
+  }
+}
+
+/** 다 썼으면 놓는다. 신청을 마쳤거나, 이미 그 가족인 경우다. */
+export function forgetInviteCode() {
+  try {
+    sessionStorage.removeItem(PENDING_KEY);
+  } catch {
+    // 저장이 막혀 있으면 애초에 적히지도 않았다.
+  }
+}
+
+// ── 카카오 ────────────────────────────────────────────────────────────────────
+//
+// JS 키는 화면 코드에 그대로 박히는 공개 값이다. 감추는 값이 아니라 카카오 개발자센터에
+// 등록해둔 도메인에서만 먹히는 값이고, 실제 방어는 그 도메인 목록이 한다.
+//
+// 등록해둔 곳은 둘이다.
+//   https://ceaser501.github.io   웹
+//   https://localhost             앱(화면을 안에 담아 여는 주소)
+const KAKAO_KEY = '2142934889b97f43cfc8c5cd69690f32';
+const SDK_SRC = 'https://t1.kakaocdn.net/kakao_js_sdk/2.7.2/kakao.min.js';
+
+let loading = null;
+
+/**
+ * 카카오 SDK를 처음 쓸 때 한 번만 받아온다.
+ *
+ * 앱이 뜰 때 미리 받지 않는다. 초대는 어쩌다 한 번 하는 일이라, 모두에게 그 값을 물릴
+ * 이유가 없다. 인터넷이 막혀 있으면 실패하는데, 그때는 부르는 쪽이 링크 복사로 물러선다.
+ */
+function loadKakao() {
+  if (window.Kakao?.isInitialized?.()) return Promise.resolve(window.Kakao);
+  if (loading) return loading;
+
+  loading = new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = SDK_SRC;
+    script.async = true;
+    script.onload = () => {
+      try {
+        if (!window.Kakao.isInitialized()) window.Kakao.init(KAKAO_KEY);
+        resolve(window.Kakao);
+      } catch (err) {
+        reject(err);
+      }
+    };
+    script.onerror = () => reject(new Error('카카오를 불러오지 못했어요.'));
+    document.head.appendChild(script);
+  }).catch((err) => {
+    // 다음에 다시 해볼 수 있게 놓아준다. 한 번 실패했다고 영영 막아둘 이유가 없다.
+    loading = null;
+    throw err;
+  });
+
+  return loading;
+}
+
+/**
+ * 카톡으로 초대 카드를 보낸다.
+ *
+ * 앱 안에서도 된다. 카카오 SDK는 kakaolink:// 로 넘어가는데, 캐패시터의 웹뷰가 우리
+ * 주소가 아닌 것을 안드로이드에 그대로 넘겨주기 때문이다(BridgeWebViewClient →
+ * Bridge.launchIntent). 안드로이드 SDK를 따로 붙일 필요가 없다.
+ */
+export async function shareToKakao({ familyName, code, image }) {
+  const kakao = await loadKakao();
+  const url = inviteUrl(code);
+
+  kakao.Share.sendDefault({
+    objectType: 'feed',
+    content: {
+      title: `${familyName} 가족에 초대합니다`,
+      // 코드를 설명에도 적는다. 카톡 미리보기에서 링크를 안 누르고 코드만 옮겨 적는
+      // 사람이 있고, 그 길도 막을 이유가 없다.
+      description: `초대 코드 ${code}\n눌러서 이름만 적으면 신청이 끝나요.`,
+      imageUrl: image,
+      link: { mobileWebUrl: url, webUrl: url },
+    },
+    buttons: [{ title: '가족 참여하기', link: { mobileWebUrl: url, webUrl: url } }],
+  });
+}
+
+/**
+ * 카톡 말고 다른 데로 보내기.
+ *
+ * 폰에서는 공유 창이 뜨고(문자·메일·아무 앱), 안 되는 곳에서는 주소를 복사한다.
+ * 돌려주는 값은 무엇을 했는지다 — 부르는 쪽이 '복사했어요'를 띄울지 정한다.
+ */
+export async function shareInvite({ familyName, code }) {
+  const url = inviteUrl(code);
+  const text = `${familyName} 가족에 초대합니다. 초대 코드 ${code}`;
+
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: '모아콘 가족 초대', text, url });
+      return 'shared';
+    } catch (err) {
+      // 사용자가 공유 창을 닫은 것은 실패가 아니다. 아무 말도 하지 않는다.
+      if (err?.name === 'AbortError') return 'cancelled';
+    }
+  }
+
+  try {
+    await navigator.clipboard.writeText(`${text}\n${url}`);
+    return 'copied';
+  } catch {
+    throw new Error('링크를 복사하지 못했어요.');
+  }
+}
+
+/** 앱에서는 카톡 공유가 더 나은 길이라 먼저 보여준다. 웹에서도 되지만 굳이 가리지 않는다. */
+export function prefersKakao() {
+  return isNativeApp() || /Android|iPhone|iPad/i.test(navigator.userAgent);
+}

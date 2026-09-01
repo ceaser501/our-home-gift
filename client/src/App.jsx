@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { forgetInviteCode, pendingInviteCode } from './utils/inviteLink';
+import FamilySwitcherSheet from './components/FamilySwitcherSheet';
 import { Plus, ScanSearch, Trash2 } from 'lucide-react';
 import Header from './components/Header';
 import FilterBar from './components/FilterBar';
@@ -109,6 +111,11 @@ export default function App() {
   // 처음 온 사람에게 보여주는 공지 한 줄이 이 창을 연다. 평소에는 종 안에만 있는데,
   // 빈 화면에는 종을 눌러볼 이유가 아직 없다.
   const [noticesOpen, setNoticesOpen] = useState(false);
+  // 초대 링크를 눌러 왔는데 이미 가족이 있는 사람. 여기까지 왔다는 건 로그인도 되어
+  // 있다는 뜻이라, 참여 칸을 코드까지 채워서 바로 열어준다.
+  //
+  // 가족이 없는 사람은 이 화면에 오지도 않는다 — 그쪽은 FamilyOnboarding이 받는다.
+  const [invitedCode, setInvitedCode] = useState(() => pendingInviteCode());
 
   // silent: 당겨서 새로고침처럼 이미 다른 표시가 돌고 있을 때는 목록을 "불러오는 중…"으로
   // 갈아끼우지 않는다. 화면이 통째로 사라졌다 나타나면 오히려 새로고침이 아니라 오류처럼 보인다.
@@ -552,6 +559,17 @@ export default function App() {
           // 등록 창을 한 번 더 연다 — 그쪽은 서버가 사진에 인쇄된 숫자를 눈으로 읽어주는
           // 길이라, 막대 없이 번호만 찍힌 기프티콘이 이 길로 들어온다.
           onNext={sheetState.last ? undefined : openNext}
+        />
+      )}
+
+      {invitedCode && (
+        <FamilySwitcherSheet
+          initialCode={invitedCode}
+          onClose={() => {
+            // 닫으면 놓는다. 안 놓으면 앱을 열 때마다 다시 뜬다.
+            forgetInviteCode();
+            setInvitedCode('');
+          }}
         />
       )}
 

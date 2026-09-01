@@ -8,6 +8,7 @@ import { watchForUpdates } from './utils/appUpdate.js'
 import { registerServiceWorker } from './utils/serviceWorker.js'
 import { watchLoginRedirects } from './utils/deepLink.js'
 import { isNativeApp } from './utils/browser.js'
+import { catchInviteFromUrl } from './utils/inviteLink.js'
 
 // 안드로이드 웹뷰는 내비게이션 바 높이를 env(safe-area-inset-bottom)으로 알려주지 않는다.
 // 그래서 화면 맨 아래 버튼이 제스처 바에 물려 눌리지 않았다. CSS가 그 사실을 알 수 있게
@@ -15,6 +16,12 @@ import { isNativeApp } from './utils/browser.js'
 if (isNativeApp() && window.Capacitor?.getPlatform?.() === 'android') {
   document.documentElement.classList.add('is-native-android')
 }
+
+// 초대 링크(?join=CODE)로 들어왔으면 그 코드를 붙들어둔다.
+//
+// 로그인 화면이 그려지기 전에 해야 한다. 링크를 눌러 온 사람은 대개 로그인 전이고,
+// 로그인은 카카오·구글 화면을 다녀오는 길이라 그 사이에 주소가 통째로 갈린다.
+catchInviteFromUrl()
 
 watchForUpdates()
 
