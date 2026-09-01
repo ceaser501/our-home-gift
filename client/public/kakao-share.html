@@ -113,7 +113,8 @@
               objectType: 'feed',
               content: {
                 title: family + ' 가족에 초대받았어요',
-                description: '초대 코드 ' + code + '\n코드를 입력하면 가족이 모아둔 기프티콘을 함께 볼 수 있어요.',
+                // 카톡은 설명을 두 줄에서 자른다. 길게 적으면 둘째 줄이 '…'에 먹힌다.
+                description: '초대 코드 ' + code + '\n눌러서 이름만 적으면 끝나요.',
                 imageUrl: origin + 'kakao-share-800x400.png',
                 // 비율을 안 알려주면 카톡이 제 기본 비율로 잘라낸다.
                 imageWidth: 800,
