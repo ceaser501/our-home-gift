@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CAPACITOR_DEBUG</key>
+	<string>$(CAPACITOR_DEBUG)</string>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
+	<key>CFBundleDisplayName</key>
+        <string>모아콘</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$(MARKETING_VERSION)</string>
+	<key>CFBundleVersion</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<!-- 소셜 로그인이 끝난 뒤 앱으로 돌아오는 길.
+
+	     로그인은 사파리 뷰 컨트롤러에서 진행된다(구글이 앱 내장 웹뷰에서의 로그인을
+	     막아둬서 웹뷰 안에서는 처리할 수 없다). 끝나면 아래 스킴 주소로 리다이렉트되는데,
+	     이 등록이 있어야 iOS가 그 주소를 우리 앱에 넘겨준다. 없으면 로그인이 브라우저에서
+	     끝나고 앱은 로그아웃 상태로 남는다.
+
+	     안드로이드의 짝은 AndroidManifest.xml의 intent-filter다. 받는 쪽 코드는
+	     client/src/utils/deepLink.js이고, 주소는 거기 NATIVE_REDIRECT_URL과 같아야 한다. -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>io.github.ceaser501.moacon</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>io.github.ceaser501.moacon</string>
+			</array>
+		</dict>
+	</array>
+	<!-- 암호화를 따로 쓰지 않는다(HTTPS뿐). 이 줄이 없으면 TestFlight에 올릴 때마다
+	     수출 규정 질문에 답해야 하고, 답하기 전에는 배포가 멈춘다. -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<!-- 아래 세 줄은 "왜 필요한지"를 사용자에게 보여주는 문구다.
+
+	     안드로이드는 권한 선언이 없으면 물어보지도 않고 조용히 실패하지만, iOS는 더
+	     세다 — 문구가 없는 채로 그 기능을 부르면 앱이 그 자리에서 죽는다. 그래서 쓰는
+	     기능마다 반드시 있어야 한다.
+
+	     사진첩 훑기는 여기 없다. 그건 안드로이드에서만 도는 기능이고
+	     (client/src/utils/gallery.js에서 플랫폼을 보고 갈린다), iOS에서는 화면에
+	     버튼조차 나오지 않는다. -->
+	<key>NSCameraUsageDescription</key>
+	<string>기프티콘을 바로 찍어 등록할 때 사용해요.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>등록할 기프티콘 사진을 고를 때 사용해요.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>가까운 매장을 먼저 보여드리는 데만 사용해요. 위치는 저장하지 않아요.</string>
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+    <false/>
+    <key>UISceneConfigurations</key>
+    <dict>
+      <key>UIWindowSceneSessionRoleApplication</key>
+      <array>
+        <dict>
+            <key>UISceneConfigurationName</key>
+            <string>Default Configuration</string>
+            <key>UISceneDelegateClassName</key>
+            <string>$(PRODUCT_MODULE_NAME).SceneDelegate</string>
+            <key>UISceneStoryboardFile</key>
+            <string>Main</string>
+        </dict>
+      </array>
+    </dict>
+	</dict>
+	<key>UILaunchStoryboardName</key>
+	<string>LaunchScreen</string>
+	<key>UIMainStoryboardFile</key>
+	<string>Main</string>
+	<key>UIRequiredDeviceCapabilities</key>
+	<array>
+		<string>armv7</string>
+	</array>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>UISupportedInterfaceOrientations~ipad</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>UIViewControllerBasedStatusBarAppearance</key>
+	<true/>
+</dict>
+</plist>

@@ -1,0 +1,83 @@
+name: Build iOS app
+
+# 아이폰 앱이 지금 상태로 **빌드가 되는지**를 본다. 그것까지가 이 작업이 하는 일이다.
+#
+# ── 왜 설치 파일이 안 나오나 ──────────────────────────────────────────────────
+# 안드로이드는 APK를 만들어 링크로 주면 끝이지만, 아이폰에는 그런 길이 없다. 애플이
+# 서명하지 않은 앱은 아이폰이 아예 실행하지 않는다. 서명하려면 애플 개발자 계정
+# ($99/년)에서 발급한 인증서와 프로비저닝 프로파일이 있어야 한다.
+#
+# 그래서 계정이 생기기 전까지 여기서 할 수 있는 건 하나다 — 코드가 실제로 컴파일되는지.
+# 이 환경(리눅스)에서는 Xcode를 못 돌려서 그것조차 확인할 방법이 없고, 손대는 족족
+# "맥에서 열어봐야 안다"가 된다. 그 확인을 여기서 대신 한다.
+#
+# 계정이 생긴 뒤에 무엇을 더 붙여야 하는지는 docs/ios-release.md에 적어뒀다.
+#
+# ── 왜 자동으로 안 도나 ──────────────────────────────────────────────────────
+# 맥 러너는 분을 10배로 차감한다. 지금은 공개 저장소라 무료지만 private으로 돌리면
+# 월 2,000분으로 15번쯤이 전부다(docs/store-release.md). 눌러야 도는 것으로 둔다.
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # 앱 안에 담길 화면. 안드로이드 빌드와 같은 값을 쓴다.
+      # MOACON_DEV_SERVER는 일부러 주지 않는다 — 원격 주소를 띄우는 빌드는 애플 심사에서
+      # 리젝된다(2.5.2 / 4.2).
+      - name: Build web assets
+        working-directory: client
+        env:
+          # 앱은 화면을 capacitor://localhost 루트에서 연다. 웹 기본값(/our-home-gift/)을
+          # 그대로 쓰면 자바스크립트를 못 찾아 흰 화면만 뜬다.
+          VITE_BASE_PATH: /
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_NAVER_CLIENT_ID: ${{ secrets.VITE_NAVER_CLIENT_ID }}
+          VITE_KAKAO_JS_KEY: ${{ secrets.VITE_KAKAO_JS_KEY }}
+        run: |
+          npm ci
+          npm test
+          npm run build
+
+      # Package.swift가 ../../../node_modules/@capacitor/* 를 가리킨다. app/에 설치가
+      # 안 돼 있으면 여기가 아니라 Xcode가 의존성을 못 찾아 멈춘다.
+      - name: Sync Capacitor
+        working-directory: app
+        run: |
+          npm ci
+          npx cap sync ios
+
+      # 서명 없이 컴파일만 한다. 만들어진 .app은 아이폰에 넣을 수 없다 — 여기서
+      # 확인하려는 건 "코드가 성한가"뿐이다.
+      - name: Build (unsigned)
+        working-directory: app/ios/App
+        run: |
+          xcodebuild \
+            -project App.xcodeproj \
+            -scheme App \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY='' \
+            build
+
+      - name: Summary
+        run: |
+          {
+            echo '### 아이폰 앱 빌드 확인'
+            echo ''
+            echo '컴파일까지 통과했습니다. 다만 이 결과물은 **아이폰에 설치할 수 없습니다** —'
+            echo '애플 개발자 계정으로 서명해야 아이폰이 실행합니다.'
+            echo ''
+            echo '다음에 무엇이 필요한지는 `docs/ios-release.md` 에 있습니다.'
+          } >> "$GITHUB_STEP_SUMMARY"

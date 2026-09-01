@@ -339,9 +339,14 @@ supabase secrets set ANALYZE_DAILY_LIMIT=10 ANALYZE_TOTAL_DAILY_LIMIT=200
 
 ### 3. 아이폰은 앱으로 낸다
 
-웹으로 대신하지 않는다. `npx cap add ios` + FCM 토큰을 주는 플러그인으로 교체
-(`@capacitor/push-notifications`는 iOS에서 APNs 토큰을 준다 — 서버는 FCM 토큰을 기다린다).
-애플 개발자 계정($99/년)이 앞단에 있다.
+웹으로 대신하지 않는다. `npx cap add ios`는 해뒀다 — `app/ios/`에 Xcode 프로젝트가 있고,
+아이콘·진입 화면·권한 문구·로그인 복귀 스킴까지 맞춰져 있다. 남은 것은 FCM 토큰을 주는
+플러그인으로 교체하는 일이고(`@capacitor/push-notifications`는 iOS에서 APNs 토큰을 준다 —
+서버는 FCM 토큰을 기다린다), 그 앞단에 애플 개발자 계정($99/년)이 있다.
 
 빌드는 **맥북에서 Xcode로 직접** 한다. GitHub Actions의 맥 러너는 분을 10배로 차감해서
 private 무료 한도(월 2,000분)로는 월 15번쯤밖에 못 돈다. 안드로이드는 지금처럼 CI로 둔다.
+맥이 없을 때 컴파일만 확인하는 용도로 `.github/workflows/build-ios-app.yml`을 손으로
+돌릴 수 있다(설치 파일은 안 나온다 — 서명할 계정이 없어서다).
+
+자세한 것은 `docs/ios-release.md`.
