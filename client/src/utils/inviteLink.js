@@ -210,6 +210,10 @@ export async function shareToKakao({ familyName, code, image }) {
         // '…'에 먹힌다. 링크를 안 누르고 코드만 옮겨 적는 사람도 있다.
         description: `초대 코드 ${code}\n코드를 입력하면 가족이 모아둔 기프티콘을 함께 볼 수 있어요.`,
         imageUrl: image,
+        // 그림의 비율을 함께 알려준다. 안 알려주면 카톡이 제 기본 비율로 잘라내는데,
+        // 실제로 800×400을 넣었더니 좌우를 도려내고 가운데만 남겼다.
+        imageWidth: 800,
+        imageHeight: 400,
         link,
       },
       buttons: [{ title: '모아콘 시작하기', link }],
