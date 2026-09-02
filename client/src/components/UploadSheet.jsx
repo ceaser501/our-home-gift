@@ -945,31 +945,9 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
               </div>
             </div>
 
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="f-expires" className="text-[14px] font-semibold text-foreground/80">
-                사용기한 <Optional />
-              </Label>
-              {/* 폰이 들고 있는 날짜 고르개를 그대로 쓴다. 직접 만든 달력으로 바꾸면
-                  폰마다 익숙한 조작을 버리게 되고, 60대에게는 그 손해가 크다.
-
-                  다만 웹뷰가 그려주는 달력 아이콘은 우리 화살표와 굵기도 색도 달라서
-                  다른 칸과 나란히 두면 깨져 보인다. 그것만 감추고 같은 화살표를
-                  직접 그린다. 누르는 자리는 칸 전체라 화살표는 그림일 뿐이다. */}
-              <div className="relative">
-                <Input
-                  id="f-expires"
-                  type="date"
-                  value={form.expires_at}
-                  onChange={(e) => updateField('expires_at', e.target.value)}
-                  className="moacon-date h-[52px] w-full rounded-[13px] bg-secondary/50 pr-9 text-[15.5px]"
-                />
-                <ChevronDown
-                  aria-hidden="true"
-                  className="pointer-events-none absolute top-1/2 right-[15px] size-4 -translate-y-1/2 opacity-50"
-                />
-              </div>
-            </div>
-
+            {/* 아래 셋은 전부 금액 칸에 딸린 것이라 금액 바로 밑에 둔다. 사용기한을
+                한 줄로 내리면서 이 자리를 놓치면 "금액권 — 쓴 만큼 깎여요"가 기한
+                밑에 붙어, 기한을 깎는다는 말처럼 읽힌다. */}
             {SHOW_PRICE_SEARCH && !form.amount && form.name.trim() && (
               <Button type="button" variant="outline" size="sm" onClick={handleSearchPrice} disabled={searchingPrice} className="self-start">
                 <Search className="size-3.5" />
@@ -1000,6 +978,31 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
             {voucherHint && !form.is_voucher && onlyDigits(form.amount) && (
               <p className="m-0 text-sm break-keep text-muted-foreground">금액권 같아 보여요. 맞으면 체크해주세요.</p>
             )}
+
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="f-expires" className="text-[14px] font-semibold text-foreground/80">
+                사용기한 <Optional />
+              </Label>
+              {/* 폰이 들고 있는 날짜 고르개를 그대로 쓴다. 직접 만든 달력으로 바꾸면
+                  폰마다 익숙한 조작을 버리게 되고, 60대에게는 그 손해가 크다.
+
+                  다만 웹뷰가 그려주는 달력 아이콘은 우리 화살표와 굵기도 색도 달라서
+                  다른 칸과 나란히 두면 깨져 보인다. 그것만 감추고 같은 화살표를
+                  직접 그린다. 누르는 자리는 칸 전체라 화살표는 그림일 뿐이다. */}
+              <div className="relative">
+                <Input
+                  id="f-expires"
+                  type="date"
+                  value={form.expires_at}
+                  onChange={(e) => updateField('expires_at', e.target.value)}
+                  className="moacon-date h-[52px] w-full rounded-[13px] bg-secondary/50 pr-9 text-[15.5px]"
+                />
+                <ChevronDown
+                  aria-hidden="true"
+                  className="pointer-events-none absolute top-1/2 right-[15px] size-4 -translate-y-1/2 opacity-50"
+                />
+              </div>
+            </div>
 
             {/* 다시 고르는 칸으로 돌아왔다. 단추를 늘어놓던 때는 가족이 서넛일 때를 보고
                 정한 것인데, 다섯이 되면 두 줄을 먹고 화면에서 가장 큰 덩어리가 된다.
