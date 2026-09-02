@@ -164,7 +164,7 @@ https://ceaser501.github.io/our-home-gift/privacy.html
 | 2 | `assets/marketing/screenshots/02-scan.png` | 사진첩 훑는 중 |
 | 3 | `assets/marketing/screenshots/03-form.png` | 자동으로 채워진 등록 화면 |
 | 4 | `assets/marketing/screenshots/04-barcode.png` | 상세 · 바코드 |
-| 5 | `assets/marketing/screenshots/05-push.png` | 알림 (실제로 온 푸시) |
+| 5 | `assets/marketing/screenshots/05-push.png` | 알림 (푸시 두 종류) |
 | 6 | `assets/marketing/screenshots/06-map.png` | 근처 매장 · 길찾기 |
 | 7 | `assets/marketing/screenshots/07-invite.png` | 가족 초대 |
 | 8 | `assets/marketing/screenshots/08-stats.png` | 사용 내역 |
@@ -185,7 +185,7 @@ https://ceaser501.github.io/our-home-gift/privacy.html
 | 2 | 사진첩 훑는 중 (안드로이드) | 찾는 것부터 앱이 합니다 | 사진첩을 훑어 기프티콘만 골라내요 |
 | 3 | 자동으로 채워진 등록 화면 | 사진만 올리면 끝 | 상품명 · 금액 · 유효기한이 저절로 |
 | 4 | 상세 · 바코드 | 매장에선 대기만 하면 돼요 | 금액권은 쓴 만큼 잔액이 계산돼요 |
-| 5 | 푸시가 뜬 잠금화면 | 중요한 건 폰으로 알려드려요 | 기한 임박 · 가족 참여 신청 |
+| 5 | 푸시가 뜬 잠금화면 | 중요한 건 푸시알림으로 알려드려요 | 기한 만료 · 가족 참여 신청 |
 | 6 | 근처 매장 지도 · 길찾기 | 쓸 수 있는 곳을 지도에서 | 길찾기 · 전화까지 바로 |
 | 7 | 가족 초대 | 가족이 같은 서랍을 봅니다 | 카카오톡 링크 하나로 초대 |
 | 8 | 사용 내역 | 우리 집이 얼마나 아꼈나 | 누가 언제 썼는지 그대로 남아요 |
@@ -197,10 +197,16 @@ https://ceaser501.github.io/our-home-gift/privacy.html
 **2번은 안드로이드에만 있다.** 사진첩을 훑는 기능은 iOS에 없다. App Store는 스크린샷을
 따로 올리므로, 거기서는 2번을 빼고 7장으로 낸다. Play는 8장 그대로.
 
-5번에 찍힌 것은 **참여 신청 알림**이다. 기한 임박 알림은 그 순간을 붙잡아야 찍을 수
-있어서 못 찍었다. 그래서 문구는 둘을 함께 적었다 — 앱이 보내는 알림은 이 둘뿐이고
-(`supabase/functions/send-expiry-notifications`, `notify-join-request`), 그림은 그중
-하나를 보여주는 것이다.
+5번은 **참여 신청 알림만 실물이다.** 기한 만료 알림은 그 순간을 붙잡아야 찍을 수 있어서
+못 찍었고, 찍힌 카드를 알약 모양으로 오려 아래에 붙이고 글자만 다시 썼다. 아이콘·화살표·
+반투명 정도가 저절로 맞아서 손으로 그린 티가 안 난다.
+
+**글자는 지어낸 것이 아니다.** `supabase/functions/send-expiry-notifications/index.ts:153`이
+실제로 보내는 형식 그대로다 — 가족 이름 · 제목, 상호 · 상품명, 기한과 남은 날. 그 문구를
+고치면 이 그림도 같이 고쳐야 한다. 만드는 코드는 대화 밖 임시 폴더에 있으니, 다시 만들
+일이 생기면 찍힌 카드 위치(`CARD`)와 내릴 거리(`DROP`)만 다시 재면 된다.
+
+앱이 보내는 알림은 이 둘뿐이다(`send-expiry-notifications`, `notify-join-request`).
 
 5번의 「알림」은 **푸시**다. 헤더의 종은 가족이 올리거나 쓴 소식과 공지가 쌓이는 자리라
 기한과 관계가 없다(`client/src/components/NotificationBell.jsx:17`).
