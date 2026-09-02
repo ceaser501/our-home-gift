@@ -136,6 +136,16 @@ jobs:
           echo "$GOOGLE_SERVICES_JSON" | base64 -d > app/android/app/google-services.json
           echo "google-services.json 복원 완료"
 
+          # 이 파일 안의 package_name은 파이어베이스에 등록해둔 앱을 가리킨다. 우리 쪽
+          # applicationId를 바꾸면 짝이 어긋나고, gradle은 그때 한참 뒤에야
+          # "No matching client found for package name"으로 멈춘다 — 로그 깊은 곳이라
+          # 무엇을 해야 하는지 알기 어렵다. 여기서 먼저 보고 할 일을 적어준다.
+          want=$(sed -n 's/.*applicationId "\(.*\)".*/\1/p' app/android/app/build.gradle)
+          if ! grep -q "\"package_name\": \"$want\"" app/android/app/google-services.json; then
+            echo "::error title=google-services.json이 지금 패키지명과 맞지 않습니다::앱은 $want 인데 파일에는 없습니다. 파이어베이스 콘솔 > 프로젝트 설정 > 앱 추가 > Android 로 $want 를 등록하고, 새로 받은 google-services.json을 base64로 바꿔 GOOGLE_SERVICES_JSON 시크릿에 다시 넣어주세요."
+            exit 1
+          fi
+
       - name: Build signed APK
         working-directory: app/android
         env:
