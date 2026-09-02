@@ -1,0 +1,467 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>모아콘 — 우리 가족 기프티콘 서랍</title>
+    <meta name="description" content="흩어져 있는 기프티콘을 한곳에 모아 가족이 함께 씁니다. 사진만 올리면 상품명·금액·유효기한이 저절로 채워지고, 기한 전에 알림이 옵니다." />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="모아콘 — 우리 가족 기프티콘 서랍" />
+    <meta property="og:description" content="받아 두고 못 쓴 기프티콘, 가족이 같이 봅니다." />
+    <meta property="og:image" content="https://ceaser501.github.io/our-home-gift/og-1200x630.png" />
+    <meta property="og:url" content="https://ceaser501.github.io/our-home-gift/intro.html" />
+    <link rel="icon" href="./icon-192.png" />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
+    />
+    <style>
+      /* 시안(PC 1440 / 모바일 390) 두 벌을 한 페이지로 합쳤다. 링크 하나로 나가는
+         페이지라 화면 크기에 따라 배치가 갈리는 편이 낫다. 900px에서 갈린다. */
+      :root {
+        --ink: #17171c;
+        --body: #5c5c66;
+        --dim: #6b6b76;
+        --brand: #5b4be8;
+        --brand-dark: #4c3ed6;
+        --night: #14102e;
+        --gold: #ffd84d;
+        --line: #eeeef2;
+        --line2: #e4e4ea;
+        --wash: #f7f7fa;
+        --tint: #f5f4ff;
+        --tint-line: #dcd8fa;
+      }
+      * { box-sizing: border-box; }
+      html { scroll-behavior: smooth; }
+      body {
+        margin: 0;
+        background: #fff;
+        color: var(--ink);
+        font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        word-break: keep-all;
+      }
+      img { max-width: 100%; display: block; }
+      a { color: var(--brand); text-decoration: none; }
+      a:hover { color: var(--brand-dark); }
+
+      .wrap { max-width: 1200px; margin: 0 auto; padding: 0 22px; }
+      .sec { padding-top: 44px; }
+      .band { margin-top: 44px; padding: 38px 0; background: var(--wash); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+
+      .num { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11.5px; font-weight: 700; letter-spacing: .12em; color: var(--brand); }
+      h2 { font-size: 25px; font-weight: 700; line-height: 1.36; letter-spacing: -.03em; margin: 14px 0 0; text-wrap: pretty; }
+      .lead { font-size: 17px; line-height: 1.8; color: var(--body); letter-spacing: -.015em; margin: 14px 0 0; text-wrap: pretty; }
+      .cap { font-size: 15.5px; line-height: 1.7; color: var(--dim); letter-spacing: -.01em; margin: 14px 0 0; text-wrap: pretty; }
+      .cap b { font-weight: 700; color: var(--ink); }
+
+      /* 화면 사진 */
+      .shot { border-radius: 16px; border: 1px solid var(--line2); box-shadow: 0 12px 30px rgba(20, 20, 40, .1); }
+      .pair { display: flex; gap: 12px; margin-top: 20px; align-items: flex-start; }
+      .pair > * { flex: 1; min-width: 0; }
+      .inset { margin-top: 16px; }
+      .split.s3 { margin-top: 20px; }
+
+      /* 머리·꼬리의 밤색 판 */
+      .night { background: var(--night); color: #fff; position: relative; overflow: hidden; }
+      .top { display: flex; align-items: center; gap: 10px; padding: 20px 0; }
+      .top .name { font-size: 17px; font-weight: 700; letter-spacing: -.02em; }
+      .top .tag { margin-left: auto; font-size: 13px; font-weight: 500; color: #9a94c4; letter-spacing: -.01em; }
+      .top img { width: 32px; height: 32px; border-radius: 10px; }
+
+      h1 { font-size: 36px; font-weight: 800; line-height: 1.22; letter-spacing: -.035em; margin: 26px 0 0; text-wrap: pretty; }
+      h1 em { font-style: normal; color: var(--gold); }
+      .hero-sub { font-size: 17px; line-height: 1.75; color: #c9c4e6; letter-spacing: -.015em; margin: 18px 0 0; text-wrap: pretty; }
+
+      .cta { display: flex; flex-direction: column; gap: 10px; margin-top: 22px; }
+      .btn {
+        height: 54px; border-radius: 14px; display: flex; align-items: center; justify-content: center;
+        font-size: 17px; font-weight: 700; letter-spacing: -.01em; border: 1px solid var(--brand);
+        background: var(--brand); color: #fff;
+      }
+      .btn:hover { background: var(--brand-dark); border-color: var(--brand-dark); color: #fff; }
+      .btn.ghost { background: transparent; border-color: rgba(255, 255, 255, .28); color: #edebfa; font-weight: 600; }
+      .btn.ghost:hover { background: rgba(255, 255, 255, .08); color: #fff; }
+
+      /* 화면 사진은 세로가 길다. 그대로 두면 옆의 글보다 훨씬 아래까지 내려가 밤색 판에
+         빈 자리가 크게 남는다. 위쪽만 남기고 잘라 '아래에서 올라온 화면'으로 보이게 한다. */
+      .hero-shot { position: relative; padding-top: 30px; }
+      .glow { position: absolute; inset: 20px 0 auto; height: 300px; background: radial-gradient(circle at 50% 40%, rgba(139, 92, 246, .5), rgba(139, 92, 246, 0) 70%); }
+      .frame {
+        position: relative; height: 470px; overflow: hidden;
+        border-radius: 22px 22px 0 0; border: 1px solid rgba(255, 255, 255, .16); border-bottom: none;
+        box-shadow: 0 -8px 50px rgba(0, 0, 0, .35);
+      }
+
+      .stats { display: none; }
+
+      /* 목록·상자 */
+      .chips { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+      .chip { padding: 14px 16px; border-radius: 12px; background: var(--wash); border: 1px solid var(--line); font-size: 16px; font-weight: 600; color: #3a3a44; letter-spacing: -.01em; }
+      .chip.on { background: var(--tint); border-color: var(--tint-line); color: var(--brand-dark); }
+      .chip.plain { background: #fff; border-color: var(--line2); }
+      .chip.good { background: #e8f5ee; border-color: #c8e6d5; color: #1f9d5c; }
+
+      .cards { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
+      .card { padding: 18px 20px; border: 1px solid var(--line); border-radius: 14px; }
+      .card.on { background: var(--tint); border-color: var(--tint-line); }
+      .card h3 { font-size: 17.5px; font-weight: 700; letter-spacing: -.02em; margin: 0; }
+      .card p { font-size: 16px; line-height: 1.75; color: var(--dim); letter-spacing: -.01em; margin: 6px 0 0; }
+      .card.on p { color: #4a4a58; }
+
+      .badge { display: inline-block; margin-left: 8px; padding: 4px 9px; border-radius: 7px; background: #fff; border: 1px solid var(--tint-line); font-size: 12.5px; font-weight: 700; color: var(--brand-dark); letter-spacing: -.01em; vertical-align: 2px; }
+
+      .notes { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+      .note { display: flex; gap: 12px; align-items: flex-start; padding: 16px; background: #fff; border: 1px solid var(--line); border-radius: 14px; }
+      .note.on { background: var(--tint); border-color: var(--tint-line); }
+      .dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--brand); margin-top: 8px; }
+      .note p { font-size: 16px; line-height: 1.7; color: #3a3a44; letter-spacing: -.01em; margin: 0; }
+      .note b { font-weight: 700; color: var(--ink); }
+
+      .steps { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
+      .step { padding: 22px; background: var(--tint); border: 1px solid var(--tint-line); border-radius: 16px; }
+      .step .n { width: 34px; height: 34px; border-radius: 10px; background: var(--brand); color: #fff; font-size: 15px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+      .step h3 { font-size: 19px; font-weight: 700; letter-spacing: -.02em; margin: 10px 0 0; }
+      .step p { font-size: 16px; line-height: 1.75; color: #4a4a58; letter-spacing: -.01em; margin: 8px 0 0; }
+
+      /* 꼬리 */
+      .end { margin-top: 48px; padding: 44px 0 26px; }
+      .end h2 { font-size: 30px; font-weight: 800; letter-spacing: -.03em; line-height: 1.3; color: #fff; margin: 0; }
+      .end .sub { font-size: 16.5px; line-height: 1.75; color: #c9c4e6; letter-spacing: -.015em; margin: 18px 0 0; }
+      .end .btn { margin-top: 18px; }
+      .end .store { font-size: 14px; font-weight: 500; color: #9a94c4; letter-spacing: -.01em; text-align: center; margin: 12px 0 0; }
+      .rule { height: 1px; background: rgba(255, 255, 255, .1); margin: 26px 0 18px; }
+      .foot { display: flex; align-items: center; gap: 10px; }
+      .foot img { width: 24px; height: 24px; border-radius: 7px; }
+      .foot p { font-size: 13px; font-weight: 500; color: #6f6a99; letter-spacing: -.01em; margin: 0; line-height: 1.7; }
+
+      @media (min-width: 900px) {
+        .wrap { padding: 0 40px; }
+        .sec { padding-top: 88px; }
+        .band { margin-top: 88px; padding: 80px 0; }
+        h2 { font-size: 32px; }
+        .lead { font-size: 18px; max-width: 760px; }
+        .cap { font-size: 15.5px; }
+
+        .top { padding: 34px 0 0; }
+        .top img { width: 38px; height: 38px; border-radius: 11px; }
+        .top .name { font-size: 19px; }
+        .top .tag { font-size: 14.5px; color: #b7b2d8; }
+
+        .hero { display: flex; gap: 56px; align-items: flex-start; padding-top: 64px; }
+        .hero-copy { flex: 1; padding-top: 34px; }
+        h1 { font-size: 62px; line-height: 1.16; letter-spacing: -.04em; margin-top: 0; }
+        .hero-sub { font-size: 19.5px; line-height: 1.72; max-width: 520px; margin-top: 26px; }
+        .cta { flex-direction: row; gap: 10px; margin-top: 26px; }
+        .btn { height: 52px; padding: 0 26px; }
+        .hero-shot { flex: none; width: 400px; padding-top: 0; }
+        .frame { width: 376px; height: 560px; border-radius: 26px 26px 0 0; box-shadow: 0 30px 70px rgba(0, 0, 0, .45); }
+        .glow { left: -40px; top: 40px; width: 420px; height: 420px; border-radius: 50%; background: radial-gradient(circle, rgba(139, 92, 246, .55), rgba(139, 92, 246, 0) 70%); inset: auto; position: absolute; }
+
+        .stats { display: flex; gap: 26px; margin-top: 40px; flex-wrap: wrap; }
+        .stats .v { font-size: 26px; font-weight: 700; letter-spacing: -.02em; }
+        .stats .k { font-size: 14.5px; font-weight: 500; color: #9a94c4; letter-spacing: -.01em; margin-top: 4px; }
+        .stats .bar { width: 1px; background: rgba(255, 255, 255, .14); }
+
+        .split { display: flex; gap: 64px; align-items: flex-start; }
+        .split > .side { flex: none; width: 400px; }
+        .split > .main { flex: 1; }
+        .mid { align-items: center; gap: 60px; }
+        .mid > .side { width: 340px; }
+
+        .row3 { display: flex; gap: 24px; margin-top: 34px; align-items: flex-start; }
+        .row3 > * { flex: 1; min-width: 0; }
+        .pair { max-width: 820px; }
+
+        .chips, .cards, .steps { flex-direction: row; flex-wrap: wrap; gap: 12px; }
+        .cards, .steps { gap: 18px; }
+        .card, .step { flex: 1; min-width: 260px; }
+        .chip { padding: 12px 18px; }
+        .step { padding: 28px; }
+        .step h3 { font-size: 20px; }
+
+        .end { margin-top: 96px; padding: 84px 0 24px; }
+        .end .top-row { display: flex; align-items: center; justify-content: space-between; gap: 48px; }
+        .end h2 { font-size: 40px; letter-spacing: -.035em; line-height: 1.28; }
+        .end .btn { margin-top: 0; height: 56px; padding: 0 30px; font-size: 18px; }
+        .end .store { text-align: left; }
+        .end .act { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
+        .foot-row { display: flex; align-items: center; justify-content: space-between; gap: 40px; }
+        .foot-row > .foot:first-child { flex: none; }
+        .foot-row > .foot:first-child p { white-space: nowrap; }
+        .foot-row > .foot:last-child { flex: 1; justify-content: flex-end; }
+        .foot-row > .foot:last-child p { text-align: right; max-width: 620px; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="night">
+      <div class="wrap">
+        <div class="top">
+          <img src="./icon-192.png" alt="모아콘" />
+          <div class="name">모아콘</div>
+          <div class="tag">우리 가족 기프티콘 서랍</div>
+        </div>
+
+        <div class="hero">
+          <div class="hero-copy">
+            <h1>받아 두고<br />못 쓴 기프티콘,<br /><em>가족이 같이 봅니다</em></h1>
+            <p class="hero-sub">
+              사진첩에 흩어져 있는 기프티콘을 찾아 한곳에 모읍니다. 모인 서랍은 가족이 함께 쓰고,
+              기한이 지나기 전에 알림으로 알려 줍니다.
+            </p>
+            <div class="cta">
+              <a class="btn" href="https://ceaser501.github.io/our-home-gift/">웹에서 바로 써보기</a>
+              <a class="btn ghost" href="#start">어떻게 쓰나요</a>
+            </div>
+            <div class="stats">
+              <div><div class="v">사진첩 한 번</div><div class="k">여러 장을 한꺼번에 등록</div></div>
+              <div class="bar"></div>
+              <div><div class="v">가족 단위</div><div class="k">한 서랍을 같이 씁니다</div></div>
+              <div class="bar"></div>
+              <div><div class="v">기한 알림</div><div class="k">놓치기 전에 푸시로</div></div>
+            </div>
+          </div>
+          <div class="hero-shot">
+            <div class="glow"></div>
+            <div class="frame">
+              <img src="./intro/home.jpg" alt="모아콘 기프티콘 목록 화면" width="760" height="1473" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="wrap sec">
+      <div class="split">
+        <div class="side">
+          <h2>기프티콘은 받는 순간부터<br />사라지기 시작합니다</h2>
+        </div>
+        <div class="main">
+          <p class="lead">
+            메시지로 오고, 사진첩에 저장되고, 그 위로 다른 사진이 천 장 쌓입니다. 쓰려고 찾으면 없고,
+            찾으면 기한이 지나 있습니다. 가족 중 누가 무엇을 갖고 있는지는 아무도 모릅니다.
+          </p>
+          <div class="chips">
+            <div class="chip">사진첩 어딘가에 있다</div>
+            <div class="chip">기한을 모른다</div>
+            <div class="chip">가족은 더 모른다</div>
+            <div class="chip on">모아콘이 세 가지를 없앱니다</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="wrap sec">
+      <div class="num">01</div>
+      <h2>여러 장을 한 번에 읽고, 기프티콘만 골라 등록합니다<span class="badge">Android</span></h2>
+      <p class="lead">
+        사진첩을 훑어 기프티콘으로 보이는 것만 골라냅니다. 골라낸 것은 상품명·상호·금액·유효기한까지
+        채워 놓습니다. 캡처든 저장한 이미지든 상관없습니다. 빼고 싶은 것은 ✕ 하나로 빼면 됩니다.
+      </p>
+      <div class="row3">
+        <div>
+          <img class="shot" src="./intro/scan-found.jpg" alt="사진첩에서 찾은 기프티콘 목록" width="760" height="1473" />
+          <p class="cap"><b>찾은 결과를 먼저 보여 줍니다.</b> 등록하기 전에 무엇이 들어가는지 확인하고, 필요 없는 것은 빼세요.</p>
+        </div>
+        <div>
+          <img class="shot" src="./intro/scan-progress.jpg" alt="사진첩을 읽는 중 화면" width="760" height="1473" />
+          <p class="cap"><b>읽는 동안 진행 상황을 보여 줍니다.</b> 넣지 못한 것은 왜 못 넣었는지도 함께 알려 줍니다.</p>
+        </div>
+        <div>
+          <img class="shot" src="./intro/upload.jpg" alt="기프티콘 직접 추가 화면" width="760" height="1473" />
+          <p class="cap"><b>사진 한 장으로도 추가됩니다.</b> 아이폰에서는 이렇게 올립니다.</p>
+        </div>
+      </div>
+      <div class="cards">
+        <div class="card">
+          <h3>여러 장을 동시에</h3>
+          <p>한 장씩 기다리지 않습니다. 수십 장을 한 번에 읽어 목록으로 돌려 줍니다.</p>
+        </div>
+        <div class="card">
+          <h3>기프티콘만 골라냅니다</h3>
+          <p>사진첩에 섞여 있는 일상 사진은 그대로 두고, 기프티콘으로 보이는 것만 추립니다.</p>
+        </div>
+        <div class="card on">
+          <h3>앱을 열면 알아서<span class="badge">Android</span></h3>
+          <p>켜 두면 앱을 열 때마다 사진첩을 먼저 훑어 새로 들어온 기프티콘을 찾아 둡니다. 등록할지는 보고 정하시면 됩니다.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="band">
+      <div class="wrap split mid">
+        <div class="side">
+          <img class="shot" src="./intro/family.jpg" alt="가족 관리 화면" width="760" height="1079" />
+        </div>
+        <div class="main">
+          <div class="num">02</div>
+          <h2>한 서랍을 가족이 같이 씁니다</h2>
+          <p class="lead">
+            초대 코드나 카카오톡 링크를 보내면 이름만 적고 들어옵니다. 이름표 색이 하나씩 붙어,
+            목록에서 누가 등록한 것인지 한눈에 보입니다.
+          </p>
+          <div class="notes">
+            <div class="note">
+              <div class="dot"></div>
+              <p><b>참여 신청은 승인해야 들어옵니다.</b> 코드가 새어 나가도 목록이 바로 열리지 않습니다.</p>
+            </div>
+            <div class="note">
+              <div class="dot"></div>
+              <p><b>가족을 여러 개 둘 수 있습니다.</b> 본가와 우리집을 따로 두고 오갈 수 있습니다.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="wrap sec">
+      <div class="num">03</div>
+      <h2>쓰는 순간에 필요한 것만 큼직하게</h2>
+      <p class="lead">
+        계산대 앞에서는 바코드 하나면 됩니다. 금액권은 쓴 만큼 깎아 두면 남은 금액이 목록에 그대로 보입니다.
+      </p>
+      <div class="split mid s3">
+        <div class="side">
+          <img class="shot" src="./intro/barcode.jpg" alt="바코드 화면" width="760" height="980" />
+        </div>
+        <div class="main">
+          <p class="cap"><b>바코드와 번호를 크게 띄웁니다.</b> 가족이 남긴 메모도 함께 보입니다.</p>
+          <img class="shot inset" src="./intro/amount.jpg" alt="금액권으로 표시하는 칸" width="760" height="296" />
+          <p class="cap"><b>금액권은 한 번 표시해 두면 됩니다.</b> 쓴 만큼 깎여, 남은 금액이 목록에 그대로 보입니다.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="wrap sec">
+      <div class="num">04</div>
+      <h2>지금 있는 자리에서 쓸 수 있는 것부터</h2>
+      <p class="lead">
+        가진 기프티콘을 쓸 수 있는 매장이 근처 어디에 있는지 가까운 순으로 보여 줍니다.
+        매장을 누르면 지도가 열리고, 길찾기로 그대로 이어집니다. 전화도 목록에서 바로 걸립니다.
+      </p>
+      <div class="pair">
+        <img class="shot" src="./intro/nearby.jpg" alt="주변 매장 목록 화면" width="760" height="1473" />
+        <img class="shot" src="./intro/store-map.jpg" alt="매장 상세·길찾기 화면" width="760" height="1473" />
+      </div>
+      <div class="notes">
+        <div class="note on">
+          <div class="dot"></div>
+          <p><b>반대 방향으로도 씁니다.</b> 지금 이 근처에서 쓸 수 있는 기프티콘이 무엇인지 먼저 알려 주기 때문에, 나갔던 길에 한 장이 줄어듭니다.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="band">
+      <div class="wrap split mid">
+        <div class="main">
+          <div class="num">05</div>
+          <h2>기한이 지나도 끝이 아닙니다</h2>
+          <p class="lead">
+            기한이 가까워지면 푸시 알림으로 먼저 알려 주고, 목록에서는 남은 날짜가 카드마다 붙습니다.
+            이미 지난 것은 어떻게 되살릴 수 있는지 안내합니다. 발행처에서 연장을 받고 날짜를 반영해 두면
+            목록이 다시 살아납니다.
+          </p>
+          <div class="chips">
+            <div class="chip plain">푸시 알림</div>
+            <div class="chip plain">남은 날짜 표시</div>
+            <div class="chip plain">연장 날짜 반영</div>
+            <div class="chip good">5년 안 90% 환불 안내</div>
+          </div>
+        </div>
+        <div class="side">
+          <img class="shot" src="./intro/push.jpg" alt="기한 알림과 참여 신청 알림이 온 잠금화면" width="760" height="577" />
+          <p class="cap"><b>기한이 가까워지면 폰으로 알려 줍니다.</b> 가족이 참여를 신청했을 때도 같은 자리로 옵니다.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="wrap sec">
+      <div class="split mid">
+        <div class="side">
+          <img class="shot" src="./intro/report.jpg" alt="사용 내역 화면" width="760" height="1311" />
+        </div>
+        <div class="main">
+          <div class="num">06</div>
+          <h2>올해 얼마나 썼고, 얼마를 놓쳤는지</h2>
+          <p class="lead">
+            받은 개수와 쓴 개수, 가족별로 쓴 건수를 한 장에 모아 둡니다.
+            놓친 것이 보이면 다음에는 덜 놓치게 됩니다.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="wrap sec">
+      <h2>스무 살도, 예순 살도 같은 화면을 씁니다</h2>
+      <p class="lead">
+        가족이 함께 쓰는 앱이라 한 사람만 편해서는 안 됩니다. 큰 글씨 모드를 따로 두는 대신,
+        기본 화면을 모두가 읽을 수 있게 만들었습니다.
+      </p>
+      <div class="cards">
+        <div class="card">
+          <h3>누르는 곳은 크게</h3>
+          <p>버튼과 입력칸은 손가락이 빗나가지 않는 크기로 고정했습니다.</p>
+        </div>
+        <div class="card">
+          <h3>흐린 글씨를 쓰지 않습니다</h3>
+          <p>다 쓴 기프티콘도 글자는 그대로 두고 배경만 낮춰 구분합니다.</p>
+        </div>
+        <div class="card">
+          <h3>지울 때는 한 번 더</h3>
+          <p>되돌릴 수 없는 동작은 버튼을 떨어뜨려 두고 다시 묻습니다.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="wrap sec" id="start">
+      <h2>시작은 3분이면 됩니다</h2>
+      <div class="steps">
+        <div class="step">
+          <div class="n">1</div>
+          <h3>가족 만들기</h3>
+          <p>가족 이름과 내 이름만 적으면 서랍이 하나 생깁니다.</p>
+        </div>
+        <div class="step">
+          <div class="n">2</div>
+          <h3>기프티콘 넣기</h3>
+          <p>그동안 받아 둔 기프티콘을 사진첩에서 찾거나 사진으로 올립니다.</p>
+        </div>
+        <div class="step">
+          <div class="n">3</div>
+          <h3>가족 초대하기</h3>
+          <p>초대 코드를 보내고 승인하면 같은 목록을 보게 됩니다.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="night end">
+      <div class="wrap">
+        <div class="top-row">
+          <div>
+            <h2>올해 받은 기프티콘,<br />아직 늦지 않았습니다</h2>
+            <p class="sub">모아콘 · 우리 가족 기프티콘 서랍</p>
+          </div>
+          <div class="act">
+            <a class="btn" href="https://ceaser501.github.io/our-home-gift/">모아콘 시작하기</a>
+            <p class="store">App Store · Google Play 출시 준비 중입니다</p>
+          </div>
+        </div>
+        <div class="rule"></div>
+        <div class="foot-row">
+          <div class="foot">
+            <img src="./icon-192.png" alt="" />
+            <p>모아콘 · <a href="./privacy.html">개인정보처리방침</a> · <a href="./delete-account.html">계정 삭제</a></p>
+          </div>
+          <div class="foot">
+            <p>
+              화면은 실제 앱 화면이고, 이름·금액·바코드 번호는 예시입니다.
+              보이는 상호는 이용자가 등록한 기프티콘의 정보이며, 모아콘은 해당 브랜드와 제휴·후원 관계가 없습니다.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
