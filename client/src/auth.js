@@ -28,6 +28,16 @@ async function openAuthPage(url) {
 
 // 소셜 로그인은 세 곳 다 흐름이 같다. 주소를 받아서 여는 것까지만 여기서 하고,
 // 돌아온 뒤 처리는 client/src/utils/deepLink.js가 맡는다.
+// 구글은 브라우저에 이미 로그인된 계정이 있으면 묻지 않고 그 계정으로 그냥 들어간다.
+// 계정이 하나뿐인 사람에게는 편하지만, 여럿인 사람에게는 고를 자리가 없다 — '다른
+// 계정으로 로그인'을 눌러도 화면이 그대로 돌기만 한다.
+//
+// 이 앱은 가족이 각자 자기 계정으로 들어오는 앱이고, 한 폰에 계정이 둘 이상인 경우가
+// 흔하다(회사 계정, 예전 계정). 그래서 늘 고르게 한다.
+//
+// 카카오·네이버에는 이 값이 없다. 구글에만 붙인다.
+const PROMPT_FOR_ACCOUNT = { google: { prompt: 'select_account' } };
+
 async function startOAuth(provider, failMessage) {
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider,
@@ -35,6 +45,7 @@ async function startOAuth(provider, failMessage) {
       redirectTo: redirectTarget(),
       // 앱에서는 supabase가 바로 페이지를 넘기지 않게 막고, 주소만 받아서 직접 연다.
       skipBrowserRedirect: isNativeApp(),
+      ...(PROMPT_FOR_ACCOUNT[provider] ? { queryParams: PROMPT_FOR_ACCOUNT[provider] } : {}),
     },
   });
   if (error) throw new Error(error.message || failMessage);
