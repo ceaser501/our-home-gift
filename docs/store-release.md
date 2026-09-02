@@ -166,8 +166,8 @@ Play에 올리면 **앱 서명 키를 구글이 관리**(Play App Signing)하게
   스토어 등록 정보에 쓰는 것과 일상 대화에서 쓰는 것은 다르다. 출시 전에
   [특허정보넷 키프리스](http://www.kipris.or.kr)에서 확인해두는 편이 좋다.
 - **다른 회사의 브랜드명·로고**가 앱 화면이나 스크린샷에 들어가면 문제가 될 수 있다.
-  `client/src/sampleData.js`와 `client/src/sampleThumbs.js`에 실제 브랜드가 들어 있다면
-  스토어 스크린샷에서는 빼는 편이 안전하다.
+  실제 브랜드가 들어 있던 목데이터는 걷어냈지만, 스토어 스크린샷을 찍을 때 화면에 뜬
+  기프티콘의 상호는 그대로 사진에 남는다. 찍기 전에 한 번 본다.
 - 앱이 기프티콘을 **거래·중개**하지 않는다는 점은 분명히 해두는 게 좋다. 금융·상품권
   관련 규제와 스토어 정책 양쪽에서 민감한 영역이다.
 
@@ -288,11 +288,13 @@ Play에 올리면 **앱 서명 키를 구글이 관리**(Play App Signing)하게
 12명에게 나눠줄 빌드다. 여기부터 치우고 올린다.
 체크리스트는 [security.md의 "배포 전 최종 체크리스트"](security.md).
 
-- [ ] `reset-all-data` 세 곳 + `supabase/config.toml` 블록
-- [ ] 두 워크플로의 `VITE_TEST_TOOLS`, Supabase의 `RESET_TOKEN`
-- [ ] `client/src/utils/scanCache.js` — 틀리게 읽은 값이 폰에 굳는다
-- [ ] 로고 길게 누르기 메뉴
-- [ ] `client/src/utils/imageAnalyze.js`의 `meta` 진단값
+- [x] `reset-all-data` 세 곳 + `supabase/config.toml` 블록
+- [x] 두 워크플로의 `VITE_TEST_TOOLS`
+- [x] `client/src/utils/scanCache.js` — 틀리게 읽은 값이 폰에 굳는다
+- [x] 로고 길게 누르기 메뉴, 목데이터
+- [x] `client/src/utils/imageAnalyze.js`의 `meta` 진단값
+- [ ] Supabase에서 `supabase functions delete reset-all-data`, 시크릿 `RESET_TOKEN` 제거
+- [ ] `supabase/drop-sample-skip.sql` (급하지 않다)
 
 ### 2단계 — Play 비공개 테스트 시작 (여기서 14일 시계가 돈다)
 

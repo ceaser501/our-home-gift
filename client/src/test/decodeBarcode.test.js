@@ -33,8 +33,6 @@ vi.mock('@zxing/library', () => ({
   DecodeHintType: { TRY_HARDER: 'TRY_HARDER' },
 }));
 vi.mock('../api', () => ({ analyzeGifticonImages: vi.fn() }));
-vi.mock('../utils/scanCache', () => ({ readCachedInfo: () => null, writeCachedInfo: () => {} }));
-
 const { decodeBarcode } = await import('../utils/imageAnalyze');
 
 beforeEach(() => {

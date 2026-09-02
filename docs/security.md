@@ -218,36 +218,37 @@ if (cronSecret && url.searchParams.get('token') !== cronSecret) { ... 401 }
 
 ## 배포 전 최종 체크리스트
 
-**스토어 제출 직전에 반드시 확인할 것.** 지금은 테스트 기간이라 일부러 남겨둔 항목이다.
+**스토어 제출 직전에 반드시 확인할 것.**
 
-- [ ] **`reset-all-data` 완전 제거** — 세 곳을 모두 지워야 한다. 하나라도 남으면 의미가 없다.
-  - [ ] `supabase/functions/reset-all-data/` 삭제 + Supabase에서 함수 삭제(`supabase functions delete reset-all-data`)
-  - [ ] `client/src/components/ResetAllDataButton.jsx` 삭제 및 화면에서 제거
-  - [ ] `client/src/api.js`의 `resetAllData()` 삭제
-  - [ ] 두 워크플로에서 `VITE_TEST_TOOLS` 줄 제거, Supabase 시크릿에서 `RESET_TOKEN` 제거
-        (`VITE_RESET_TOKEN`은 더 이상 쓰지 않는다 — 비밀이 될 수 없어서 관리자 로그인 확인으로 바꿨다)
-  - [ ] `supabase/config.toml`의 `[functions.reset-all-data]` 블록 제거
-- [ ] **샘플(목) 데이터 비활성 확인** — `client/src/sampleData.js`는 `VITE_TEST_TOOLS`가 있을 때만 동작한다. 위 항목을 지우면 자동으로 꺼지지만 실제로 안 들어가는지 확인할 것
-- [ ] **스캔 캐시 제거** — `client/src/utils/scanCache.js`. 한 번 읽은 바코드 번호의 결과를
-      폰에 두고 서버를 다시 안 부르는 장치다. 테스트로 같은 사진을 반복해서 읽히느라 하루
-      한도가 스물몇 번 만에 바닥나서 넣었다. 출시에는 들어가면 안 된다 — 모델이 틀리게 읽은
-      값이 그대로 굳는데(예: "떠먹는" → "따먹는"), 자동 스캔은 사람이 고치는 단계 없이 바로
-      등록까지 가서 고쳐 쓸 자리가 없다. 자세한 내용은 [scan-cost.md](scan-cost.md).
-  - [ ] `client/src/utils/scanCache.js` 삭제
-  - [ ] `client/src/utils/imageAnalyze.js`의 import와 `readCachedInfo`/`writeCachedInfo` 두 줄 제거
-        (썸네일 자를 자리가 비었는지 보는 `thumbSource` 확인은 남겨둬도 무해하다)
-  - [ ] `client/src/components/ResetAllDataButton.jsx`의 `scan-cache` 항목 제거
-        (이 파일은 어차피 통째로 지운다)
-  - [ ] `ANALYZE_DAILY_LIMIT` / `ANALYZE_TOTAL_DAILY_LIMIT`을 출시 값으로 정하기
-        (`supabase/functions/analyze-gifticon/index.ts`. 지금은 손대지 않고 30 / 500이다 —
-        둘은 성격이 달라서 나란히 놓고 한 번에 정하기로 했다)
-- [x] **훑기 진단 표시 제거** — 배스킨라빈스 카드 한 장이 왜 안 읽히는지 나흘을 짐작으로
-      고치다 넣은 것들이다. 화면에 나오던 것은 모두 지웠다.
-      (`probeBarcode`, `막대를 못 읽은 사진` 목록, 카드 진단줄, 단계별 시간 표시.
-      그 아래 **폴더별 안내 문구는 출시 기능이라 남긴다.**)
-  - [ ] `client/src/utils/imageAnalyze.js`의 `meta` — `promptVersion`·`fromCache`·
-        `askMs`/`verifyMs`·`nameChanged`·`verifyWhy`. 지금은 만들기만 하고 아무도 안 쓴다.
-        다시 짚어볼 일이 있을까 싶어 남겨뒀다 — 출시 전에 지운다
+### 코드에서 걷어낸 것 (2026-09-02)
+
+- [x] **`reset-all-data` 완전 제거** — 함수·화면·api.js·config.toml 네 곳 모두
+- [x] **테스트 메뉴** — `ResetAllDataButton.jsx`(로고 0.8초 길게 누르기)와
+      두 워크플로·`.env.example`의 `VITE_TEST_TOOLS`
+- [x] **샘플(목) 데이터** — `sampleData.js`·`sampleThumbs.js`, 그리고 그 번호대를
+      활동 기록에서 건너뛰던 SQL 가지
+- [x] **스캔 캐시** — `scanCache.js`. 한 번 읽은 번호의 결과를 폰에 두고 서버를 다시
+      안 부르는 장치였다. 출시에 들어가면 안 되는 이유는 모델이 틀리게 읽은 값이 그대로
+      굳어서다(예: "떠먹는" → "따먹는"). 자동 스캔은 사람이 고치는 단계 없이 바로 등록까지
+      가서 고쳐 쓸 자리가 없다. 자세한 내용은 [scan-cost.md](scan-cost.md)
+- [x] **훑기 진단 표시** — `probeBarcode`, `막대를 못 읽은 사진` 목록, 카드 진단줄,
+      단계별 시간 표시, `readGifticonInfo`가 돌려주던 `meta`.
+      (**폴더별 안내 문구는 출시 기능이라 남긴다.**)
+
+`.github/workflows/build-android-apk.yml`의 `Check test-only leftovers`가 위 항목이
+되살아나면 빌드를 세운다. 예전에는 경고만 띄웠는데, 경고는 로그를 안 보면 지나간다.
+
+**남아 있는 진단 스위치 둘은 그대로 둔다.** `GalleryScanSheet.jsx`의
+`SHOW_SKIPPED_NOTES`·`SHOW_MISSED_DETAILS`는 둘 다 `false` 상수라 아무것도 그리지
+않고 데이터를 건드리지도 않는다. 판독이 또 막히면 올려서 쓸 자리다.
+
+### 태수님이 하실 것
+
+- [ ] `supabase functions delete reset-all-data`
+- [ ] Supabase 시크릿에서 `RESET_TOKEN` 제거
+- [ ] `supabase/drop-sample-skip.sql` 실행 (급하지 않다 — 이미 아무 일도 안 하는 가지다)
+- [ ] `ANALYZE_DAILY_LIMIT` / `ANALYZE_TOTAL_DAILY_LIMIT`을 출시 값으로 정하기
+      (지금은 30 / 500. 둘은 성격이 달라서 나란히 놓고 한 번에 정하기로 했다)
 - [ ] 위 1~11번 조치 완료 확인
 - [ ] Anthropic·카카오·TMAP·Supabase 각각 **일일 사용량 상한과 알림** 설정
 - [ ] 개인정보처리방침·이용약관 URL이 앱과 스토어 양쪽에 연결돼 있는지 확인

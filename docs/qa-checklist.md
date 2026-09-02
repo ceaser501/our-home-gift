@@ -79,8 +79,6 @@
 ### 알림도 같이
 
 - [ ] 금액권을 조금 쓰면 종에 **「◯◯원 썼어요」**가 뜨는지
-- [ ] 목데이터(9000111122…)로는 알림이 안 뜨는지. **사용 내역에는 떠야 한다** —
-      알림만 걸러내고 기록은 남긴다
 
 ---
 
@@ -99,7 +97,6 @@
 - [ ] `supabase/admin-users.sql` — 관리자 명단(주인·자물쇠·넣고 빼는 함수). admin-permanent.sql을 대신한다
 - [x] `supabase functions deploy admin-stats`
 - [x] `supabase functions deploy delete-account`
-- [ ] `supabase functions deploy reset-all-data` — 관리자 확인을 이메일 기준으로
 - [ ] `select jobname, schedule from cron.job;`으로 예약이 다 살아 있는지 한 번 확인
 - [ ] 만료 알림이 실제로 폰까지 오는지 — `supabase/push-test-once.sql`로 시각을 정해
       한 번 보내본다. 정기 발송(9시·15시)을 기다리면 반나절이 간다

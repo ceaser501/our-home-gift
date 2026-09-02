@@ -27,11 +27,6 @@ vi.mock('../api', () => ({
   verifyGifticonName: (...args) => verifyGifticonName(...args),
 }));
 
-vi.mock('../utils/scanCache', () => ({
-  readCachedInfo: () => null,
-  writeCachedInfo: () => {},
-}));
-
 const { readGifticonInfo } = await import('../utils/imageAnalyze');
 
 function serverSays(extra) {
@@ -69,8 +64,6 @@ describe('상품명 재확인', () => {
     const info = await readGifticonInfo(prepared);
 
     expect(info.name).toBe('떠먹는 스트로베리 케이크');
-    expect(info.meta.nameChanged).toBe(true);
-    expect(info.meta.nameBefore).toBe('따먹는 스트로베리 케이크');
   });
 
   it('통째로 틀린 것도 고친다', async () => {
@@ -100,8 +93,8 @@ describe('상품명 재확인', () => {
 
     const info = await readGifticonInfo(prepared);
 
+    expect(verifyGifticonName).toHaveBeenCalledTimes(1);
     expect(info.name).toBe('따먹는 스트로베리 케이크');
-    expect(info.meta.nameUnchecked).toBe(true);
   });
 
   // 이 함수는 { name, why }를 준다. 한때 그 덩어리를 통째로 info.name에 넣었고,
@@ -116,25 +109,25 @@ describe('상품명 재확인', () => {
     expect(typeof info.name).toBe('string');
   });
 
-  // 왜 확인을 못 했는지는 화면에 적힌다(테스트 빌드). 이유가 안 실려 오면 그 자리가 빈다.
-  it('확인에 실패하면 이유를 남긴다', async () => {
+  // 못 읽었다는 답에 딸려 오는 why는 이름 자리에 얼씬해서는 안 된다. 한때 { name, why }를
+  // 통째로 넣었다가 화면이 하얗게 죽었다.
+  it('확인에 실패해도 이유가 이름 자리로 새지 않는다', async () => {
     analyzeGifticonImages.mockResolvedValue(serverSays());
     verifyGifticonName.mockResolvedValue({ name: null, why: '답이 잘림' });
 
     const info = await readGifticonInfo(prepared);
 
-    expect(info.meta.verifyWhy).toBe('답이 잘림');
+    expect(info.name).toBe('따먹는 스트로베리 케이크');
   });
 
-  it('둘이 같게 읽었으면 아무 표시도 남기지 않는다', async () => {
+  it('둘이 같게 읽었으면 그 이름 그대로다', async () => {
     analyzeGifticonImages.mockResolvedValue(serverSays({ name: '아이스 아메리카노 T' }));
     verifyGifticonName.mockResolvedValue({ name: '아이스 아메리카노 T', why: null });
 
     const info = await readGifticonInfo(prepared);
 
+    expect(verifyGifticonName).toHaveBeenCalledTimes(1);
     expect(info.name).toBe('아이스 아메리카노 T');
-    expect(info.meta.nameChanged).toBeUndefined();
-    expect(info.meta.nameUnchecked).toBeUndefined();
   });
 
   // 이름을 아예 못 읽은 건은 확인할 것이 없다. 빈칸을 물어봐야 값만 나간다.
@@ -156,7 +149,6 @@ describe('상품명 재확인', () => {
     const info = await readGifticonInfo(prepared);
 
     expect(info.name).toBe('따먹는 스트로베리 케이크');
-    expect(info.meta.nameUnchecked).toBe(true);
     expect(verifyGifticonName).not.toHaveBeenCalled();
   });
 });

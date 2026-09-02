@@ -122,12 +122,6 @@ begin
     );
   end if;
 
-  -- ⚠️ 테스트 전용. 출시 전에 이 두 줄을 지운다(client/src/sampleData.js와 함께).
-  -- 목데이터는 사람이 올린 것이 아니라 앱이 채워 넣은 것이라 알릴 일이 아니다.
-  if new.code like '9000111122%' then
-    return new;
-  end if;
-
   -- 가족에서 나간 사람의 기프티콘은 목록에 안 보이므로 알릴 것도 없다.
   if new.family_id is null or new.hidden_at is not null then
     return new;

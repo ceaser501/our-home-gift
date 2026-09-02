@@ -16,11 +16,6 @@ vi.mock('../api', () => ({
   verifyGifticonName: () => Promise.resolve({ name: null, why: null }),
 }));
 
-vi.mock('../utils/scanCache', () => ({
-  readCachedInfo: () => null,
-  writeCachedInfo: () => {},
-}));
-
 const { readGifticonInfo } = await import('../utils/imageAnalyze');
 
 // 썸네일을 안 자르게 thumbnail은 비워 둔다. 자르는 쪽은 캔버스가 필요한데 여기엔 없다.

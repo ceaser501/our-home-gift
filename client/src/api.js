@@ -545,26 +545,6 @@ export async function deleteGifticon(id) {
   if (paths.length) await removeImages(paths);
 }
 
-// ⚠️ 테스트 전용. 샘플로 넣어둔 기프티콘만 골라 지운다(번호 앞자리로 알아본다).
-// 실사용 배포 전에 이 함수와 부르는 곳을 함께 지운다 — client/src/components/ResetAllDataButton.jsx.
-//
-// 샘플에도 그려 넣은 썸네일이 딸려 있어서, 줄만 지우면 그림 파일이 버킷에 남는다.
-// 넣고 지우기를 반복하는 도구라 쌓이면 금방 지저분해진다.
-export async function deleteSampleGifticons(familyId, codePrefix) {
-  const { data, error } = await supabase
-    .from(GIFTICON_TABLE)
-    .delete()
-    .eq('family_id', familyId)
-    .like('code', `${codePrefix}%`)
-    .select('id, image_paths, barcode_image_path, thumb_image_path');
-  if (error) throw new Error(error.message);
-
-  const paths = (data || []).flatMap((row) => imagePathsOf(row));
-  if (paths.length) await removeImages(paths);
-
-  return data?.length ?? 0;
-}
-
 // 운영자 공지. 아직 시작 안 된 글은 RLS가 걸러주고, 여기서는 끝난 글만 더 걸러낸다.
 // 끝난 글까지 받아오는 이유: "지난 공지"로 모아 보여줘야 해서다. 화면에서 나눠 쓴다.
 export async function listNotices() {
@@ -714,18 +694,6 @@ export async function hasMyPushSubscriptions(userId) {
 export async function deleteMyPushSubscriptions(userId) {
   const { error } = await supabase.from('push_subscriptions').delete().eq('user_id', userId);
   if (error) throw new Error(error.message);
-}
-
-// ⚠️ 테스트 전용: 가족/구성원/기프티콘/이미지/가입계정을 전부 지운다.
-export async function resetAllData() {
-  // 토큰을 보내지 않는다. 로그인 토큰은 supabase 클라이언트가 자동으로 실어 보내고,
-  // 서버가 그 사람이 관리자 명단에 있는지 확인한다.
-  const { data, error } = await supabase.functions.invoke('reset-all-data');
-  if (error) {
-    const detail = await error.context?.json?.().catch(() => null);
-    throw new Error(detail?.error || error.message || '초기화에 실패했어요.');
-  }
-  return data;
 }
 
 // "이건 내가 쓸게" 표시. 한 사람만 찜할 수 있어서, 이미 다른 사람이 찜해뒀으면

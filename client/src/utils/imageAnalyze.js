@@ -3,7 +3,6 @@ import { barcodeScaleLadder } from './gallery';
 import { BarcodeFormat, DecodeHintType } from '@zxing/library';
 import { CATEGORY_KEYS } from '../constants';
 import { analyzeGifticonImages, verifyGifticonName } from '../api';
-import { readCachedInfo, writeCachedInfo } from './scanCache';
 
 // 기프티콘 이미지에서 정보를 뽑는 과정은 두 갈래다.
 //   1) 바코드/QR: 브라우저에서 zxing이 바로 읽는다. 매장에서 스캔할 크롭 이미지도 여기서 만든다.
@@ -74,11 +73,6 @@ async function toAnalyzeCanvas(file) {
   const canvas = drawScaled(source, width, height, analyzeScale(Math.max(width, height)));
   source.close?.();
   return canvas;
-}
-
-// 시간 재기. performance가 없는 환경(오래된 웹뷰, 테스트)에서도 터지지 않게 감싼다.
-function now() {
-  return typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now();
 }
 
 function loadImage(src) {
@@ -491,24 +485,7 @@ export async function readGifticonInfo(prepared, { onProgress, knownCode, knownT
   const report = (step) => onProgress?.({ step, total });
 
   report('reading');
-  // 테스트 중에는 같은 번호를 다시 읽히지 않는다. 실사용 배포에서는 늘 null이라
-  // 아래 호출이 그대로 나간다 (client/src/utils/scanCache.js).
-  //
-  // 열쇠는 부르는 쪽이 아는 번호를 먼저 쓴다. 여기서 다시 읽은 prepared.code만 쓰면
-  // 갤러리 훑기의 정밀 탐색으로 찾은 건이 통째로 빠진다 — 저쪽은 tryHarder를 켜고 읽고
-  // 이쪽 decodeBarcode는 그냥 읽어서, 저쪽만 성공하는 사진이 있다. 그런 건은 열쇠가
-  // 없어 저장되지 않았고, 여덟 건을 읽어도 캐시에는 한 건만 남았다.
-  //
-  // 번호에 사진 장수를 붙인다. 번호만으로 두면, 같은 기프티콘에 정보 화면을 한 장 더해
-  // 다시 올려도 예전 답이 그대로 나온다 — 새로 넣은 사진은 모델이 보지도 못한다.
-  // "금액 화면을 같이 올렸는데 금액이 안 채워진다"가 그래서 났고, 그때는 캐시를
-  // 의심하기 어려웠다. 화면에는 사진이 세 장 멀쩡히 붙어 있기 때문이다.
-  const known = knownCode || prepared.code;
-  const cacheKey = known ? `${known}·${prepared.uploads.length}장` : null;
-  const cached = readCachedInfo(cacheKey);
-  // 두 번 부르는 구조라 한 덩어리로 재면 어느 쪽이 느린지 알 수가 없다. 나눠 잰다.
-  const askedAt = now();
-  const asking = cached ? null : analyzeGifticonImages(prepared.uploads, CATEGORY_KEYS);
+  const asking = analyzeGifticonImages(prepared.uploads, CATEGORY_KEYS);
 
   // 사진이 한 장뿐이면 상품명이 어디 있는지 물어볼 것도 없다. 그 한 장이다.
   // 그래서 답을 기다리지 않고 상품명 확인을 같이 출발시킨다.
@@ -518,24 +495,9 @@ export async function readGifticonInfo(prepared, { onProgress, knownCode, knownT
   //
   // 여러 장일 때는 못 한다. 어느 사진에 이름이 있는지는 읽어봐야 알고, 아무 장이나 미리
   // 쏘면 이름이 없는 화면을 물어보는 셈이라 값만 나가고 답은 빈칸이다.
-  //
-  // 끝난 시각은 답이 오는 그 자리에서 찍는다. 아래에서 받아 든 시각으로 재면 못 쓴다 —
-  // 나란히 쏜 것은 읽기가 끝난 뒤에야 await하므로, 확인이 먼저 끝나 있어도 읽기가
-  // 끝나기를 기다린 시간까지 얹혀 찍힌다. 그래서 확인이 아무리 빨라도 읽기보다 작게
-  // 나올 수가 없었다. 실제로 화면에 읽기 9.0초·확인 9.0초처럼 같은 값이 나란히 찍혔고,
-  // 그걸 보면 "확인이 읽기만큼 걸린다"고 읽게 된다. 나눠 잰 이유가 없어진다.
-  let soloDoneAt = 0;
-  const soloVerify =
-    !cached && prepared.uploads.length === 1
-      ? verifyGifticonName(prepared.uploads[0]).then((answer) => {
-          soloDoneAt = now();
-          return answer;
-        })
-      : null;
-  const soloAt = now();
+  const soloVerify = prepared.uploads.length === 1 ? verifyGifticonName(prepared.uploads[0]) : null;
 
-  const info = cached || (await asking);
-  const askMs = cached ? 0 : now() - askedAt;
+  const info = await asking;
 
   // 상품명만 한 번 더 읽힌다. 그 사진 한 장을 통째로 다시 보낸다.
   //
@@ -551,43 +513,22 @@ export async function readGifticonInfo(prepared, { onProgress, knownCode, knownT
   // 틀린 이름으로 덮이는데, 그걸 막으려고 "앞서 읽은 이름과 너무 다르면 물리친다"를 넣었다가
   // 둘 다 걷어냈다 — 못 믿는 쪽을 자로 삼는 셈이라, 하이쿠가 크게 틀릴수록("또망는 케이크")
   // 맞는 교정을 더 확실히 막았다. 통째로 주면 저쪽이 스스로 상품명을 찾으니 좌표가 필요 없다.
-  //
-  // 캐시에서 꺼낸 답은 이미 확인을 거친 이름이라 다시 묻지 않는다(테스트 빌드 전용).
-  const meta = { fromCache: Boolean(cached), promptVersion: info.promptVersion, askMs };
-  if (!cached && info.name && info.nameImage) {
+  if (info.name && info.nameImage) {
     report('verifying');
     // 나란히 출발시킨 것이 있으면 그것을 받는다. 없으면 이제 짚어준 사진으로 부른다.
-    //
-    // 시간은 각자 출발한 자리부터 끝난 자리까지 잰다. 줄 세운 것을 출발 전부터 재면
-    // 읽기 시간까지 얹혀 찍히고, 나란히 쏜 것을 여기서 끝냈다고 치면 읽기를 기다린
-    // 시간이 얹힌다. 양쪽 끝을 다 제 자리에 둬야 두 값을 나란히 놓고 볼 수 있다.
     const upload = prepared.uploads[info.nameImage - 1] || null;
-    const startedAt = soloVerify ? soloAt : now();
     // verifyGifticonName은 { name, why }를 준다. 이름만 꺼내 써야 한다 —
     // 통째로 info.name에 넣었더니 화면이 객체를 그리려다 하얗게 죽었다.
     const answer = soloVerify ? await soloVerify : upload ? await verifyGifticonName(upload) : null;
     const checked = typeof answer?.name === 'string' ? answer.name : null;
-    // 나란히 쏜 것은 답이 온 자리에서 찍어둔 시각으로 잰다. 여기서 재면 읽기를 기다린
-    // 시간까지 들어간다.
-    meta.verifyMs = (soloVerify ? soloDoneAt : now()) - startedAt;
-    if (checked && checked !== info.name) {
-      meta.nameChanged = true;
-      meta.nameBefore = info.name;
-      info.name = checked;
-    } else if (!checked) {
-      // 못 물어본 것과 물어봤는데 같은 것은 다르다. 앞엣것은 확인이 안 된 이름이다.
-      meta.nameUnchecked = true;
-      meta.verifyWhy = answer?.why || '이유 모름';
-    }
-  } else if (!cached && info.name) {
-    meta.nameUnchecked = true;
+    // 못 물어봤으면(checked가 없으면) 처음 읽은 이름을 그대로 쓴다. 확인이 안 된 이름이지만,
+    // 비워두면 목록에서 그게 무엇인지 알아볼 수가 없다.
+    if (checked && checked !== info.name) info.name = checked;
   }
   // 나란히 쏜 것을 안 쓰게 된 경우(이름을 못 읽었다). 답이 와도 받을 곳이 없지만,
   // 붙잡지 않으면 처리 안 된 거절로 콘솔에 남는다. verifyGifticonName은 실패해도
   // 던지지 않으므로 여기 걸릴 일은 거의 없다.
   soloVerify?.catch(() => {});
-
-  if (!cached) writeCachedInfo(cacheKey, info);
 
   // 서버가 상품 사진 위치를 못 짚었으면 잘라내지 않는다. 이 경우 목록은 예전처럼
   // 첫 사진을 그대로 보여준다(잘못 자른 그림보다는 캡처 전체가 낫다).
@@ -691,7 +632,5 @@ export async function readGifticonInfo(prepared, { onProgress, knownCode, knownT
     expiresAt: info.expiresAt || null,
     name: readName || readBrand || '',
     isVoucher: Boolean(info.isVoucher),
-    // 이 답이 어디서 왔는지. 테스트 빌드 화면에만 찍힌다.
-    meta,
   };
 }

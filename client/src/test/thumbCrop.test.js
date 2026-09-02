@@ -15,11 +15,6 @@ vi.mock('../api', () => ({
   verifyGifticonName: () => Promise.resolve({ name: null, why: null }),
 }));
 
-vi.mock('../utils/scanCache', () => ({
-  readCachedInfo: () => null,
-  writeCachedInfo: () => {},
-}));
-
 const { readGifticonInfo, boxHolds, toSquare, looksLikeTextPanel } = await import('../utils/imageAnalyze');
 
 beforeEach(() => vi.clearAllMocks());

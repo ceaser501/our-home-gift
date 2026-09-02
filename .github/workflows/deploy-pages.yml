@@ -43,10 +43,6 @@ jobs:
         working-directory: client
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          # 브로셔용 스크린샷을 찍는 동안만 테스트 메뉴를 띄운다. 비밀이 아니다 —
-          # 실제 초기화 권한은 서버가 관리자 명단으로 확인한다.
-          # 출시 전에 이 줄을 지운다(docs/store-release.md).
-          VITE_TEST_TOOLS: '1'
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_NAVER_CLIENT_ID: ${{ secrets.VITE_NAVER_CLIENT_ID }}
           VITE_KAKAO_JS_KEY: ${{ secrets.VITE_KAKAO_JS_KEY }}
