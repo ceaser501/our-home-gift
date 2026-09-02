@@ -907,9 +907,9 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
                 하필 잘리는 것이 끝자리라, 11월 1일인지 10일인지 20일인지를 알 수 없다.
 
                 기한은 이 앱이 하는 일의 거의 전부다. 반대로 번호는 열몇 자리, 금액은
-                길어야 여섯 자리라 절반씩으로 충분하다. 번호가 조금 더 기니 3:2로 나눈다. */}
-            <div className="grid grid-cols-5 gap-3">
-              <div className="col-span-3 flex flex-col gap-1.5">
+                길어야 여섯 자리라 절반씩으로 충분하다. */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1.5">
                 <Label htmlFor="f-code" className="text-[14px] font-semibold text-foreground/80">바코드 번호</Label>
                 <Input
                   id="f-code"
@@ -920,7 +920,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
                 />
               </div>
 
-              <div className="col-span-2 flex flex-col gap-1.5">
+              <div className="flex flex-col gap-1.5">
                 <Label htmlFor="f-amount" className="text-[14px] font-semibold text-foreground/80">
                   금액 <Optional />
                 </Label>
