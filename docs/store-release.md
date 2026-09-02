@@ -260,37 +260,88 @@ Play에 올리면 **앱 서명 키를 구글이 관리**(Play App Signing)하게
 
 ---
 
-## 8. 순서 제안
+## 8. 순서 (2026-09-02 다시 정함)
 
-**1단계 — 지금 구조를 스토어에 맞추기**
+### 일정을 지배하는 것은 Play의 14일이다
+
+개인 개발자 계정으로 만든 앱은 **12명이 14일 연속 비공개 테스트에 들어가 있어야**
+프로덕션 출시를 신청할 수 있다(2023-11-13 이후 만든 개인 계정 대상. 사업자로 등록한
+법인 계정은 면제).
+
+이 14일은 코드로 줄일 수 없다. **그러니 시계부터 돌린다.** 나머지 작업은 그 14일 동안
+같이 굴러간다. 반대로 하면 다 만들어놓고 2주를 그냥 기다리게 된다.
+
+- 원문: [App testing requirements for new personal developer accounts](https://support.google.com/googleplay/android-developer/answer/14151465)
+- 예전에는 20명이었다. 2024년 12월에 12명으로 줄었다.
+- 2026년부터는 그 12명이 **실제로 앱을 썼는지**도 본다. 이름만 넣어두면 안 된다.
+
+### 0단계 — 계정 두 개 (제일 먼저. 기다리는 시간이 있다)
+
+- [ ] **Google Play Console** $25, 평생 1회. 신원 확인에 며칠 걸린다
+- [ ] **Apple Developer Program** $99/년. 신원 확인에 하루이틀.
+      이게 없으면 iOS 빌드도 Sign in with Apple도 시작할 수 없다
+
+둘은 서로를 안 기다린다. 같은 날 신청한다.
+
+### 1단계 — 테스트로 넣어둔 것 걷기
+
+12명에게 나눠줄 빌드다. 여기부터 치우고 올린다.
+체크리스트는 [security.md의 "배포 전 최종 체크리스트"](security.md).
+
+- [ ] `reset-all-data` 세 곳 + `supabase/config.toml` 블록
+- [ ] 두 워크플로의 `VITE_TEST_TOOLS`, Supabase의 `RESET_TOKEN`
+- [ ] `client/src/utils/scanCache.js` — 틀리게 읽은 값이 폰에 굳는다
+- [ ] 로고 길게 누르기 메뉴
+- [ ] `client/src/utils/imageAnalyze.js`의 `meta` 진단값
+
+### 2단계 — Play 비공개 테스트 시작 (여기서 14일 시계가 돈다)
+
+- [ ] AAB 올리기. `npm run release`로 태그를 따면 빌드가 APK와 함께 만들어
+      **워크플로 아티팩트**에 넣어둔다(Release 노트에는 APK만 붙는다). Play는 AAB만 받는다
+- [ ] 12명 모아서 opt-in
+- [ ] 스토어 등록 정보 초안, 데이터 세이프티 양식
+
+### 3단계 — 14일이 도는 동안, 아이폰 쪽
+
+- [ ] **Sign in with Apple** — iOS 제출의 관문이다(4.8). 남은 것 중 제일 크다.
+      애플이 릴레이 이메일을 주므로 계정 식별 구조를 같이 봐야 한다(1장)
+- [ ] 알림 — APNs 토큰을 FCM 토큰으로 바꿔주는 플러그인 ([ios-release.md](ios-release.md))
+- [ ] [설정 열기] 아이폰 이식 — 5장
+- [ ] TestFlight로 실기 확인
+
+### 4단계 — 주소와 자원
+
+**출시 필수는 아니다.** 지금 GitHub Pages 주소로도 스토어가 요구하는 URL은 다 된다.
+다만 커스텀 스킴 딥링크(3장)를 App Links로 올리려면 루트가 필요하다.
+
+- [ ] 도메인을 살지 정한다 (연 1.5~2만원. 안 사면 `ceaser501.github.io` 저장소로 공짜)
+- [ ] `.well-known/` 올리고 App Links / Universal Links로 승격
+- [ ] Cloudflare Pages 이전 + 저장소 private — **이 둘은 한 몸이다.**
+      무료 계정은 private 저장소에서 Pages를 못 쓴다. 먼저 옮기고 닫는다.
+      개인정보처리방침만은 어떤 경우에도 공개 URL로 남는다
+
+### 5단계 — 돈이 새는 자리
+
+- [ ] 업로드 이미지를 축소본으로 (스토리지 1/10) — 6-2장. **700건이면 무료 한도가 찬다**
+- [ ] AI 한도를 출시 값으로, 달 단위 한도 만들기 — 아래 "출시 확정 뒤에" 1번
+- [ ] Anthropic·카카오·TMAP·Supabase 각각 사용량 상한과 알림
+
+### 6단계 — 제출
+
+- [ ] Play 사진 권한 선언 (자동 스캔이 여기 걸린다. 반려되면 그 기능만 빼고 낸다 — 2장)
+- [ ] 스크린샷, 앱 설명, 콘텐츠 등급, 개인정보 라벨
+- [ ] "기프티콘" 상표 확인 — 6장
+- [ ] Play 프로덕션 신청 / App Store 제출
+
+### 이미 끝난 것
+
 - [x] `server.url` 제거, 화면을 앱에 번들 (`app/capacitor.config.ts`)
 - [x] 워크플로가 AAB도 만들게 하기 (`.github/workflows/build-android-apk.yml`)
-- [ ] `docs/security.md`의 "배포 전 최종 체크리스트" 비우기 (`reset-all-data` 제거 등)
-
-**2단계 — 심사 필수 요건**
-- [ ] Sign in with Apple 붙이기 (iOS 없이는 제출 불가)
-- [ ] 도메인 또는 `ceaser501.github.io` 저장소 확보 → App Links / Universal Links로 딥링크 승격
-- [ ] 권한 목적 문자열 (Android/iOS)
-
-**3단계 — 비용·보안 (공개 배포 전 필수)**
-- [ ] 업로드 이미지를 축소본으로 바꾸기 (스토리지 1/10) — 6-2장
-- [ ] Edge Function 인증 + 사용자당 호출 상한 — [security.md](security.md) 2번
-- [ ] Anthropic·카카오·TMAP·Supabase 사용량 상한과 알림 설정
-
-**4단계 — 기능**
-- [ ] 갤러리 자동 스캔 (Apple 4.2의 근거이자, Play 선언 심사 대상)
-- [ ] Play 사진 권한 선언 제출
-
-**5단계 — 제출**
-- [ ] 스토어 등록 정보, 스크린샷, 데이터 세이프티/개인정보 라벨
-- [ ] 내부 테스트 → 비공개 테스트 → 공개
-
----
-
-## 정리
-
-`server.url`을 뺀 것 말고는 아직 코드를 건드리지 않았다. 위 목록에서 **Sign in with Apple**과
-**도메인 확보**가 다른 작업의 앞단에 있어서, 그 둘을 먼저 정하는 게 순서상 맞다.
+- [x] 갤러리 자동 스캔 (Apple 4.2의 근거)
+- [x] Edge Function 인증 + 사용자당 호출 상한 — 코드는 들어가 있다
+      (`supabase/functions/_shared/guard.ts`). 남은 것은 배포와 `ALLOWED_ORIGINS` 확인이라
+      5단계에 있다
+- [x] iOS 프로젝트와 권한 목적 문자열 (`app/ios/`)
 
 ---
 
