@@ -164,7 +164,7 @@ https://ceaser501.github.io/our-home-gift/privacy.html
 | 2 | `assets/marketing/screenshots/02-scan.png` | 사진첩 훑는 중 |
 | 3 | `assets/marketing/screenshots/03-form.png` | 자동으로 채워진 등록 화면 |
 | 4 | `assets/marketing/screenshots/04-barcode.png` | 상세 · 바코드 |
-| 5 | `assets/marketing/screenshots/05-push.png` | 알림 (실물이 없어 앱이 보내는 문구로 만든 것) |
+| 5 | `assets/marketing/screenshots/05-push.png` | 알림 (실제로 온 푸시) |
 | 6 | `assets/marketing/screenshots/06-map.png` | 근처 매장 · 길찾기 |
 | 7 | `assets/marketing/screenshots/07-invite.png` | 가족 초대 |
 | 8 | `assets/marketing/screenshots/08-stats.png` | 사용 내역 |
@@ -185,7 +185,7 @@ https://ceaser501.github.io/our-home-gift/privacy.html
 | 2 | 사진첩 훑는 중 (안드로이드) | 찾는 것부터 앱이 합니다 | 사진첩을 훑어 기프티콘만 골라내요 |
 | 3 | 자동으로 채워진 등록 화면 | 사진만 올리면 끝 | 상품명 · 금액 · 유효기한이 저절로 |
 | 4 | 상세 · 바코드 | 매장에선 대기만 하면 돼요 | 금액권은 쓴 만큼 잔액이 계산돼요 |
-| 5 | 기한 임박 푸시가 뜬 잠금화면 | 기한 놓칠 일이 없어요 | 만료 전에 알림으로 알려드려요 |
+| 5 | 푸시가 뜬 잠금화면 | 중요한 건 폰으로 알려드려요 | 기한 임박 · 가족 참여 신청 |
 | 6 | 근처 매장 지도 · 길찾기 | 쓸 수 있는 곳을 지도에서 | 길찾기 · 전화까지 바로 |
 | 7 | 가족 초대 | 가족이 같은 서랍을 봅니다 | 카카오톡 링크 하나로 초대 |
 | 8 | 사용 내역 | 우리 집이 얼마나 아꼈나 | 누가 언제 썼는지 그대로 남아요 |
@@ -197,16 +197,15 @@ https://ceaser501.github.io/our-home-gift/privacy.html
 **2번은 안드로이드에만 있다.** 사진첩을 훑는 기능은 iOS에 없다. App Store는 스크린샷을
 따로 올리므로, 거기서는 2번을 빼고 7장으로 낸다. Play는 8장 그대로.
 
-5번은 폰에서 찍을 수가 없었다. 알림이 실제로 오는 순간을 붙잡아야 해서다. 그래서
-`supabase/functions/send-expiry-notifications/index.ts:153`이 실제로 보내는 문구를
-그대로 옮겨 만들었다. **문구를 고치면 이 그림도 같이 고쳐야 한다.**
+5번에 찍힌 것은 **참여 신청 알림**이다. 기한 임박 알림은 그 순간을 붙잡아야 찍을 수
+있어서 못 찍었다. 그래서 문구는 둘을 함께 적었다 — 앱이 보내는 알림은 이 둘뿐이고
+(`supabase/functions/send-expiry-notifications`, `notify-join-request`), 그림은 그중
+하나를 보여주는 것이다.
 
 5번의 「알림」은 **푸시**다. 헤더의 종은 가족이 올리거나 쓴 소식과 공지가 쌓이는 자리라
 기한과 관계가 없다(`client/src/components/NotificationBell.jsx:17`).
 
 ### 다시 찍는다면
 
-- **가족 이름이 「테스트 가족」, 구성원이 「테스터」·「테스터2」로 찍혔다.** 스토어에
-  그대로 나간다. 앱에서 이름을 바꾸고 1·7·8번만 다시 찍으면 훨씬 낫다.
 - **이미 쓴 기프티콘으로 찍는다.** 살아 있는 번호는 스토어에 올리면 안 된다.
 - **상호.** 남의 브랜드가 사진에 남는다. 자세한 설명 맨 아래 고지 한 줄이 그 때문이다.
