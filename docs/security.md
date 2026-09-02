@@ -244,9 +244,10 @@ if (cronSecret && url.searchParams.get('token') !== cronSecret) { ... 401 }
 
 ### 태수님이 하실 것
 
-- [ ] `supabase functions delete reset-all-data`
-- [ ] Supabase 시크릿에서 `RESET_TOKEN` 제거
-- [ ] `supabase/drop-sample-skip.sql` 실행 (급하지 않다 — 이미 아무 일도 안 하는 가지다)
+- [x] `supabase functions delete reset-all-data` (2026-09-02)
+- [x] `supabase/drop-sample-skip.sql` 실행 (2026-09-02)
+- [ ] Supabase 시크릿에서 `RESET_TOKEN` 제거 — 함수를 지워서 읽을 코드는 없지만,
+      쓰지 않는 비밀값을 남겨두면 다음에 이게 뭐였는지 아무도 모른다
 - [ ] `ANALYZE_DAILY_LIMIT` / `ANALYZE_TOTAL_DAILY_LIMIT`을 출시 값으로 정하기
       (지금은 30 / 500. 둘은 성격이 달라서 나란히 놓고 한 번에 정하기로 했다)
 - [ ] 위 1~11번 조치 완료 확인

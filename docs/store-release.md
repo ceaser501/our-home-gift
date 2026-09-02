@@ -293,8 +293,9 @@ Play에 올리면 **앱 서명 키를 구글이 관리**(Play App Signing)하게
 - [x] `client/src/utils/scanCache.js` — 틀리게 읽은 값이 폰에 굳는다
 - [x] 로고 길게 누르기 메뉴, 목데이터
 - [x] `client/src/utils/imageAnalyze.js`의 `meta` 진단값
-- [ ] Supabase에서 `supabase functions delete reset-all-data`, 시크릿 `RESET_TOKEN` 제거
-- [ ] `supabase/drop-sample-skip.sql` (급하지 않다)
+- [x] Supabase에서 `reset-all-data` 함수 삭제
+- [x] `supabase/drop-sample-skip.sql`
+- [ ] Supabase 시크릿에서 `RESET_TOKEN` 제거 (남은 하나)
 
 ### 2단계 — Play 비공개 테스트 시작 (여기서 14일 시계가 돈다)
 
