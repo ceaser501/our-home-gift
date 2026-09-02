@@ -1,4 +1,4 @@
-package io.github.ceaser501.moacon;
+package io.github.ceaser501.ourhomegift;
 
 import android.os.Bundle;
 import android.webkit.WebView;

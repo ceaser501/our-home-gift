@@ -1,4 +1,4 @@
-package io.github.ceaser501.moacon;
+package io.github.ceaser501.ourhomegift;
 
 import android.Manifest;
 import android.content.ContentResolver;

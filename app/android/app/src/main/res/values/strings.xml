@@ -1,7 +1,20 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
+    <!-- 홈 화면 아이콘 아래에 뜨는 이름. 화면에 보이는 글자라 언제든 바꿀 수 있다. -->
     <string name="app_name">모아콘</string>
     <string name="title_activity_main">모아콘</string>
-    <string name="package_name">io.github.ceaser501.moacon</string>
+
+    <!-- 앱을 식별하는 값. build.gradle의 applicationId와 같아야 한다. -->
+    <string name="package_name">io.github.ceaser501.ourhomegift</string>
+
+    <!-- 소셜 로그인이 끝난 뒤 앱으로 돌아오는 주소의 앞부분.
+         (io.github.ceaser501.moacon://login — client/src/utils/deepLink.js)
+
+         패키지명을 바꿀 때 이건 일부러 그대로 뒀다. 같은 값이 세 곳에 적혀 있어서다 —
+         여기, Supabase 대시보드의 Redirect URLs, 네이버용 Edge Function 시크릿
+         NAVER_ALLOWED_REDIRECTS. 셋을 동시에 바꾸지 않으면 그사이 로그인이 깨진다.
+
+         급하지 않은 이유: 이 값은 화면에 안 보이고, 스토어에도 안 나가고, 앱을 새로
+         내면 언제든 바꿀 수 있다. 못 바꾸는 것은 applicationId 하나뿐이다. -->
     <string name="custom_url_scheme">io.github.ceaser501.moacon</string>
 </resources>

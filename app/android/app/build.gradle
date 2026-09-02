@@ -1,10 +1,18 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace = "io.github.ceaser501.moacon"
+    namespace = "io.github.ceaser501.ourhomegift"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "io.github.ceaser501.moacon"
+        // 앱을 식별하는 값이다. 스토어 주소에도 이게 그대로 들어간다
+        // (play.google.com/store/apps/details?id=...).
+        //
+        // 한 번 스토어에 올리면 **절대 못 바꾼다.** 바꾸면 같은 앱이 아니라 새 앱이 되고,
+        // 깔아둔 사람들은 갱신을 못 받는다. 그래서 앱 이름과 떼어놨다 — 이름은 화면에
+        // 뜨는 글자라 언제든 바꿀 수 있지만, 이 값은 그 한 번이 전부다.
+        //
+        // 저장소 이름(our-home-gift)을 땄다. 어떤 이름으로 내든 이 값은 걸리지 않는다.
+        applicationId "io.github.ceaser501.ourhomegift"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         // 버전은 빌드할 때 정해진다(.github/workflows/build-android-apk.yml).

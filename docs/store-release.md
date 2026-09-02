@@ -220,6 +220,32 @@ Play에 올리면 **앱 서명 키를 구글이 관리**(Play App Signing)하게
 로고는 어느 후보든 그대로 쓴다. 워드마크가 이미 **MOA** 세 글자라, 뒤에 무엇이 붙든
 아이콘은 손댈 것이 없다(`assets/brand/`).
 
+#### 정한 것 — 이름은 「모아콘」으로 내되, 앱 식별자는 떼어놨다 (2026-09-02)
+
+위험을 알고 그대로 가기로 했다. 실제로 신고가 올 확률은 낮다 — 컴파일테크놀로지는
+공장 자동화 회사라 가족용 기프티콘 앱을 찾아볼 일이 없다.
+
+대신 **퇴로를 열어뒀다.** 앱 식별자를 이름에서 떼어 `io.github.ceaser501.ourhomegift`로
+바꿨다(예전 값은 `io.github.ceaser501.moacon`).
+
+식별자는 **스토어에 한 번 올리면 절대 못 바꾼다.** 바꾸면 같은 앱이 아니라 새 앱이 되고,
+깔아둔 사람들은 갱신을 못 받는다. 게다가 스토어 주소에 그대로 노출된다
+(`play.google.com/store/apps/details?id=...`). 여기에 moacon을 박아두면, 나중에 이름을
+바꿔도 그 글자는 영영 남는다.
+
+이제 이름을 바꿔야 할 일이 생기면 **화면에 뜨는 글자 한 줄만 갈고 업데이트를 내면 된다.**
+사용자는 다시 깔 필요가 없다.
+
+바꾼 자리: `app/capacitor.config.ts`, `app/android/app/build.gradle`(namespace·applicationId),
+안드로이드 자바 패키지 폴더, `app/android/…/res/values/strings.xml`,
+`app/ios/App/App.xcodeproj/project.pbxproj`.
+
+**딥링크 스킴(`io.github.ceaser501.moacon://login`)은 일부러 그대로 뒀다.** 같은 값이
+세 곳에 적혀 있어서다 — 앱, Supabase Redirect URLs, 네이버 Edge Function 시크릿
+`NAVER_ALLOWED_REDIRECTS`. 셋을 동시에 바꾸지 않으면 그사이 로그인이 깨진다. 그리고
+이 값은 화면에 안 보이고 스토어에도 안 나가며 앱을 새로 내면 언제든 바꿀 수 있다.
+못 바꾸는 것은 applicationId 하나뿐이라, 그것만 지금 처리했다.
+
 앱 이름은 올라간 뒤에 바꾸면 그때까지 쌓인 검색·리뷰·링크가 함께 흔들린다.
 **아직 아무것도 안 올라간 지금이 바꾸기 제일 싼 때다.**
 

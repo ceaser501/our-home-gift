@@ -20,7 +20,16 @@ import type { CapacitorConfig } from '@capacitor/cli';
 const devServerUrl = process.env.MOACON_DEV_SERVER;
 
 const config: CapacitorConfig = {
-  appId: 'io.github.ceaser501.moacon',
+  // 앱을 식별하는 값. 스토어 주소에 그대로 들어가고, 한 번 올리면 절대 못 바꾼다.
+  //
+  // 앱 이름과 일부러 다르게 뒀다. 이름은 화면에 뜨는 글자라 언제든 바꿀 수 있지만
+  // 이 값은 그 한 번이 전부라서, 이름을 여기 묶어두면 이름을 바꿀 때 앱을 새로
+  // 내야 한다. 「모아콘」은 선등록 상표(MOACON, 제9류)와 겹치는 이름이라
+  // 언젠가 바꾸게 될 수 있다 — docs/store-release.md 6장.
+  //
+  // 실제로 쓰이는 자리는 android/app/build.gradle의 applicationId와 iOS의
+  // PRODUCT_BUNDLE_IDENTIFIER다. 여기 값은 플랫폼을 새로 붙일 때만 쓰인다.
+  appId: 'io.github.ceaser501.ourhomegift',
   appName: '모아콘',
   webDir: '../client/dist',
   android: {
