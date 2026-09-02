@@ -72,15 +72,26 @@ Authentication → Providers
 
 ### Redirect URLs
 
-Authentication → URL Configuration → Redirect URLs에 둘 다 넣는다.
+Authentication → URL Configuration → Redirect URLs. **네 개를 각각 「Add URL」로 넣는다.**
+한 칸에 몰아 쓰는 것이 아니라 항목 넷이다.
 
-```
-https://ceaser501.github.io/our-home-gift/
-io.github.ceaser501.moacon://login
-```
+| URL | 없으면 |
+|---|---|
+| `https://ceaser501.github.io/our-home-gift/` | 웹 로그인이 안 된다 |
+| `https://ceaser501.github.io/our-home-gift/admin/` | **관리자 대시보드 로그인이 안 된다.** 경로가 달라 따로 필요하다 |
+| `http://localhost:5173/` | 로컬에서 `npm run dev` 할 때 로그인이 안 된다 |
+| `io.github.ceaser501.moacon://login` | 앱에서 로그인이 브라우저에서 끝난다 |
 
-두 번째가 앱이 로그인을 마치고 돌아오는 주소다. 없으면 앱에서 로그인이 브라우저에서
-끝나고 앱은 로그아웃 상태로 남는다.
+Site URL은 `https://ceaser501.github.io/our-home-gift/`.
+
+마지막 줄이 앱이 로그인을 마치고 돌아오는 주소다. **앱 패키지명은
+`io.github.ceaser501.ourhomegift`로 바뀌었지만 이 스킴은 일부러 `moacon` 그대로 뒀다** —
+바꾸면 Supabase와 네이버 시크릿을 동시에 고쳐야 해서 그사이 로그인이 깨진다.
+둘이 다른 것이 맞다(`app/android/…/res/values/strings.xml`에 같은 메모).
+
+> **이 목록보다 옛 프로젝트 화면이 진짜다.** 여기 적힌 것은 2026-09-02 기준이고, 그 뒤에
+> 늘어난 주소가 있을 수 있다. 옛 프로젝트의 URL Configuration을 나란히 띄워놓고 베끼는
+> 편이 확실하다. 실제로 이 문서는 처음에 둘만 적었다가 admin과 localhost를 빠뜨렸다.
 
 ## 5. ⚠️ 바깥 서비스에 등록된 주소 바꾸기 — 제일 빠뜨리기 쉽다
 
