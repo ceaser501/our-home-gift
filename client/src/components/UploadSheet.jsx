@@ -901,46 +901,26 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
                 보여주는 것은 숫자뿐이고, 고쳐 적으면 기억해둔 앞뒤에 다시 끼워 넣는다.
                 한때 아래에 "매장에서 부를 번호는 …" 한 줄을 달아뒀는데, 그건 화면이 왜
                 이상한지를 변명하는 줄이었다. 이상하지 않게 만드는 편이 맞다. */}
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="f-code" className="text-[14px] font-semibold text-foreground/80">바코드 번호</Label>
-              <Input
-                id="f-code"
-                value={readableCode(form.code)}
-                onChange={(e) => updateField('code', wrapCode(form.code, e.target.value))}
-                placeholder="사진에서 읽거나 직접 입력"
-                className="h-[52px] rounded-[13px] text-[15.5px]"
-              />
-            </div>
+            {/* 번호와 금액을 한 줄에 나눠 놓고, 사용기한에 한 줄을 통째로 준다.
+                셋을 반반씩 놓았더니 기한 칸이 좁아 "2026. 11. 0"에서 잘렸다 — 날짜
+                고르개는 폰이 그리는 것이라 글자를 줄여 맞춰주지 않고 그냥 자른다.
+                하필 잘리는 것이 끝자리라, 11월 1일인지 10일인지 20일인지를 알 수 없다.
 
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="f-expires" className="text-[14px] font-semibold text-foreground/80">
-                  사용기한 <Optional />
-                </Label>
-                {/* 폰이 들고 있는 날짜 고르개를 그대로 쓴다. 직접 만든 달력으로 바꾸면
-                    폰마다 익숙한 조작을 버리게 되고, 60대에게는 그 손해가 크다.
-
-                    다만 웹뷰가 그려주는 달력 아이콘은 우리 화살표와 굵기도 색도 달라서
-                    옆 카테고리 칸과 나란히 두면 깨져 보인다. 그것만 감추고 같은 화살표를
-                    직접 그린다. 누르는 자리는 칸 전체라 화살표는 그림일 뿐이다. */}
-                <div className="relative">
-                  <Input
-                    id="f-expires"
-                    type="date"
-                    value={form.expires_at}
-                    onChange={(e) => updateField('expires_at', e.target.value)}
-                    className="moacon-date h-[52px] w-full rounded-[13px] bg-secondary/50 pr-9 text-[15.5px]"
-                  />
-                  <ChevronDown
-                    aria-hidden="true"
-                    className="pointer-events-none absolute top-1/2 right-[15px] size-4 -translate-y-1/2 opacity-50"
-                  />
-                </div>
+                기한은 이 앱이 하는 일의 거의 전부다. 반대로 번호는 열몇 자리, 금액은
+                길어야 여섯 자리라 절반씩으로 충분하다. 번호가 조금 더 기니 3:2로 나눈다. */}
+            <div className="grid grid-cols-5 gap-3">
+              <div className="col-span-3 flex flex-col gap-1.5">
+                <Label htmlFor="f-code" className="text-[14px] font-semibold text-foreground/80">바코드 번호</Label>
+                <Input
+                  id="f-code"
+                  value={readableCode(form.code)}
+                  onChange={(e) => updateField('code', wrapCode(form.code, e.target.value))}
+                  placeholder="직접 입력"
+                  className="h-[52px] rounded-[13px] text-[15.5px]"
+                />
               </div>
 
-              {/* 금액은 길어야 여섯 자리라 한 줄을 통째로 쓸 이유가 없다. */}
-              <div className="flex flex-col gap-1.5">
+              <div className="col-span-2 flex flex-col gap-1.5">
                 <Label htmlFor="f-amount" className="text-[14px] font-semibold text-foreground/80">
                   금액 <Optional />
                 </Label>
@@ -956,12 +936,37 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
                       updateField('amount', onlyDigits(e.target.value));
                       setPriceSearchNote('');
                     }}
-                    className="h-[52px] rounded-[13px] pr-9 text-[15.5px] font-semibold tabular-nums"
+                    className="h-[52px] rounded-[13px] pr-8 text-[15.5px] font-semibold tabular-nums"
                   />
-                  <span className="pointer-events-none absolute inset-y-0 right-[15px] flex items-center text-[15px] font-semibold text-muted-foreground">
+                  <span className="pointer-events-none absolute inset-y-0 right-[13px] flex items-center text-[15px] font-semibold text-muted-foreground">
                     원
                   </span>
                 </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="f-expires" className="text-[14px] font-semibold text-foreground/80">
+                사용기한 <Optional />
+              </Label>
+              {/* 폰이 들고 있는 날짜 고르개를 그대로 쓴다. 직접 만든 달력으로 바꾸면
+                  폰마다 익숙한 조작을 버리게 되고, 60대에게는 그 손해가 크다.
+
+                  다만 웹뷰가 그려주는 달력 아이콘은 우리 화살표와 굵기도 색도 달라서
+                  다른 칸과 나란히 두면 깨져 보인다. 그것만 감추고 같은 화살표를
+                  직접 그린다. 누르는 자리는 칸 전체라 화살표는 그림일 뿐이다. */}
+              <div className="relative">
+                <Input
+                  id="f-expires"
+                  type="date"
+                  value={form.expires_at}
+                  onChange={(e) => updateField('expires_at', e.target.value)}
+                  className="moacon-date h-[52px] w-full rounded-[13px] bg-secondary/50 pr-9 text-[15.5px]"
+                />
+                <ChevronDown
+                  aria-hidden="true"
+                  className="pointer-events-none absolute top-1/2 right-[15px] size-4 -translate-y-1/2 opacity-50"
+                />
               </div>
             </div>
 
