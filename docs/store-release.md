@@ -144,7 +144,7 @@ Play에 올리면 **앱 서명 키를 구글이 관리**(Play App Signing)하게
 지금은 안드로이드에서만 뜬다. `client/src/utils/gallery.js:442`의 `canOpenAppSettings()`가
 `isGalleryScanSupported()`를 그대로 쓰고 있어서다 — 그건 **안드로이드 네이티브**일 때만
 참이다. 실제로 여는 코드도 자바 한 곳에만 있다
-(`app/android/app/src/main/java/io/github/ceaser501/moacon/GalleryPlugin.java`의
+(`app/android/app/src/main/java/io/github/ceaser501/ourhomegift/GalleryPlugin.java`의
 `openAppSettings`, `Settings.ACTION_APPLICATION_DETAILS_SETTINGS`).
 
 - [ ] 스위프트 쪽에 같은 이름의 메서드를 만든다 — `UIApplication.openSettingsURLString`
@@ -162,9 +162,9 @@ Play에 올리면 **앱 서명 키를 구글이 관리**(Play App Signing)하게
 
 **단정할 수 없어서 확인이 필요한 항목이다. 법률 자문이 아니다.**
 
-### ⚠️ 「모아콘」은 쓸 수 없다 — 확인 끝났다 (2026-09-02)
+### ⚠️ 「모아콘」은 선등록 상표와 겹친다 (2026-09-02 확인)
 
-**선등록 상표와 정면으로 겹친다.** 이름을 바꿔야 한다.
+알고도 그대로 쓰기로 했다. 그 판단과 대비는 이 절 끝에 있다.
 
 | | |
 |---|---|
@@ -413,23 +413,64 @@ sole proprietorship으로 잡히면 "법인으로 확인되지 않음"으로 거
 
 | | Google Play | Apple |
 |---|---|---|
-| 값 | $25, 평생 1회 | $99, 해마다 |
-| 먼저 할 일 | 구글 계정 2단계 인증 켜기 | Apple ID 2단계 인증 켜기 |
-| 주소 | play.google.com/console/signup | 아이폰의 Apple Developer 앱 (웹보다 빠르다) |
+| 값 | $25, 평생 1회 | $99, 해마다 (자동 갱신) |
+| 먼저 할 일 | 구글 계정 2단계 인증 | Apple ID 2단계 인증 |
+| 주소 | play.google.com/console/signup | 아이폰의 **Apple Developer 앱** (웹보다 빠르다) |
 | 이름 | 스토어에 뜨는 개발자명. 나중에 바꿀 수 있다 | **신분증 그대로.** 별명·회사명을 넣으면 승인이 밀린다 |
 | 신원 확인 | 신분증·주소·연락처, 이메일과 전화 각각 OTP | 신분증 스캔 |
+| 걸리는 시간 | 며칠 | 보통 하루이틀 |
 
-개인정보처리방침과 이용약관 주소는 둘 다 이미 살아 있다.
+**로그인에 쓰는 구글 계정은 공개되지 않는다.** 스토어에 뜨는 문의 이메일은 나중에
+앱 등록정보에서 따로 적는 값이라, 그것 때문에 계정을 새로 만들 필요가 없다.
+(번호 하나에 붙는 구글 계정 수에는 한도가 있어서, 새로 만들려다 막히기도 한다.)
 
-- https://ceaser501.github.io/our-home-gift/privacy.html
-- https://ceaser501.github.io/our-home-gift/terms.html
+#### Google Play — $25 결제 다음
 
-스토어 이미지도 만들어져 있다 — `assets/app-icons/store/`(아이콘 512·1024),
-`assets/marketing/play-feature-graphic-1024x500.png`. **스크린샷만 없다.** 실제 폰에서
-찍어야 하고, 화면에 뜬 기프티콘 상호가 그대로 사진에 남으니 찍기 전에 한 번 본다.
+1. **신원 확인** — 신분증 앞뒤를 올린다. 이름·주소가 신분증과 **정확히** 같아야 한다
+2. **연락처 확인** — 이메일과 전화를 각각 OTP로 확인한다. 계정이 살아 있는 내내
+   받을 수 있는 것이어야 한다
+3. **개발자 이름** — 스토어에 뜬다. 나중에 바꿀 수 있다
+4. 승인까지 며칠. 그동안 아래를 준비한다
 
-계정이 승인되면 바로 앱을 만들어 **이름부터 잡아둔다.** 빌드 없이도 선점된다.
-다만 「모아콘」은 그대로 쓰기 어렵다 — 6장을 먼저 읽는다.
+승인된 뒤 앱을 만들며 채우는 것들:
+
+- 앱 이름 · 기본 언어(한국어) · 앱/게임 · **무료** (무료로 만들면 유료로 못 바꾼다.
+  인앱 결제와 구독은 무료 앱에서도 되므로 수익화는 막히지 않는다)
+- 스토어 등록정보 — 짧은 설명, 자세한 설명, 스크린샷, 아이콘, 그래픽 이미지
+- **개인정보처리방침 URL** (필수)
+- 콘텐츠 등급 설문
+- **데이터 보안(Data safety) 양식** — 이메일·사진·위치를 받는다고 정직하게 적는다
+- 타겟층, 광고 포함 여부
+- **앱 액세스 권한 — 빠뜨리기 쉽다.** 이 앱은 로그인해야 화면이 보이므로,
+  심사자용 테스트 계정(아이디·비밀번호)과 들어가는 방법을 적어줘야 한다.
+  안 적으면 "화면을 볼 수 없다"로 반려된다
+- AAB 업로드 (`npm run release` → 워크플로 아티팩트)
+
+#### Apple — 등록하는 법
+
+**아이폰의 Apple Developer 앱으로 한다.** 웹으로도 되지만 신분증 확인이 번거롭다.
+
+1. App Store에서 **Apple Developer** 앱을 받는다
+2. Apple ID로 로그인. **2단계 인증이 켜져 있어야 한다**
+3. Account 탭 → Enroll(등록)
+4. Entity Type에서 **Individual / Sole Proprietor**를 고른다
+5. 이름을 **신분증 그대로** 적는다. 여권이 있으면 여권의 영문 표기를 쓴다.
+   Apple ID에 저장된 이름도 같아야 한다 — 다르면 승인이 밀리거나 거절된다
+6. 신분증을 앱 카메라로 찍는다
+7. $99 결제. **해마다 자동 갱신**되므로 그만둘 때는 해지해야 한다
+8. 승인까지 보통 하루이틀
+
+승인된 뒤:
+
+1. **developer.apple.com → Certificates, Identifiers & Profiles → Identifiers**에서
+   App ID를 만든다 — `io.github.ceaser501.ourhomegift`.
+   Capabilities에서 **Push Notifications**와 **Sign in with Apple**을 켜둔다
+   (지금 안 쓰더라도 나중에 켜려면 프로파일을 다시 만들어야 해서, 미리 켜두는 편이 낫다)
+2. **appstoreconnect.apple.com → 나의 앱 → +** 로 앱을 만든다
+   - 플랫폼 iOS · 이름 **모아콘** · 기본 언어 한국어
+   - 번들 ID는 1에서 만든 것을 고른다
+   - SKU는 아무 문자열이면 된다(`moacon-001`)
+   - **App Store는 앱 이름이 전역 유일하다.** 여기서 이름이 선점되므로 승인되면 바로 한다
 
 ### 1단계 — 테스트로 넣어둔 것 걷기
 
