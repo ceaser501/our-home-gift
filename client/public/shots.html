@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>스토어 스크린샷 받기 — 모아콘</title>
+    <link rel="icon" href="./icon-192.png" />
+    <style>
+      /* 폰에서 여덟 장을 한 번에 내려받으려고 둔 페이지다. 스토어에 올릴 때 말고는
+         쓸 일이 없어서 검색에는 안 걸리게 해뒀다(robots noindex).
+
+         그림은 저장소의 raw 주소에서 그대로 가져온다. 여기로 복사해 두면 같은 4MB가
+         저장소와 배포본에 한 벌씩 더 생긴다. */
+      * { box-sizing: border-box; }
+      body {
+        margin: 0; padding: 24px 18px 60px;
+        background: #f7f7fa; color: #17171c;
+        font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', Pretendard, system-ui, sans-serif;
+        word-break: keep-all; line-height: 1.6;
+      }
+      .wrap { max-width: 460px; margin: 0 auto; }
+      h1 { font-size: 22px; font-weight: 800; letter-spacing: -.03em; margin: 0 0 10px; }
+      .how {
+        background: #f5f4ff; border: 1px solid #dcd8fa; border-radius: 14px;
+        padding: 14px 16px; font-size: 15px; color: #3a3a44; margin-bottom: 8px;
+      }
+      .how b { color: #4c3ed6; }
+      .how p { margin: 0 0 6px; }
+      .how p:last-child { margin-bottom: 0; }
+      figure { margin: 26px 0 0; }
+      figcaption {
+        display: flex; align-items: baseline; gap: 8px;
+        font-size: 15px; font-weight: 700; letter-spacing: -.02em; margin-bottom: 8px;
+      }
+      figcaption .n {
+        flex: none; width: 24px; height: 24px; border-radius: 8px;
+        background: #5b4be8; color: #fff; font-size: 13px;
+        display: flex; align-items: center; justify-content: center;
+      }
+      figcaption .sub { font-weight: 500; color: #6b6b76; }
+      img {
+        display: block; width: 100%; height: auto;
+        border-radius: 14px; border: 1px solid #e4e4ea;
+        box-shadow: 0 8px 24px rgba(20, 20, 40, .08);
+        background: #fff;
+      }
+      footer { margin-top: 40px; font-size: 13.5px; color: #6b6b76; text-align: center; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>스토어 스크린샷 8장</h1>
+      <div class="how">
+        <p><b>사진을 길게 눌러</b> 저장하세요.</p>
+        <p>아이폰은 「사진에 추가」, 안드로이드는 「이미지 다운로드」입니다.</p>
+        <p><b>1번부터 차례로</b> 받으면 사진첩 순서가 그대로 맞습니다.</p>
+      </div>
+
+      <figure>
+        <figcaption><span class="n">1</span>목록 <span class="sub">기한이 급한 것부터 위로</span></figcaption>
+        <img src="https://raw.githubusercontent.com/ceaser501/our-home-gift/main/assets/marketing/screenshots/01-list.png" alt="목록" width="1080" height="2160" />
+      </figure>
+      <figure>
+        <figcaption><span class="n">2</span>사진첩 훑기 <span class="sub">찾는 것부터 앱이 합니다</span></figcaption>
+        <img src="https://raw.githubusercontent.com/ceaser501/our-home-gift/main/assets/marketing/screenshots/02-scan.png" alt="사진첩 훑는 중" width="1080" height="2160" />
+      </figure>
+      <figure>
+        <figcaption><span class="n">3</span>등록 화면 <span class="sub">사진만 올리면 끝</span></figcaption>
+        <img src="https://raw.githubusercontent.com/ceaser501/our-home-gift/main/assets/marketing/screenshots/03-form.png" alt="자동으로 채워진 등록 화면" width="1080" height="2160" />
+      </figure>
+      <figure>
+        <figcaption><span class="n">4</span>바코드 <span class="sub">매장에선 대기만 하면 돼요</span></figcaption>
+        <img src="https://raw.githubusercontent.com/ceaser501/our-home-gift/main/assets/marketing/screenshots/04-barcode.png" alt="상세 바코드" width="1080" height="2160" />
+      </figure>
+      <figure>
+        <figcaption><span class="n">5</span>푸시 알림 <span class="sub">중요한 건 푸시알림으로</span></figcaption>
+        <img src="https://raw.githubusercontent.com/ceaser501/our-home-gift/main/assets/marketing/screenshots/05-push.png" alt="알림이 온 잠금화면" width="1080" height="2160" />
+      </figure>
+      <figure>
+        <figcaption><span class="n">6</span>근처 매장 <span class="sub">쓸 수 있는 곳을 지도에서</span></figcaption>
+        <img src="https://raw.githubusercontent.com/ceaser501/our-home-gift/main/assets/marketing/screenshots/06-map.png" alt="근처 매장 지도" width="1080" height="2160" />
+      </figure>
+      <figure>
+        <figcaption><span class="n">7</span>가족 초대 <span class="sub">가족이 같은 서랍을 봅니다</span></figcaption>
+        <img src="https://raw.githubusercontent.com/ceaser501/our-home-gift/main/assets/marketing/screenshots/07-invite.png" alt="가족 초대" width="1080" height="2160" />
+      </figure>
+      <figure>
+        <figcaption><span class="n">8</span>사용 내역 <span class="sub">우리 집이 얼마나 아꼈나</span></figcaption>
+        <img src="https://raw.githubusercontent.com/ceaser501/our-home-gift/main/assets/marketing/screenshots/08-stats.png" alt="사용 내역" width="1080" height="2160" />
+      </figure>
+
+      <footer>1080 × 2160 · Play Console 「기본 스토어 등록정보 → 휴대전화」에 이 순서로 올립니다.</footer>
+    </div>
+  </body>
+</html>
