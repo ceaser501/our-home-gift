@@ -48,6 +48,8 @@
 
       .wrap { max-width: 1200px; margin: 0 auto; padding: 0 22px; }
       .sec { padding-top: 44px; }
+      /* 회색 판(.band)이 없이 흰 칸이 연달아 오면 어디서 끊기는지 안 보인다. 줄 하나로 가른다. */
+      .sec + .sec { margin-top: 44px; border-top: 1px solid var(--line); }
       .band { margin-top: 44px; padding: 38px 0; background: var(--wash); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 
       .num { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11.5px; font-weight: 700; letter-spacing: .12em; color: var(--brand); }
@@ -61,7 +63,17 @@
       .pair { display: flex; gap: 12px; margin-top: 20px; align-items: flex-start; }
       .pair > * { flex: 1; min-width: 0; }
       .inset { margin-top: 16px; max-width: 300px; }
+
+      /* 모바일에서는 제목 → 설명 → 사진 순으로 쌓는다.
+         PC에서 사진을 왼쪽에 두려고 .side를 .main보다 먼저 적어둔 자리가 몇 군데 있는데,
+         그대로 세로로 쌓으면 사진이 제목 위로 올라간다. 그래서 여기서 순서를 뒤집는다. */
+      .split { display: flex; flex-direction: column; gap: 20px; }
+      .split > .main { order: 0; }
+      .split > .side { order: 1; }
+      /* 05는 제목과 설명이 .split 밖에 있어서 사진이 먼저 오는 것이 맞다.
+         .head는 .side 안에 든 것이 사진이 아니라 제목이라 그대로 둔다. */
       .split.s3 { margin-top: 20px; }
+      .split.s3 > .side, .split.head > .side { order: 0; }
 
       /* 머리·꼬리의 밤색 판 */
       .night { background: var(--night); color: #fff; position: relative; overflow: hidden; }
@@ -149,6 +161,7 @@
       @media (min-width: 900px) {
         .wrap { padding: 0 40px; }
         .sec { padding-top: 88px; }
+        .sec + .sec { margin-top: 88px; }
         .band { margin-top: 88px; padding: 80px 0; }
         h2 { font-size: clamp(26px, 2.3vw, 32px); }
         .lead { font-size: 17.5px; max-width: 720px; }
@@ -174,9 +187,11 @@
         .stats .k { font-size: 14.5px; font-weight: 500; color: #9a94c4; letter-spacing: -.01em; margin-top: 4px; }
         .stats .bar { width: 1px; background: rgba(255, 255, 255, .14); }
 
-        .split { display: flex; gap: 64px; align-items: flex-start; }
+        .split { flex-direction: row; gap: 64px; align-items: flex-start; }
         .split > .side { flex: none; width: 400px; }
         .split > .main { flex: 1; }
+        /* 가로로 놓으면 적어둔 순서가 곧 왼쪽·오른쪽이라 뒤집은 것을 되돌린다 */
+        .split > .main, .split > .side, .split.s3 > .side, .split.head > .side { order: 0; }
         .mid { align-items: center; gap: 60px; }
         .mid > .side { width: 340px; }
 
@@ -249,7 +264,7 @@
     </div>
 
     <div class="wrap sec">
-      <div class="split">
+      <div class="split head">
         <div class="side">
           <h2>기프티콘은 받는 순간부터<br />사라지기 시작합니다</h2>
         </div>
@@ -489,7 +504,7 @@
     </div>
 
     <div class="wrap sec">
-      <h2>스무 살도, 예순 살도 같은 화면을 씁니다</h2>
+      <h2>아들딸도, 엄마아빠도 같은 화면을 씁니다</h2>
       <p class="lead">
         가족이 함께 쓰는 앱이라 한 사람만 편해서는 안 됩니다. 큰 글씨 모드를 따로 두는 대신,
         기본 화면을 모두가 읽을 수 있게 만들었습니다.
