@@ -109,6 +109,58 @@ export async function signInWithGoogle() {
   await startOAuth('google', '구글 로그인에 실패했어요.');
 }
 
+// 애플 로그인.
+//
+// 넣은 이유는 하나다 — 소셜 로그인이 있는 앱은 애플 로그인도 함께 내야 심사를 통과한다
+// (App Store 심사 지침 4.8). 그래서 아이폰 앱 안에서만 보인다. 웹과 안드로이드에는
+// 띄우지 않는다.
+//
+// 위의 셋과 흐름이 다르다. 저쪽은 브라우저를 열어 Supabase가 주는 주소로 다녀오지만,
+// 이쪽은 iOS가 직접 띄우는 시스템 창에서 끝나고 토큰만 손에 쥐어준다. 그 토큰을
+// Supabase에 건네는 것이 전부라 브라우저도 딥링크도 거치지 않는다.
+// 덕분에 Supabase 쪽에 넣을 것도 번들 ID 한 줄뿐이다(Client IDs).
+//
+// ⚠️ 애플은 「이메일 가리기」를 고르면 privaterelay.appleid.com 주소를 준다. 그 사람이
+// 예전에 구글로 들어왔다면 이메일이 달라서 Supabase가 다른 계정으로 본다 — 같은 사람이
+// 가족 구성원 둘이 된다. 그래서 '최근 로그인' 표시가 여기서도 중요하다.
+const APPLE_CLIENT_ID = 'io.github.ceaser501.ourhomegift';
+
+// nonce는 지금 이 화면이 시작한 로그인의 토큰이 맞는지 확인하는 값이다.
+// 애플에는 해시해서 보내고, Supabase에는 원문을 준다. 둘을 맞춰보는 것은 Supabase가 한다.
+async function sha256Hex(text) {
+  const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(bytes))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+export async function signInWithApple() {
+  rememberLoginMethod('apple');
+
+  const { SignInWithApple } = await import('@capacitor-community/apple-sign-in');
+
+  const rawNonce = crypto.randomUUID();
+  const result = await SignInWithApple.authorize({
+    clientId: APPLE_CLIENT_ID,
+    // 네이티브 창은 돌아올 주소가 필요 없지만 플러그인이 필수 인자로 받는다.
+    redirectURI: NATIVE_REDIRECT_URL,
+    scopes: 'email name',
+    nonce: await sha256Hex(rawNonce),
+  });
+
+  // 사용자가 창을 닫으면 플러그인이 예외를 던진다. 여기까지 왔는데 토큰이 없으면
+  // 애플이 준 답이 비어 있는 것이라 그대로 실패로 본다.
+  const idToken = result?.response?.identityToken;
+  if (!idToken) throw new Error('애플 로그인에 실패했어요.');
+
+  const { error } = await supabase.auth.signInWithIdToken({
+    provider: 'apple',
+    token: idToken,
+    nonce: rawNonce,
+  });
+  if (error) throw new Error(error.message || '애플 로그인에 실패했어요.');
+}
+
 // 네이버는 Supabase가 기본 제공하는 로그인 제공자가 아니라서, supabase/functions/naver-auth
 // Edge Function이 네이버 OAuth 코드 교환 → 세션 발급까지 대신 처리한다. 이 함수는 그 흐름을
 // 시작하는 페이지 이동만 담당한다(콜백 이후 세션은 magiclink 방식과 동일하게 URL로 돌아온다).

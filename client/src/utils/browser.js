@@ -18,6 +18,15 @@ export function isIos() {
   return /iphone|ipad|ipod/i.test(window.navigator.userAgent);
 }
 
+// 아이폰 앱 안에서 도는지. 사파리로 연 웹은 여기 해당하지 않는다.
+//
+// isIos()로는 가를 수 없다 — 아이폰 사파리도 아이패드 웹도 다 참이다. Capacitor가
+// 알려주는 실행 환경을 본다. 애플 로그인 버튼은 여기가 참일 때만 띄운다. 그 로그인은
+// iOS가 직접 띄우는 시스템 창을 쓰기 때문에 웹에서는 눌러도 아무 일이 없다.
+export function isIosApp() {
+  return isNativeApp() && window.Capacitor?.getPlatform?.() === 'ios';
+}
+
 export function isAndroid() {
   return /android/i.test(window.navigator.userAgent);
 }

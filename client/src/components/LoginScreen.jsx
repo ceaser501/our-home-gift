@@ -1,6 +1,14 @@
 import { useEffect, useState } from 'react';
 import { ChevronDown, MessageCircle } from 'lucide-react';
-import { lastLoginMethod, sendMagicLink, signInWithGoogle, signInWithKakao, signInWithNaver } from '../auth';
+import {
+  lastLoginMethod,
+  sendMagicLink,
+  signInWithApple,
+  signInWithGoogle,
+  signInWithKakao,
+  signInWithNaver,
+} from '../auth';
+import { isIosApp } from '../utils/browser';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -16,6 +24,19 @@ function NaverIcon({ className }) {
       <path
         fill="currentColor"
         d="M16.273 12.845 7.376 0H0v24h7.727V11.155L16.624 24H24V0h-7.727v12.845z"
+      />
+    </svg>
+  );
+}
+
+// 애플 마크. 애플이 정해둔 모양이라 손대지 않는다 —
+// 검은 버튼에는 흰 마크, 흰 버튼에는 검은 마크. currentColor로 버튼 색을 따라간다.
+function AppleIcon({ className }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
+      <path
+        fill="currentColor"
+        d="M17.05 12.54c-.02-2.2 1.8-3.26 1.88-3.31-1.02-1.5-2.62-1.7-3.18-1.72-1.35-.14-2.64.79-3.33.79-.69 0-1.75-.77-2.87-.75-1.48.02-2.84.86-3.6 2.18-1.53 2.66-.39 6.6 1.1 8.76.73 1.06 1.6 2.25 2.74 2.2 1.1-.04 1.52-.71 2.85-.71 1.33 0 1.7.71 2.87.69 1.18-.02 1.93-1.08 2.65-2.14.83-1.22 1.18-2.4 1.2-2.46-.03-.01-2.3-.88-2.31-3.53zM14.88 5.6c.6-.74 1.01-1.75.9-2.77-.87.04-1.93.58-2.56 1.31-.56.65-1.06 1.7-.93 2.69.97.08 1.97-.49 2.59-1.23z"
       />
     </svg>
   );
@@ -89,8 +110,14 @@ export default function LoginScreen() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [naverLoading, setNaverLoading] = useState(false);
   const [kakaoLoading, setKakaoLoading] = useState(false);
+  const [appleLoading, setAppleLoading] = useState(false);
   // 화면이 그려질 때 한 번만 읽는다. 이 화면에 머무는 동안 바뀔 값이 아니다.
   const [lastUsed] = useState(() => lastLoginMethod());
+  // 애플 로그인은 아이폰 앱에서만 뜬다. 이것도 화면 도는 동안 바뀌지 않는다.
+  const [showApple] = useState(() => isIosApp());
+  // 지난번에 애플로 들어온 사람이 웹으로 이 화면을 열면 그 버튼이 여기 없다.
+  // 그때 '최근 로그인' 딱지가 엉뚱한 버튼에 붙지 않게 아예 처음 온 것처럼 그린다.
+  const lastUsable = lastUsed === 'apple' && !showApple ? null : lastUsed;
   // 지난번에 쓴 것이 따로 있는 날, 이메일 칸을 펼쳤는가.
   const [emailOpen, setEmailOpen] = useState(false);
 
@@ -153,10 +180,25 @@ export default function LoginScreen() {
     }
   }
 
-  // 세 수단을 한 줄씩. 지난번에 쓴 것과 나머지가 같은 모양을 쓰되 무게만 다르다.
+  async function handleAppleLogin() {
+    setAppleLoading(true);
+    setError('');
+    try {
+      await signInWithApple();
+    } catch (err) {
+      // 사용자가 시스템 창을 그냥 닫은 것도 예외로 온다. 그때 빨간 글씨를 띄우면
+      // 취소한 사람에게 실패했다고 말하는 꼴이라, 취소는 조용히 넘긴다.
+      const message = err?.message || '';
+      if (!/cancel|1001/i.test(message)) setError(message || '애플 로그인에 실패했어요.');
+      setAppleLoading(false);
+    }
+  }
+
+  // 로그인 수단을 한 줄씩. 지난번에 쓴 것과 나머지가 같은 모양을 쓰되 무게만 다르다.
   //
   // 차례는 쓰는 사람이 많을 순서다 — 카카오 · 네이버 · 구글. 기프티콘을 주고받는 곳이
   // 카카오톡이라 그쪽이 맨 위고, 나머지 둘은 국내에서 쓰는 비중을 따랐다.
+  // 애플은 아이폰 앱에서만 맨 아래에 붙는다(showApple).
   const socials = [
     {
       key: 'kakao',
@@ -185,6 +227,19 @@ export default function LoginScreen() {
       loading: googleLoading,
       brand: null,
     },
+    ...(showApple
+      ? [
+          {
+            key: 'apple',
+            label: appleLoading ? '연결 중…' : 'Apple로 로그인',
+            icon: <AppleIcon className="size-[19px]" />,
+            onClick: handleAppleLogin,
+            loading: appleLoading,
+            // 애플이 정한 모양 그대로. 검은 바탕에 흰 마크와 흰 글씨다.
+            brand: 'bg-black text-white hover:bg-black/90',
+          },
+        ]
+      : []),
   ];
 
   // plain은 '다른 방법' 자리에 놓일 때다. 여기서도 브랜드 색은 그대로 간다.
@@ -297,21 +352,21 @@ export default function LoginScreen() {
           <p className="m-0 text-base text-foreground">{email}로 로그인 링크를 보냈어요.</p>
           <p className="mt-1.5 mb-0 text-sm text-muted-foreground">메일함에서 링크를 눌러 로그인을 완료해주세요.</p>
         </div>
-      ) : lastUsed ? (
+      ) : lastUsable ? (
         /* 두 번째부터. 지난번에 쓴 것 하나를 카드로 올려두고 나머지는 아래로 내린다. */
         <div className="flex w-full flex-col gap-5">
           <LastUsed>
-            {lastUsed === 'email'
+            {lastUsable === 'email'
               ? emailForm
-              : renderSocial(socials.find((m) => m.key === lastUsed) || socials[0], false)}
+              : renderSocial(socials.find((m) => m.key === lastUsable), false)}
           </LastUsed>
 
           {error && <p className="m-0 text-sm text-destructive">{error}</p>}
 
           <div className="flex flex-col gap-2.5">
             <p className="m-0 text-[13px] font-semibold text-muted-foreground">다른 방법</p>
-            {socials.filter((m) => m.key !== lastUsed).map((m) => renderSocial(m, true))}
-            {lastUsed !== 'email' && (emailOpen ? emailForm : emailToggle)}
+            {socials.filter((m) => m.key !== lastUsable).map((m) => renderSocial(m, true))}
+            {lastUsable !== 'email' && (emailOpen ? emailForm : emailToggle)}
           </div>
         </div>
       ) : (
