@@ -74,15 +74,26 @@
       h1 em { font-style: normal; color: var(--gold); }
       .hero-sub { font-size: 17px; line-height: 1.75; color: #c9c4e6; letter-spacing: -.015em; margin: 18px 0 0; text-wrap: pretty; }
 
-      .cta { display: flex; flex-direction: column; gap: 10px; margin-top: 22px; }
-      .btn {
-        height: 54px; border-radius: 14px; display: flex; align-items: center; justify-content: center;
-        font-size: 17px; font-weight: 700; letter-spacing: -.01em; border: 1px solid var(--brand);
-        background: var(--brand); color: #fff;
+      /* 스토어 배지.
+         아직 어느 쪽에도 안 올라가서 눌러도 갈 곳이 없다. 그래서 링크가 아니라 표시만 한다.
+         올라가면 <a href>로 바꾸고, 그림도 애플·구글이 주는 공식 배지로 갈아 끼운다 —
+         로고를 흉내 내 그리는 것은 두 회사 다 금지한다. */
+      .stores { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 26px; }
+      .store {
+        display: flex; align-items: center; gap: 12px;
+        height: 62px; padding: 0 26px; border-radius: 14px;
+        background: rgba(255, 255, 255, .07); border: 1px solid rgba(255, 255, 255, .22);
       }
-      .btn:hover { background: var(--brand-dark); border-color: var(--brand-dark); color: #fff; }
-      .btn.ghost { background: transparent; border-color: rgba(255, 255, 255, .28); color: #edebfa; font-weight: 600; }
-      .btn.ghost:hover { background: rgba(255, 255, 255, .08); color: #fff; }
+      .store .t { font-size: 19px; font-weight: 700; letter-spacing: -.4px; line-height: 1.15; color: #fff; }
+      .store .t small { display: block; font-size: 12.5px; font-weight: 500; color: #9a94c4; letter-spacing: -.2px; margin-bottom: 3px; }
+      .soon { margin-top: 14px; font-size: 14.5px; font-weight: 500; color: #9a94c4; letter-spacing: -.3px; }
+
+      /* 문제를 늘어놓은 뒤의 한 줄. 앞의 회색 칩들과 같은 모양이면 그냥 넷째 칩으로 읽힌다. */
+      .answer {
+        margin: 20px 0 0; font-size: 20px; font-weight: 800; color: var(--brand-dark);
+        letter-spacing: -.7px;
+      }
+      .band-shot { margin-top: 20px; width: 100%; max-width: 620px; }
 
       .hero-shot { position: relative; padding: 34px 0 40px; }
       .glow { position: absolute; inset: 20px 0 auto; height: 320px; background: radial-gradient(circle at 50% 40%, rgba(139, 92, 246, .5), rgba(139, 92, 246, 0) 70%); }
@@ -108,6 +119,7 @@
       .card p { font-size: 16px; line-height: 1.75; color: var(--dim); letter-spacing: -.01em; margin: 6px 0 0; }
       .card.on p { color: #4a4a58; }
 
+      h2 .badge { vertical-align: 4px; }
       .badge { display: inline-block; margin-left: 8px; padding: 4px 9px; border-radius: 7px; background: #fff; border: 1px solid var(--tint-line); font-size: 12.5px; font-weight: 700; color: var(--brand-dark); letter-spacing: -.01em; vertical-align: 2px; }
 
       .notes { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
@@ -186,6 +198,8 @@
         .end .btn { margin-top: 0; height: 56px; padding: 0 30px; font-size: 18px; }
         .end .store { text-align: left; }
         .end .act { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
+        .end .stores { margin-top: 0; }
+        .answer { font-size: 23px; }
         .foot-row { display: flex; align-items: center; justify-content: space-between; gap: 40px; }
         .foot-row > .foot:first-child { flex: none; }
         .foot-row > .foot:first-child p { white-space: nowrap; }
@@ -210,17 +224,19 @@
               사진첩에 흩어져 있는 기프티콘을 찾아 한곳에 모읍니다. 모인 서랍은 가족이 함께 쓰고,
               기한이 지나기 전에 알림으로 알려 줍니다.
             </p>
-            <div class="cta">
-              <a class="btn" href="https://ceaser501.github.io/our-home-gift/">웹에서 바로 써보기</a>
-              <a class="btn ghost" href="#start">어떻게 쓰나요</a>
+            <!-- 스토어에 올라가면 여기 href를 채운다.
+                 Play  https://play.google.com/store/apps/details?id=io.github.ceaser501.ourhomegift
+                 App Store는 앱 ID가 나와야 주소가 정해진다.
+                 그때 배지 그림도 애플·구글이 주는 공식 것으로 바꾼다 — 로고를 흉내 내 그리면 안 된다. -->
+            <div class="stores">
+              <span class="store">
+                <span class="t"><small>곧 만나요</small>App&nbsp;Store</span>
+              </span>
+              <span class="store">
+                <span class="t"><small>곧 만나요</small>Google&nbsp;Play</span>
+              </span>
             </div>
-            <div class="stats">
-              <div><div class="v">사진첩 한 번</div><div class="k">여러 장을 한꺼번에 등록</div></div>
-              <div class="bar"></div>
-              <div><div class="v">가족 단위</div><div class="k">한 서랍을 같이 씁니다</div></div>
-              <div class="bar"></div>
-              <div><div class="v">기한 알림</div><div class="k">놓치기 전에 푸시로</div></div>
-            </div>
+            <p class="soon">두 스토어 모두 출시 준비 중입니다.</p>
           </div>
           <div class="hero-shot">
             <div class="glow"></div>
@@ -246,45 +262,42 @@
             <div class="chip">사진첩 어딘가에 있다</div>
             <div class="chip">기한을 모른다</div>
             <div class="chip">가족은 더 모른다</div>
-            <div class="chip on">모아콘이 세 가지를 없앱니다</div>
           </div>
+          <p class="answer">모아콘이 이 셋을 없앱니다.</p>
         </div>
       </div>
     </div>
 
     <div class="wrap sec">
       <div class="num">01</div>
-      <h2>여러 장을 한 번에 읽고, 기프티콘만 골라 등록합니다<span class="badge">Android</span></h2>
+      <h2>사진첩을 대신 뒤져 드립니다<span class="badge">Android</span></h2>
       <p class="lead">
-        사진첩을 훑어 기프티콘으로 보이는 것만 골라냅니다. 골라낸 것은 상품명·상호·금액·유효기한까지
-        채워 놓습니다. 캡처든 저장한 이미지든 상관없습니다. 빼고 싶은 것은 ✕ 하나로 빼면 됩니다.
+        어느 사진이 기프티콘인지 먼저 알아야 고를 수 있습니다. 그것을 대신 찾아주는 것이 이 앱입니다.
+        <b>앱을 설치한 날 0시부터 지금까지</b> 쌓인 사진 중 <b>다운로드 · 카카오톡 · 스크린샷</b>
+        세 앨범만 훑어 기프티콘으로 보이는 것을 골라냅니다.
       </p>
-      <div class="row3">
+      <div class="pair">
         <div>
-          <img class="shot" src="./intro/scan-found.jpg" alt="사진첩에서 찾은 기프티콘 목록" width="760" height="1473" />
-          <p class="cap"><b>찾은 결과를 먼저 보여 줍니다.</b> 등록하기 전에 무엇이 들어가는지 확인하고, 필요 없는 것은 빼세요.</p>
+          <img class="shot" src="./intro/scan-progress.jpg" alt="사진첩을 훑는 중" width="760" height="1473" />
+          <p class="cap"><b>훑는 동안 어디까지 갔는지 보여 줍니다.</b> 세 앨범만 보기 때문에 다른 사진은 건드리지 않습니다.</p>
         </div>
         <div>
-          <img class="shot" src="./intro/scan-progress.jpg" alt="사진첩을 읽는 중 화면" width="760" height="1473" />
-          <p class="cap"><b>읽는 동안 진행 상황을 보여 줍니다.</b> 넣지 못한 것은 왜 못 넣었는지도 함께 알려 줍니다.</p>
-        </div>
-        <div>
-          <img class="shot" src="./intro/upload.jpg" alt="기프티콘 직접 추가 화면" width="760" height="1473" />
-          <p class="cap"><b>사진 한 장으로도 추가됩니다.</b> 아이폰에서는 이렇게 올립니다.</p>
+          <img class="shot" src="./intro/scan-found.jpg" alt="찾아낸 기프티콘 목록" width="760" height="1473" />
+          <p class="cap"><b>찾은 것을 먼저 보여 드립니다.</b> 올리고 싶지 않은 것은 ✕ 를 눌러 빼면 됩니다.</p>
         </div>
       </div>
       <div class="cards">
         <div class="card">
-          <h3>여러 장을 동시에</h3>
-          <p>한 장씩 기다리지 않습니다. 수십 장을 한 번에 읽어 목록으로 돌려 줍니다.</p>
+          <h3>한 번 본 사진은 다시 안 봅니다</h3>
+          <p>기프티콘이 아니라고 확인된 사진은 기억해둡니다. 다음에 찾을 때는 그만큼 빨라지고, 같은 것을 또 묻지 않습니다.</p>
         </div>
         <div class="card">
-          <h3>기프티콘만 골라냅니다</h3>
-          <p>사진첩에 섞여 있는 일상 사진은 그대로 두고, 기프티콘으로 보이는 것만 추립니다.</p>
+          <h3>처음부터 다시 찾고 싶다면</h3>
+          <p><b>내 메뉴 → 설정 → 전부 다시 찾기.</b> 기억해둔 것을 지우고 다음 찾기에서 전부 다시 봅니다. 실수로 뺀 것이 있을 때 씁니다.</p>
         </div>
         <div class="card on">
-          <h3>앱을 열면 알아서<span class="badge">Android</span></h3>
-          <p>켜 두면 앱을 열 때마다 사진첩을 먼저 훑어 새로 들어온 기프티콘을 찾아 둡니다. 등록할지는 보고 정하시면 됩니다.</p>
+          <h3>열 때마다 알아서<span class="badge">Android</span></h3>
+          <p><b>내 메뉴 → 설정 → 기프티콘 자동 찾기</b>를 켜두면, 앱을 열 때마다 사진첩을 먼저 훑어 새로 들어온 것을 찾아 둡니다. 등록할지는 보고 정하시면 됩니다.</p>
         </div>
       </div>
     </div>
@@ -292,23 +305,24 @@
     <div class="band">
       <div class="wrap split mid">
         <div class="side">
-          <img class="shot" src="./intro/family.jpg" alt="가족 관리 화면" width="760" height="1079" />
+          <img class="shot" src="./intro/upload.jpg" alt="기프티콘 추가 화면" width="760" height="1473" />
         </div>
         <div class="main">
           <div class="num">02</div>
-          <h2>한 서랍을 가족이 같이 씁니다</h2>
+          <h2>사진으로 직접 올릴 수도 있습니다<span class="badge">Android · iPhone</span></h2>
           <p class="lead">
-            초대 코드나 카카오톡 링크를 보내면 이름만 적고 들어옵니다. 이름표 색이 하나씩 붙어,
-            목록에서 누가 등록한 것인지 한눈에 보입니다.
+            한 장이든 여러 장이든 한꺼번에 올리면 됩니다. <b>기프티콘별로 알아서 나누고</b>,
+            바코드를 읽어 <b>상품명 · 상호 · 금액 · 유효기한</b>까지 채워 놓습니다.
+            같은 기프티콘을 여러 장으로 찍어 두셨어도 한 건으로 묶습니다.
           </p>
           <div class="notes">
             <div class="note">
               <div class="dot"></div>
-              <p><b>참여 신청은 승인해야 들어옵니다.</b> 코드가 새어 나가도 목록이 바로 열리지 않습니다.</p>
+              <p><b>직접 적을 것이 거의 없습니다.</b> 틀린 곳만 고치고 저장하면 끝입니다.</p>
             </div>
             <div class="note">
               <div class="dot"></div>
-              <p><b>가족을 여러 개 둘 수 있습니다.</b> 본가와 우리집을 따로 두고 오갈 수 있습니다.</p>
+              <p><b>아이폰에서도 그대로 됩니다.</b> 사진첩을 대신 훑는 것은 안드로이드에만 있지만, 사진으로 올리는 이 길은 양쪽 다 같습니다.</p>
             </div>
           </div>
         </div>
@@ -317,61 +331,140 @@
 
     <div class="wrap sec">
       <div class="num">03</div>
-      <h2>쓰는 순간에 필요한 것만 큼직하게</h2>
+      <h2>한 서랍을 가족이 같이 씁니다</h2>
       <p class="lead">
-        계산대 앞에서는 바코드 하나면 됩니다. 금액권은 쓴 만큼 깎아 두면 남은 금액이 목록에 그대로 보입니다.
-      </p>
-      <div class="split mid s3">
-        <div class="side">
-          <img class="shot" src="./intro/barcode.jpg" alt="바코드 화면" width="760" height="980" />
-        </div>
-        <div class="main">
-          <p class="cap"><b>바코드와 번호를 크게 띄웁니다.</b> 가족이 남긴 메모도 함께 보입니다.</p>
-          <img class="shot inset" src="./intro/amount.jpg" alt="금액권으로 표시하는 칸" width="760" height="296" />
-          <p class="cap"><b>금액권은 한 번 표시해 두면 됩니다.</b> 쓴 만큼 깎여, 남은 금액이 목록에 그대로 보입니다.</p>
-        </div>
-      </div>
-    </div>
-
-    <div class="wrap sec">
-      <div class="num">04</div>
-      <h2>지금 있는 자리에서 쓸 수 있는 것부터</h2>
-      <p class="lead">
-        가진 기프티콘을 쓸 수 있는 매장이 근처 어디에 있는지 가까운 순으로 보여 줍니다.
-        매장을 누르면 지도가 열리고, 길찾기로 그대로 이어집니다. 전화도 목록에서 바로 걸립니다.
+        초대 코드나 카카오톡 링크를 보내면 이름만 적고 들어옵니다. 이름표 색이 하나씩 붙어,
+        목록에서 누가 등록한 것인지 한눈에 보입니다.
       </p>
       <div class="pair">
-        <img class="shot" src="./intro/nearby.jpg" alt="주변 매장 목록 화면" width="760" height="1473" />
-        <img class="shot" src="./intro/store-map.jpg" alt="매장 상세·길찾기 화면" width="760" height="1473" />
+        <div>
+          <img class="shot" src="./intro/family.jpg" alt="가족 초대 화면" width="760" height="1079" />
+          <p class="cap"><b>초대 코드나 카카오톡 링크를 보냅니다.</b> 받은 사람은 이름만 적으면 됩니다.</p>
+        </div>
+        <div>
+          <img class="shot" src="./intro/approve.jpg" alt="참여 신청 승인 화면" width="760" height="500" />
+          <p class="cap"><b>신청이 오면 승인해야 들어옵니다.</b> 가족 중 누구나 승인할 수 있어, 대표를 기다릴 필요가 없습니다.</p>
+        </div>
       </div>
       <div class="notes">
-        <div class="note on">
+        <div class="note">
           <div class="dot"></div>
-          <p><b>반대 방향으로도 씁니다.</b> 지금 이 근처에서 쓸 수 있는 기프티콘이 무엇인지 먼저 알려 주기 때문에, 나갔던 길에 한 장이 줄어듭니다.</p>
+          <p><b>코드가 새어 나가도 목록이 바로 열리지 않습니다.</b> 승인이라는 문이 하나 더 있습니다.</p>
+        </div>
+        <div class="note">
+          <div class="dot"></div>
+          <p><b>가족을 여러 개 둘 수 있습니다.</b> 본가와 우리집을 따로 두고 오갈 수 있습니다.</p>
         </div>
       </div>
     </div>
 
     <div class="band">
       <div class="wrap split mid">
+        <div class="side">
+          <img class="shot" src="./intro/barcode.jpg" alt="바코드 화면" width="760" height="980" />
+        </div>
         <div class="main">
-          <div class="num">05</div>
-          <h2>기한이 지나도 끝이 아닙니다</h2>
+          <div class="num">04</div>
+          <h2>계산대 앞에서는 이것 하나면 됩니다</h2>
           <p class="lead">
-            기한이 가까워지면 푸시 알림으로 먼저 알려 주고, 목록에서는 남은 날짜가 카드마다 붙습니다.
-            이미 지난 것은 어떻게 되살릴 수 있는지 안내합니다. 발행처에서 연장을 받고 날짜를 반영해 두면
-            목록이 다시 살아납니다.
+            목록에서 카드를 누르면 <b>바코드가 화면 가득</b> 뜹니다. 리더기에 대면 끝입니다.
+            번호를 부르는 매장이라면 아래 큰 숫자를 읽어주시면 됩니다.
           </p>
-          <div class="chips">
-            <div class="chip plain">푸시 알림</div>
-            <div class="chip plain">남은 날짜 표시</div>
-            <div class="chip plain">연장 날짜 반영</div>
-            <div class="chip good">5년 안 90% 환불 안내</div>
+          <div class="notes">
+            <div class="note">
+              <div class="dot"></div>
+              <p><b>가족이 남긴 메모가 함께 보입니다.</b> "이건 아빠가 쓰세요" 같은 말을 그 자리에서 봅니다.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="wrap sec">
+      <div class="num">05</div>
+      <h2>금액권은 쓴 만큼 깎아 나갑니다</h2>
+      <p class="lead">
+        상품권은 한 번 쓰면 끝이지만 금액권은 나눠 씁니다.
+        등록할 때 <b>「금액권 — 쓴 만큼 깎여요」</b>에 한 번만 표시해 두시면 됩니다.
+      </p>
+      <div class="split mid s3">
+        <div class="side">
+          <img class="shot" src="./intro/amount.jpg" alt="금액권으로 표시하는 칸" width="760" height="296" />
+        </div>
+        <div class="main">
+          <div class="notes">
+            <div class="note">
+              <div class="dot"></div>
+              <p><b>쓸 때마다 얼마 썼는지 묻습니다.</b> 5만원권에서 3천원을 썼다면 그만큼만 깎입니다.</p>
+            </div>
+            <div class="note">
+              <div class="dot"></div>
+              <p><b>남은 금액이 목록에 그대로 보입니다.</b> 다 쓸 때까지 목록에 남아 있습니다.</p>
+            </div>
+            <div class="note">
+              <div class="dot"></div>
+              <p><b>누가 얼마를 썼는지도 남습니다.</b> 가족이 나눠 쓴 내역이 한 줄씩 쌓입니다.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="band">
+      <div class="wrap">
+        <div class="num">06</div>
+        <h2>지금 이 근처에서 쓸 수 있는 것을 먼저 알려 줍니다</h2>
+        <p class="lead">
+          쓸 곳을 찾아 나서는 게 아니라, <b>나갔던 길에 한 장이 줄어들게</b> 하는 기능입니다.
+          지금 있는 자리에서 쓸 수 있는 기프티콘이 있으면 목록 맨 위에 띠로 알려 줍니다.
+        </p>
+        <img class="shot band-shot" src="./intro/band.jpg" alt="목록 맨 위에 뜨는 근처 매장 안내 띠" width="760" height="239" />
+        <p class="cap">
+          <b>「BBQ 여의도파라다이스점 355m · 사용가능 1개」</b> — 가까운 매장과 거리, 거기서 쓸 수 있는 개수를
+          한 줄로 보여 줍니다. 이 띠는 <b>내 메뉴 → 설정 → 내 주변 안내</b>에서 켜고 끕니다.
+        </p>
+        <p class="lead">
+          띠를 누르거나 카드의 <b>매장</b>을 누르면 반대 방향으로도 씁니다 —
+          그 기프티콘을 쓸 수 있는 매장을 가까운 순으로 보여 주고, 지도와 길찾기로 이어집니다.
+        </p>
+        <div class="pair">
+          <img class="shot" src="./intro/nearby.jpg" alt="주변 매장 목록" width="760" height="1473" />
+          <img class="shot" src="./intro/store-map.jpg" alt="매장 상세와 길찾기" width="760" height="1473" />
+        </div>
+        <div class="chips">
+          <div class="chip plain">가까운 순 매장 목록</div>
+          <div class="chip plain">지도 보기 · 길찾기</div>
+          <div class="chip plain">매장 전화</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="wrap sec">
+      <div class="split mid">
+        <div class="main">
+          <div class="num">07</div>
+          <h2>중요한 건 푸시 알림으로 알려 드립니다</h2>
+          <p class="lead">
+            앱을 열지 않아도 폰으로 옵니다. 보내는 알림은 둘뿐이라 성가시지 않습니다 —
+            <b>유효기한이 다가올 때</b>, 그리고 <b>가족이 참여를 신청했을 때</b>.
+          </p>
+          <div class="notes">
+            <div class="note">
+              <div class="dot"></div>
+              <p><b>기한 알림에는 무엇이 며칠 남았는지가 적혀 있습니다.</b> 열어보지 않아도 알림만으로 압니다.</p>
+            </div>
+            <div class="note">
+              <div class="dot"></div>
+              <p><b>참여 신청은 기다리는 사람이 있는 일입니다.</b> 그래서 앱을 켜둔 채 딴 화면을 보고 있어도 뜹니다.</p>
+            </div>
+            <div class="note">
+              <div class="dot"></div>
+              <p><b>내 메뉴 → 설정 → 푸시 알림 받기</b>에서 켜고 끕니다.</p>
+            </div>
           </div>
         </div>
         <div class="side">
-          <img class="shot" src="./intro/push.jpg" alt="기한 알림과 참여 신청 알림이 온 잠금화면" width="760" height="577" />
-          <p class="cap"><b>기한이 가까워지면 폰으로 알려 줍니다.</b> 가족이 참여를 신청했을 때도 같은 자리로 옵니다.</p>
+          <img class="shot" src="./intro/push.jpg" alt="알림이 온 잠금화면" width="760" height="577" />
         </div>
       </div>
     </div>
@@ -382,11 +475,15 @@
           <img class="shot" src="./intro/report.jpg" alt="사용 내역 화면" width="760" height="1311" />
         </div>
         <div class="main">
-          <div class="num">06</div>
-          <h2>올해 얼마나 썼고, 얼마를 놓쳤는지</h2>
+          <div class="num">08</div>
+          <h2>기한이 지나도 끝은 아닙니다</h2>
           <p class="lead">
-            받은 개수와 쓴 개수, 가족별로 쓴 건수를 한 장에 모아 둡니다.
-            놓친 것이 보이면 다음에는 덜 놓치게 됩니다.
+            지난 것도 목록에서 아주 내리지 않습니다. <b>기한은 발행처에서 늘릴 수 있고</b>,
+            그마저 지났다면 <b>5년 안에는 90%를 환불</b>받을 수 있습니다. 앱이 그 길을 안내합니다.
+          </p>
+          <p class="lead">
+            올해 받은 것 중 몇 개를 썼고 몇 개를 놓쳤는지, 가족별로는 누가 얼마나 썼는지도
+            한 장에 모아 둡니다. 놓친 것이 보이면 다음에는 덜 놓치게 됩니다.
           </p>
         </div>
       </div>
@@ -425,7 +522,7 @@
         <div class="step">
           <div class="n">2</div>
           <h3>기프티콘 넣기</h3>
-          <p>그동안 받아 둔 기프티콘을 사진첩에서 찾거나 사진으로 올립니다.</p>
+          <p>사진첩에서 찾거나, 사진으로 올리면 나머지는 알아서 채워집니다.</p>
         </div>
         <div class="step">
           <div class="n">3</div>
@@ -443,8 +540,14 @@
             <p class="sub">모아콘 · 우리 가족 기프티콘 서랍</p>
           </div>
           <div class="act">
-            <a class="btn" href="https://ceaser501.github.io/our-home-gift/">모아콘 시작하기</a>
-            <p class="store">App Store · Google Play 출시 준비 중입니다</p>
+            <div class="stores">
+              <span class="store">
+                <span class="t"><small>곧 만나요</small>App&nbsp;Store</span>
+              </span>
+              <span class="store">
+                <span class="t"><small>곧 만나요</small>Google&nbsp;Play</span>
+              </span>
+            </div>
           </div>
         </div>
         <div class="rule"></div>
