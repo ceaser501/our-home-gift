@@ -410,6 +410,14 @@ Deno.serve(async (req) => {
       // 하루 요금의 천장이다. 따로 보면 한쪽만 조이게 되니 나란히 놓고 한 번에 정한다.
       limitFromEnv('ANALYZE_DAILY_LIMIT', 30),
       limitFromEnv('ANALYZE_TOTAL_DAILY_LIMIT', 500),
+      // 달 천장. 하루 500건이 30일이면 15,000건이고, 기프티콘 한 장에 analyze와 verify가
+      // 한 번씩 붙으니 실제 요금으로는 수백 달러다. 하루치만 보면 늘 여유가 있어 보여서
+      // 이 구멍은 아무도 못 알아챈다.
+      //
+      // 2,000으로 잡은 근거는 ai_usage_log 를 뽑아본 실제 단가다 — 한 장에 약 $0.025
+      // (analyze는 sonnet 5로 입력 5,081·출력 224, verify는 입력 2,048·출력 31).
+      // 2,000장이면 $50 남짓이고, Anthropic 콘솔에 걸어둔 월 한도와 같은 자리에 선다.
+      limitFromEnv('ANALYZE_TOTAL_MONTHLY_LIMIT', 2000),
     );
     if (!usage.allowed) {
       return new Response(JSON.stringify({ error: tooManyMessage(usage) }), {

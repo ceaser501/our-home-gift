@@ -82,12 +82,23 @@ export async function requireUser(req: Request) {
 // 사람별 상한과 전체 상한을 함께 본다. 계정은 이메일만 있으면 새로 만들 수 있어서
 // 사람별 상한만으로는 계정을 갈아치우는 것을 막지 못한다. 하루에 나갈 수 있는 요금의
 // 천장을 정하는 건 전체 상한 쪽이다.
-export async function withinDailyLimit(admin, userId: string, action: string, limit: number, totalLimit: number) {
+// 달 상한(monthlyTotal)은 하루 상한만으로는 막지 못하는 것을 막는다. 하루 500건이
+// 30일이면 15,000건인데, 하루치만 보면 늘 여유가 있어 보여서 아무도 못 알아챈다.
+// 안 주면 예전과 똑같이 하루 상한만 본다.
+export async function withinDailyLimit(
+  admin,
+  userId: string,
+  action: string,
+  limit: number,
+  totalLimit: number,
+  monthlyTotal?: number,
+) {
   const { data, error } = await admin.rpc('bump_api_usage', {
     uid: userId,
     act: action,
     max_per_day: limit,
     max_total_per_day: totalLimit,
+    ...(monthlyTotal ? { max_total_per_month: monthlyTotal } : {}),
   });
 
   // 세는 데 실패했다고 기능을 막지는 않는다. 한도는 요금 사고를 막으려는 장치이지
@@ -130,6 +141,10 @@ export function limitFromEnv(name: string, fallback: number) {
 // 내가 많이 쓴 것과, 전체가 많이 쓴 것은 사용자에게 할 말이 다르다.
 // 후자는 사용자 잘못이 아니라서 "네가 많이 썼다"고 하면 안 된다.
 export function tooManyMessage(usage: { reason: string | null; used: number; limit: number }) {
+  // 달 상한에 닿으면 내일이 되어도 안 풀린다. "내일 다시"라고 하면 안 된다.
+  if (usage.reason === 'month') {
+    return '이번 달 사용량을 다 썼어요. 직접 등록으로는 계속 올리실 수 있어요.';
+  }
   if (usage.reason === 'total') {
     return '오늘은 이 기능을 쓰는 사람이 너무 많아 잠시 쉬어가요. 내일 다시 시도해주세요.';
   }

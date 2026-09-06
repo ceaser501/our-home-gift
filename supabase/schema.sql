@@ -1519,7 +1519,21 @@ alter table public.api_usage_total enable row level security;
 -- "아직 여유 있음"으로 읽고 지나가버린다.
 -- (인자가 늘어서 예전 것을 지우고 다시 만든다)
 drop function if exists public.bump_api_usage(uuid, text, int);
-create or replace function public.bump_api_usage(uid uuid, act text, max_per_day int, max_total_per_day int default null)
+drop function if exists public.bump_api_usage(uuid, text, int, int);
+-- 달 상한(max_total_per_month)은 하루 상한만으로는 막지 못하는 것을 막는다.
+-- 하루 500건이 30일이면 15,000건이고, 기프티콘 한 장에 두 번 부르니 요금으로는
+-- 수백 달러다. 하루치만 보면 늘 여유가 있어 보여서 아무도 못 알아챈다.
+--
+-- 달 합계는 api_usage_total 을 더해서 낸다. 그 표는 지우지 않으므로(아래 delete는
+-- 사람별 기록만 치운다) 따로 쌓아둘 것이 없다. 기능당 하루 한 줄이라 한 달치를
+-- 더해봐야 서른 줄이다.
+create or replace function public.bump_api_usage(
+  uid uuid,
+  act text,
+  max_per_day int,
+  max_total_per_day int default null,
+  max_total_per_month int default null
+)
 returns json
 language plpgsql
 security definer
@@ -1529,6 +1543,7 @@ declare
   today date := (now() at time zone 'utc')::date;
   used int;
   total_used int;
+  month_used int;
 begin
   insert into public.api_usage (user_id, action, day, count)
   values (uid, act, today, 1)
@@ -1552,6 +1567,17 @@ begin
       -- 사용자 잘못이 아니다. 화면에도 다르게 말해야 한다.
       return json_build_object('allowed', false, 'reason', 'total', 'used', used, 'limit', max_per_day);
     end if;
+
+    if max_total_per_month is not null then
+      select coalesce(sum(count), 0) into month_used
+      from public.api_usage_total
+      where action = act and day >= date_trunc('month', today)::date;
+
+      if month_used > max_total_per_month then
+        -- 하루 상한과 말이 달라야 한다. 이건 내일이 되어도 안 풀린다.
+        return json_build_object('allowed', false, 'reason', 'month', 'used', used, 'limit', max_per_day);
+      end if;
+    end if;
   end if;
 
   return json_build_object('allowed', true, 'reason', null, 'used', used, 'limit', max_per_day);
@@ -1560,10 +1586,10 @@ $$;
 
 -- 이 함수를 사용자가 부를 수 있으면 남의 사용량을 마음대로 올려 못 쓰게 만들 수 있다.
 -- 서버(Edge Function)와, 이 안에서 다시 부르는 security definer 함수만 부른다.
-revoke all on function public.bump_api_usage(uuid, text, int, int) from public;
-revoke all on function public.bump_api_usage(uuid, text, int, int) from anon;
-revoke all on function public.bump_api_usage(uuid, text, int, int) from authenticated;
-grant execute on function public.bump_api_usage(uuid, text, int, int) to service_role;
+revoke all on function public.bump_api_usage(uuid, text, int, int, int) from public;
+revoke all on function public.bump_api_usage(uuid, text, int, int, int) from anon;
+revoke all on function public.bump_api_usage(uuid, text, int, int, int) from authenticated;
+grant execute on function public.bump_api_usage(uuid, text, int, int, int) to service_role;
 
 -- 오래된 기록은 쌓아둘 이유가 없다. 이 파일을 실행할 때마다 한 달 지난 것을 치운다.
 -- 단 api_usage_total은 치우지 않는다. 사람별 기록(api_usage)은 한도 검사용이라 한 달이면
