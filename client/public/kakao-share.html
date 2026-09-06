@@ -132,8 +132,27 @@
           }
         }
 
-        again.addEventListener('click', send);
-        send();
+        again.addEventListener('click', function () {
+          again.textContent = '다시 보내기';
+          send();
+        });
+
+        // 아이폰은 손으로 누르지 않은 앱 실행을 막는다.
+        //
+        // 페이지가 뜨자마자 보내면 카톡이 안 열리고, 카카오 SDK가 제 대체 페이지를
+        // 대신 띄운다 — 「카카오톡 다운로드 / 카카오톡 열기」가 그것이다. 그 '열기'는
+        // 그냥 카톡을 여는 버튼이라 초대 카드가 실리지 않는다. 보낸 줄 알고 넘어가게 된다.
+        //
+        // 그래서 아이폰에서는 버튼 한 번을 거친다. 안드로이드는 그 제약이 없고 지금까지
+        // 잘 돌던 길이라 그대로 자동으로 보낸다.
+        if (/iphone|ipad|ipod/i.test(navigator.userAgent)) {
+          title.textContent = '카카오톡으로 보내기';
+          note.textContent = '아래 버튼을 눌러주세요.';
+          again.textContent = '카카오톡으로 보내기';
+          again.hidden = false;
+        } else {
+          send();
+        }
       })();
     </script>
   </body>
