@@ -11,8 +11,14 @@ import { saveNativePushToken, deleteMyNativePushTokens, hasMyNativePushTokens } 
 // 토큰은 서버가 볼 때 웹 구독과 나란히 선다. 발송 함수(send-expiry-notifications,
 // send-test-notification)가 웹 구독과 FCM 토큰 양쪽으로 보낸다.
 
+// 앱 푸시는 지금 안드로이드만이다.
+//
+// 아이폰은 파이어베이스에 iOS 앱과 APNs 키를 붙이기 전에는 register()가 토큰을 못 받는다.
+// 오지도 실패하지도 않아서 아래 15초 타이머에 걸려 「알림 서버와 연결하지 못했어요」로
+// 끝난다. 켤 수 없는 스위치를 두는 대신, 준비될 때까지 화면에서 안내로 바꾼다
+// (NotificationToggle의 iosPending).
 export function isNativePushSupported() {
-  return isNativeApp();
+  return isNativeApp() && window.Capacitor?.getPlatform?.() === 'android';
 }
 
 // 켜기. 권한을 묻고, 토큰을 받아, 서버에 적는다.

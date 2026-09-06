@@ -67,15 +67,47 @@ export function loadKakaoMap() {
 
   if (!loadPromise) {
     loadPromise = new Promise((resolve) => {
+      // 어떤 길로 끝나든 약속은 반드시 한 번 끝나야 한다.
+      //
+      // 예전에는 onload 안에서 window.kakao를 바로 팠다. 카카오가 도메인을 거절하면
+      // 오류 본문이 스크립트로 실려 와서 onload가 불리는데 window.kakao는 없다 —
+      // 그 줄에서 터지고, onerror도 안 불리니 약속이 영영 안 끝났다. 화면은 「지도를
+      // 불러오는 중…」에 그대로 멈췄고 이유조차 못 보여줬다. 아이폰에서 그랬다.
+      let settled = false;
+      const done = (value) => {
+        if (settled) return;
+        settled = true;
+        if (value.kakao === null) loadPromise = null; // 다음에 다시 시도할 수 있게
+        clearTimeout(timer);
+        resolve(value);
+      };
+
+      // 스크립트가 성공도 실패도 아닌 채로 멈추는 경우까지 받아낸다.
+      const timer = setTimeout(
+        () => done({ kakao: null, reason: '카카오 지도가 응답하지 않아요. 잠시 뒤에 다시 열어주세요.' }),
+        10000
+      );
+
       const script = document.createElement('script');
       // autoload=false: SDK가 문서 로드 시점을 놓쳐도 kakao.maps.load()로 직접 초기화한다.
       script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${key}&autoload=false`;
-      script.onload = () => window.kakao.maps.load(() => resolve({ kakao: window.kakao, reason: null }));
-      script.onerror = async () => {
-        // 실패를 기억해두면 네트워크가 돌아와도 영영 못 쓰니, 다음에 다시 시도하게 비운다.
-        loadPromise = null;
+      script.onload = async () => {
+        if (window.kakao?.maps?.load) {
+          window.kakao.maps.load(() => done({ kakao: window.kakao, reason: null }));
+          return;
+        }
+        // 받아지긴 했는데 SDK가 아니다. 거의 언제나 도메인 거절이라 이유를 물어본다.
         const why = await askWhy(script.src);
-        resolve({
+        done({
+          kakao: null,
+          reason:
+            `카카오 지도를 불러오지 못했어요. 지금 주소는 ${window.location.origin} 이에요.` +
+            (why ? ` ${why}` : ''),
+        });
+      };
+      script.onerror = async () => {
+        const why = await askWhy(script.src);
+        done({
           kakao: null,
           reason:
             `카카오 지도를 불러오지 못했어요. 지금 주소는 ${window.location.origin} 이에요.` +

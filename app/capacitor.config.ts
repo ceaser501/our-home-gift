@@ -49,14 +49,21 @@ const config: CapacitorConfig = {
       presentationOptions: ['alert', 'sound', 'badge'],
     },
   },
-  ...(devServerUrl
-    ? {
-        server: {
-          url: devServerUrl,
-          androidScheme: 'https',
-        },
-      }
-    : {}),
+  // 웹뷰가 화면을 여는 주소.
+  //
+  // 카카오 지도 SDK는 스크립트를 부른 주소(Referer)로 등록된 도메인인지 판정한다.
+  // 안드로이드 기본값은 https://localhost 라 개발자센터에 그 주소를 등록해두면 되는데,
+  // iOS 기본값은 capacitor://localhost 다 — 등록할 수 있는 형태가 아니라 늘 거절당한다.
+  // 아이폰에서 지도가 「불러오는 중…」에서 멈춰 있던 이유가 이것이다.
+  //
+  // 둘을 https://localhost 로 맞춘다. 등록해둔 도메인 하나로 양쪽이 다 된다.
+  // iOS는 아직 깔린 사람이 없어서 주소가 바뀌어도 잃을 것이 없다(주소가 바뀌면 그
+  // 주소에 묶인 localStorage가 초기화된다 — 안드로이드는 값이 그대로라 영향이 없다).
+  server: {
+    androidScheme: 'https',
+    iosScheme: 'https',
+    ...(devServerUrl ? { url: devServerUrl } : {}),
+  },
 };
 
 export default config;
