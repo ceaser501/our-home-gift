@@ -160,30 +160,39 @@ Play에 올리면 **앱 서명 키를 구글이 관리**(Play App Signing)하게
 가기로 했다** — 기능 손실이 없고 한 벌로 유지되기 때문이다. 지도에 손댈 일이 많아지면
 그때 다시 본다.
 
-### ⚠️ 맥에서 `npm install`을 돌린 뒤 잠금 파일을 커밋하지 않는다 (2026-09-06)
+### ⚠️ `package-lock.json`을 지우고 새로 만들지 않는다 (2026-09-06)
 
-맥에서 `npm install`을 돌리면 `package-lock.json`에서 **리눅스용 항목이 빠진다**.
-그걸 커밋하면 GitHub Actions의 `npm ci`가 그 자리에서 죽는다.
+**하루에 두 번, 서로 반대 방향으로 이걸로 막혔다.**
+
+`lightningcss`·`rolldown`·`tailwindcss/oxide` 같은 것들은 플랫폼마다 다른 이진 파일을
+쓴다. 잠금 파일에는 그 목록이 **플랫폼별로 전부** 들어 있어야 리눅스(GitHub Actions)와
+맥 양쪽에서 `npm ci`가 돈다. 그런데 **파일을 지우고 `npm install`을 다시 돌리면 지금
+돌리는 컴퓨터의 것만 적힌다.**
+
+- 리눅스에서 새로 만들면 → 맥에서 `npm ci`가 죽는다
+  (`Missing: lightningcss-darwin-arm64 …`)
+- 맥에서 새로 만들면 → GitHub Actions가 죽는다
+  (`Missing: @emnapi/wasi-threads …`)
+
+후자로 **웹 배포가 세 번 연속 실패했고**(run 299~301) 그동안 고친 것이 하나도 안 나갔다.
+아이폰에서 지도가 404로 뜨고 카톡 초대가 옛 화면이던 것이 전부 그 때문이었다 — 코드는
+맞았는데 배포가 안 된 것이었다. **웹이 안 나가면 앱도 같이 막힌다**(map.html·
+kakao-share.html이 웹에 있다).
+
+**규칙은 하나다. 잠금 파일을 지우지 않는다.** 이미 있는 파일 위에 얹으면 npm이 다른
+플랫폼 항목을 그대로 둔 채 필요한 것만 더한다. 확인해봤다 — 지우고 만들면 맥용 15개가
+0개가 되고, 얹으면 15개가 그대로 남으면서 빠져 있던 것이 채워진다.
 
 ```
-npm error Missing: @emnapi/wasi-threads@1.2.3 from lock file
+npm install --package-lock-only     # 파일을 지우지 않고 갱신만
 ```
 
-**세 번 연속으로 웹 배포가 실패했고**(2026-09-06, run 299~301), 그동안 고친 것이
-하나도 안 나갔다. 아이폰에서 지도가 404로 뜨고 카톡 초대가 옛 화면 그대로였던 것이
-전부 이것 때문이다 — 코드는 맞았는데 배포가 안 된 것이었다. **웹이 안 나가면 앱도
-같이 막힌다**(map.html·kakao-share.html이 웹에 있다).
-
-맥에서 `git status`에 아래가 보이면 되돌린다.
+되돌릴 때는 지난 커밋에서 가져온다.
 
 ```
-git checkout -- client/package-lock.json app/package-lock.json
+git checkout <성한 커밋> -- client/package-lock.json app/package-lock.json
 ```
 
-**그래서 맥에서는 `npm install`을 직접 치지 않는다.** `npm run sync:ios`가 `npm ci`로
-설치까지 같이 한다 — `ci`는 잠금 파일을 읽기만 하고 고치지 않는다. 의존성이 늘어난
-날 빌드만 돌리면 `Rolldown failed to resolve import` 로 죽는데, 언제 늘었는지 사람이
-기억할 일이 아니라 스크립트에 넣어뒀다.
 막혔을 때 확인할 곳: 저장소 → Actions → **Deploy to GitHub Pages**.
 
 ### 맥에서 손으로 빌드할 때 — 두 번 막혔다 (2026-09-06)
