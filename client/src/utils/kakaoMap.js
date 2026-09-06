@@ -83,10 +83,20 @@ export function loadKakaoMap() {
       };
 
       // 스크립트가 성공도 실패도 아닌 채로 멈추는 경우까지 받아낸다.
-      const timer = setTimeout(
-        () => done({ kakao: null, reason: '카카오 지도가 응답하지 않아요. 잠시 뒤에 다시 열어주세요.' }),
-        10000
-      );
+      //
+      // 그냥 "응답하지 않아요"로 끝내면 무엇을 고쳐야 하는지 알 수 없다 — 인터넷이 느린
+      // 건지, 도메인이 안 맞아 카카오가 막은 건지 구별이 안 된다. 그래서 여기서도
+      // 네이티브로 한 번 더 물어보고(askWhy), 지금 주소와 함께 적는다. 주소가 틀렸으면
+      // 그 한 줄로 바로 드러난다.
+      const timer = setTimeout(async () => {
+        const why = await askWhy(script.src);
+        done({
+          kakao: null,
+          reason:
+            `카카오 지도가 응답하지 않아요. 지금 주소는 ${window.location.origin} 이에요.` +
+            (why ? ` ${why}` : ''),
+        });
+      }, 10000);
 
       const script = document.createElement('script');
       // autoload=false: SDK가 문서 로드 시점을 놓쳐도 kakao.maps.load()로 직접 초기화한다.

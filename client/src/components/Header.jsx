@@ -68,15 +68,23 @@ export default function Header() {
         <NotificationBell />
 
         {/* 내 이름 버튼: 설정·가족 나가기·로그아웃이 여기 모여 있다. */}
+        {/* 옆의 아이콘들과 같은 방식으로, 보이는 크기는 34px 그대로 두고 누를 자리만
+            42px로 넓힌다. 이 버튼만 34px이라 두세 번 눌러야 열린다는 말을 들었다 —
+            화면 맨 오른쪽 끝이라 엄지가 조금만 밖으로 나가도 빗나가는 자리다.
+            애플이 권하는 최소 과녁이 44pt인데 34는 그보다 한참 작다. */}
         <button
           type="button"
           onClick={() => setProfileOpen(true)}
           aria-label="내 메뉴"
-          className={`ml-0.5 flex size-[34px] shrink-0 items-center justify-center rounded-full text-xs font-bold text-white ${
-            memberTagColorClass(me) ?? OWNER_TAG_PALETTE[0]
-          }`}
+          className="-mr-1 flex size-[42px] shrink-0 items-center justify-center"
         >
-          {myName.slice(0, 3)}
+          <span
+            className={`flex size-[34px] items-center justify-center rounded-full text-xs font-bold text-white ${
+              memberTagColorClass(me) ?? OWNER_TAG_PALETTE[0]
+            }`}
+          >
+            {myName.slice(0, 3)}
+          </span>
         </button>
       </div>
 
