@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="only light" />
+    <title>모아콘 · 매장 지도</title>
+
+    <!--
+      매장 한 곳을 지도에 찍어 보여주는 작은 페이지. 아이폰 앱이 iframe으로 끼워 쓴다.
+
+      ── 왜 페이지가 따로 있나 ────────────────────────────────────────────────
+      카카오 지도 SDK는 스크립트를 부른 주소로 등록된 도메인인지 판정한다.
+
+      안드로이드 앱은 화면을 https://localhost 에서 열어서, 그 주소를 개발자센터에
+      등록해두면 앱 안에서 SDK가 그대로 돈다. 아이폰은 capacitor://localhost 다.
+      바꿔보려 했지만 iOS는 http·https 를 시스템이 예약해두어 앱이 그 이름을 쓸 수
+      없다 — 설정해도 조용히 무시된다. 카카오는 capacitor: 를 보고 401로 막는다
+      (domain mismatched! caller=capacitor:).
+
+      그래서 지도를 그리는 일만 등록된 웹 주소(ceaser501.github.io)로 넘긴다.
+      iframe 안의 주소가 그 도메인이라 SDK가 정상으로 본다.
+      카톡 초대가 kakao-share.html 로 우회하는 것과 같은 방식이다.
+
+      ── 여기서 하지 않는 것 ──────────────────────────────────────────────────
+      경로 그리기는 없다. 앱 화면이 지도 객체를 직접 쥐고 선을 그리는데, iframe 너머로는
+      그걸 못 넘긴다. 아이폰에서는 경로 칩을 감추고 길찾기(티맵·카카오맵)만 남긴다.
+
+      값은 주소에 실어 보낸다. 매장 좌표는 검색 결과로 이미 화면에 떠 있는 값이다.
+    -->
+    <style>
+      :root { color-scheme: only light; }
+      html, body { margin: 0; height: 100%; background: #eef0f4; }
+      #map { width: 100%; height: 100%; }
+      p {
+        margin: 0;
+        display: flex;
+        height: 100%;
+        align-items: center;
+        justify-content: center;
+        padding: 0 24px;
+        text-align: center;
+        font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif;
+        font-size: 13px;
+        line-height: 1.6;
+        color: #71717f;
+        word-break: keep-all;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+
+    <script>
+      (function () {
+        var params = new URLSearchParams(location.search);
+        var lat = parseFloat(params.get('lat'));
+        var lng = parseFloat(params.get('lng'));
+        var level = parseInt(params.get('level'), 10);
+
+        function fail(message) {
+          document.body.innerHTML = '<p>' + message + '</p>';
+        }
+
+        if (!isFinite(lat) || !isFinite(lng)) {
+          fail('매장 위치 정보가 없어요.');
+          return;
+        }
+
+        // 화면 코드가 쓰는 것과 같은 공개 키다. 감추는 값이 아니라, 카카오에 등록해둔
+        // 도메인에서만 먹히는 값이다.
+        var KEY = '2142934889b97f43cfc8c5cd69690f32';
+
+        var script = document.createElement('script');
+        script.src = 'https://dapi.kakao.com/v2/maps/sdk.js?appkey=' + KEY + '&autoload=false';
+
+        // 성공도 실패도 아닌 채로 멈추는 경우까지 받아낸다. 앱 쪽 kakaoMap.js와 같은 이유다.
+        var settled = false;
+        var timer = setTimeout(function () {
+          if (settled) return;
+          settled = true;
+          fail('지도가 응답하지 않아요.');
+        }, 10000);
+
+        script.onload = function () {
+          if (settled) return;
+          if (!window.kakao || !kakao.maps || !kakao.maps.load) {
+            settled = true;
+            clearTimeout(timer);
+            fail('지도를 불러오지 못했어요.');
+            return;
+          }
+          kakao.maps.load(function () {
+            settled = true;
+            clearTimeout(timer);
+            var center = new kakao.maps.LatLng(lat, lng);
+            var map = new kakao.maps.Map(document.getElementById('map'), {
+              center: center,
+              level: isFinite(level) ? level : 4,
+            });
+            new kakao.maps.Marker({ map: map, position: center });
+            // 끼워 넣은 칸의 크기가 뒤늦게 잡히면 회색으로 남는다. 한 번 다시 재고 중심을 맞춘다.
+            setTimeout(function () {
+              map.relayout();
+              map.setCenter(center);
+            }, 300);
+          });
+        };
+
+        script.onerror = function () {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          fail('지도를 불러오지 못했어요. 인터넷을 확인해주세요.');
+        };
+
+        document.head.appendChild(script);
+      })();
+    </script>
+  </body>
+</html>

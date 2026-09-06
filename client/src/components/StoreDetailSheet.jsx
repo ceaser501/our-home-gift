@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { fetchRoute } from '../api';
 import { loadKakaoMap } from '../utils/kakaoMap';
+import { isIosApp } from '../utils/browser';
 import { openTmapRoute } from '../utils/tmap';
 import useBackClose from '../utils/useBackClose';
 
@@ -53,7 +54,8 @@ export default function StoreDetailSheet({ store, origin, onClose }) {
   // 뒤로가기로 이 창을 닫는다. 안 그러면 설치해서 쓸 때 앱이 통째로 꺼진다.
   useBackClose(onClose);
   const mapRef = useRef(null);
-  // loading: SDK 받는 중 / ready: 지도 표시됨 / none: 키가 없거나 로드 실패(지도 없이 정보만)
+  // loading: SDK 받는 중 / ready: 지도 표시됨 / embed: 아이폰에서 웹 지도를 끼워 넣음
+  // / none: 키가 없거나 로드 실패(지도 없이 정보만)
   const [mapState, setMapState] = useState('loading');
   // 왜 안 떴는지. 화면에 그대로 보여준다 — 조용히 비어 있으면 무엇을 고쳐야 할지 모른다.
   const [mapReason, setMapReason] = useState(null);
@@ -73,11 +75,24 @@ export default function StoreDetailSheet({ store, origin, onClose }) {
 
   const canShowRoute = store.lat != null && origin != null;
 
+  // 아이폰 앱에서는 지도를 우리가 그리지 않고, 등록된 웹 주소에서 그린 것을 끼워 넣는다.
+  //
+  // 카카오는 스크립트를 부른 주소로 등록 도메인인지 판정하는데, 아이폰 앱 화면은
+  // capacitor://localhost 에서 열린다. iOS가 http·https 를 예약해두어 앱이 그 이름을
+  // 쓸 수 없어(설정해도 조용히 무시된다) 카카오는 401로 막는다 —
+  // "domain mismatched! caller=capacitor:". client/public/map.html 로 우회한다.
+  const embedMap = isIosApp();
+
   useEffect(() => {
     let cancelled = false;
 
     if (store.lat == null || store.lng == null) {
       setMapState('none');
+      return undefined;
+    }
+
+    if (embedMap) {
+      setMapState('embed');
       return undefined;
     }
 
@@ -212,9 +227,17 @@ export default function StoreDetailSheet({ store, origin, onClose }) {
               mapExpanded ? 'h-[58dvh]' : 'h-45'
             )}
           >
-            <div ref={mapRef} className="h-full w-full" />
+            {mapState === 'embed' ? (
+              <iframe
+                title="매장 지도"
+                src={`https://ceaser501.github.io/our-home-gift/map.html?lat=${store.lat}&lng=${store.lng}`}
+                className="h-full w-full border-0"
+              />
+            ) : (
+              <div ref={mapRef} className="h-full w-full" />
+            )}
 
-            {mapState === 'ready' && (
+            {(mapState === 'ready' || mapState === 'embed') && (
               <button
                 type="button"
                 onClick={() => setMapExpanded((on) => !on)}
@@ -240,7 +263,7 @@ export default function StoreDetailSheet({ store, origin, onClose }) {
                 {route.state === 'error' && <span className="text-center">{route.message}</span>}
               </span>
             )}
-            {mapState !== 'ready' && (
+            {mapState !== 'ready' && mapState !== 'embed' && (
               <p className="absolute inset-0 m-0 flex flex-col items-center justify-center gap-1 px-6 text-center text-xs text-muted-foreground">
                 {mapState === 'loading' ? (
                   '지도를 불러오는 중…'

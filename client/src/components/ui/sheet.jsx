@@ -63,9 +63,15 @@ function SheetContent({ className, children, side = 'bottom', showClose = true, 
         {...props}
       >
         {children}
+        {/* 보이는 동그라미는 34px 그대로 두고, 누를 자리만 44px로 넓힌다.
+            창 오른쪽 위 모서리라 엄지가 조금만 밖으로 나가도 빗나가는 자리다 —
+            아이폰에서 "잘 안 눌린다"는 말이 여기서 나왔다. 애플이 권하는 최소
+            과녁이 44pt다. 음수 마진으로 넓혀서 보이는 위치는 그대로 둔다. */}
         {showClose && (
-          <SheetPrimitive.Close className="absolute top-4 right-4 rounded-full bg-muted p-[9px] opacity-80 transition-opacity hover:opacity-100 focus:outline-hidden">
-            <XIcon className="size-4" />
+          <SheetPrimitive.Close className="absolute top-4 right-4 -m-[5px] flex size-11 items-center justify-center focus:outline-hidden">
+            <span className="flex size-[34px] items-center justify-center rounded-full bg-muted opacity-80 transition-opacity hover:opacity-100">
+              <XIcon className="size-4" />
+            </span>
             <span className="sr-only">닫기</span>
           </SheetPrimitive.Close>
         )}
