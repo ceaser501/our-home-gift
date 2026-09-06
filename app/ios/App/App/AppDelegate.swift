@@ -11,6 +11,23 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         return true
     }
 
+    // APNs가 앱에 직접 알려주는 것들을 캐패시터 쪽으로 넘긴다.
+    //
+    // 파이어베이스 메시징 플러그인이 이 세 가지를 기다린다. 안 넘기면 토큰이 오지도
+    // 실패하지도 않고, 화면에는 "알림 서버와 연결하지 못했어요"만 뜬다.
+    // 플러그인 README가 그대로 시키는 코드다.
+    func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+        NotificationCenter.default.post(name: .capacitorDidRegisterForRemoteNotifications, object: deviceToken)
+    }
+
+    func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
+        NotificationCenter.default.post(name: .capacitorDidFailToRegisterForRemoteNotifications, object: error)
+    }
+
+    func application(_ application: UIApplication, didReceiveRemoteNotification userInfo: [AnyHashable: Any], fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {
+        NotificationCenter.default.post(name: Notification.Name.init("didReceiveRemoteNotification"), object: completionHandler, userInfo: userInfo)
+    }
+
     func applicationWillResignActive(_ application: UIApplication) {
         // Sent when the application is about to move from active to inactive state. This can occur for certain types of temporary interruptions (such as an incoming phone call or SMS message) or when the user quits the application and it begins the transition to the background state.
         // Use this method to pause ongoing tasks, disable timers, and invalidate graphics rendering callbacks. Games should use this method to pause the game.

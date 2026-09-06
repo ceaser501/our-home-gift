@@ -49,6 +49,21 @@ const config: CapacitorConfig = {
       presentationOptions: ['alert', 'sound', 'badge'],
     },
   },
+  // 파이어베이스 메시징 플러그인이 SwiftPM에서 이름이 겹치는 것을 피하는 설정.
+  //
+  // 이 플러그인은 firebase-ios-sdk를 끌어오는데, 다른 패키지가 같은 것을 다른 이름으로
+  // 가리키면 Xcode가 "같은 패키지가 둘"이라며 멈춘다. symlink로 얹으면 그 충돌이 없다.
+  // 플러그인 README가 시키는 것이고, Capacitor CLI 8.4.0 이상에서만 먹는다(우리는 8.5).
+  experimental: {
+    ios: {
+      spm: {
+        packageOptions: {
+          '@capacitor-firebase/messaging': { symlink: true },
+        },
+      },
+    },
+  },
+
   // 웹뷰가 화면을 여는 주소.
   //
   // 카카오 지도 SDK는 스크립트를 부른 주소(Referer)로 등록된 도메인인지 판정한다.
