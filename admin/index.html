@@ -401,7 +401,11 @@ body.has-bar .auth-main{min-height:calc(100vh - 58px)}
     <nav>
       <a data-page="notices">공지사항</a>
       <a data-page="dash" class="on">대시보드</a>
-      <a data-page="sample">대시보드 샘플</a>
+      <!-- 대시보드 샘플은 메뉴에서 뺐다(2026-09-06). 실제 데이터가 적을 때
+           "쌓이면 이런 모습" 을 보려고 만든 것인데, 이제 진짜 숫자가 들어와서
+           옆에 나란히 두면 어느 쪽이 진짜인지 헷갈린다.
+           그리는 코드는 아래(대시보드 샘플 목데이터)에 그대로 뒀다 — 다시 보고
+           싶으면 이 줄만 되살리면 된다. -->
       <a data-page="users">회원 관리</a>
       <a data-page="gifticons">기프티콘 관리</a>
       <a data-page="families">가족 관리</a>

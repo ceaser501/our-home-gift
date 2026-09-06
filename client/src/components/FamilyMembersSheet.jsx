@@ -7,7 +7,7 @@ import RenameSheet from './RenameSheet';
 import CopyButton from './CopyButton';
 import { useFamily } from '../FamilyContext';
 import { approveJoinRequest, kickMember, rejectJoinRequest, renameFamily, renameMember } from '../family';
-import { OWNER_TAG_PALETTE, memberTagColorClass, nameTagColorClass } from '../utils/tagColor';
+import { OWNER_TAG_PALETTE, memberTagColorClass } from '../utils/tagColor';
 import { formatDate } from '../utils/date';
 import useBackClose from '../utils/useBackClose';
 import { shareInvite, shareToKakao } from '../utils/inviteLink';
@@ -144,14 +144,15 @@ export default function FamilyMembersSheet({ onClose }) {
             {joinRequests.map((request) => (
               <div key={request.id} className="flex flex-col gap-2.5 rounded-xl bg-card px-3 py-3">
                 <div className="flex items-center gap-2.5">
-                  {/* 구성원 목록과 같은 동그라미. 아직 가족이 아니라 tag_color가 없어서
-                      이름에서 색을 뽑는다(nameTagColorClass) — 같은 이름이면 언제 봐도 같은
-                      색이라, 승인하고 나서 목록에 설 때 색이 안 바뀐다. */}
-                  <span
-                    className={`flex size-[30px] shrink-0 items-center justify-center rounded-full text-[11.5px] font-bold text-white ${
-                      nameTagColorClass(request.display_name) ?? OWNER_TAG_PALETTE[0]
-                    }`}
-                  >
+                  {/* 색을 채우지 않는다. 이름표 색은 승인하는 순간 정해지는데
+                      (schema.sql의 next_tag_color — 그 가족에서 아직 안 쓴 가장 작은
+                      번호다) 이름과는 아무 상관이 없다.
+                      예전에는 여기서 이름으로 색을 뽑아 채워두고 "승인해도 색이 안 바뀐다"고
+                      적어뒀는데, 사실이 아니었다. 초록으로 기다리던 사람이 승인하고 나면
+                      분홍이 돼 있었다.
+                      맞출 수 있는 색이 없으므로 맞추는 척을 하지 않는다. 점선 테두리로
+                      "아직 정해지지 않았다"를 그대로 보여준다. */}
+                  <span className="flex size-[30px] shrink-0 items-center justify-center rounded-full border border-dashed border-muted-foreground/50 text-[11.5px] font-bold text-muted-foreground">
                     {request.display_name.slice(0, 3)}
                   </span>
                   {/* 이름은 끝까지 남고 이메일만 줄어든다. 누구를 들일지 정하는 자리라
