@@ -1,4 +1,5 @@
 import { isNativeApp } from './browser';
+import { WEB_ORIGIN } from './webOrigin';
 
 // 초대 링크. 카톡으로 보내고, 눌러서 들어온 사람을 참여 화면까지 데려간다.
 //
@@ -23,9 +24,9 @@ import { isNativeApp } from './browser';
 const PENDING_KEY = 'moacon:invite-code';
 export const INVITE_PARAM = 'join';
 
-// 앱은 화면을 안에 담아 https://localhost/ 로 연다. 그 주소로 초대 링크를 만들면 받는
-// 사람 폰에서는 아무 데도 닿지 않는다. 링크에 쓸 주소는 늘 웹이다.
-const WEB_ORIGIN = 'https://ceaser501.github.io/our-home-gift/';
+// 앱은 화면을 안에 담아 열기 때문에(안드로이드 https://localhost, 아이폰
+// capacitor://localhost) 그 주소로 초대 링크를 만들면 받는 사람 폰에서는 아무 데도
+// 닿지 않는다. 링크에 쓸 주소는 늘 웹이다 — utils/webOrigin.js 에 한곳으로 모아뒀다.
 
 /** 초대 링크. 받는 사람이 이 주소를 누르면 코드가 박힌 참여 화면으로 간다. */
 export function inviteUrl(code) {

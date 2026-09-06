@@ -1,6 +1,8 @@
 import { ChevronRight, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { markLeaving } from '../utils/returnTo';
+import { isNativeApp } from '../utils/browser';
+import { webUrl } from '../utils/webOrigin';
 
 // 내 메뉴의 줄들. 세 가지뿐이라 한 군데 모아둔다 — 켜고 끄는 줄, 앱 안으로 가는 줄,
 // 브라우저로 나가는 줄.
@@ -55,9 +57,18 @@ export function SettingSwitchRow({ icon: Icon, label, hint, on, onToggle, disabl
 // 오른쪽 표시가 두 가지다. 이 창에서 열리면 ›, 이 화면을 떠나면 ↗. 누르기 전에
 // "여기서 열리나 나가나"를 알려주는 값이라 모양이 달라야 한다.
 //
-// returnTo는 떠나기 전에 "여기로 돌아와야 한다"를 적어둘 이름이다. 앱 웹뷰에는 탭이
-// 없어서 target="_blank"가 그 자리에서 이동해버리는데, 그러고 뒤로가기를 누르면 앱이
-// 처음부터 다시 열려 이 창이 사라진다(utils/returnTo.js 참고).
+// 앱에서는 target="_blank"를 쓰지 않는다. 웹뷰에는 탭이 없어서 안드로이드는 그 자리에서
+// 이동해버리고(뒤로가기를 누르면 앱이 처음부터 다시 열려 이 창이 사라진다),
+// 아이폰은 아예 아무 일도 안 일어난다 — 약관 세 줄이 눌리지 않던 것이 그것이었다.
+//
+// 대신 브라우저 창을 덮어 띄운다(@capacitor/browser). 로그인과 카톡 초대가 쓰는 것과
+// 같은 방식이고, 닫으면 이 창이 그대로 있다.
+//
+// 주소도 웹 것으로 바꿔 준다. 앱 안에 담긴 화면은 capacitor://localhost 라 브라우저가
+// 열 수 있는 주소가 아니다.
+//
+// returnTo는 그래도 남겨둔다. 웹에서 새 탭이 막힌 경우처럼 화면을 떠나게 되는 길이
+// 아직 있고, 적어두는 값이라 손해가 없다(utils/returnTo.js 참고).
 export function SettingLinkRow({ icon: Icon, label, hint, onClick, href, returnTo }) {
   const external = Boolean(href);
   const Mark = external ? ExternalLink : ChevronRight;
@@ -80,14 +91,16 @@ export function SettingLinkRow({ icon: Icon, label, hint, onClick, href, returnT
 
   const className = 'flex w-full items-center gap-[13px] px-0.5 py-[13px] no-underline';
 
+  async function openExternal(event) {
+    if (returnTo) markLeaving(returnTo);
+    if (!isNativeApp()) return;
+    event.preventDefault();
+    const { Browser } = await import('@capacitor/browser');
+    await Browser.open({ url: webUrl(href) });
+  }
+
   return external ? (
-    <a
-      href={href}
-      target="_blank"
-      rel="noreferrer"
-      onClick={() => returnTo && markLeaving(returnTo)}
-      className={className}
-    >
+    <a href={href} target="_blank" rel="noreferrer" onClick={openExternal} className={className}>
       {inner}
     </a>
   ) : (
