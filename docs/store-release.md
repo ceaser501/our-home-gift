@@ -180,7 +180,10 @@ npm error Missing: @emnapi/wasi-threads@1.2.3 from lock file
 git checkout -- client/package-lock.json app/package-lock.json
 ```
 
-`npm run sync:ios`는 잠금 파일을 건드리지 않으니 그대로 써도 된다.
+**그래서 맥에서는 `npm install`을 직접 치지 않는다.** `npm run sync:ios`가 `npm ci`로
+설치까지 같이 한다 — `ci`는 잠금 파일을 읽기만 하고 고치지 않는다. 의존성이 늘어난
+날 빌드만 돌리면 `Rolldown failed to resolve import` 로 죽는데, 언제 늘었는지 사람이
+기억할 일이 아니라 스크립트에 넣어뒀다.
 막혔을 때 확인할 곳: 저장소 → Actions → **Deploy to GitHub Pages**.
 
 ### 맥에서 손으로 빌드할 때 — 두 번 막혔다 (2026-09-06)
