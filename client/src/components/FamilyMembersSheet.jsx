@@ -150,9 +150,9 @@ export default function FamilyMembersSheet({ onClose }) {
                       예전에는 여기서 이름으로 색을 뽑아 채워두고 "승인해도 색이 안 바뀐다"고
                       적어뒀는데, 사실이 아니었다. 초록으로 기다리던 사람이 승인하고 나면
                       분홍이 돼 있었다.
-                      맞출 수 있는 색이 없으므로 맞추는 척을 하지 않는다. 점선 테두리로
-                      "아직 정해지지 않았다"를 그대로 보여준다. */}
-                  <span className="flex size-[30px] shrink-0 items-center justify-center rounded-full border border-dashed border-muted-foreground/50 text-[11.5px] font-bold text-muted-foreground">
+                      맞출 수 있는 색이 없으므로 맞추는 척을 하지 않는다. 회색으로 두고,
+                      승인하면 그때 색이 입혀져 아래 목록에 선다. */}
+                  <span className="flex size-[30px] shrink-0 items-center justify-center rounded-full bg-muted-foreground text-[11.5px] font-bold text-background">
                     {request.display_name.slice(0, 3)}
                   </span>
                   {/* 이름은 끝까지 남고 이메일만 줄어든다. 누구를 들일지 정하는 자리라
