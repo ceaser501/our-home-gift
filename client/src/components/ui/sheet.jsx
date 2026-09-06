@@ -60,6 +60,15 @@ function SheetContent({ className, children, side = 'bottom', showClose = true, 
           className
         )}
         style={{ '--sheet-max-width': '480px' }}
+        // 열자마자 첫 버튼에 포커스가 잡히지 않게 한다.
+        //
+        // 기본 동작은 창이 열리면 안쪽 첫 번째 누를 수 있는 것으로 포커스를 옮기는
+        // 것이다. 키보드로 쓰는 화면에서는 맞는 동작이지만 폰에서는 '이름 바꾸기'
+        // 버튼이 눌린 것처럼 테두리가 씌워진 채로 떠서, 뭘 잘못 눌렀나 싶어진다.
+        //
+        // 글자를 적는 시트(이름 바꾸기·금액 입력·가족 만들기)는 입력칸에 autoFocus를
+        // 직접 달아뒀다. 그건 이 설정과 상관없이 그대로 뜬다.
+        onOpenAutoFocus={(event) => event.preventDefault()}
         {...props}
       >
         {children}
