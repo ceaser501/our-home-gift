@@ -135,6 +135,31 @@ Play에 올리면 **앱 서명 키를 구글이 관리**(Play App Signing)하게
   - `NSLocationWhenInUseUsageDescription` — 주변 사용처를 찾기 위해
   - `NSCameraUsageDescription` — 기프티콘을 촬영해 등록하기 위해 (쓰는 경우)
 
+### 아이폰 지도는 왜 iframe인가 (2026-09-06 정함)
+
+**아이폰에서만** 매장 지도를 `client/public/map.html`로 그려 iframe으로 끼운다
+(`client/src/components/StoreDetailSheet.jsx`의 `embedMap`). 안드로이드와 웹은
+지금까지처럼 화면이 SDK를 직접 부른다. 벽이 둘이고 둘 다 우리 쪽에서 못 바꾼다.
+
+- **애플** — iOS 웹뷰는 `http`·`https`를 시스템이 예약해둬서 앱이 그 이름으로 화면을
+  열 수 없다. `iosScheme: 'https'`를 넣어도 조용히 무시되고 `capacitor://localhost`로
+  되돌아간다. 안드로이드에는 그 제약이 없어 `https://localhost`가 된다.
+- **카카오** — 지도 JS SDK는 개발자센터에 등록된 **웹 도메인**에서만 동작한다.
+  `capacitor://`는 등록할 수 있는 형태가 아니다. 실기기가 그대로 말해줬다:
+  `401 domain mismatched! caller=capacitor:`
+
+**기능은 하나도 안 빠진다.** 경로도 그린다 — 길을 받아오는 일(`fetchRoute`)은 앱이
+그대로 하고, 좌표만 `postMessage`로 넘겨 저쪽이 선을 긋는다(`moacon:route` ·
+`moacon:relayout` · `moacon:ready`). 차/도보 칩, 점선(도보), 출발지 파란 점, 범위
+맞춤까지 안드로이드와 같다.
+
+**정식 대안은 카카오 지도 iOS 네이티브 SDK다.** 카카오가 iOS 앱용으로 내놓은 것이고,
+쓰려면 개발자센터에 iOS 플랫폼(번들 ID)을 등록하고 Swift로 Capacitor 플러그인을 새로
+써야 한다(지도 생성·마커·경로선·범위맞춤). 그러면 안드로이드는 JS SDK, 아이폰은
+네이티브 SDK로 **두 벌을 따로 관리**하게 된다. 2026-09-06에 견줘보고 **A(iframe)로
+가기로 했다** — 기능 손실이 없고 한 벌로 유지되기 때문이다. 지도에 손댈 일이 많아지면
+그때 다시 본다.
+
 ### 맥에서 손으로 빌드할 때 — 두 번 막혔다 (2026-09-06)
 
 둘 다 흰 화면이나 「Load failed」로만 나타나서, 원인을 짐작하기가 어려웠다.
