@@ -6,6 +6,12 @@
 	<string>$(CAPACITOR_DEBUG)</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
+	<!-- 수출 규정 질문을 매번 안 받으려고 미리 답해둔다.
+	     이 앱이 쓰는 암호화는 HTTPS(TLS)뿐이고 그건 운영체제가 해주는 것이다.
+	     자체 암호화를 만들어 넣지 않았으므로 면제 대상이라 false가 맞다.
+	     이 줄이 없으면 빌드를 올릴 때마다 App Store Connect가 물어본다. -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>CFBundleDisplayName</key>
         <string>모아콘</string>
 	<key>CFBundleExecutable</key>
