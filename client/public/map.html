@@ -22,9 +22,17 @@
       iframe 안의 주소가 그 도메인이라 SDK가 정상으로 본다.
       카톡 초대가 kakao-share.html 로 우회하는 것과 같은 방식이다.
 
-      ── 여기서 하지 않는 것 ──────────────────────────────────────────────────
-      경로 그리기는 없다. 앱 화면이 지도 객체를 직접 쥐고 선을 그리는데, iframe 너머로는
-      그걸 못 넘긴다. 아이폰에서는 경로 칩을 감추고 길찾기(티맵·카카오맵)만 남긴다.
+      ── 경로도 여기서 그린다 ─────────────────────────────────────────────────
+      지도 객체를 iframe 너머로 넘길 수는 없다. 대신 그릴 것을 말로 넘긴다 —
+      앱이 서버에서 받아온 길 좌표를 postMessage로 보내면 여기서 선을 긋는다.
+      길을 받아오는 일(fetchRoute)은 그대로 앱이 한다. 여기는 그리기만 맡는다.
+
+        앱 → 지도   { type: 'moacon:route', points, mode, origin }   points가 없으면 지움
+        앱 → 지도   { type: 'moacon:relayout' }                      칸 크기가 바뀌었을 때
+        지도 → 앱   { type: 'moacon:ready' }                         이제 받을 수 있다
+
+      받는 쪽에서 보내는 이가 누구인지는 따지지 않는다. 이 창이 하는 일은 선을 긋는 것
+      뿐이고, 좌표는 이미 화면에 떠 있는 값이다. 대신 우리가 정한 형태가 아니면 버린다.
 
       값은 주소에 실어 보낸다. 매장 좌표는 검색 결과로 이미 화면에 떠 있는 값이다.
     -->
@@ -104,6 +112,77 @@
               map.relayout();
               map.setCenter(center);
             }, 300);
+
+            // ── 경로 ────────────────────────────────────────────────────────
+            var shapes = [];
+            var points = null;
+
+            function fitTo() {
+              if (points && points.length) {
+                var bounds = new kakao.maps.LatLngBounds();
+                points.forEach(function (p) { bounds.extend(p); });
+                map.setBounds(bounds, 30, 30, 30, 30);
+                return;
+              }
+              map.setLevel(isFinite(level) ? level : 4);
+              map.setCenter(center);
+            }
+
+            function clearRoute() {
+              shapes.forEach(function (shape) { shape.setMap(null); });
+              shapes = [];
+              points = null;
+            }
+
+            function drawRoute(data) {
+              clearRoute();
+              if (!data.points || !data.points.length) {
+                fitTo();
+                return;
+              }
+              points = data.points.map(function (p) { return new kakao.maps.LatLng(p.lat, p.lng); });
+
+              var line = new kakao.maps.Polyline({
+                path: points,
+                strokeWeight: 5,
+                strokeColor: '#5b4fe8',
+                strokeOpacity: 0.9,
+                // 걸어가는 길은 점선으로 그려 차로 가는 길과 한눈에 구분되게 한다.
+                strokeStyle: data.mode === 'walk' ? 'shortdash' : 'solid',
+              });
+              line.setMap(map);
+              shapes.push(line);
+
+              // 매장 마커와 구분되게, 출발지(내 위치)는 파란 점으로 표시한다.
+              if (data.origin) {
+                var dot = new kakao.maps.CustomOverlay({
+                  position: new kakao.maps.LatLng(data.origin.lat, data.origin.lng),
+                  content:
+                    '<div style="width:14px;height:14px;border-radius:50%;background:#2f6fed;' +
+                    'border:3px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.2)"></div>',
+                });
+                dot.setMap(map);
+                shapes.push(dot);
+              }
+
+              fitTo();
+            }
+
+            window.addEventListener('message', function (event) {
+              var data = event.data;
+              if (!data || typeof data !== 'object') return;
+              if (data.type === 'moacon:route') drawRoute(data);
+              // 칸 높이가 바뀌면 다시 재라고 알려줘야 한다. 안 그러면 늘어난 자리가
+              // 회색으로 비거나 보던 위치가 어긋난다.
+              else if (data.type === 'moacon:relayout') {
+                map.relayout();
+                fitTo();
+              }
+            });
+
+            // 이제 받을 수 있다고 앱에 알린다. 이걸 안 보내면 앱이 지도가 준비되기 전에
+            // 경로를 보내고, 그 메시지는 아무도 못 받은 채 사라진다.
+            if (window.parent !== window) window.parent.postMessage({ type: 'moacon:ready' }, '*');
           });
         };
 

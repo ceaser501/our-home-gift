@@ -72,6 +72,9 @@ export default function StoreDetailSheet({ store, origin, onClose }) {
   const routeShapesRef = useRef([]);
   // 지도 크기가 바뀌었을 때 경로 전체가 다시 들어오도록 좌표를 들고 있는다.
   const routePointsRef = useRef(null);
+  // 아이폰에서 지도를 끼워 넣을 때 쓰는 것들. 그쪽이 준비됐다고 알려와야 경로를 보낸다.
+  const iframeRef = useRef(null);
+  const [embedReady, setEmbedReady] = useState(false);
 
   const canShowRoute = store.lat != null && origin != null;
 
@@ -122,10 +125,52 @@ export default function StoreDetailSheet({ store, origin, onClose }) {
     };
   }, [store]);
 
+  // 끼워 넣은 지도가 준비됐다고 알려오면 그때부터 경로를 보낼 수 있다.
+  useEffect(() => {
+    if (!embedMap) return undefined;
+    function onMessage(event) {
+      if (event.data?.type === 'moacon:ready') setEmbedReady(true);
+    }
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+  }, [embedMap]);
+
+  function tellMap(message) {
+    iframeRef.current?.contentWindow?.postMessage(message, 'https://ceaser501.github.io');
+  }
+
   // 내 위치에서 매장까지 길을 따라가는 경로를 그린다. 두 점을 직선으로 이으면 건물과
   // 강을 가로질러서 실제로는 쓸모가 없기 때문에, 서버에서 받아온 길 좌표를 그대로 잇는다.
   // 자동차는 카카오, 걸어가는 길은 티맵에서 받아온다(카카오는 도보를 주지 않는다).
   useEffect(() => {
+    // 아이폰은 지도가 iframe 안에 있다. 길을 받아오는 일은 여기서 그대로 하고,
+    // 그린 것만 그쪽에 맡긴다 — 좌표를 보내면 저쪽이 선을 긋는다.
+    if (embedMap) {
+      if (!embedReady) return undefined;
+      if (!routeMode || !origin) {
+        tellMap({ type: 'moacon:route', points: null });
+        setRoute(null);
+        return undefined;
+      }
+
+      let cancelled = false;
+      setRoute({ state: 'loading' });
+
+      fetchRoute({ mode: routeMode, origin, destination: { lat: store.lat, lng: store.lng } })
+        .then((result) => {
+          if (cancelled) return;
+          tellMap({ type: 'moacon:route', points: result.path, mode: routeMode, origin });
+          setRoute({ state: 'done', distance: result.distance, duration: result.duration });
+        })
+        .catch((err) => {
+          if (!cancelled) setRoute({ state: 'error', message: err.message });
+        });
+
+      return () => {
+        cancelled = true;
+      };
+    }
+
     const kakao = kakaoRef.current;
     const map = mapObjRef.current;
     if (!kakao || !map) return undefined;
@@ -180,11 +225,17 @@ export default function StoreDetailSheet({ store, origin, onClose }) {
     return () => {
       cancelled = true;
     };
-  }, [routeMode, origin, store, mapState]);
+  }, [routeMode, origin, store, mapState, embedMap, embedReady]);
 
   // 지도 칸의 크기가 바뀌면 카카오 지도에 다시 재라고 알려줘야 한다. 안 그러면 늘어난
   // 자리가 회색으로 비거나 보던 위치가 어긋난다. 높이 애니메이션이 끝난 뒤에 잰다.
   useEffect(() => {
+    if (embedMap) {
+      if (!embedReady) return undefined;
+      const timer = setTimeout(() => tellMap({ type: 'moacon:relayout' }), 320);
+      return () => clearTimeout(timer);
+    }
+
     const kakao = kakaoRef.current;
     const map = mapObjRef.current;
     if (!kakao || !map) return undefined;
@@ -194,7 +245,7 @@ export default function StoreDetailSheet({ store, origin, onClose }) {
       fitTo(kakao, map, routePointsRef.current, store);
     }, 320);
     return () => clearTimeout(timer);
-  }, [mapExpanded, mapState, store]);
+  }, [mapExpanded, mapState, store, embedMap, embedReady]);
 
   const phoneHref = store.phone ? `tel:${store.phone.replace(/[^\d+]/g, '')}` : null;
   // 길안내는 티맵 앱으로 넘긴다(도보·자동차·대중교통을 거기서 고를 수 있다).
@@ -229,6 +280,7 @@ export default function StoreDetailSheet({ store, origin, onClose }) {
           >
             {mapState === 'embed' ? (
               <iframe
+                ref={iframeRef}
                 title="매장 지도"
                 src={`https://ceaser501.github.io/our-home-gift/map.html?lat=${store.lat}&lng=${store.lng}`}
                 className="h-full w-full border-0"
@@ -248,7 +300,7 @@ export default function StoreDetailSheet({ store, origin, onClose }) {
               </button>
             )}
             {/* 차로 가는 길인지 걸어가는 길인지 분명히 적어둔다. 거리와 시간이 크게 달라진다. */}
-            {mapState === 'ready' && routeMode && route && (
+            {(mapState === 'ready' || mapState === 'embed') && routeMode && route && (
               <span className="absolute bottom-2 left-1/2 z-1 flex max-w-[92%] -translate-x-1/2 items-center gap-1.5 rounded-full bg-black/70 px-2.5 py-1 text-[11px] font-semibold text-white">
                 {route.state === 'loading' && '경로를 그리는 중…'}
                 {route.state === 'done' && (
@@ -295,7 +347,7 @@ export default function StoreDetailSheet({ store, origin, onClose }) {
                   <span className="font-bold whitespace-nowrap text-primary">{formatDistance(store.distance)}</span>
                 </span>
                 {/* 같은 곳이라도 차로 갈 때와 걸어갈 때 길이 달라서, 눌러서 각각 볼 수 있게 한다. */}
-                {canShowRoute && mapState === 'ready' && (
+                {canShowRoute && (mapState === 'ready' || mapState === 'embed') && (
                   <span className="flex shrink-0 gap-1">
                     {[
                       { key: 'car', label: '차', Icon: Car },
