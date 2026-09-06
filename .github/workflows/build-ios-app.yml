@@ -47,6 +47,30 @@ jobs:
           npm test
           npm run build
 
+      # 파이어베이스 설정(아이폰 판). 안드로이드의 google-services.json과 같은 역할이라
+      # 같은 방식으로 다룬다 — 저장소에 두지 않고 시크릿에서 꺼내 넣는다.
+      # 없으면 알림만 빠진 채로 빌드된다. 코드가 성한지 보는 것이 이 워크플로의 일이라
+      # 여기서 멈추지 않는다.
+      - name: Restore Firebase config
+        env:
+          GOOGLE_SERVICE_INFO_PLIST: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST }}
+        run: |
+          if [ -z "$GOOGLE_SERVICE_INFO_PLIST" ]; then
+            echo "::warning::GOOGLE_SERVICE_INFO_PLIST 시크릿이 없어 앱 알림 없이 빌드합니다."
+            exit 0
+          fi
+          echo "$GOOGLE_SERVICE_INFO_PLIST" | base64 -d > app/ios/App/App/GoogleService-Info.plist
+          echo "GoogleService-Info.plist 복원 완료"
+
+          # 이 파일 안의 BUNDLE_ID는 파이어베이스에 등록해둔 앱을 가리킨다. 지금 앱과
+          # 다르면 토큰을 못 받는데, 앱에서는 "알림 서버와 연결하지 못했어요"로만 보여서
+          # 원인을 찾기 어렵다. 여기서 미리 잡는다.
+          want=$(sed -n 's/.*PRODUCT_BUNDLE_IDENTIFIER = \(.*\);.*/\1/p' app/ios/App/App.xcodeproj/project.pbxproj | head -1)
+          if ! grep -q "<string>$want</string>" app/ios/App/App/GoogleService-Info.plist; then
+            echo "::error title=GoogleService-Info.plist가 지금 번들 ID와 맞지 않습니다::앱은 $want 인데 파일에는 없습니다. 파이어베이스 콘솔 > 프로젝트 설정 > 앱 추가 > iOS 로 $want 를 등록하고, 새로 받은 GoogleService-Info.plist를 base64로 바꿔 GOOGLE_SERVICE_INFO_PLIST 시크릿에 다시 넣어주세요."
+            exit 1
+          fi
+
       # Package.swift가 ../../../node_modules/@capacitor/* 를 가리킨다. app/에 설치가
       # 안 돼 있으면 여기가 아니라 Xcode가 의존성을 못 찾아 멈춘다.
       - name: Sync Capacitor

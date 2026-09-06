@@ -11,21 +11,49 @@ import { saveNativePushToken, deleteMyNativePushTokens, hasMyNativePushTokens } 
 // 토큰은 서버가 볼 때 웹 구독과 나란히 선다. 발송 함수(send-expiry-notifications,
 // send-test-notification)가 웹 구독과 FCM 토큰 양쪽으로 보낸다.
 
-// 앱 푸시는 지금 안드로이드만이다.
-//
-// 아이폰은 파이어베이스에 iOS 앱과 APNs 키를 붙이기 전에는 register()가 토큰을 못 받는다.
-// 오지도 실패하지도 않아서 아래 15초 타이머에 걸려 「알림 서버와 연결하지 못했어요」로
-// 끝난다. 켤 수 없는 스위치를 두는 대신, 준비될 때까지 화면에서 안내로 바꾼다
-// (NotificationToggle의 iosPending).
 export function isNativePushSupported() {
-  return isNativeApp() && window.Capacitor?.getPlatform?.() === 'android';
+  return isNativeApp();
+}
+
+function isIos() {
+  return window.Capacitor?.getPlatform?.() === 'ios';
 }
 
 // 켜기. 권한을 묻고, 토큰을 받아, 서버에 적는다.
 //
 // registration 이벤트를 먼저 걸고 register()를 부른다 — 순서를 바꾸면 토큰이
 // 이벤트로 왔다 가버린 뒤라 영영 기다리게 된다.
+// 아이폰은 파이어베이스 플러그인으로 받는다.
+//
+// @capacitor/push-notifications 는 아이폰에서 APNs 토큰을 준다. 서버는 FCM 한 갈래로만
+// 보내는데(send-expiry-notifications) FCM은 APNs 토큰을 모른다 — 그래서 켜도 알림이
+// 안 온다. 파이어베이스 플러그인은 같은 자리에서 FCM 토큰을 주고, 애플로 전달하는 일은
+// 파이어베이스가 대신 한다. 서버와 토큰 표는 손대지 않아도 된다.
+//
+// 안드로이드는 지금까지 잘 돌던 길이라 그대로 둔다.
+async function iosFcmToken() {
+  const { FirebaseMessaging } = await import('@capacitor-firebase/messaging');
+
+  const permission = await FirebaseMessaging.requestPermissions();
+  if (permission.receive !== 'granted') {
+    throw new Error('알림 권한을 허용해주셔야 켤 수 있어요.');
+  }
+
+  const { token } = await FirebaseMessaging.getToken();
+  if (!token) {
+    // GoogleService-Info.plist 가 빌드에 안 들어갔거나 APNs 키가 안 붙은 경우다.
+    throw new Error('알림 서버와 연결하지 못했어요. 잠시 뒤 다시 시도해주세요.');
+  }
+  return token;
+}
+
 export async function enableNativePush({ familyId }) {
+  if (isIos()) {
+    const token = await iosFcmToken();
+    await saveNativePushToken({ familyId, token });
+    return token;
+  }
+
   const permission = await PushNotifications.requestPermissions();
   if (permission.receive !== 'granted') {
     throw new Error('알림 권한을 허용해주셔야 켤 수 있어요.');

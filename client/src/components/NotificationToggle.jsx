@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { BellRing } from 'lucide-react';
 import { isPushSupported, isPushEnabled, subscribeToPush, unsubscribeFromPush } from '../push';
 import { isNativePushSupported, isNativePushEnabled, enableNativePush, disableNativePush } from '../nativePush';
-import { isIosApp } from '../utils/browser';
 import { useFamily } from '../FamilyContext';
 import AlertDialog from './AlertDialog';
 import { SettingSwitchRow } from './SettingRow';
@@ -32,23 +31,6 @@ export default function NotificationToggle({ asRow = false, onChange }) {
   function apply(value) {
     setEnabled(value);
     onChange?.(value);
-  }
-
-  // 아이폰 앱은 아직 푸시를 못 켠다(nativePush.js). 줄을 통째로 지우면 바로 아래
-  // '알림 테스트'만 남아, 켤 방법이 없는데 보내보라는 화면이 된다 — v0.0.80에서 한 번
-  // 그랬다. 그래서 자리는 두고 왜 못 켜는지만 적는다.
-  const iosPending = isIosApp();
-  if (iosPending) {
-    return asRow ? (
-      <SettingSwitchRow
-        icon={BellRing}
-        label="푸시 알림 받기"
-        hint="아이폰은 준비 중이에요"
-        on={false}
-        onToggle={() => {}}
-        disabled
-      />
-    ) : null;
   }
 
   if (!supported) return null;
