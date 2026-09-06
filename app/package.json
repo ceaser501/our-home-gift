@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "sync:ios": "npm --prefix ../client run build:app && cap sync ios",
+    "sync:android": "npm --prefix ../client run build:app && cap sync android"
   },
   "keywords": [],
   "author": "",

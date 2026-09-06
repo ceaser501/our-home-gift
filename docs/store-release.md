@@ -135,6 +135,30 @@ Play에 올리면 **앱 서명 키를 구글이 관리**(Play App Signing)하게
   - `NSLocationWhenInUseUsageDescription` — 주변 사용처를 찾기 위해
   - `NSCameraUsageDescription` — 기프티콘을 촬영해 등록하기 위해 (쓰는 경우)
 
+### 맥에서 손으로 빌드할 때 — 두 번 막혔다 (2026-09-06)
+
+둘 다 흰 화면이나 「Load failed」로만 나타나서, 원인을 짐작하기가 어려웠다.
+그래서 **명령 한 줄로 묶어뒀다.**
+
+```
+cd app && npm run sync:ios      # 앱용 빌드 + cap sync 까지 한 번에
+```
+
+**① `npm run build`를 쓰면 안 된다.** `client/vite.config.js:23`이 웹 빌드에
+`/our-home-gift/`를 앞에 붙인다 — GitHub Pages 주소가 그래서다. 앱 안에는 그런
+경로가 없으니 파일을 하나도 못 찾고 **흰 화면**이 된다. 앱용은 `build:app`이고,
+그게 `VITE_BASE_PATH=/`를 준다. 워크플로들도 같은 값을 준다
+(`.github/workflows/build-ios-app.yml:41`, `build-android-apk.yml:85`).
+
+**② `client/.env`가 맥에 있어야 한다.** 저장소에 안 올라가는 파일이고
+(`client/.gitignore:15`), 워크플로는 GitHub 시크릿에서 채운다. 맥에 없으면
+Supabase 주소가 `undefined`가 되어 **모든 통신이 「Load failed」**로 죽는다.
+애플 로그인만 안 되는 것처럼 보이지만 이메일 로그인도 똑같이 죽는다 — 그걸로 갈랐다.
+
+```
+cp client/.env.example client/.env      # 값은 Supabase·네이버·카카오 콘솔에서
+```
+
 ### 안드로이드에만 있어서 같이 옮겨야 하는 것 — 설정 열기
 
 권한을 거절한 사람에게 **[설정 열기]** 버튼을 보여주는 자리가 두 곳 있다.
