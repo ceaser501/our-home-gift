@@ -160,6 +160,29 @@ Play에 올리면 **앱 서명 키를 구글이 관리**(Play App Signing)하게
 가기로 했다** — 기능 손실이 없고 한 벌로 유지되기 때문이다. 지도에 손댈 일이 많아지면
 그때 다시 본다.
 
+### ⚠️ 맥에서 `npm install`을 돌린 뒤 잠금 파일을 커밋하지 않는다 (2026-09-06)
+
+맥에서 `npm install`을 돌리면 `package-lock.json`에서 **리눅스용 항목이 빠진다**.
+그걸 커밋하면 GitHub Actions의 `npm ci`가 그 자리에서 죽는다.
+
+```
+npm error Missing: @emnapi/wasi-threads@1.2.3 from lock file
+```
+
+**세 번 연속으로 웹 배포가 실패했고**(2026-09-06, run 299~301), 그동안 고친 것이
+하나도 안 나갔다. 아이폰에서 지도가 404로 뜨고 카톡 초대가 옛 화면 그대로였던 것이
+전부 이것 때문이다 — 코드는 맞았는데 배포가 안 된 것이었다. **웹이 안 나가면 앱도
+같이 막힌다**(map.html·kakao-share.html이 웹에 있다).
+
+맥에서 `git status`에 아래가 보이면 되돌린다.
+
+```
+git checkout -- client/package-lock.json app/package-lock.json
+```
+
+`npm run sync:ios`는 잠금 파일을 건드리지 않으니 그대로 써도 된다.
+막혔을 때 확인할 곳: 저장소 → Actions → **Deploy to GitHub Pages**.
+
 ### 맥에서 손으로 빌드할 때 — 두 번 막혔다 (2026-09-06)
 
 둘 다 흰 화면이나 「Load failed」로만 나타나서, 원인을 짐작하기가 어려웠다.
