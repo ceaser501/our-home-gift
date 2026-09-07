@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { isNativeApp } from './browser';
 
 // 뒤로가기를 누르면 앱이 꺼지는 문제를 막는다.
 //
@@ -46,10 +47,33 @@ function mark() {
   window.history.pushState({ sheet: MARK }, '');
 }
 
+// 닫을 창이 없는데 뒤로가기가 왔다. 앱을 나가겠다는 뜻이다.
+//
+// 이 자리가 "뒤로가기를 눌러도 앱이 안 꺼진다"였다. 창을 X로 닫으면 히스토리의 표시가
+// 하나 남는데(아래 정리 함수의 주석), 목록 화면에서 누른 첫 뒤로가기가 그 표시를
+// 걷어내느라 헛돌았다. 화면에서는 아무 일도 안 일어나고, 한 번 더 눌러야 꺼졌다.
+//
+// 표시를 남기는 것 자체는 그대로 둔다. 그걸 걷어내려다 계정 삭제 창이 스스로 닫히던
+// 사고가 났고, 그 이유는 아래에 적혀 있다. 대신 헛도는 그 한 번에 뜻을 준다 —
+// 닫을 것이 없는 뒤로가기는 원래 앱을 나가는 뒤로가기다.
+//
+// 웹에서는 아무것도 하지 않는다. 브라우저 탭을 코드가 닫을 수는 없고, 그 자리에서는
+// 뒤로가기가 앞 사이트로 나가는 것이 맞다.
+function exitApp() {
+  if (!isNativeApp()) return;
+  import('@capacitor/app')
+    .then(({ App }) => App.exitApp())
+    .catch(() => {
+      // 플러그인을 못 불러왔다. 예전처럼 한 번 더 눌러야 꺼진다.
+    });
+}
+
 function onPop() {
   const top = stack[stack.length - 1];
-  // 우리가 걷어낸 표시다(마지막 창까지 닫혀서). 닫을 것이 없다.
-  if (!top) return;
+  if (!top) {
+    exitApp();
+    return;
+  }
 
   top.close();
   // 아직 열려 있는 것이 남았으면 표시를 다시 세운다. 다음 뒤로가기가 그것을 닫는다.

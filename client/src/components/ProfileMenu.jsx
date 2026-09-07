@@ -6,6 +6,7 @@ import {
   MapPin,
   Megaphone,
   Receipt,
+  Send,
   RotateCcw,
   Scale,
   ScanSearch,
@@ -55,13 +56,20 @@ export default function ProfileMenu({ onClose }) {
   const [forgetAsking, setForgetAsking] = useState(false);
   // 목록 위 '내 주변' 띠. 여기는 앱·브라우저 둘 다 있어서 줄을 감추지 않는다.
   const [nearby, setNearby] = useState(() => isNearbyBannerOn());
-  /* 알림 테스트와 짝인 것들. 줄을 접어둔 동안 함께 접어둔다(아래 블록 참고).
+  // ⚠ 임시 — 시험용 줄이다. 아이폰·갤럭시에서 알림이 실제로 도착하는지 보려고 잠깐
+  // 되살렸다. 확인이 끝나면 이 줄과 아래 JSX를 함께 걷는다.
+  //
+  // 실제 발송(send-expiry-notifications)과 같은 길을 지나간다. 다른 점은 셋이다 —
+  // 누른 사람에게만 가고, '보냄' 표시를 안 남겨 몇 번이든 다시 눌러볼 수 있고,
+  // 앱을 배경으로 돌릴 틈을 주려고 5초 뒤에 나간다.
   const [testing, setTesting] = useState(false);
-  const [pushOn, setPushOn] = useState(false);
 
   async function handleTestNotification() {
     setTesting(true);
     try {
+      // 여기서 불러온다. 위에서 통째로 불러오면 이 창을 세우는 것만으로 서버 연결까지
+      // 딸려 온다(WelcomeSetupScreen에서 같은 자리에 걸렸다).
+      const { sendTestNotification } = await import('../api');
       const result = await sendTestNotification();
       if (result?.sent > 0) {
         setNotice({
@@ -88,7 +96,6 @@ export default function ProfileMenu({ onClose }) {
       setTesting(false);
     }
   }
-  */
 
   async function handleLeave() {
     setLeaveAsking(false);
@@ -190,6 +197,14 @@ export default function ProfileMenu({ onClose }) {
             )}
 
             <NotificationToggle asRow />
+
+            {/* ⚠ 임시 — 확인이 끝나면 걷는다. 위 스위치가 켜져 있어야 도착한다. */}
+            <SettingLinkRow
+              icon={Send}
+              label={testing ? '보내는 중…' : '사용기한 알림 테스트'}
+              hint="5초 뒤에 나가요. 그동안 앱을 내려두세요"
+              onClick={testing ? () => {} : handleTestNotification}
+            />
 
             {/* 목록 위에 뜨는 '이 근처에 쓸 수 있는 게 있어요' 띠. 띠의 X는 그날 하루만
                 안 띄우는 것이라, 매일 닫는 사람에게는 매일 닫는 일이 남았다.
