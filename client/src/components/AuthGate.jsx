@@ -7,6 +7,8 @@ import LoginScreen from './LoginScreen';
 import FamilyOnboarding from './FamilyOnboarding';
 import FamilyLoadError from './FamilyLoadError';
 import ConsentScreen from './ConsentScreen';
+import WelcomeSetupScreen from './WelcomeSetupScreen';
+import { needsWelcomeSetup, markWelcomeSetupDone } from '../utils/welcomeSetup';
 import LoadingScreen from './LoadingScreen';
 import DeleteAccountError from './DeleteAccountError';
 
@@ -198,6 +200,14 @@ export default function AuthGate({ children }) {
     if (next) setFamilyState(next);
   }
 
+  // 첫 설정 화면을 띄울지.
+  //
+  // useState의 초기값으로 정할 수가 없다 — 처음 그릴 때는 로그인 정보를 아직 못 읽어서
+  // 누구인지 모르고, 그때 정해버리면 영영 거짓으로 남는다. 그래서 그릴 때마다 본다.
+  // '시작하기'를 누르면 아래 값이 참이 되어 다시 세우지 않는다.
+  const [welcomeDone, setWelcomeDone] = useState(false);
+  const welcomeSetup = !welcomeDone && needsWelcomeSetup(session?.user?.id);
+
   const waitingScreen = <LoadingScreen />;
 
   // 탈퇴가 막힌 이유는 여기서 들고 있는다. 탈퇴는 데이터부터 지우기 때문에 도중에 실패하면
@@ -221,6 +231,21 @@ export default function AuthGate({ children }) {
   if (familyState === undefined) return withNotice(waitingScreen);
   if (!familyState)
     return withNotice(<FamilyOnboarding userEmail={session.user.email} onDone={refetchFamily} />);
+
+  // 가족까지 정한 사람에게 딱 한 번. 사진첩 찾기와 알림을 켜고 시작할지 묻는다.
+  //
+  // 여기가 자리인 이유는 둘 다 가족이 있어야 뜻이 서기 때문이다 — 알림 토큰은 가족에
+  // 매여 있고, 찾아낸 기프티콘도 가족 서랍으로 들어간다.
+  if (welcomeSetup)
+    return withNotice(
+      <WelcomeSetupScreen
+        familyId={familyState.family.id}
+        onDone={() => {
+          markWelcomeSetupDone(session.user.id);
+          setWelcomeDone(true);
+        }}
+      />
+    );
 
   return withNotice(
     <FamilyContext.Provider
