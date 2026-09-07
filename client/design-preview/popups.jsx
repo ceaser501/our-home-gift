@@ -19,6 +19,8 @@ import BarcodeModal from '../src/components/BarcodeModal';
 const STAGES = {
   rename1: '① 이름 바꾸기 — 제목 한 줄',
   rename2: '① - 2 제목이 두 줄일 때',
+  rename3: '① - 3 안내를 부제 자리로',
+  rename4: '① - 4 칸 아래 헬퍼',
   spend: '② 금액 입력 — 부제 없음',
   extend: '③ 기한 연장 — 긴 제목 + 부제',
   photo: '⑥ 원본 사진 — 제목 아래가 값',
@@ -147,6 +149,30 @@ function App() {
           hint="가족 모두가 함께 쓰는 이름이에요."
           initialValue="우리집"
           placeholder="예: 우리 가족"
+          onSubmit={async () => {}}
+          onClose={reopen}
+        />
+      )}
+
+      {cur === 'rename3' && (
+        <RenameSheet
+          title="어떤 이름을 쓸까요?"
+          label="이름"
+          hint="기프티콘에 적힌 이름도 함께 바뀌어요."
+          initialValue="태수"
+          placeholder="예: 태수"
+          onSubmit={async () => {}}
+          onClose={reopen}
+        />
+      )}
+
+      {cur === 'rename4' && (
+        <RenameSheet
+          title="어떤 이름을 쓸까요?"
+          label="이름"
+          helper="기프티콘에 적힌 이름도 함께 바뀌어요."
+          initialValue="태수"
+          placeholder="예: 태수"
           onSubmit={async () => {}}
           onClose={reopen}
         />

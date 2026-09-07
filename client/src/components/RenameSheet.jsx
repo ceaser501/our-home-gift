@@ -11,7 +11,7 @@ const MAX_LENGTH = 20;
 // 이름 한 줄만 고치는 작은 창. 내 이름과 가족 이름이 같은 모양을 쓴다.
 // 다른 창(내 메뉴, 가족 목록) 위에 겹쳐서 열리는데, Radix 시트는 겹쳐 열어도
 // 글자 입력 포커스를 맨 위 창이 가져가므로 그대로 겹쳐 쓴다.
-export default function RenameSheet({ title, label, hint, description, initialValue = '', placeholder, onSubmit, onClose }) {
+export default function RenameSheet({ title, label, hint, description, helper, initialValue = '', placeholder, onSubmit, onClose }) {
   // 뒤로가기로 이 창을 닫는다. 안 그러면 설치해서 쓸 때 앱이 통째로 꺼진다.
   useBackClose(onClose);
   const [value, setValue] = useState(initialValue);
@@ -80,6 +80,9 @@ export default function RenameSheet({ title, label, hint, description, initialVa
               aria-label={label}
               className="h-[52px] rounded-lg px-[15px] text-callout"
             />
+            {/* 칸 아래 한 줄. 상자를 치지 않고 글자만 둔다 — footnote 는 12px 에 행간이
+                넓어서, 두 줄로 흐르는 짧은 안내에 맞는 자리다. */}
+            {helper && <p className="m-0 text-footnote text-muted-foreground">{helper}</p>}
           </div>
 
           {/* 이름을 바꾸면 다른 화면의 값까지 바뀐다는 것은 저장하기 전에 읽어야 하는 말이다.
