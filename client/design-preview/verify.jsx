@@ -10,7 +10,6 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '
 import { Button } from '../src/components/ui/button';
 import { Input } from '../src/components/ui/input';
 import { Label } from '../src/components/ui/label';
-import { Stack } from '../src/components/ui/stack';
 
 const FAMILY = {
   family: { id: 1, name: '우리집' },
@@ -137,14 +136,14 @@ function App() {
               <SheetDescription>사진을 올리면 이름과 기한을 읽어드려요.</SheetDescription>
             </SheetHeader>
             <div className="flex flex-col gap-4 px-5 pt-2">
-              <Stack gap="tight">
+              <div className="flex flex-col gap-2">
                 <Label htmlFor="v-name">상품명</Label>
                 <Input id="v-name" defaultValue="아이스 카페 아메리카노 T" />
-              </Stack>
-              <Stack gap="tight">
+              </div>
+              <div className="flex flex-col gap-2">
                 <Label htmlFor="v-amt">금액</Label>
                 <Input id="v-amt" defaultValue="500,000" />
-              </Stack>
+              </div>
               <Button size="lg" className="w-full">저장하기</Button>
             </div>
           </SheetContent>
