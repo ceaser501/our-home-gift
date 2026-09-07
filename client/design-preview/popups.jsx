@@ -11,6 +11,8 @@ import GifticonCard from '../src/components/GifticonCard';
 import SpendSheet from '../src/components/SpendSheet';
 import ExtendSheet from '../src/components/ExtendSheet';
 import AlertDialog from '../src/components/AlertDialog';
+import ImageViewerModal from '../src/components/ImageViewerModal';
+import BarcodeModal from '../src/components/BarcodeModal';
 
 // 제목이 한 줄인 경우와 두 줄인 경우를 다 본다. 닫기 버튼과 부딪히는 자리라
 // 한 줄만 보면 넘어간다.
@@ -19,6 +21,8 @@ const STAGES = {
   rename2: '① - 2 제목이 두 줄일 때',
   spend: '② 금액 입력 — 부제 없음',
   extend: '③ 기한 연장 — 긴 제목 + 부제',
+  photo: '⑥ 원본 사진 — 제목 아래가 값',
+  barcode: '⑥ - 2 바코드',
   t16: '⑤ 제목이 16px 인 넷 — 고르개 시트',
   t16b: '⑤ - 2 가족 바꾸기',
   t16c: '⑤ - 3 카드 ⋮ 메뉴',
@@ -187,6 +191,30 @@ function App() {
       {cur === 'spend' && <SpendSheet gifticon={GIFTICON} onSpend={async () => {}} onClose={reopen} />}
 
       {cur === 'extend' && <ExtendSheet gifticon={GIFTICON} onExtend={async () => {}} onClose={reopen} />}
+
+      {cur === 'photo' && (
+        <ImageViewerModal
+          gifticon={{
+            ...GIFTICON,
+            // 사진 두 장 — 제목 아래 '2장 중 1장' 같은 줄이 그때만 뜬다
+            image_urls: [
+              'data:image/svg+xml;utf8,' +
+                encodeURIComponent(
+                  '<svg xmlns="http://www.w3.org/2000/svg" width="300" height="420"><rect width="300" height="420" fill="%23e7e7ec"/></svg>'
+                ),
+              'data:image/svg+xml;utf8,' +
+                encodeURIComponent(
+                  '<svg xmlns="http://www.w3.org/2000/svg" width="300" height="420"><rect width="300" height="420" fill="%23d8d8e0"/></svg>'
+                ),
+            ],
+          }}
+          onClose={reopen}
+        />
+      )}
+
+      {cur === 'barcode' && (
+        <BarcodeModal gifticon={{ ...GIFTICON, code: '8801234567890123' }} onClose={reopen} onUsed={reopen} onSpend={reopen} />
+      )}
 
       {cur === 't16' && (
         <FamilyContext.Provider value={FAMILY}>
