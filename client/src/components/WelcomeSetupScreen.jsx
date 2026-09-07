@@ -1,14 +1,15 @@
 import { useState } from 'react';
-import { BellRing, ScanSearch } from 'lucide-react';
+import { BellRing, MapPin, ScanSearch } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SwitchTrack } from './SettingRow';
 import { isGalleryScanSupported, setAutoScanOn } from '../utils/gallery';
+import { setNearbyBannerOn } from '../utils/geolocation';
 import { isNativeApp } from '../utils/browser';
 import { isServiceWorkerSupported } from '../utils/serviceWorker';
 
 // 가족까지 정한 사람이 앱에 처음 들어가기 전에 한 번 보는 화면.
 //
-// 두 가지를 켜고 시작한다. 둘 다 켜짐으로 두고 열지, 여기서 끌 수 있게 한다.
+// 셋을 켜고 시작한다. 다 켜짐으로 두고 열지, 여기서 끌 수 있게 한다.
 //
 // 왜 이 화면이 생겼나. 테스터가 "왜 자동 찾기가 안 되냐"고 물었다. 설정에 들어가
 // 스위치를 켜야 도는 것이었는데, 앱을 연 사람 눈에는 아무 일도 안 일어나는 화면이라
@@ -18,13 +19,17 @@ import { isServiceWorkerSupported } from '../utils/serviceWorker';
 // 그렇다고 아무 말 없이 켜둘 수는 없다. 사진첩을 읽는 일이고 알림을 보내는 일이다.
 // 무엇을 하는지 적어두고, 끄고 싶으면 여기서 끄게 한다.
 //
-// 권한 창(사진·알림)은 우리가 대신 누를 수 없다. 여기서 하는 일은 그 창이 뜰 자리를
-// 만들어주는 것뿐이다 — 무슨 창인지 모른 채 뜨면 대개 '거부'를 누르고, 안드로이드는
-// 두 번 거부하면 다시 물어볼 수도 없다.
+// 권한 창(사진·알림·위치)은 우리가 대신 누를 수 없다. 여기서 하는 일은 그 창이 뜰
+// 자리를 만들어주는 것뿐이다 — 무슨 창인지 모른 채 뜨면 대개 '거부'를 누르고,
+// 안드로이드는 두 번 거부하면 다시 물어볼 수도 없다.
 //
-// 알림은 이 화면에서 바로 묻는다(스위치를 켜둔 채 시작하기를 누른 그 순간이 맥락이다).
-// 사진은 안 묻는다 — 다음에 찾기 창이 "기프티콘을 찾고 있어요"를 띄우는 그 자리가 더
-// 분명한 맥락이라, 거기서 폰이 묻게 둔다.
+// 그래서 여기서 묻는 것은 알림 하나뿐이다. 스위치를 켜둔 채 시작하기를 누른 그 순간이
+// 맥락이라서다. 나머지 둘은 그 기능이 실제로 도는 자리에서 폰이 묻는다.
+//
+//   사진   찾기 창이 "기프티콘을 찾고 있어요"를 띄울 때
+//   위치   목록 위 띠의 '켜기'를 누를 때
+//
+// 여기서 셋을 다 물으면 권한 창이 연달아 뜬다. 그러면 무엇을 허락하는 창인지 흐려진다.
 export default function WelcomeSetupScreen({ familyId, onDone }) {
   const scanAvailable = isGalleryScanSupported();
   // 알림을 켤 수 있는 폰인지. 앱은 파이어베이스로, 웹은 브라우저 구독으로 간다.
@@ -32,12 +37,14 @@ export default function WelcomeSetupScreen({ familyId, onDone }) {
 
   const [scan, setScan] = useState(true);
   const [push, setPush] = useState(true);
+  const [nearby, setNearby] = useState(true);
   const [busy, setBusy] = useState(false);
 
   async function start() {
     setBusy(true);
 
     if (scanAvailable) setAutoScanOn(scan);
+    setNearbyBannerOn(nearby);
 
     // 알림은 켜기로 한 경우에만 묻는다. 거절해도 그냥 넘어간다 — 시작을 막을 일이 아니고,
     // 내 메뉴에서 언제든 다시 켤 수 있다.
@@ -60,17 +67,32 @@ export default function WelcomeSetupScreen({ familyId, onDone }) {
     onDone();
   }
 
+  // 제목이 개수를 센다. 아이폰에는 사진첩 찾기가 없어서 하나가 빠진다.
+  const count = (scanAvailable ? 1 : 0) + (pushAvailable ? 1 : 0) + 1;
+  const countWord = { 1: '한', 2: '두', 3: '세' }[count] || String(count);
+
   return (
     <div className="mx-auto flex min-h-[calc(100dvh/var(--ui-scale))] w-full max-w-[480px] flex-col bg-background px-6">
       <div className="flex flex-1 flex-col justify-center gap-7 py-10">
         <div className="flex flex-col gap-2">
           <h1 className="m-0 text-[25px] leading-[1.32] font-bold tracking-[-0.03em] break-keep text-foreground">
-            두 가지만 켜고
+            시작하기 전에
             <br />
-            시작할까요?
+            {countWord} 가지만 켜둘게요
           </h1>
+          {/* 무엇을 해주는지를 적는다. 셋을 나열하지 않고 두 마디로 줄인 것은, 아래
+              스위치가 이미 하나씩 말하고 있어서다. 사진첩 줄은 그 기능이 있는 폰에서만
+              나오므로 문장도 함께 빠진다 — 없는 기능을 약속하면 안 된다. */}
           <p className="m-0 text-[15px] leading-[1.6] font-medium break-keep text-muted-foreground">
-            나중에 내 메뉴에서 바꿀 수 있어요.
+            기한이 다가오면 알려드리고,
+            <br />
+            매장 근처에 가면 안내해 드려요.
+            {scanAvailable && (
+              <>
+                <br />
+                기프티콘도 자동으로 찾아드릴게요.
+              </>
+            )}
           </p>
         </div>
 
@@ -79,7 +101,7 @@ export default function WelcomeSetupScreen({ familyId, onDone }) {
             <SetupRow
               icon={ScanSearch}
               label="사진첩에서 기프티콘 찾기"
-              hint="앱을 열 때 찾아서 상품명과 기한까지 채워드려요"
+              hint="앱을 열 때 자동으로 찾아서 상품명과 기한까지 채워드려요"
               on={scan}
               onToggle={() => setScan(!scan)}
             />
@@ -87,16 +109,27 @@ export default function WelcomeSetupScreen({ familyId, onDone }) {
           {pushAvailable && (
             <SetupRow
               icon={BellRing}
-              label="사용기한 알림 받기"
-              hint="쓰기 전에 기한이 지나가지 않게 알려드려요"
+              label="사용기한 알림"
+              hint="기한이 다가오면 미리 알려드려요"
               on={push}
               onToggle={() => setPush(!push)}
             />
           )}
+          <SetupRow
+            icon={MapPin}
+            label="내 주변 안내"
+            hint="근처에서 쓸 수 있으면 알려드려요"
+            on={nearby}
+            onToggle={() => setNearby(!nearby)}
+          />
         </div>
       </div>
 
-      <div className="pb-[max(28px,var(--safe-bottom))]">
+      <div className="flex flex-col gap-2.5 pb-[max(28px,var(--safe-bottom))]">
+        {/* 버튼 바로 위다. 결정을 가볍게 만드는 말이라 결정 직전에 있어야 한다. */}
+        <p className="m-0 text-center text-[13px] font-medium text-muted-foreground">
+          나중에 내 메뉴에서 바꿀 수 있어요
+        </p>
         <Button
           type="button"
           onClick={start}
