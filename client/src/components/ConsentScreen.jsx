@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { agreeToCurrent } from '../consent';
 import { signOut } from '../auth';
 import { cn } from '@/lib/utils';
+import { PRIMARY_BUTTON } from '../utils/sheetUi';
 
 // 세 가지 모두 필수다. 선택 항목(마케팅 수신 등)이 없어서 "전체 동의"와 개별 동의가
 // 결국 같은 결과인데도 둘 다 두는 이유는, 하나씩 눌러 확인하고 싶은 사람과 한 번에
@@ -171,7 +172,7 @@ export default function ConsentScreen({ userId, onDone }) {
       <div className="flex flex-col gap-2">
         <Button
           size="lg"
-          className="h-[52px] w-full rounded-[13px] text-[15.5px] font-bold"
+          className={PRIMARY_BUTTON}
           disabled={!allAgreed || saving}
           onClick={handleSubmit}
         >

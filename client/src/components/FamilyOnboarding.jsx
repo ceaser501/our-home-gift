@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import CopyButton from './CopyButton';
 import { signOut } from '../auth';
 import { forgetInviteCode, pendingInviteCode } from '../utils/inviteLink';
+import { PRIMARY_BUTTON } from '../utils/sheetUi';
 
 export default function FamilyOnboarding({ userEmail, onDone }) {
   // 초대 링크를 눌러 온 사람은 참여하러 온 것이다. 코드를 이미 들고 있는데 '가족
@@ -183,7 +184,7 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
               '확인했어요'는 실제로 로그아웃인데 그렇게 읽히지 않아서 이름을 고쳤다. */}
           <Button
             size="lg"
-            className="h-[52px] w-full rounded-[13px] text-[15.5px] font-bold"
+            className={PRIMARY_BUTTON}
             onClick={() => signOut()}
           >
             알겠어요, 나가기
@@ -237,7 +238,7 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
         <Button
           variant="outline"
           size="lg"
-          className="h-[52px] w-full rounded-[13px] text-[15.5px] font-bold"
+          className={PRIMARY_BUTTON}
           onClick={onDone}
         >
           시작하기
@@ -358,7 +359,7 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
           <Button
             type="submit"
             size="lg"
-            className="h-[52px] w-full rounded-[13px] text-[15.5px] font-bold"
+            className={PRIMARY_BUTTON}
             disabled={submitting}
           >
             {submitting ? '만드는 중…' : '만들기'}
@@ -405,7 +406,7 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
           <Button
             type="submit"
             size="lg"
-            className="h-[52px] w-full rounded-[13px] text-[15.5px] font-bold"
+            className={PRIMARY_BUTTON}
             disabled={submitting}
           >
             {submitting ? '참여하는 중…' : '참여하기'}

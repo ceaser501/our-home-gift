@@ -1,5 +1,6 @@
 import { ChevronRight, Megaphone, Plus, ScanSearch, Ticket } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { PRIMARY_BUTTON } from '../utils/sheetUi';
 
 // 기프티콘이 하나도 없는 사람이 보는 화면.
 //
@@ -60,7 +61,7 @@ export default function FirstRunScreen({ notice, onOpenNotices, onUpload, onScan
         </div>
 
         <div className="flex w-full flex-col gap-2.5">
-          <Button size="lg" className="h-[52px] w-full rounded-[13px] text-[15.5px] font-bold" onClick={onUpload}>
+          <Button size="lg" className={PRIMARY_BUTTON} onClick={onUpload}>
             <Plus className="size-5" />
             기프티콘 올리기
           </Button>

@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { addDays, daysUntil, ddayUrgency, formatDate, formatDday, todayStr } from '../utils/date';
 import useBackClose from '../utils/useBackClose';
+import { PRIMARY_BUTTON } from '../utils/sheetUi';
 
 // 유효기한이 임박했거나 지난 기프티콘의 칩을 누르면 열리는 창.
 //
@@ -171,7 +172,7 @@ export default function ExtendSheet({ gifticon, onExtend, onClose }) {
               <Button
                 type="button"
                 size="lg"
-                className="h-[52px] w-full rounded-[13px] text-[15.5px] font-bold"
+                className={PRIMARY_BUTTON}
                 onClick={onClose}
               >
                 닫기
@@ -219,7 +220,7 @@ export default function ExtendSheet({ gifticon, onExtend, onClose }) {
                 <Button
                   type="button"
                   size="lg"
-                  className="h-[52px] w-full rounded-[13px] text-[15.5px] font-bold"
+                  className={PRIMARY_BUTTON}
                   onClick={() => setStep(2)}
                 >
                   연장했어요
@@ -290,7 +291,7 @@ export default function ExtendSheet({ gifticon, onExtend, onClose }) {
                 <Button
                   type="button"
                   size="lg"
-                  className="h-[52px] w-full rounded-[13px] text-[15.5px] font-bold"
+                  className={PRIMARY_BUTTON}
                   onClick={apply}
                   disabled={saving || !next}
                 >

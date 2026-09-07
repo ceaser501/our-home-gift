@@ -18,6 +18,7 @@ import useBackClose from '../utils/useBackClose';
 import { groupImages } from '../utils/gallery';
 import { PhotoStrip } from './PhotoViewer';
 import { todayStr } from '../utils/date';
+import { PRIMARY_BUTTON } from '../utils/sheetUi';
 
 // 스토리지 버킷에 걸어둔 제한과 같은 값이어야 한다(supabase/schema.sql).
 // 달라지면 화면에서는 통과했는데 올릴 때 실패하는, 이유를 알 수 없는 오류가 난다.
@@ -1104,7 +1105,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
           <div className="flex flex-col gap-2 pt-1">
             <Button
               type="submit"
-              className="h-[52px] w-full rounded-[13px] text-[15.5px] font-bold"
+              className={PRIMARY_BUTTON}
               disabled={submitting || analyzing}
             >
               {submitting ? '저장 중…' : '저장하기'}
