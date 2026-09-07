@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import FamilyReport from './FamilyReport';
 import { listGifticonStats, listUsageHistory } from '../api';
@@ -122,7 +122,7 @@ export default function UsageReportSheet({ onClose }) {
       <SheetContent className="max-h-[calc(92dvh/var(--ui-scale))] gap-0 overflow-y-auto pb-[var(--safe-bottom)]">
         <SheetHeader className="gap-0">
           <SheetTitle>사용 내역</SheetTitle>
-          <p className="m-0 text-[13px] font-medium text-muted-foreground">{family.name}</p>
+          <SheetDescription>{family.name}</SheetDescription>
         </SheetHeader>
 
         {/* 결산이 먼저다. 목록은 "무엇을 썼나"를 하나씩 보는 자리이고, 결산은 그걸

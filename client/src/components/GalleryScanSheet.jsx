@@ -15,7 +15,7 @@ import {
   TriangleAlert,
   X,
 } from 'lucide-react';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { PhotoStrip } from './PhotoViewer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -1953,9 +1953,9 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                   {registered.length > 0 ? `${registered.length}개를 등록했어요` : '등록할 게 없었어요'}
                 </SheetTitle>
                 {/* 이 앱에서 등록은 곧 공유다. 그 말을 여기서 한 번 해둔다. */}
-                <p className="m-0 text-[13px] font-medium break-keep text-muted-foreground">
+                <SheetDescription className="break-keep">
                   {registered.length > 0 ? '가족 모두가 볼 수 있어요' : '아래에서 무엇이 막혔는지 볼 수 있어요'}
-                </p>
+                </SheetDescription>
               </div>
             </div>
           ) : stage === 'done' && !picked && keptCount > 0 ? (

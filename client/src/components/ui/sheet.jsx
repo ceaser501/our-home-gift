@@ -127,10 +127,16 @@ function SheetTitle({ className, ...props }) {
 }
 
 function SheetDescription({ className, ...props }) {
+  // 제목 아래 한 줄. 다섯 시트가 저마다 <p> 를 놓아 12.5 · 13 · 13.5 로 갈려 있었다.
+  // body(14)로 맞춘다 — 제목이 20 이라 14 면 한 단 아래로 읽히고, 12 까지 내리면 8px
+  // 차이가 나서 부제가 아니라 각주처럼 앉는다.
+  //
+  // 이걸 쓰면 aria-describedby 가 저절로 붙는다. <p> 로 놓으면 눈에는 보이는데 화면
+  // 낭독기는 제목만 읽고 지나간다.
   return (
     <SheetPrimitive.Description
       data-slot="sheet-description"
-      className={cn('text-sm text-muted-foreground', className)}
+      className={cn('text-body font-medium text-muted-foreground', className)}
       {...props}
     />
   );

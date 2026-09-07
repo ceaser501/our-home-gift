@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { PhotoDeck, PhotoCount, SwipeHint } from './PhotoViewer';
 import useBackClose from '../utils/useBackClose';
 
@@ -30,7 +30,7 @@ export default function ImageViewerModal({ gifticon, onClose }) {
           <div className="flex items-center gap-2.5">
             <div className="flex min-w-0 flex-1 flex-col gap-0.5">
               <SheetTitle className="truncate">원본 사진</SheetTitle>
-              <p className="m-0 truncate text-[12.5px] font-medium text-muted-foreground">{gifticon.name}</p>
+              <SheetDescription className="truncate">{gifticon.name}</SheetDescription>
             </div>
             {images.length > 1 && <PhotoCount index={current} total={images.length} />}
           </div>

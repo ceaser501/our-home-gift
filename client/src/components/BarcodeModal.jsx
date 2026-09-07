@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
 import JsBarcode from 'jsbarcode';
 import { CheckCircle2, ChevronLeft, Image as ImageIcon, ScanLine, StickyNote, Wallet } from 'lucide-react';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import CopyButton from './CopyButton';
 import { PhotoDeck, PhotoCount, SwipeHint } from './PhotoViewer';
@@ -151,23 +151,16 @@ export default function BarcodeModal({ gifticon, onClose, onUsed, onSpend }) {
                 <ChevronLeft className="size-[18px]" />
               </button>
             )}
-            <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-              <SheetTitle
-                className={cn(
-                  'truncate',
-                  view === 'photo' ? 'text-base font-bold' : 'text-[19px] font-bold tracking-heading'
-                )}
-              >
+            <div className="flex min-w-0 flex-1 flex-col gap-1">
+              {/* 사진 보기에서는 16, 바코드에서는 19 로 갈라 두었었다. 화면이 바뀐다고
+                  제목 크기가 달라질 까닭이 없다 — 왼쪽에 돌아가기 버튼이 붙어 자리가
+                  좁아지는 것은 truncate 가 맡는다. */}
+              <SheetTitle className="truncate">
                 {view === 'photo' ? '원본 사진' : gifticon.brand || gifticon.name}
               </SheetTitle>
-              <p
-                className={cn(
-                  'm-0 truncate font-medium text-muted-foreground',
-                  view === 'photo' ? 'text-[12.5px]' : 'text-[13.5px]'
-                )}
-              >
-                {gifticon.name}
-              </p>
+              {/* 사진 보기로 넘어가면 12.5, 아니면 13.5 로 갈라 두었었다. 부제는 부제라
+                  화면이 바뀐다고 크기가 달라질 까닭이 없다. 한 종으로 둔다. */}
+              <SheetDescription className="truncate">{gifticon.name}</SheetDescription>
             </div>
             {/* 몇 장 중 몇 번째인지. 사진 위 오버레이에 있던 것을 여기로 올렸다 —
                 사진을 가리지 않고, 넘길 때 눈이 움직이지 않는다. */}
