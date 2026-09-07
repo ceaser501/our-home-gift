@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ChevronLeft, ExternalLink, Ticket } from 'lucide-react';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -97,11 +97,11 @@ export default function ExtendSheet({ gifticon, onExtend, onClose }) {
   return (
     <Sheet open onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="max-h-[calc(92dvh/var(--ui-scale))] gap-0 overflow-y-auto pb-[var(--safe-bottom)]">
-        <SheetHeader className="gap-0">
+        <SheetHeader>
           {/* 두 화면짜리라는 것을 먼저 보여준다. 안 보이면 1/2에서 '연장했어요'를 누른
               사람이 "끝난 건가" 하고 창을 닫는다. 만료된 것은 한 화면이라 안 띄운다. */}
           {!expired && (
-            <div className="flex items-center gap-[7px]">
+            <div className="mb-2 flex items-center gap-[7px]">
               {step === 2 && (
                 <button
                   type="button"
@@ -120,7 +120,10 @@ export default function ExtendSheet({ gifticon, onExtend, onClose }) {
 
           {/* 제목이 그대로 이 화면의 할 일이다. 창 이름('기한 늘리기')을 따로 얹지
               않는다 — 두 번 읽을 것이 없다. */}
-          <SheetTitle className="mt-3 leading-[1.38] break-keep">
+          {/* 행간 1.38 을 따로 주고 있었다. 제목 줄 상자가 27.6 이 되어 X 가 1.8px 아래로
+              어긋났다 — X 는 줄 상자의 가운데에 앉기 때문이다. 두 줄짜리 제목이라 넓히려
+              한 것인데, 제목의 행간은 토큰이 이미 1.2 로 정하고 있다. */}
+          <SheetTitle className="break-keep">
             {expired ? (
               '기한이 지났어요'
             ) : step === 1 ? (
@@ -140,18 +143,26 @@ export default function ExtendSheet({ gifticon, onExtend, onClose }) {
               </>
             )}
           </SheetTitle>
+
+          {/* 제목만으로는 모르는 것을 덧붙이는 말이라 부제다. 본문 첫 줄에 두었었는데,
+              그러면 제목과 이 말 사이가 헤더 여백(20)만큼 벌어져 딴 이야기처럼 읽힌다. */}
+          {(expired || step === 1) && (
+            <SheetDescription className="leading-relaxed break-keep">
+              {expired ? (
+                <>
+                  기한이 지나도 <b className="font-bold text-foreground">5년 안</b>이면{' '}
+                  <b className="font-bold text-foreground">90% 환불</b>을 받을 수 있어요.
+                </>
+              ) : (
+                '받으신 문자나 발행처 앱에서 연장할 수 있어요. 보통 90일씩, 최대 5년까지요.'
+              )}
+            </SheetDescription>
+          )}
         </SheetHeader>
 
         <div className="flex flex-col gap-3.5 px-5">
           {expired ? (
             <>
-              {/* 만료된 것에 연장을 권하면 헛걸음이 된다. 대신 돈을 돌려받는 길을
-                  알려준다. 신유형 상품권 표준약관에서 정한 권리라, 모르고 버리는
-                  사람이 많다. */}
-              <p className="m-0 text-[15px] leading-[1.7] font-medium break-keep text-muted-foreground">
-                기한이 지나도 <b className="font-bold text-foreground">5년 안</b>이면{' '}
-                <b className="font-bold text-foreground">90% 환불</b>을 받을 수 있어요.
-              </p>
               {target}
               {/* 구분선 사이의 목록 줄이었다. 실제로는 앱을 나가는 동작이라 테두리를 준다.
                   채운 보라로 올리지 않는 이유는 아래 1단계의 카카오 행과 같다. */}
@@ -184,10 +195,6 @@ export default function ExtendSheet({ gifticon, onExtend, onClose }) {
                   카카오·기프티쇼·SK… 어디서 받은 것인지 우리는 알 방법이 없다. 그런데
                   예전 문구는 "선물함에서 늘릴 수 있어요"라고 적어, 카카오톡이 아닌
                   사람에게는 그냥 틀린 말이 됐다. 어디서 받았든 같은 사실만 적는다. */}
-              <p className="m-0 text-[15px] leading-[1.7] font-medium break-keep text-muted-foreground">
-                받으신 문자나 발행처 앱에서 연장할 수 있어요. 보통 90일씩, 최대 5년까지요.
-              </p>
-
               {target}
 
               {/* 카카오톡으로 나가는 문. 조건을 제목에 달아 해당 안 되는 사람이 먼저
