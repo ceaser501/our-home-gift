@@ -12,6 +12,27 @@ import { isNativeApp } from './browser';
 //   3) 네이버용 Edge Function 비밀값 NAVER_ALLOWED_REDIRECTS
 export const NATIVE_REDIRECT_URL = 'io.github.ceaser501.moacon://login';
 
+// 서버가 돌려주는 말을 우리 말로 바꾼다.
+//
+// 그대로 띄우면 화면에 「Email link is invalid or has expired」가 영어로 뜬다. 이 앱은
+// 60대도 쓰고 심사자도 눌러본다 — 무슨 일이 났는지도, 무엇을 하면 되는지도 알 수 없다.
+//
+// 특히 저 문구는 대개 고장이 아니다. 로그인 링크는 한 번만 쓸 수 있어서, 이미 로그인한
+// 링크를 다시 누르면 저 말이 나온다. 그래서 '틀렸다'가 아니라 '이미 썼다'로 적는다.
+//
+// 목록에 없는 말은 그대로 보여준다. 짐작해서 뭉뚱그리면 고칠 자리를 가리키는 유일한
+// 단서가 사라진다.
+const KNOWN_ERRORS = [
+  [/invalid or has expired/i, '이미 사용한 링크예요. 로그인 화면에서 다시 받아주세요.'],
+  [/token has expired|expired/i, '링크가 만료됐어요. 로그인 화면에서 다시 받아주세요.'],
+  [/access_denied|cancel/i, '로그인이 취소됐어요.'],
+];
+
+function inKorean(message) {
+  const found = KNOWN_ERRORS.find(([pattern]) => pattern.test(message));
+  return found ? found[1] : message;
+}
+
 // 돌아온 주소에 로그인 결과가 실려 온다. 형식이 두 가지다.
 //   #access_token=...&refresh_token=...   기본(implicit)
 //   ?code=...                             PKCE를 켰을 때
@@ -24,20 +45,20 @@ async function applySession(rawUrl) {
   // 실패해서 돌아오는 경우도 있다. 이때 토큰만 찾다가 조용히 넘기면 사용자는 아무 일도
   // 일어나지 않은 화면을 보게 된다.
   const failed = hash.get('error_description') || url.searchParams.get('login_error');
-  if (failed) throw new Error(failed);
+  if (failed) throw new Error(inKorean(failed));
 
   const accessToken = hash.get('access_token');
   const refreshToken = hash.get('refresh_token');
   if (accessToken && refreshToken) {
     const { error } = await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(inKorean(error.message));
     return;
   }
 
   const code = url.searchParams.get('code');
   if (code) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(inKorean(error.message));
     return;
   }
 
