@@ -72,7 +72,11 @@ export const MAX_UI_SCALE = 1.15;
 // 상한은 그대로 115%다. 곱한 뒤에 자르기 때문에, 눈이 어두워 폰 글자를 다섯 눈금 이상
 // 키운 사람은 예전과 똑같이 115%를 받는다 — 어차피 상한에 걸리는 자리라 이 조정으로
 // 잃는 것이 없다. 줄어드는 사람은 기본 설정으로 쓰는 사람뿐이고, 그게 겨냥한 자리다.
-const PLATFORM_BASE = { android: 0.98, ios: 1 };
+//
+// 아이폰은 반대로 5% 올린다. 같은 이유의 뒷면이다 — 1인치에 154px이 들어가서 갤럭시보다
+// 작게 그려진다. 폰에 깔고 눈으로 정한 값이다: 아이폰 눈금은 일곱 칸이고 네 번째가
+// 기본인데, 100%로 두면 그 기본에서 살짝 작았다. 다섯 번째(102%)와 견줘 고른 자리다.
+const PLATFORM_BASE = { android: 0.98, ios: 1.05 };
 
 function platformBase() {
   return PLATFORM_BASE[window.Capacitor?.getPlatform?.()] ?? 1;
