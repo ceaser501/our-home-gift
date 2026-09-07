@@ -25,8 +25,13 @@ export default function FamilySwitcherSheet({ onClose, initialCode = '' }) {
   // 그러라고 링크를 만든 것이다 — 목록을 보여주고 '가족 추가하기'를 찾게 하면 걸음이
   // 도로 늘어난다.
   const [mode, setMode] = useState(initialCode ? 'join' : 'list'); // list | create | join
-  const [familyName, setFamilyName] = useState('우리집');
-  const [memberName, setMemberName] = useState(myName);
+  // 빈 칸으로 시작한다.
+  //
+  // 예전에는 가족 이름에 '우리집', 내 이름에 지금 쓰는 이름을 미리 넣어뒀다. 새 가족을
+  // 만드는 화면인데 이미 쓰고 있는 가족의 값이 적혀 있으면, 그대로 눌러 똑같은 이름의
+  // 가족이 하나 더 생긴다. 무엇을 적어야 하는지는 아래 예시(placeholder)가 말한다.
+  const [familyName, setFamilyName] = useState('');
+  const [memberName, setMemberName] = useState('');
   const [code, setCode] = useState(initialCode);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -159,6 +164,10 @@ export default function FamilySwitcherSheet({ onClose, initialCode = '' }) {
                   className="h-12 flex-1 rounded-xl text-[14.5px] font-semibold"
                   onClick={() => {
                     setError('');
+                    // 반대쪽에서 적다 만 값이 남아 있지 않게 한다.
+                    setFamilyName('');
+                    setCode('');
+                    setMemberName('');
                     setMode('create');
                   }}
                 >
@@ -169,6 +178,9 @@ export default function FamilySwitcherSheet({ onClose, initialCode = '' }) {
                   className="h-12 flex-1 rounded-xl text-[14.5px] font-semibold"
                   onClick={() => {
                     setError('');
+                    setFamilyName('');
+                    setCode('');
+                    setMemberName('');
                     setMode('join');
                   }}
                 >
@@ -187,7 +199,7 @@ export default function FamilySwitcherSheet({ onClose, initialCode = '' }) {
                   id="switch-fam-name"
                   value={familyName}
                   onChange={(e) => setFamilyName(e.target.value)}
-                  placeholder="예: 부모님댁"
+                  placeholder="우리집"
                   maxLength={20}
                   autoComplete="off"
                   autoFocus
@@ -219,7 +231,7 @@ export default function FamilySwitcherSheet({ onClose, initialCode = '' }) {
                 id="switch-my-name"
                 value={memberName}
                 onChange={(e) => setMemberName(e.target.value)}
-                placeholder="예: 태수"
+                placeholder="아빠, 엄마, 아들, 딸"
                 maxLength={20}
                 autoComplete="off"
                 required
