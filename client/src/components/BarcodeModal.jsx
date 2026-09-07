@@ -182,7 +182,7 @@ export default function BarcodeModal({ gifticon, onClose, onUsed, onSpend }) {
               테두리나 띠는 두지 않는다. 이 창에서 진한 선은 바코드 하나만 가져야
               계산대에서 눈이 거기로 곧장 간다. */}
           {gifticon.memo?.trim() && (
-            <div className="rounded-[13px] bg-accent px-3.5 py-3">
+            <div className="rounded-lg bg-accent px-3.5 py-3">
               <p className="m-0 mb-1 flex items-center gap-1.5">
                 <StickyNote className="size-3.5 shrink-0 text-primary" />
                 <span className="min-w-0 truncate text-caption font-bold text-primary">
@@ -209,7 +209,7 @@ export default function BarcodeModal({ gifticon, onClose, onUsed, onSpend }) {
               점원에게 불러주는 것도 이 한 덩어리다. 바코드 높이(150px)는 건드리지 않는다 —
               지금 인식이 잘 되고 있어서 손댈 이유가 없다. */}
           {(gifticon.code || gifticon.barcode_image_url) && (
-            <div className="flex flex-col items-center gap-2.5 rounded-[15px] border border-border bg-white px-2.5 pt-3.5 pb-3">
+            <div className="flex flex-col items-center gap-2.5 rounded-lg border border-border bg-white px-2.5 pt-3.5 pb-3">
               {gifticon.code && !renderError ? (
                 // QR은 두 변을 다 못박는다.
                 //
@@ -261,7 +261,7 @@ export default function BarcodeModal({ gifticon, onClose, onUsed, onSpend }) {
                     value={humanCode}
                     icon
                     label="바코드 번호 복사"
-                    className="size-8 justify-center rounded-[10px] border border-input bg-card p-0"
+                    className="size-8 justify-center rounded-md border border-input bg-card p-0"
                   />
                 </div>
               )}

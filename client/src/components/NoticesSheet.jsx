@@ -49,10 +49,10 @@ export default function NoticesSheet({ onClose }) {
           {live.map((notice) => (
             <article
               key={notice.id}
-              className="rounded-[14px] border-[1.5px] border-primary bg-primary/4 p-3.5"
+              className="rounded-lg border-[1.5px] border-primary bg-primary/4 p-3.5"
             >
               <div className="flex items-center gap-2">
-                <span className="shrink-0 rounded-[5px] bg-primary px-[7px] py-0.5 text-[11px] font-bold text-primary-foreground">
+                <span className="shrink-0 rounded-sm bg-primary px-[7px] py-0.5 text-[11px] font-bold text-primary-foreground">
                   진행 중
                 </span>
                 <h3 className="m-0 min-w-0 flex-1 text-[15.5px] font-bold break-keep text-foreground">

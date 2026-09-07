@@ -69,7 +69,7 @@ export default function ExtendSheet({ gifticon, onExtend, onClose }) {
   // 테두리를 걷고 배경만 남겼다. 썸네일에도 테두리가 있어 이중이었다 — 테두리는
   // 누르는 것에, 배경은 묶는 것에 쓴다.
   const target = (
-    <div className="flex items-center gap-3 rounded-[14px] bg-secondary/60 p-[13px]">
+    <div className="flex items-center gap-3 rounded-lg bg-secondary/60 p-[13px]">
       <span className="relative flex size-[50px] shrink-0 items-center justify-center overflow-hidden rounded-xl bg-accent">
         {thumbUrl ? (
           <img src={thumbUrl} alt="" className="h-full w-full object-cover" />
@@ -170,7 +170,7 @@ export default function ExtendSheet({ gifticon, onExtend, onClose }) {
                 href={GIFT_BOX_URL}
                 target="_blank"
                 rel="noreferrer"
-                className="flex items-center gap-3 rounded-[13px] border border-input bg-card px-3.5 py-[11px] text-foreground no-underline"
+                className="flex items-center gap-3 rounded-lg border border-input bg-card px-3.5 py-[11px] text-foreground no-underline"
               >
                 <ExternalLink className="size-[18px] shrink-0 text-foreground/70" />
                 <span className="flex min-w-0 flex-1 flex-col gap-0.5">
@@ -204,7 +204,7 @@ export default function ExtendSheet({ gifticon, onExtend, onClose }) {
                 href={GIFT_BOX_URL}
                 target="_blank"
                 rel="noreferrer"
-                className="flex items-center gap-3 rounded-[14px] border border-border px-3.5 py-3 text-foreground no-underline"
+                className="flex items-center gap-3 rounded-lg border border-border px-3.5 py-3 text-foreground no-underline"
               >
                 <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                   <span className="text-[14.5px] font-bold break-keep">
@@ -215,7 +215,7 @@ export default function ExtendSheet({ gifticon, onExtend, onClose }) {
                   </span>
                 </span>
                 {/* 이 화면에서 유일하게 앱을 벗어나는 문인데 30px로 제일 작았다. */}
-                <span className="flex h-10 shrink-0 items-center gap-[5px] rounded-[11px] border border-input px-3.5 text-sm font-semibold text-foreground/80">
+                <span className="flex h-10 shrink-0 items-center gap-[5px] rounded-md border border-input px-3.5 text-sm font-semibold text-foreground/80">
                   열기
                   <ExternalLink className="size-3.5 text-muted-foreground" />
                 </span>
@@ -253,8 +253,8 @@ export default function ExtendSheet({ gifticon, onExtend, onClose }) {
               {/* 어느 기프티콘인지가 이 화면에 없었다. 목록에 카드가 많으면 저장을 누르기
                   직전에 무엇을 바꾸는지 확인할 데가 없다. 기한은 아래 카드가 말하므로
                   여기서는 썸네일과 이름만 적는다. */}
-              <div className="flex items-center gap-3 rounded-[13px] bg-secondary/60 px-3 py-2.5">
-                <span className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-accent">
+              <div className="flex items-center gap-3 rounded-lg bg-secondary/60 px-3 py-2.5">
+                <span className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-md bg-accent">
                   {thumbUrl ? (
                     <img src={thumbUrl} alt="" className="h-full w-full object-cover" />
                   ) : (

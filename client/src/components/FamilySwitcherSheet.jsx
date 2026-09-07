@@ -123,7 +123,7 @@ export default function FamilySwitcherSheet({ onClose, initialCode = '' }) {
                     >
                       <span
                         className={cn(
-                          'flex size-11 shrink-0 items-center justify-center rounded-[13px]',
+                          'flex size-11 shrink-0 items-center justify-center rounded-lg',
                           isCurrent ? 'bg-primary' : 'bg-secondary'
                         )}
                       >

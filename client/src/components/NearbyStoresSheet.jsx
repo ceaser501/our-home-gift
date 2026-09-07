@@ -191,7 +191,7 @@ export default function NearbyStoresSheet({ gifticon, onClose }) {
                 찾아가는 데서 헤맨다. 둘이 한 벌이다.
                 (브라우저에는 설정 화면이 없어서 버튼이 안 뜬다 — 글만 남는다.) */}
             {error.denied && (
-              <div className="flex w-full flex-col gap-1.5 rounded-[13px] bg-secondary px-[15px] py-[13px]">
+              <div className="flex w-full flex-col gap-1.5 rounded-lg bg-secondary px-[15px] py-[13px]">
                 <p className="m-0 text-body font-bold text-foreground/80">켜는 방법</p>
                 <p className="m-0 text-[13.5px] leading-relaxed font-medium break-keep text-foreground/70">
                   위치 → <b className="font-bold text-foreground">앱 사용 중에만 허용</b>
@@ -212,7 +212,7 @@ export default function NearbyStoresSheet({ gifticon, onClose }) {
               {error.retriable && (
                 <Button
                   variant="outline"
-                  className="h-11 w-full rounded-[11px] text-[14.5px] font-semibold"
+                  className="h-11 w-full rounded-md text-[14.5px] font-semibold"
                   onClick={() => setAttempt((n) => n + 1)}
                 >
                   다시 시도
@@ -246,7 +246,7 @@ export default function NearbyStoresSheet({ gifticon, onClose }) {
             {/* 가장 가까운 한 곳만 카드로 세운다. 거리를 전부 포인트색으로 칠하면 다 같은
                 무게라 "제일 가까운 데가 어디냐"를 눈이 아니라 순서로 세어야 한다. */}
             <div className="px-5 pb-3">
-              <div className="flex flex-col gap-3 rounded-[15px] border-[1.5px] border-primary bg-primary/4 px-3.5 py-[13px]">
+              <div className="flex flex-col gap-3 rounded-lg border-[1.5px] border-primary bg-primary/4 px-3.5 py-[13px]">
                 <button
                   type="button"
                   onClick={() => setDetail(first)}
@@ -262,7 +262,7 @@ export default function NearbyStoresSheet({ gifticon, onClose }) {
                     <span className="text-[11.5px] font-semibold text-primary/75">{firstDistance?.unit ?? ''}</span>
                   </span>
                   <span className="flex min-w-0 flex-1 flex-col gap-[3px]">
-                    <span className="self-start rounded-[5px] bg-primary px-1.5 py-0.5 text-[11px] font-bold text-primary-foreground">
+                    <span className="self-start rounded-sm bg-primary px-1.5 py-0.5 text-[11px] font-bold text-primary-foreground">
                       가장 가까움
                     </span>
                     <span className="truncate text-[15.5px] font-bold text-foreground">
@@ -280,7 +280,7 @@ export default function NearbyStoresSheet({ gifticon, onClose }) {
                   <button
                     type="button"
                     onClick={() => setDetail(first)}
-                    className="flex h-11 flex-1 items-center justify-center gap-2 rounded-[11px] bg-primary text-[15px] font-bold text-primary-foreground"
+                    className="flex h-11 flex-1 items-center justify-center gap-2 rounded-md bg-primary text-[15px] font-bold text-primary-foreground"
                   >
                     <MapPin className="size-[17px]" strokeWidth={2.2} />
                     지도 보기
@@ -289,7 +289,7 @@ export default function NearbyStoresSheet({ gifticon, onClose }) {
                     <button
                       type="button"
                       onClick={() => openNavigation(first)}
-                      className="flex h-11 flex-1 items-center justify-center gap-2 rounded-[11px] border border-input bg-card text-[15px] font-semibold text-foreground/80"
+                      className="flex h-11 flex-1 items-center justify-center gap-2 rounded-md border border-input bg-card text-[15px] font-semibold text-foreground/80"
                     >
                       <Navigation className="size-[17px] text-primary" strokeWidth={2} />
                       길찾기
@@ -299,7 +299,7 @@ export default function NearbyStoresSheet({ gifticon, onClose }) {
                     <a
                       href={`tel:${first.phone.replace(/[^\d+]/g, '')}`}
                       aria-label={`${first.name}에 전화 걸기`}
-                      className="flex size-11 shrink-0 items-center justify-center rounded-[11px] border border-input bg-card"
+                      className="flex size-11 shrink-0 items-center justify-center rounded-md border border-input bg-card"
                     >
                       <Phone className="size-[18px] text-primary" strokeWidth={2} />
                     </a>

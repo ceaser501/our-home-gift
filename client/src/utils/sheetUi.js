@@ -1,8 +1,11 @@
 // 시트 아래에 놓이는 버튼 두 종류. 03 명세에서 정한 치수를 한 군데 모아둔다.
 //
+// 반지름은 13 이었는데 lg(14)로 옮겼다. 같은 시트 안의 안내 상자·입력칸이 전부 14 로
+// 모였는데 버튼만 13 이면 그 안에서 어긋난다. 1px 이라 눈에는 안 잡힌다.
+//
 // 주 버튼과 보조 버튼의 무게 차이는 색이 아니라 높이가 낸다(52 : 48). 색만 다르고 크기가
 // 같으면, 색을 잘 못 가르는 사람에게는 둘이 그냥 나란한 버튼 둘이다.
-export const PRIMARY_BUTTON = 'h-[52px] w-full rounded-[13px] text-[15.5px] font-bold';
+export const PRIMARY_BUTTON = 'h-[52px] w-full rounded-lg text-[15.5px] font-bold';
 export const SECONDARY_BUTTON = 'h-12 w-full rounded-xl text-[14.5px] font-semibold text-foreground/80';
 
 // 확정·취소 짝은 나란히 둔다. 되돌릴 수 있는 선택이라 눈이 한 번에 훑고 고르는 편이 낫고,
@@ -19,5 +22,5 @@ export const SECONDARY_BUTTON = 'h-12 w-full rounded-xl text-[14.5px] font-semib
 export const ACTION_ROW = 'flex flex-row-reverse gap-2 [&>*]:flex-1';
 // flex-1 은 ACTION_ROW 가 준다. 여기 박아 두면 세로로 쌓을 때 축이 바뀌어
 // 높이를 나눠 갖게 되고 52 가 무너진다(39 · 41 로 줄었다).
-export const ACTION_PRIMARY = 'h-[52px] w-full rounded-[13px] text-[15.5px] font-bold';
-export const ACTION_CANCEL = 'h-[52px] w-full rounded-[13px] text-[15.5px] font-semibold text-foreground/80';
+export const ACTION_PRIMARY = 'h-[52px] w-full rounded-lg text-[15.5px] font-bold';
+export const ACTION_CANCEL = 'h-[52px] w-full rounded-lg text-[15.5px] font-semibold text-foreground/80';

@@ -329,7 +329,7 @@ const BLOCK_TONES = {
 function FoldBox({ tone, title, open, onToggle, children }) {
   const { Icon, bg, fg } = tone;
   return (
-    <div className="overflow-hidden rounded-[14px] border border-border">
+    <div className="overflow-hidden rounded-lg border border-border">
       <button
         type="button"
         onClick={onToggle}
@@ -429,7 +429,7 @@ function CandidateSlot({ at, hints = HINTS }) {
           '채워지는 중'이 아니라 '사진이 안 뜬 칸'으로 읽힌다 — 눈은 그걸 '없다'로 본다.
           글자 두 줄과 바코드를 옅게 그려두고 흰 띠를 지나가게 하면 무엇이 들어올
           자리인지 보인다. */}
-      <span className="relative size-14 shrink-0 overflow-hidden rounded-[11px] bg-secondary">
+      <span className="relative size-14 shrink-0 overflow-hidden rounded-md bg-secondary">
         <i className="absolute top-3 left-[9px] h-[3px] w-[22px] rounded-sm bg-border" />
         <i className="absolute top-5 left-[9px] h-[3px] w-[15px] rounded-sm bg-border" />
         <i
@@ -1544,7 +1544,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
             안 보는 것을 늘어놓으면 그걸 뒤진다는 뜻으로 읽힌다. */}
         {/* 받아 온 사진은 어느 폴더에서 왔는지 모른다. 그 줄 대신 몇 장을 봤는지만 적는다. */}
         {picked ? (
-          <div className="flex flex-col gap-0.5 rounded-[10px] bg-muted/50 px-2.5 py-2.5">
+          <div className="flex flex-col gap-0.5 rounded-md bg-muted/50 px-2.5 py-2.5">
             <span className="text-xs font-medium text-muted-foreground">고른 사진</span>
             <span className="text-base font-bold tabular-nums text-foreground">{scanned}</span>
           </div>
@@ -1553,7 +1553,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
             {summary.watched.map((folder) => (
               <div
                 key={folder.label}
-                className="flex flex-1 flex-col gap-0.5 rounded-[10px] bg-muted/50 px-2.5 py-2.5"
+                className="flex flex-1 flex-col gap-0.5 rounded-md bg-muted/50 px-2.5 py-2.5"
               >
                 <span className="truncate text-xs font-medium text-muted-foreground">{folder.label}</span>
                 <span className="text-base font-bold tabular-nums text-foreground">
@@ -1624,7 +1624,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
             <img
               src={`data:image/jpeg;base64,${candidate.images[0]}`}
               alt=""
-              className="size-14 shrink-0 rounded-[11px] bg-secondary object-cover"
+              className="size-14 shrink-0 rounded-md bg-secondary object-cover"
             />
             <div className="flex min-w-0 flex-1 flex-col">
               {/* 맨 윗줄은 상호와 어느 사진첩에서 나왔는지. 상호를 작게 위에 올려두면
@@ -1683,7 +1683,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                   type="button"
                   onClick={() => handleDismiss(candidate)}
                   aria-label="기프티콘 아님"
-                  className="-mr-1 flex size-[34px] items-center justify-center rounded-[10px] text-muted-foreground"
+                  className="-mr-1 flex size-[34px] items-center justify-center rounded-md text-muted-foreground"
                 >
                   <X className="size-[18px]" />
                 </button>
@@ -1708,7 +1708,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
               onClick={() => toggleVoucher(candidate)}
               aria-pressed={voucherIds.includes(candidate.id)}
               className={cn(
-                'flex w-full items-center gap-2.5 rounded-[11px] px-3 py-2.5 text-left',
+                'flex w-full items-center gap-2.5 rounded-md px-3 py-2.5 text-left',
                 voucherIds.includes(candidate.id)
                   ? 'border-[1.5px] border-primary bg-primary/6'
                   : 'border border-input'
@@ -1833,7 +1833,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
          썸네일에만 얹는다. 카드 테두리도 걷고 구분선으로 — 상자가 이미 테두리다. */
       <li key={candidate.id} className="list-none border-t border-border/40 first:border-t-0">
         <div className="flex items-center gap-3 py-2.5">
-          <span className="relative size-9 shrink-0 overflow-hidden rounded-[9px] bg-secondary">
+          <span className="relative size-9 shrink-0 overflow-hidden rounded-md bg-secondary">
             <img
               src={`data:image/jpeg;base64,${candidate.images[0]}`}
               alt=""
@@ -2075,7 +2075,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                 {/* 막대 위로 빛이 한 번씩 지나간다. 막대가 잠시 멈춰 보이는 순간에도
                     무언가 돌고 있다는 게 보인다. 진행률은 그대로 막대가 말한다 —
                     움직임만 얹었지 정보를 대신하지 않는다. */}
-                <div className="moacon-sweep relative h-[7px] w-full overflow-hidden rounded-[4px] bg-primary/15">
+                <div className="moacon-sweep relative h-[7px] w-full overflow-hidden rounded-sm bg-primary/15">
                   {/* 찾기는 앞의 몫(SCAN_SHARE)만 채운다. 여기서 100%까지 갔다가 읽기에서
                       다시 0으로 떨어지면, 다 온 줄 알았다가 처음으로 돌아간다. */}
                   <div
@@ -2139,7 +2139,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                         <img
                           src={`data:image/jpeg;base64,${candidate.images[0]}`}
                           alt=""
-                          className="size-11 shrink-0 rounded-[10px] bg-secondary object-cover"
+                          className="size-11 shrink-0 rounded-md bg-secondary object-cover"
                         />
                         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                           <span className="truncate text-[15px] font-semibold text-foreground">
@@ -2175,7 +2175,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                     있을 수 있는데, 그건 서버가 눈으로 읽어야 안다. 미리 다 물어보면 정보
                     캡처까지 물어보게 돼서 느려진다 — 누를 때만 읽는다. */}
                 {leftovers.length > 0 && onNext && (
-                  <div className="flex shrink-0 flex-col gap-2.5 rounded-[14px] border border-border px-3.5 py-3">
+                  <div className="flex shrink-0 flex-col gap-2.5 rounded-lg border border-border px-3.5 py-3">
                     <p className="m-0 text-sm leading-relaxed break-keep text-muted-foreground">
                       바코드가 없어서 빼둔 사진이에요. 기프티콘이면 이어서 올려드릴게요.
                     </p>
@@ -2204,12 +2204,12 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                     보낼 수가 없다(2개면 어디로 갈지 정해지지 않는다). 대신 어느
                     기프티콘인지 이름을 보여준다 — 목록에서 그것만 찾아 고치면 된다. */}
                 {(result.failed.length > 0 || result.noExpiry > 0) && (
-                  <div className="shrink-0 overflow-hidden rounded-[14px] border border-border">
+                  <div className="shrink-0 overflow-hidden rounded-lg border border-border">
                     <div className="flex items-center gap-2 border-b border-border bg-muted/40 px-3.5 py-2.5">
                       <span className="text-body font-bold text-foreground/80">
                         확인이 필요해요
                       </span>
-                      <span className="rounded-[9px] bg-muted-foreground px-1.5 py-px text-xs font-bold tabular-nums text-background">
+                      <span className="rounded-md bg-muted-foreground px-1.5 py-px text-xs font-bold tabular-nums text-background">
                         {result.failed.length + result.noExpiry}
                       </span>
                     </div>
@@ -2348,7 +2348,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                   사진이 있을 리 없고, 눌러도 같은 목록이 다시 나온다. 나가는 길 하나면
                   된다. */}
               <div className="flex shrink-0 flex-col gap-2 pt-1">
-                <Button type="button" className="h-[52px] w-full rounded-[14px] text-[15.5px]" onClick={onClose}>
+                <Button type="button" className="h-[52px] w-full rounded-lg text-[15.5px]" onClick={onClose}>
                   목록으로 가기
                 </Button>
               </div>
@@ -2571,7 +2571,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                 {stage === 'done' && keptCount > 0 && (
                   <Button
                     type="button"
-                    className="h-[52px] w-full rounded-[14px] text-[15.5px]"
+                    className="h-[52px] w-full rounded-lg text-[15.5px]"
                     onClick={registerAll}
                   >
                     <Check className="size-4.5" />
@@ -2587,7 +2587,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                     버튼 바로 밑에서 128장을 다시 읽는 버튼이 손에 닿는다.
                     넣거나, 나가거나. 둘이면 된다. */}
                 {stage === 'done' && keptCount === 0 && (
-                  <Button type="button" className="h-[52px] w-full rounded-[14px] text-[15.5px]" onClick={onClose}>
+                  <Button type="button" className="h-[52px] w-full rounded-lg text-[15.5px]" onClick={onClose}>
                     목록으로 가기
                   </Button>
                 )}

@@ -81,7 +81,7 @@ export default function SpendSheet({ gifticon, onSpend, onClose }) {
           {/* 얼마 쓸지 정하려면 남은 돈을 먼저 알아야 하는데, 그 값이 12px 회색 한 줄에
               묻혀 있었다. 이 화면에서 제일 큰 숫자가 되어야 하는 값이다.
               한 줄이던 설명을 왼쪽(남은 금액)·오른쪽(권종·쓴 금액)으로 갈랐다. */}
-          <div className="flex flex-col gap-2.5 rounded-[14px] bg-secondary/60 px-[15px] py-[13px]">
+          <div className="flex flex-col gap-2.5 rounded-lg bg-secondary/60 px-[15px] py-[13px]">
             {/* 어느 기프티콘의 잔액인지. 값을 말하는 줄이라 남은 금액과 한 칸에 둔다. */}
             <p className="m-0 truncate text-body font-semibold text-foreground">{gifticon.name}</p>
 
@@ -113,7 +113,7 @@ export default function SpendSheet({ gifticon, onSpend, onClose }) {
             {/* 테두리를 보라로 둔다. 이 화면에서 채워야 하는 칸이 하나뿐이라는 말이다.
                 플레이스홀더는 굵기를 낮춘다 — 굵으면 이미 적힌 값처럼 보여서, 그대로
                 눌러도 되는 줄 안다. */}
-            <div className="flex h-14 items-center gap-2.5 rounded-[14px] border-[1.5px] border-primary bg-card px-[15px]">
+            <div className="flex h-14 items-center gap-2.5 rounded-lg border-[1.5px] border-primary bg-card px-[15px]">
               <input
                 id="spend-amount"
                 type="text"
@@ -135,7 +135,7 @@ export default function SpendSheet({ gifticon, onSpend, onClose }) {
                   key={step}
                   type="button"
                   onClick={() => addQuick(step)}
-                  className="h-10 flex-1 rounded-[11px] border border-input bg-card text-sm font-semibold tabular-nums text-foreground"
+                  className="h-10 flex-1 rounded-md border border-input bg-card text-sm font-semibold tabular-nums text-foreground"
                 >
                   {label}
                 </button>
@@ -143,7 +143,7 @@ export default function SpendSheet({ gifticon, onSpend, onClose }) {
               <button
                 type="button"
                 onClick={() => setValue('')}
-                className="h-10 w-14 shrink-0 rounded-[11px] border border-input bg-card text-sm font-semibold text-muted-foreground"
+                className="h-10 w-14 shrink-0 rounded-md border border-input bg-card text-sm font-semibold text-muted-foreground"
               >
                 지우기
               </button>

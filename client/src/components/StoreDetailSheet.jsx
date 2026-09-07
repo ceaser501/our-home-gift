@@ -274,7 +274,7 @@ export default function StoreDetailSheet({ store, origin, onClose }) {
           <div
             className={cn(
               // 테두리를 걷었다. 회색 지도가 이미 면이라 테두리가 할 일이 없다.
-              'relative w-full overflow-hidden rounded-[14px] bg-muted transition-[height] duration-300 ease-out',
+              'relative w-full overflow-hidden rounded-lg bg-muted transition-[height] duration-300 ease-out',
               mapExpanded ? 'h-[calc(58dvh/var(--ui-scale))]' : 'h-45'
             )}
           >
@@ -432,7 +432,7 @@ export default function StoreDetailSheet({ store, origin, onClose }) {
               <Button
                 asChild
                 variant="outline"
-                className="h-[42px] rounded-[11px] text-sm font-semibold"
+                className="h-[42px] rounded-md text-sm font-semibold"
               >
                 <a href={store.placeUrl} target="_blank" rel="noopener noreferrer">
                   <ExternalLink className="size-4" strokeWidth={2} /> 카카오맵에서 보기

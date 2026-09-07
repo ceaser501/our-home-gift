@@ -759,9 +759,9 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="flex w-full flex-col items-center gap-3 rounded-[15px] border-[1.5px] border-dashed border-primary/60 bg-primary/4 px-3.5 py-4"
+              className="flex w-full flex-col items-center gap-3 rounded-lg border-[1.5px] border-dashed border-primary/60 bg-primary/4 px-3.5 py-4"
             >
-              <span className="flex size-[52px] items-center justify-center rounded-[15px] bg-primary">
+              <span className="flex size-[52px] items-center justify-center rounded-lg bg-primary">
                 <Plus className="size-[26px] text-primary-foreground" strokeWidth={2.1} />
               </span>
               <span className="flex flex-col items-center gap-1">
@@ -870,7 +870,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
                 value={form.name}
                 onChange={(e) => updateField('name', e.target.value)}
                 required
-                className="h-[52px] rounded-[13px] text-callout"
+                className="h-[52px] rounded-lg text-callout"
               />
             </div>
 
@@ -881,7 +881,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
                   id="f-brand"
                   value={form.brand}
                   onChange={(e) => updateField('brand', e.target.value)}
-                  className="h-[52px] rounded-[13px] text-callout"
+                  className="h-[52px] rounded-lg text-callout"
                 />
               </div>
 
@@ -900,7 +900,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
                   <SelectTrigger
                     size="lg"
                     aria-label="카테고리"
-                    className="w-full gap-2.5 rounded-[13px] border border-input bg-secondary/50 px-[15px] text-[15.5px] [&>span]:min-w-0 [&>span]:truncate [&>span]:whitespace-nowrap"
+                    className="w-full gap-2.5 rounded-lg border border-input bg-secondary/50 px-[15px] text-[15.5px] [&>span]:min-w-0 [&>span]:truncate [&>span]:whitespace-nowrap"
                   >
                     <SelectValue />
                   </SelectTrigger>
@@ -945,7 +945,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
                   value={readableCode(form.code)}
                   onChange={(e) => updateField('code', wrapCode(form.code, e.target.value))}
                   placeholder="직접 입력"
-                  className="h-[52px] rounded-[13px] text-callout"
+                  className="h-[52px] rounded-lg text-callout"
                 />
               </div>
 
@@ -965,7 +965,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
                       updateField('amount', onlyDigits(e.target.value));
                       setPriceSearchNote('');
                     }}
-                    className="h-[52px] rounded-[13px] pr-8 text-callout font-semibold tabular-nums"
+                    className="h-[52px] rounded-lg pr-8 text-callout font-semibold tabular-nums"
                   />
                   <span className="pointer-events-none absolute inset-y-0 right-[13px] flex items-center text-[15px] font-semibold text-muted-foreground">
                     원
@@ -1024,7 +1024,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
                   type="date"
                   value={form.expires_at}
                   onChange={(e) => updateField('expires_at', e.target.value)}
-                  className="moacon-date h-[52px] w-full rounded-[13px] bg-secondary/50 pr-9 text-callout"
+                  className="moacon-date h-[52px] w-full rounded-lg bg-secondary/50 pr-9 text-callout"
                 />
                 <ChevronDown
                   aria-hidden="true"
@@ -1049,7 +1049,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
                 <SelectTrigger
                   size="lg"
                   aria-label="받는 사람"
-                  className="w-full gap-2.5 rounded-[13px] border border-input bg-card px-[15px] text-[15.5px]"
+                  className="w-full gap-2.5 rounded-lg border border-input bg-card px-[15px] text-[15.5px]"
                 >
                   {/* pointer-events를 끈다. 안 끄면 이 span이 눌림을 먼저 받아서, 열려
                       있을 때 다시 눌러도 닫히지 않는다 — 라딕스는 밖을 눌러 닫고 트리거를
@@ -1064,7 +1064,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
                       {form.owner || '골라주세요'}
                     </span>
                     {form.owner && form.owner === myName && (
-                      <span className="shrink-0 rounded-[5px] bg-accent px-1.5 py-0.5 text-caption font-semibold text-primary">
+                      <span className="shrink-0 rounded-sm bg-accent px-1.5 py-0.5 text-caption font-semibold text-primary">
                         나
                       </span>
                     )}
@@ -1097,7 +1097,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
                 id="f-memo"
                 value={form.memo}
                 onChange={(e) => updateField('memo', e.target.value)}
-                className="h-[76px] rounded-[13px] text-[15.5px]"
+                className="h-[76px] rounded-lg text-[15.5px]"
               />
             </div>
           </div>

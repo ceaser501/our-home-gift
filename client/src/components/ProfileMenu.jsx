@@ -137,7 +137,7 @@ export default function ProfileMenu({ onClose }) {
         {/* 이름은 여기 크게 적혀 있는데 아래 '내 정보 · 내 이름' 줄에서 또 보여주고 있었다.
             같은 값이 한 화면에 두 번 나온 셈이라, 그 줄을 걷고 바꾸는 길만 이 카드로 들인다.
             구역이 하나 줄었다. */}
-        <div className="mx-5 mb-3.5 flex items-center gap-3 rounded-[14px] bg-secondary/60 px-3.5 py-[13px]">
+        <div className="mx-5 mb-3.5 flex items-center gap-3 rounded-lg bg-secondary/60 px-3.5 py-[13px]">
           <span
             className={`flex size-[46px] shrink-0 items-center justify-center rounded-full text-sm font-bold text-white ${
               memberTagColorClass(me) ?? OWNER_TAG_PALETTE[0]
@@ -154,7 +154,7 @@ export default function ProfileMenu({ onClose }) {
             variant="outline"
             size="sm"
             onClick={() => setRenameOpen(true)}
-            className="h-[38px] shrink-0 rounded-[11px] px-[13px] text-[13.5px] font-semibold"
+            className="h-[38px] shrink-0 rounded-md px-[13px] text-[13.5px] font-semibold"
           >
             이름 바꾸기
           </Button>
@@ -288,7 +288,7 @@ export default function ProfileMenu({ onClose }) {
             <p className="m-0 pb-1 text-body font-bold text-muted-foreground">
               조심해서 눌러주세요
             </p>
-            <div className="flex flex-col gap-3 rounded-[14px] border border-destructive/20 bg-destructive/5 p-4">
+            <div className="flex flex-col gap-3 rounded-lg border border-destructive/20 bg-destructive/5 p-4">
               <div className="flex items-center gap-3">
                 <div className="min-w-0 flex-1">
                   <p className="m-0 text-[15px] font-semibold text-foreground">가족 나가기</p>
@@ -302,7 +302,7 @@ export default function ProfileMenu({ onClose }) {
                   size="sm"
                   onClick={() => setLeaveAsking(true)}
                   disabled={leaving}
-                  className="h-10 shrink-0 rounded-[11px] border-destructive/30 px-3.5 text-sm font-semibold text-destructive/85"
+                  className="h-10 shrink-0 rounded-md border-destructive/30 px-3.5 text-sm font-semibold text-destructive/85"
                 >
                   {leaving ? '나가는 중…' : '나가기'}
                 </Button>
@@ -323,7 +323,7 @@ export default function ProfileMenu({ onClose }) {
                   size="sm"
                   onClick={() => setDeleteStep('what')}
                   disabled={deleting}
-                  className="h-10 shrink-0 rounded-[11px] border-destructive/30 px-3.5 text-sm font-semibold text-destructive/85"
+                  className="h-10 shrink-0 rounded-md border-destructive/30 px-3.5 text-sm font-semibold text-destructive/85"
                 >
                   {deleting ? '지우는 중…' : '삭제'}
                 </Button>

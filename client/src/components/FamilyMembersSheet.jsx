@@ -178,14 +178,14 @@ export default function FamilyMembersSheet({ onClose }) {
                 <div className="flex gap-2">
                   <Button
                     variant="outline"
-                    className="h-10 shrink-0 rounded-[11px] px-5 text-sm font-semibold text-muted-foreground"
+                    className="h-10 shrink-0 rounded-md px-5 text-sm font-semibold text-muted-foreground"
                     disabled={deciding === request.id}
                     onClick={() => decide(request, false)}
                   >
                     거절
                   </Button>
                   <Button
-                    className="h-10 flex-1 rounded-[11px] text-sm font-bold"
+                    className="h-10 flex-1 rounded-md text-sm font-bold"
                     disabled={deciding === request.id}
                     onClick={() => decide(request, true)}
                   >
@@ -215,7 +215,7 @@ export default function FamilyMembersSheet({ onClose }) {
               value={family.invite_code}
               label="복사"
               copiedLabel="복사됨"
-              className="h-11 shrink-0 rounded-[12px] bg-primary px-4 text-[15px] font-bold text-primary-foreground"
+              className="h-11 shrink-0 rounded-md bg-primary px-4 text-[15px] font-bold text-primary-foreground"
             />
           </div>
           <p className="m-0 text-body leading-snug font-medium break-keep text-muted-foreground">
@@ -237,7 +237,7 @@ export default function FamilyMembersSheet({ onClose }) {
               type="button"
               onClick={invite}
               disabled={sending}
-              className="h-[52px] w-full rounded-[13px] border border-[#E3B800] bg-[#FEE500] text-[16px] font-bold text-[#191600] hover:bg-[#FEE500]/90 disabled:opacity-70"
+              className="h-[52px] w-full rounded-lg border border-[#E3B800] bg-[#FEE500] text-[16px] font-bold text-[#191600] hover:bg-[#FEE500]/90 disabled:opacity-70"
             >
               <MessageCircle className="size-[19px]" />
               {sending ? '여는 중…' : '카카오톡으로 초대'}
@@ -276,14 +276,14 @@ export default function FamilyMembersSheet({ onClose }) {
                   </span>
                   {/* 글자만 있으면 이름의 일부처럼 읽힌다("아들 나"). 뱃지로 떼어놓는다. */}
                   {member.user_id === user.id && (
-                    <span className="shrink-0 rounded-[5px] bg-primary px-1.5 py-px text-xs font-bold text-primary-foreground">
+                    <span className="shrink-0 rounded-sm bg-primary px-1.5 py-px text-xs font-bold text-primary-foreground">
                       나
                     </span>
                   )}
                   {/* 권한이 더 있는 건 아니고, 누구에게 물어보면 되는지 알려주는 표시다.
                       혼자면 물어볼 사람도 나뿐이라 붙일 이유가 없다. */}
                   {index === 0 && members.length > 1 && (
-                    <span className="shrink-0 rounded-[5px] bg-accent px-1.5 py-px text-xs font-bold text-primary">
+                    <span className="shrink-0 rounded-sm bg-accent px-1.5 py-px text-xs font-bold text-primary">
                       대표
                     </span>
                   )}
@@ -304,7 +304,7 @@ export default function FamilyMembersSheet({ onClose }) {
                   type="button"
                   onClick={() => setMyNameOpen(true)}
                   aria-label="내 이름 바꾸기"
-                  className="flex size-[34px] shrink-0 items-center justify-center rounded-[10px] border border-input"
+                  className="flex size-[34px] shrink-0 items-center justify-center rounded-md border border-input"
                 >
                   <Pencil className="size-4 text-muted-foreground" />
                 </button>
@@ -319,7 +319,7 @@ export default function FamilyMembersSheet({ onClose }) {
                   type="button"
                   onClick={() => setKicking(member)}
                   aria-label={`${member.display_name} 내보내기`}
-                  className="flex size-[34px] shrink-0 items-center justify-center rounded-[10px] border border-input"
+                  className="flex size-[34px] shrink-0 items-center justify-center rounded-md border border-input"
                 >
                   <UserMinus className="size-4 text-muted-foreground" />
                 </button>

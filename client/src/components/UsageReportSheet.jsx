@@ -173,7 +173,7 @@ export default function UsageReportSheet({ onClose }) {
                           {person.amount > 0 && ` · ${formatAmount(person.amount)}`}
                         </span>
                       </div>
-                      <div className="h-[7px] overflow-hidden rounded-[4px] bg-secondary">
+                      <div className="h-[7px] overflow-hidden rounded-sm bg-secondary">
                         <div className={`h-full ${colorOf(person.name)}`} style={{ width: `${person.ratio}%` }} />
                       </div>
                     </div>
@@ -234,7 +234,7 @@ export default function UsageReportSheet({ onClose }) {
                       key={row.id}
                       className="flex items-center gap-3 border-b border-border/40 px-0.5 py-[11px] last:border-b-0"
                     >
-                      <span className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-accent">
+                      <span className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-md bg-accent">
                         {row.thumb_url && <img src={row.thumb_url} alt="" className="size-full object-cover" />}
                       </span>
                       <span className="flex min-w-0 flex-1 flex-col gap-0.5">

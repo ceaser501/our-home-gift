@@ -66,7 +66,7 @@ export default function AlertDialog({
 
       {/* 테두리를 걷고 그림자를 키웠다. 어두운 판 위에 뜬 카드라 테두리가 할 일이 없고,
           그림자가 카드를 판에서 들어올린다. */}
-      <div className="animate-splash-in relative w-full max-w-[322px] rounded-[18px] bg-card px-5 pt-[22px] pb-[18px] shadow-xl">
+      <div className="animate-splash-in relative w-full max-w-[322px] rounded-xl bg-card px-5 pt-[22px] pb-[18px] shadow-xl">
         <div className="flex flex-col items-center gap-[9px] text-center">
           <span className={cn('flex size-[46px] items-center justify-center rounded-full', className)}>
             <Icon className="size-[23px]" />
