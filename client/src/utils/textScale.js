@@ -23,8 +23,33 @@ import { isNativeApp } from './browser';
 
 const KEY = 'moacon:text-scale';
 
-export const MIN_TEXT_SCALE = 0.9;
+export const MIN_TEXT_SCALE = 0.85;
 export const MAX_TEXT_SCALE = 1.15;
+
+// 안드로이드만 기준을 7% 내린다.
+//
+// 같은 CSS px가 두 폰에서 물리적으로 다른 크기로 그려진다. 갤럭시 S25는 기본에서
+// 1인치에 138px이 들어가고 아이폰 15/16은 154px이 들어간다 — 같은 15.5px 글자가
+// 갤럭시에서 11% 크게 보인다는 뜻이다.
+//
+// 그래서 갤럭시에서는 폰에 깔린 다른 앱들보다 모아콘이 커 보였다. 직접 대보고 안 것이다.
+// 이론상으로는 "안드로이드가 원래 큰 것이고 다른 앱도 다 그렇다"가 맞지만, 실제로
+// 나란히 놓고 보면 우리가 더 컸다.
+//
+// 상한은 그대로 115%다. 눈이 어두워 폰 글자를 키워둔 사람은 어차피 상한에 걸리므로
+// 이 조정으로 잃는 것이 없다. 곱한 뒤에 자르기 때문에, 폰 글자를 다섯 눈금 이상
+// 키운 사람은 예전과 똑같이 115%를 받는다.
+//
+// 줄어드는 사람은 기본 설정으로 쓰는 사람뿐이고, 그게 이 조정이 겨냥한 자리다.
+//
+// ⚠ 이건 글자만 줄인다. 카드 여백·버튼 높이는 그대로라서, 화면 전체의 덩치는 안 준다.
+//    그쪽까지 손보려면 목록 카드의 짜임을 다시 잡아야 한다.
+const PLATFORM_BASE = { android: 0.93, ios: 1 };
+
+function platformBase() {
+  const platform = window.Capacitor?.getPlatform?.();
+  return PLATFORM_BASE[platform] ?? 1;
+}
 
 // 설정 화면에 내놓는 눈금. 폰 설정에서 쓰는 말과 맞췄다.
 export const TEXT_SCALE_OPTIONS = [
@@ -33,8 +58,9 @@ export const TEXT_SCALE_OPTIONS = [
   { value: 1.15, label: '크게' },
 ];
 
-// 마지막으로 실제 적용한 값. 설정 화면이 지금 어디에 불이 들어와야 하는지를 이걸로 안다
-// (폰 설정을 따라가는 중이면 고른 값이 없어서, 저장된 값만으로는 알 수 없다).
+// 마지막으로 정해진 눈금(작게·보통·크게). 설정 화면이 지금 어디에 불이 들어와야
+// 하는지를 이걸로 안다 — 폰 설정을 따라가는 중이면 고른 값이 없어서, 저장된 값만으로는
+// 알 수 없다. 실제로 화면에 걸리는 값은 여기에 플랫폼 기준을 곱한 것이다.
 let effective = 1;
 
 function clamp(value) {
@@ -74,16 +100,25 @@ async function systemScale() {
 }
 
 // 지금 있어야 할 크기를 계산해서 화면에 건다. 값이 바뀔 만한 때마다 다시 부르면 된다.
+//
+// 돌려주는 값은 '사용자가 고른 눈금'(작게·보통·크게)이고, 실제로 거는 값은 거기에
+// 플랫폼 기준을 곱한 것이다. 둘을 나눠 둔 이유는 설정 화면이 어느 버튼에 불을 켤지를
+// 앞엣것으로 정해야 하기 때문이다 — 갤럭시에서 '보통'을 고르면 실제로는 93%가 걸리는데,
+// 그 93을 그대로 들고 가면 어느 버튼과도 안 맞아서 불이 다 꺼진다.
 export async function applyTextScale() {
   const chosen = readTextScale();
-  const scale = clamp(chosen ?? (await systemScale()));
-  effective = scale;
+  const choice = clamp(chosen ?? (await systemScale()));
+  effective = choice;
+
+  // 곱한 뒤에 자른다. 순서를 바꾸면 상한이 115에서 107로 함께 내려가고, 폰 글자를
+  // 키워둔 사람이 이유 없이 손해를 본다.
+  const scale = clamp(platformBase() * choice);
 
   if (isNativeApp()) {
     try {
       const { TextZoom } = await import('@capacitor/text-zoom');
       await TextZoom.set({ value: scale });
-      return scale;
+      return choice;
     } catch {
       // 이 플러그인이 없는 옛 빌드다. 아래 CSS 쪽이 받아준다(아이폰에서는 그것만으로도 된다).
     }
@@ -92,7 +127,7 @@ export async function applyTextScale() {
   // 웹(사파리·크롬)이 가는 길. 앱에서는 위 플러그인이 이미 처리했으므로 여기까지 오지
   // 않는다 — 둘 다 걸면 크기가 두 번 곱해진다.
   document.documentElement.style.webkitTextSizeAdjust = `${Math.round(scale * 100)}%`;
-  return scale;
+  return choice;
 }
 
 // 설정에서 골랐을 때. null을 주면 고른 값을 지우고 다시 폰 설정을 따라간다.

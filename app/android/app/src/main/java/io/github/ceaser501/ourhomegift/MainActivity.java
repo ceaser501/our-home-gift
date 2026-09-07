@@ -44,14 +44,22 @@ public class MainActivity extends BridgeActivity {
      * 글자만 커지면 그 줄이 먼저 무너진다. 읽기 편하자고 키운 것이 도리어 못 읽는
      * 화면을 만든다.
      *
-     * 90~115% 안에서만 따라간다. 위는 칸이 유지되는 선이고, 아래는 폰 글자를 작게 해둔
+     * 85~115% 안에서만 따라간다. 위는 칸이 유지되는 선이고, 아래는 폰 글자를 작게 해둔
      * 사람을 위해 열어둔 쪽이다 — 예전에는 100 아래로 안 내려가서, 폰 전체를 작게 해둔
      * 사람에게는 이 앱만 혼자 커 보였다.
+     *
+     * 그리고 기준 자체를 93%로 잡는다. 같은 CSS px가 갤럭시에서 아이폰보다 물리적으로
+     * 크게 그려져서(1인치에 138px 대 154px), 폰에 깔린 다른 앱들과 나란히 놓고 보면
+     * 모아콘만 커 보였다. 직접 대보고 안 것이다.
+     *
+     * 곱한 뒤에 자르는 순서가 중요하다. 상한 115는 그대로라서, 눈이 어두워 폰 글자를
+     * 키워둔 사람은 예전과 똑같이 115를 받는다 — 어차피 상한에 걸리는 자리다.
+     * 줄어드는 사람은 기본 설정으로 쓰는 사람뿐이고, 그게 이 조정이 겨냥한 자리다.
      *
      * 화면이 뜬 뒤에는 client/src/utils/textScale.js가 같은 자리를 다시 정한다
      * (@capacitor/text-zoom). 설정에서 직접 고른 값이 있으면 그 값이 이긴다. 여기서
      * 먼저 한 번 걸어두는 이유는 그 전에도 첫 화면이 그려지기 때문이다 — 안 걸어두면
-     * 100%로 한 번 그렸다가 바뀌면서 글자가 튄다.
+     * 100%로 한 번 그렸다가 바뀌면서 글자가 튄다. 그래서 두 곳의 셈이 같아야 한다.
      */
     private void applySystemFontScale() {
         if (getBridge() == null) return;
@@ -59,8 +67,8 @@ public class MainActivity extends BridgeActivity {
         if (webView == null) return;
 
         float scale = getResources().getConfiguration().fontScale;
-        int zoom = Math.round(scale * 100);
-        webView.getSettings().setTextZoom(Math.max(90, Math.min(115, zoom)));
+        int zoom = Math.round(scale * 100 * 0.93f);
+        webView.getSettings().setTextZoom(Math.max(85, Math.min(115, zoom)));
     }
 
     /**
