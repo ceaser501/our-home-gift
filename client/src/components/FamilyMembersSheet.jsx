@@ -353,9 +353,9 @@ export default function FamilyMembersSheet({ onClose }) {
 
         {renameOpen && (
           <RenameSheet
-            title="가족 이름 바꾸기"
+            title="이 가족을 뭐라고 부를까요?"
             label="가족 이름"
-            hint="가족 모두에게 보여요"
+            hint="가족 모두가 함께 쓰는 이름이에요."
             initialValue={family.name}
             placeholder="예: 우리 가족"
             onSubmit={async (name) => {
@@ -368,9 +368,9 @@ export default function FamilyMembersSheet({ onClose }) {
 
         {myNameOpen && (
           <RenameSheet
-            title="내 이름 바꾸기"
-            label="내 이름"
-            description="이 가족에서 쓰는 이름이에요. 기프티콘에 적힌 이름도 함께 바뀌어요."
+            title="어떤 이름을 쓸까요?"
+            label="이름"
+            description="기프티콘에 적힌 이름도 함께 바뀌어요."
             initialValue={members.find((m) => m.user_id === user.id)?.display_name || ''}
             placeholder="예: 아빠"
             onSubmit={async (name) => {

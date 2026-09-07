@@ -130,11 +130,11 @@ function App() {
 
       {cur === 'rename1' && (
         <RenameSheet
-          title="이름 바꾸기"
+          title="어떤 이름을 쓸까요?"
           label="이름"
           initialValue="태수"
-          placeholder="이름을 적어주세요"
-          description="가족에게 이 이름으로 보여요."
+          placeholder="예: 태수"
+          description="기프티콘에 적힌 이름도 함께 바뀌어요."
           onSubmit={async () => {}}
           onClose={reopen}
         />
@@ -142,11 +142,11 @@ function App() {
 
       {cur === 'rename2' && (
         <RenameSheet
-          title="우리집 기프티콘함 이름 바꾸기"
+          title="이 가족을 뭐라고 부를까요?"
           label="가족 이름"
+          hint="가족 모두가 함께 쓰는 이름이에요."
           initialValue="우리집"
-          placeholder="가족 이름을 적어주세요"
-          description="구성원 모두에게 이 이름으로 보여요. 언제든 다시 바꿀 수 있어요."
+          placeholder="예: 우리 가족"
           onSubmit={async () => {}}
           onClose={reopen}
         />

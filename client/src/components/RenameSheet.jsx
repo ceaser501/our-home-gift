@@ -1,8 +1,7 @@
 import { useState } from 'react';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { ACTION_ROW, ACTION_PRIMARY, ACTION_CANCEL } from '../utils/sheetUi';
 import useBackClose from '../utils/useBackClose';
@@ -44,31 +43,25 @@ export default function RenameSheet({ title, label, hint, description, initialVa
   return (
     <Sheet open onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="gap-0 pb-[var(--safe-bottom)]">
+        {/* 제목이 무엇을 적는 자리인지 말하므로 칸 위에 라벨을 또 두지 않는다.
+            '이름 바꾸기' 아래에 '이름'이 다시 서 있었다 — 한 화면에서 같은 말이 두 번이다.
+
+            hint 는 부제 자리로 옮겼다. 라벨 옆 한마디로 두던 것인데 라벨이 없어졌고,
+            내용도 '누가 보는지'라 제목에 딸리는 말이다. */}
         <SheetHeader>
           <SheetTitle>{title}</SheetTitle>
+          {hint && <SheetDescription>{hint}</SheetDescription>}
         </SheetHeader>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-3.5 px-5">
           <div className="flex flex-col gap-2">
-            <div className="flex items-baseline justify-between gap-2">
-              {/* hint는 라벨 옆 한마디다. 바뀌는 곳이 한 군데뿐이라 아래 안내 상자까지
-                  쓸 것은 없고, 누가 보는지만 적으면 되는 경우에 쓴다(가족 이름). */}
-              <div className="flex min-w-0 items-baseline gap-1.5">
-                <Label htmlFor="rename-input" className="text-sm font-semibold text-foreground/80">
-                  {label}
-                </Label>
-                {hint && (
-                  <span className="shrink-0 text-caption font-medium text-muted-foreground">{hint}</span>
-                )}
-              </div>
-              {/* 글자 수는 한계에 가까울 때만 나타난다. 이름은 보통 두세 글자라 늘 띄우면
-                  쓸모없는 숫자가 하나 더 있는 셈이고, 그 자리에 있으면 자꾸 세게 된다. */}
-              {value.length > MAX_LENGTH - 5 && (
-                <span className="shrink-0 text-caption font-medium tabular-nums text-muted-foreground">
-                  {value.length} / {MAX_LENGTH}
-                </span>
-              )}
-            </div>
+            {/* 글자 수는 한계에 가까울 때만 나타난다. 이름은 보통 두세 글자라 늘 띄우면
+                쓸모없는 숫자가 하나 더 있는 셈이고, 그 자리에 있으면 자꾸 세게 된다. */}
+            {value.length > MAX_LENGTH - 5 && (
+              <span className="self-end text-caption font-medium tabular-nums text-muted-foreground">
+                {value.length} / {MAX_LENGTH}
+              </span>
+            )}
             {/* 예전에 적었던 이름이 아래로 주르륵 뜨는 걸 막는다. 브라우저가 입력칸마다
                 지난 값을 기억해뒀다 보여주는 기능인데, 이름은 몇 개 되지도 않고
                 가족끼리 쓰는 화면이라 지난 값이 보이는 쪽이 성가시다.
@@ -82,6 +75,9 @@ export default function RenameSheet({ title, label, hint, description, initialVa
               autoComplete="off"
               autoFocus
               required
+              // 보이는 라벨을 걷었으므로 이름은 여기로 넘긴다. 없으면 화면 낭독기가
+              // '편집' 이라고만 읽고 무엇을 적는 칸인지 말해주지 못한다.
+              aria-label={label}
               className="h-[52px] rounded-lg px-[15px] text-callout"
             />
           </div>
