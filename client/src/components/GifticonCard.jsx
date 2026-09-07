@@ -14,7 +14,7 @@ import useBackClose from '../utils/useBackClose';
 // 보였다. 원래대로 칸을 구분선으로만 나눈다 — 카드 폭을 끝까지 쓰는 쪽이 넓다.
 //
 // 대신 높이를 44px로 올렸다. 손가락 하나가 온전히 들어가는 크기다.
-const BAR_BUTTON = 'flex h-11 flex-1 items-center justify-center gap-1.5 text-[13px] font-semibold';
+const BAR_BUTTON = 'flex h-11 flex-1 items-center justify-center gap-1.5 text-body font-semibold';
 
 // 카드의 ⋮ 메뉴. 따로 떼어낸 이유가 둘 있다.
 //
@@ -154,7 +154,7 @@ export default function GifticonCard({
   const dateNode = (
     <span
       className={cn(
-        'text-[14.5px] font-semibold whitespace-nowrap tabular-nums',
+        'text-body font-semibold whitespace-nowrap tabular-nums',
         urgent ? 'text-destructive' : 'text-muted-foreground'
       )}
     >
@@ -189,7 +189,7 @@ export default function GifticonCard({
         codeLocked ? 'border-border/60 bg-muted/30' : 'border-border bg-card'
       )}
     >
-      <div className="relative flex gap-3 p-[13px]">
+      <div className="relative flex gap-3 p-3">
         {/* 계산대 앞에서 제일 급한 동작이 바코드 열기라, 이 윗칸 전체를 그 버튼으로 쓴다.
             사진만 눌리게 두면 68px짜리 과녁을 조준해야 하는데, 계산대 앞에서 그건 작다.
             빈자리까지 포함해 어디를 눌러도 열리게 깔아둔 판이다.
@@ -218,19 +218,19 @@ export default function GifticonCard({
         {/* D-day 뱃지는 사진 바깥으로 반쯤 걸쳐야 해서, 사진을 자르는 칸(overflow-hidden)
             안에 둘 수 없다. 한 겹 감싸고 그 위에 얹는다. */}
         <span className="pointer-events-none relative shrink-0">
-          <span className="relative flex size-[62px] items-center justify-center overflow-hidden rounded-xl bg-accent">
+          <span className="relative flex size-16 items-center justify-center overflow-hidden rounded-lg bg-accent">
             {thumbUrl ? (
               <img src={thumbUrl} alt={gifticon.name} className="h-full w-full object-cover" />
             ) : (
               <Ticket className="size-6 text-primary/60" />
             )}
             {codeLocked && (
-              <span className="absolute inset-0 flex items-center justify-center bg-black/45 text-[11px] font-bold text-white">
+              <span className="absolute inset-0 flex items-center justify-center bg-black/45 text-caption font-bold text-white">
                 {isUsed ? '사용완료' : '기한만료'}
               </span>
             )}
             {photoCount > 1 && (
-              <span className="absolute top-1 right-1 rounded-full bg-black/60 px-1.5 py-px text-[10px] font-bold text-white">
+              <span className="absolute top-1 right-1 rounded-full bg-black/60 px-1.5 py-0.5 text-caption font-bold text-white">
                 {photoCount}
               </span>
             )}
@@ -241,7 +241,7 @@ export default function GifticonCard({
           {ddayLabel && (
             <span
               className={cn(
-                'absolute -top-1.5 -left-1.5 rounded-full px-[7px] py-[1px] text-[11px] font-bold tabular-nums ring-2 ring-card',
+                'absolute -top-1.5 -left-1.5 rounded-full px-2 py-0.5 text-caption font-bold tabular-nums ring-2 ring-card',
                 urgent ? 'bg-destructive text-white' : 'bg-foreground/80 text-background'
               )}
             >
@@ -250,7 +250,7 @@ export default function GifticonCard({
           )}
         </span>
 
-        <div className="pointer-events-none relative flex min-w-0 flex-1 flex-col gap-[5px]">
+        <div className="pointer-events-none relative flex min-w-0 flex-1 flex-col gap-1">
           {/* 1줄 — 받은 사람 · 상호.
               받은 사람은 진한 이름표 대신 이름 앞 작은 점으로. 색은 그대로라 누구 건지는
               그대로 구분된다.
@@ -265,7 +265,7 @@ export default function GifticonCard({
               한 줄 사이로 두 번 나온다. */}
           <div className="flex items-center gap-1.5">
             {gifticon.owner && <i className={cn('size-1.5 shrink-0 rounded-full', ownerDotClass)} />}
-            <span className="min-w-0 flex-1 truncate text-xs font-medium text-muted-foreground">
+            <span className="min-w-0 flex-1 truncate text-caption font-medium text-muted-foreground">
               {[
                 gifticon.owner,
                 gifticon.brand === gifticon.name ? null : gifticon.brand,
@@ -287,7 +287,7 @@ export default function GifticonCard({
               실제 이름은 거의 다 들어온다. */}
           <span
             className={cn(
-              'line-clamp-2 text-[15.5px] leading-snug tracking-[-0.018em] break-keep',
+              'line-clamp-2 text-callout leading-snug break-keep',
               codeLocked ? 'font-medium text-muted-foreground' : 'font-semibold text-foreground'
             )}
           >
@@ -312,7 +312,7 @@ export default function GifticonCard({
                 // 기한을 안 적으면 이 자리가 통째로 비어서, 기한이 넉넉한 것과 구분이 안 됐다.
                 // 빈칸 대신 "안 적혔다"고 말해준다. 급한 일은 아니므로 붉은색은 쓰지 않는다
                 // (목록에서 붉은색은 기한이 임박한 것 하나만 가져야 눈에 들어온다).
-                <span className="shrink-0 rounded-full border border-dashed border-input px-2.5 py-0.5 text-[13px] font-bold whitespace-nowrap text-muted-foreground">
+                <span className="shrink-0 rounded-full border border-dashed border-input px-2.5 py-0.5 text-body font-bold whitespace-nowrap text-muted-foreground">
                   유효기한 미입력
                 </span>
               )}
@@ -322,11 +322,11 @@ export default function GifticonCard({
                 남기지 않는다 — 칸을 따로 잡아두면 긴 상품명이 그만큼 폭을 잃는다. */}
             {hasAmount && (
               <>
-                <span className="h-[12px] w-px shrink-0 bg-border" />
+                <span className="h-3 w-px shrink-0 bg-border" />
                 <div className="flex shrink-0 items-baseline gap-0.5">
                   <span
                     className={cn(
-                      'text-[15px] font-bold tabular-nums',
+                      'text-body font-bold tabular-nums',
                       codeLocked ? 'text-muted-foreground' : 'text-foreground'
                     )}
                   >
@@ -335,7 +335,7 @@ export default function GifticonCard({
                   {/* 금액권은 액면가보다 "지금 얼마 남았나"가 먼저다. 계산대 앞에서 알아야
                       할 값이라 잔액을 적고, 얼마짜리였는지는 맨 윗줄이 말한다. */}
                   {isVoucher && spent > 0 && (
-                    <span className="text-[12.5px] font-medium text-muted-foreground">남음</span>
+                    <span className="text-caption font-medium text-muted-foreground">남음</span>
                   )}
                 </div>
               </>
@@ -368,9 +368,9 @@ export default function GifticonCard({
           type="button"
           onClick={() => setMenuOpen(true)}
           aria-label="더 보기"
-          className="relative -mt-[9px] -mr-[9px] -mb-3 flex size-11 shrink-0 items-center justify-center rounded-[10px] text-muted-foreground/60"
+          className="relative -mt-[9px] -mr-[9px] -mb-3 flex size-11 shrink-0 items-center justify-center rounded-md text-muted-foreground/60"
         >
-          <MoreVertical className="size-[17px]" />
+          <MoreVertical className="size-4" />
         </button>
       </div>
 
