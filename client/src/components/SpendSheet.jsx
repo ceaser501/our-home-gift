@@ -1,8 +1,15 @@
 import { useState } from 'react';
-import { Wallet } from 'lucide-react';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { X } from 'lucide-react';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
-import { PRIMARY_BUTTON, SECONDARY_BUTTON } from '../utils/sheetUi';
+import { cn } from '@/lib/utils';
+import { PRIMARY_BUTTON } from '../utils/sheetUi';
 import useBackClose from '../utils/useBackClose';
 
 // 금액권을 얼마나 썼는지 받는 창.
@@ -35,6 +42,12 @@ const QUICK = [
   [1000, '+1천'],
 ];
 
+// 칩은 늘리지 않고 글자 너비로 둔다. 넷이 폭을 꽉 채우고 나란히 서면 계산기 자판처럼
+// 보인다. 테두리를 빼고 회색으로 채운 것도 같은 까닭이다 — 선 넷이 사라지면 조용해진다.
+// 모서리 12 는 알약보다 덜 튀면서 입력 상자(8)와 결이 맞는 자리다.
+const CHIP =
+  'h-9 shrink-0 rounded-xl bg-secondary px-4 text-body font-semibold tabular-nums text-foreground';
+
 export default function SpendSheet({ gifticon, onSpend, onClose }) {
   // 뒤로가기로 이 창을 닫는다. 안 그러면 설치해서 쓸 때 앱이 통째로 꺼진다.
   useBackClose(onClose);
@@ -45,7 +58,7 @@ export default function SpendSheet({ gifticon, onSpend, onClose }) {
   const left = Math.max(0, face - Number(gifticon.spent_amount || 0));
   const spent = Number(onlyDigits(value) || 0);
   const tooMuch = spent > left;
-  const already = Number(gifticon.spent_amount || 0);
+  const leftRatio = face > 0 ? Math.min(100, (left / face) * 100) : 0;
 
   // 빠른 입력은 지금 값에 더하되 잔액에서 멈춘다. 넘겨놓고 빨간 글씨로 나무라는 것보다,
   // 애초에 못 넘게 하는 편이 계산대에서 손이 덜 간다.
@@ -67,120 +80,120 @@ export default function SpendSheet({ gifticon, onSpend, onClose }) {
   return (
     <Sheet open onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="gap-0 pb-[var(--safe-bottom)]">
-        {/* 상품명은 부제가 아니라 값이다. 부제는 '이 창이 무엇인지'를 말하는 자리인데
-            (기한 연장 창의 '기한이 지나도 5년 안이면 환불받을 수 있어요'가 그렇다),
-            상품명은 어느 기프티콘인지를 가리키는 값이라 아래 상태 칸에 함께 있어야 한다.
+        {/* 상품명은 부제 자리에 둔다.
+            한때 '상품명은 값이라 아래 상태 칸에 함께 있어야 한다'고 적어두었는데, 그
+            상태 칸(회색 상자)을 걷어내면서 근거가 없어졌다. 이제는 이름 바꾸기 시트의
+            부제와 같은 자리·같은 값이다 — '이 창이 무엇에 대한 것인지'.
 
-            한때 본문 첫 줄에 있던 것을 제목 아래로 올렸는데, 그때 고치려던 것은 '제목과
-            같은 무게로 나란히 서 있는 것'이었다. 무게는 아래에서도 낮출 수 있다. */}
+            뺄 수는 없다. 바코드 창에서 넘어오는 길에서는 바코드 창이 먼저 닫히기 때문에
+            (App.jsx 의 onSpend), 이 이름 말고는 화면에 남는 단서가 없다. */}
         <SheetHeader>
           <SheetTitle>얼마 쓰셨어요?</SheetTitle>
+          <SheetDescription className="truncate">{gifticon.name}</SheetDescription>
         </SheetHeader>
 
-        <div className="flex flex-col gap-3.5 px-5">
-          {/* 얼마 쓸지 정하려면 남은 돈을 먼저 알아야 하는데, 그 값이 12px 회색 한 줄에
-              묻혀 있었다. 이 화면에서 제일 큰 숫자가 되어야 하는 값이다.
-              한 줄이던 설명을 왼쪽(남은 금액)·오른쪽(권종·쓴 금액)으로 갈랐다. */}
-          <div className="flex flex-col gap-2.5 rounded-lg bg-secondary/60 px-[15px] py-[13px]">
-            {/* 어느 기프티콘의 잔액인지. 값을 말하는 줄이라 남은 금액과 한 칸에 둔다. */}
-            <p className="m-0 truncate text-body font-semibold text-foreground">{gifticon.name}</p>
+        <div className="flex flex-col gap-4 px-5">
+          {/* 잔액. 얼마 쓸지 정하는 근거다.
+              숫자는 16 이다 — 입력(20)보다 한 단 아래. 답보다 근거가 크면 무엇을 적는
+              창인지 흐려진다. 한때 25px 회색 상자 안에 있었는데, 눈을 끄는 몫은 아래
+              막대가 받아갔으므로 숫자는 근거의 크기로 물러나도 된다. */}
+          <div className="flex flex-col gap-[7px]">
+            <div className="flex items-baseline justify-between gap-2.5">
+              <p className="m-0 flex items-baseline gap-1">
+                <span className="text-callout font-bold tabular-nums text-foreground">
+                  {won(left)}
+                </span>
+                <span className="text-body font-semibold text-foreground">남음</span>
+              </p>
+              <span className="shrink-0 text-caption font-medium tabular-nums text-muted-foreground">
+                {shortWon(face)}권
+              </span>
+            </div>
 
-            <div className="flex items-end justify-between gap-3">
-            <div className="flex flex-col gap-0.5">
-              <span className="text-caption font-semibold text-muted-foreground">
-                지금 남은 금액
-              </span>
-              <span className="text-[25px] leading-none font-bold tracking-heading tabular-nums text-foreground">
-                {won(left)}
-              </span>
-            </div>
-            <div className="text-right text-caption leading-snug font-medium tabular-nums text-muted-foreground">
-              {shortWon(face)}권
-              {already > 0 && (
-                <>
-                  <br />
-                  {won(already)} 씀
-                </>
-              )}
-            </div>
+            {/* 배터리처럼 찬 만큼이 남은 돈이다. 숫자를 안 읽어도 대충 얼마인지 보인다.
+                색을 트랙 전체에 깔고 쓴 만큼을 회색으로 덮는다 — 채워진 쪽에 걸면 값이
+                바뀔 때마다 색이 늘었다 줄었다 해서 경계가 늘 같은 색이 된다. */}
+            <div className="relative h-1.5 overflow-hidden rounded-full bg-gauge">
+              <div
+                className="absolute inset-y-0 right-0 bg-secondary"
+                style={{ left: `${leftRatio}%` }}
+              />
             </div>
           </div>
 
           <div className="flex flex-col gap-2">
-            <label htmlFor="spend-amount" className="text-sm font-semibold text-foreground/80">
-              이번에 쓴 금액
-            </label>
             {/* 테두리를 보라로 둔다. 이 화면에서 채워야 하는 칸이 하나뿐이라는 말이다.
                 플레이스홀더는 굵기를 낮춘다 — 굵으면 이미 적힌 값처럼 보여서, 그대로
-                눌러도 되는 줄 안다. */}
-            <div className="flex h-14 items-center gap-2.5 rounded-lg border-[1.5px] border-primary bg-card px-[15px]">
+                눌러도 되는 줄 안다.
+
+                라벨은 없앴다. 제목이 '얼마 쓰셨어요?'인데 라벨이 '이번에 쓴 금액'이면
+                같은 말을 두 번 하는 것이다. 읽어주는 기계를 위해 aria-label 로 남긴다. */}
+            <div className="flex h-14 items-center gap-2.5 rounded-lg border-[1.5px] border-primary bg-card px-4">
               <input
                 id="spend-amount"
                 type="text"
                 inputMode="numeric"
                 autoFocus
+                aria-label="이번에 쓴 금액"
                 value={spent ? spent.toLocaleString('ko-KR') : ''}
                 onChange={(e) => setValue(onlyDigits(e.target.value))}
                 placeholder={left.toLocaleString('ko-KR')}
-                className="min-w-0 flex-1 bg-transparent text-xl font-bold tabular-nums text-foreground outline-none placeholder:font-normal placeholder:text-muted-foreground"
+                className="min-w-0 flex-1 bg-transparent text-title font-bold tabular-nums text-foreground outline-none placeholder:font-normal placeholder:text-muted-foreground"
               />
-              <span className="shrink-0 text-base font-semibold text-muted-foreground">원</span>
+              {/* 지우기는 값이 있을 때만, 지우는 자리에 둔다. 빈 칸 아래 '지우기' 버튼이
+                  늘 서 있던 것이 이상했다.
+                  보이는 것은 24 지만 누를 자리는 40 이다(-m-2 p-2). 시트 닫기의 선 X 와
+                  헷갈리지 않게 채운 동그라미로 그린다 — 같은 짓을 하는 것으로 보이면 안 된다. */}
+              {spent > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setValue('')}
+                  aria-label="지우기"
+                  className="-m-2 flex shrink-0 items-center justify-center p-2"
+                >
+                  <span className="flex size-6 items-center justify-center rounded-full bg-border text-muted-foreground">
+                    <X className="size-3.5" strokeWidth={2.5} />
+                  </span>
+                </button>
+              )}
+              <span className="shrink-0 text-callout font-semibold text-muted-foreground">원</span>
             </div>
 
-            {/* 계산대에서 키패드를 여섯 번 누르는 대신 두 번으로 끝낸다. 아래 '전부 썼어요'와
-                같은 성격의 단축이다. */}
-            <div className="flex gap-2">
+            {/* 계산대에서 키패드를 여섯 번 누르는 대신 두 번으로 끝낸다.
+                '전액'은 값을 채우기만 하고 저장하지 않는다. 한때 '남은 30,000원 전부
+                썼어요' 라는 버튼이 아래에 따로 있어서 누르는 순간 저장까지 됐는데,
+                되돌릴 수 없는 동작은 아래 버튼 하나로 모으는 편이 안전하다. */}
+            <div className="flex flex-wrap gap-2">
+              <button type="button" onClick={() => setValue(String(left))} className={CHIP}>
+                전액
+              </button>
               {QUICK.map(([step, label]) => (
-                <button
-                  key={step}
-                  type="button"
-                  onClick={() => addQuick(step)}
-                  className="h-10 flex-1 rounded-md border border-input bg-card text-sm font-semibold tabular-nums text-foreground"
-                >
+                <button key={step} type="button" onClick={() => addQuick(step)} className={CHIP}>
                   {label}
                 </button>
               ))}
-              <button
-                type="button"
-                onClick={() => setValue('')}
-                className="h-10 w-14 shrink-0 rounded-md border border-input bg-card text-sm font-semibold text-muted-foreground"
-              >
-                지우기
-              </button>
             </div>
 
             {tooMuch && (
-              <p className="m-0 text-body text-destructive">남은 금액({won(left)})보다 많이 쓸 수는 없어요.</p>
+              <p className="m-0 text-body text-destructive">
+                남은 금액({won(left)})보다 많이 쓸 수는 없어요.
+              </p>
             )}
           </div>
 
-          <div className="flex flex-col gap-2">
-            <Button
-              type="button"
-              size="lg"
-              onClick={() => submit(spent)}
-              disabled={saving || !spent || tooMuch}
-              className={PRIMARY_BUTTON}
-            >
-              <Wallet className="size-5" />
-              {spent > 0 && spent < left ? `${won(spent)} 쓰고 ${won(left - spent)} 남기기` : '이만큼 썼어요'}
-            </Button>
-
-            {/* 잔돈을 굳이 남기고 싶지 않은 사람도 있다. 계산기를 두드리게 하지 않는다.
-                위 버튼과 같은 모양이되 색을 뺀다 — 나란히 놓였을 때 어느 쪽이 기본인지
-                한눈에 갈려야 하고, 앱 안에서 이 짝은 늘 같은 모양이어야 한다
-                (기한 늘리기 창의 '다른 날짜예요'도 같다). */}
-            <Button
-              type="button"
-              variant="outline"
-              size="lg"
-              onClick={() => submit(left)}
-              disabled={saving}
-              className={SECONDARY_BUTTON}
-            >
-              남은 {won(left)} 전부 썼어요
-            </Button>
-          </div>
+          {/* 본문끼리는 16, 버튼 앞은 24 다. 같은 값이면 버튼이 본문의 넷째 줄처럼 붙는다.
+              지갑 아이콘은 뺐다 — 글자가 이미 무슨 버튼인지 다 말하고 있다. */}
+          <Button
+            type="button"
+            size="lg"
+            onClick={() => submit(spent)}
+            disabled={saving || !spent || tooMuch}
+            className={cn(PRIMARY_BUTTON, 'mt-2')}
+          >
+            {spent > 0 && spent < left
+              ? `${won(spent)} 쓰고 ${won(left - spent)} 남기기`
+              : '이만큼 썼어요'}
+          </Button>
         </div>
       </SheetContent>
     </Sheet>

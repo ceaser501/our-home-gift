@@ -19,7 +19,7 @@ import BarcodeModal from '../src/components/BarcodeModal';
 const STAGES = {
   rename1: '① 이름 바꾸기',
   rename2: '① - 2 제목이 두 줄일 때',
-  spend: '② 금액 입력 — 부제 없음',
+  spend: '② 금액 입력',
   extend: '③ 기한 연장 — 긴 제목 + 부제',
   photo: '⑥ 원본 사진 — 제목 아래가 값',
   barcode: '⑥ - 2 바코드',
