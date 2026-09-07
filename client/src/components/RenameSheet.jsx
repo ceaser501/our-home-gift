@@ -90,7 +90,7 @@ export default function RenameSheet({ title, label, hint, description, initialVa
               입력칸 아래 작은 회색 줄로 두면 저장을 누른 뒤에야 알게 된다. */}
           {description && (
             <div className="flex gap-[9px] rounded-lg bg-secondary/60 px-3.5 py-3">
-              <span className="mt-px flex size-[18px] shrink-0 items-center justify-center rounded-full bg-border text-[11px] font-bold text-muted-foreground">
+              <span className="mt-px flex size-4 shrink-0 items-center justify-center rounded-full bg-border text-[11px] font-bold text-muted-foreground">
                 i
               </span>
               <p className="m-0 flex-1 text-[13.5px] leading-relaxed font-medium break-keep text-muted-foreground">

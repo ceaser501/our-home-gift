@@ -141,9 +141,9 @@ export default function FamilySwitcherSheet({ onClose, initialCode = '' }) {
                         </span>
                       </div>
                       {isCurrent ? (
-                        <Check className="size-[19px] shrink-0 text-primary" strokeWidth={2.6} />
+                        <Check className="size-5 shrink-0 text-primary" strokeWidth={2.6} />
                       ) : (
-                        <ChevronRight className="size-[17px] shrink-0 text-muted-foreground/70" strokeWidth={2.2} />
+                        <ChevronRight className="size-4 shrink-0 text-muted-foreground/70" strokeWidth={2.2} />
                       )}
                     </button>
                   </li>

@@ -139,7 +139,7 @@ export default function ProfileMenu({ onClose }) {
             구역이 하나 줄었다. */}
         <div className="mx-5 mb-3.5 flex items-center gap-3 rounded-lg bg-secondary/60 px-3.5 py-[13px]">
           <span
-            className={`flex size-[46px] shrink-0 items-center justify-center rounded-full text-sm font-bold text-white ${
+            className={`flex size-12 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white ${
               memberTagColorClass(me) ?? OWNER_TAG_PALETTE[0]
             }`}
           >
@@ -269,7 +269,7 @@ export default function ProfileMenu({ onClose }) {
             onClick={() => signOut()}
             className="mt-1 h-11 w-full rounded-xl text-[15px] font-semibold text-foreground/80"
           >
-            <LogOut className="size-[18px] text-muted-foreground" />
+            <LogOut className="size-4 text-muted-foreground" />
             로그아웃
           </Button>
 

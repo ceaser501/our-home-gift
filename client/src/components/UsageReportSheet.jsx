@@ -150,7 +150,7 @@ export default function UsageReportSheet({ onClose }) {
                 {summary.map((person) => (
                   <div key={person.name} className="flex items-center gap-2.5">
                     <span
-                      className={`flex size-[34px] shrink-0 items-center justify-center rounded-full text-[11.5px] font-bold text-white ${colorOf(person.name)}`}
+                      className={`flex size-9 shrink-0 items-center justify-center rounded-full text-[11.5px] font-bold text-white ${colorOf(person.name)}`}
                     >
                       {person.name.slice(0, 3)}
                     </span>

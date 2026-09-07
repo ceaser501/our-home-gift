@@ -146,9 +146,9 @@ export default function BarcodeModal({ gifticon, onClose, onUsed, onSpend }) {
                 type="button"
                 onClick={() => setView('code')}
                 aria-label="바코드로 돌아가기"
-                className="flex size-[34px] shrink-0 items-center justify-center rounded-full bg-secondary text-foreground"
+                className="flex size-9 shrink-0 items-center justify-center rounded-full bg-secondary text-foreground"
               >
-                <ChevronLeft className="size-[18px]" />
+                <ChevronLeft className="size-4" />
               </button>
             )}
             <div className="flex min-w-0 flex-1 flex-col gap-1">
@@ -291,13 +291,13 @@ export default function BarcodeModal({ gifticon, onClose, onUsed, onSpend }) {
           <div className="flex flex-col gap-2">
             {isVoucher && onSpend ? (
               <Button type="button" size="lg" onClick={onSpend} className={PRIMARY_BUTTON}>
-                <Wallet className="size-[19px]" />
+                <Wallet className="size-5" />
                 잔액입력
               </Button>
             ) : (
               onUsed && (
                 <Button type="button" size="lg" onClick={onUsed} className={PRIMARY_BUTTON}>
-                  <CheckCircle2 className="size-[19px]" />
+                  <CheckCircle2 className="size-5" />
                   사용완료
                 </Button>
               )
@@ -318,7 +318,7 @@ export default function BarcodeModal({ gifticon, onClose, onUsed, onSpend }) {
                 }}
                 className={SECONDARY_BUTTON}
               >
-                <ImageIcon className="size-[17px] text-muted-foreground" />
+                <ImageIcon className="size-4 text-muted-foreground" />
                 원본 사진 {photos.length}장
               </Button>
             )}
@@ -346,7 +346,7 @@ export default function BarcodeModal({ gifticon, onClose, onUsed, onSpend }) {
               onClick={() => setView('code')}
               className={SECONDARY_BUTTON}
             >
-              <ScanLine className="size-[17px] text-muted-foreground" />
+              <ScanLine className="size-4 text-muted-foreground" />
               바코드로 돌아가기
             </Button>
           </div>

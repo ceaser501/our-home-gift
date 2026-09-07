@@ -127,8 +127,8 @@ export default function FamilyMembersSheet({ onClose }) {
         {joinRequests.length > 0 && (
           <div className="mx-5 mb-3 flex flex-col gap-2.5 rounded-2xl border-[1.5px] border-primary bg-primary/4 p-3.5">
             <div className="flex items-center gap-2">
-              <span className="flex size-[26px] shrink-0 items-center justify-center rounded-full bg-primary">
-                <UserPlus className="size-[15px] text-primary-foreground" strokeWidth={2.3} />
+              <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary">
+                <UserPlus className="size-4 text-primary-foreground" strokeWidth={2.3} />
               </span>
               <p className="m-0 flex-1 text-[15px] font-bold text-foreground">
                 참여를 기다리는 사람 <span className="tabular-nums">{joinRequests.length}명</span>
@@ -152,7 +152,7 @@ export default function FamilyMembersSheet({ onClose }) {
                       분홍이 돼 있었다.
                       맞출 수 있는 색이 없으므로 맞추는 척을 하지 않는다. 회색으로 두고,
                       승인하면 그때 색이 입혀져 아래 목록에 선다. */}
-                  <span className="flex size-[30px] shrink-0 items-center justify-center rounded-full bg-muted-foreground text-[11.5px] font-bold text-background">
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted-foreground text-[11.5px] font-bold text-background">
                     {request.display_name.slice(0, 3)}
                   </span>
                   {/* 이름은 끝까지 남고 이메일만 줄어든다. 누구를 들일지 정하는 자리라
@@ -239,7 +239,7 @@ export default function FamilyMembersSheet({ onClose }) {
               disabled={sending}
               className="h-[52px] w-full rounded-lg border border-[#E3B800] bg-[#FEE500] text-[16px] font-bold text-[#191600] hover:bg-[#FEE500]/90 disabled:opacity-70"
             >
-              <MessageCircle className="size-[19px]" />
+              <MessageCircle className="size-5" />
               {sending ? '여는 중…' : '카카오톡으로 초대'}
             </Button>
           </div>
@@ -263,7 +263,7 @@ export default function FamilyMembersSheet({ onClose }) {
           {members.map((member, index) => (
             <li key={member.user_id} className="flex items-center gap-3 rounded-xl px-0.5 py-3">
               <span
-                className={`flex size-[38px] shrink-0 items-center justify-center rounded-full text-caption font-bold text-white ${
+                className={`flex size-10 shrink-0 items-center justify-center rounded-full text-caption font-bold text-white ${
                   memberTagColorClass(member) ?? OWNER_TAG_PALETTE[0]
                 }`}
               >
@@ -304,7 +304,7 @@ export default function FamilyMembersSheet({ onClose }) {
                   type="button"
                   onClick={() => setMyNameOpen(true)}
                   aria-label="내 이름 바꾸기"
-                  className="flex size-[34px] shrink-0 items-center justify-center rounded-md border border-input"
+                  className="flex size-9 shrink-0 items-center justify-center rounded-md border border-input"
                 >
                   <Pencil className="size-4 text-muted-foreground" />
                 </button>
@@ -319,7 +319,7 @@ export default function FamilyMembersSheet({ onClose }) {
                   type="button"
                   onClick={() => setKicking(member)}
                   aria-label={`${member.display_name} 내보내기`}
-                  className="flex size-[34px] shrink-0 items-center justify-center rounded-md border border-input"
+                  className="flex size-9 shrink-0 items-center justify-center rounded-md border border-input"
                 >
                   <UserMinus className="size-4 text-muted-foreground" />
                 </button>

@@ -738,7 +738,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
             onClick={() => setResetAsking(true)}
             className="absolute top-4 right-[62px] flex h-11 items-center rounded-full px-2.5 text-[13.5px] font-semibold text-muted-foreground"
           >
-            <RotateCcw className="mr-1 size-[15px]" />
+            <RotateCcw className="mr-1 size-4" />
             초기화
           </button>
         )}
@@ -761,8 +761,8 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
               onClick={() => fileInputRef.current?.click()}
               className="flex w-full flex-col items-center gap-3 rounded-lg border-[1.5px] border-dashed border-primary/60 bg-primary/4 px-3.5 py-4"
             >
-              <span className="flex size-[52px] items-center justify-center rounded-lg bg-primary">
-                <Plus className="size-[26px] text-primary-foreground" strokeWidth={2.1} />
+              <span className="flex size-13 items-center justify-center rounded-lg bg-primary">
+                <Plus className="size-6 text-primary-foreground" strokeWidth={2.1} />
               </span>
               <span className="flex flex-col items-center gap-1">
                 <span className="text-base font-bold text-foreground">사진 고르기</span>
@@ -908,7 +908,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
                     {CATEGORIES.map((c) => (
                       <SelectItem key={c.key} value={c.key}>
                         <span className="flex items-center gap-2">
-                          {c.Icon && <c.Icon className="size-[18px] shrink-0 text-muted-foreground" strokeWidth={1.9} />}
+                          {c.Icon && <c.Icon className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.9} />}
                           {c.label}
                         </span>
                       </SelectItem>

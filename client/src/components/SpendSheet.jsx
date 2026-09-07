@@ -162,7 +162,7 @@ export default function SpendSheet({ gifticon, onSpend, onClose }) {
               disabled={saving || !spent || tooMuch}
               className={PRIMARY_BUTTON}
             >
-              <Wallet className="size-[19px]" />
+              <Wallet className="size-5" />
               {spent > 0 && spent < left ? `${won(spent)} 쓰고 ${won(left - spent)} 남기기` : '이만큼 썼어요'}
             </Button>
 

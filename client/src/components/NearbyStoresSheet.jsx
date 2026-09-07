@@ -165,7 +165,7 @@ export default function NearbyStoresSheet({ gifticon, onClose }) {
             실제로 눌러야 하는 길을 적는다 — 그 말만으로는 어디를 여는지 모른다. */}
         {phase === 'error' && (
           <div className="flex flex-col items-center gap-3.5 px-[26px] pt-[22px] pb-2">
-            <span className="flex size-[60px] items-center justify-center rounded-full bg-warning/12">
+            <span className="flex size-15 items-center justify-center rounded-full bg-warning/12">
               <MapPin className="size-7 text-warning" strokeWidth={1.9} />
             </span>
 
@@ -238,7 +238,7 @@ export default function NearbyStoresSheet({ gifticon, onClose }) {
             <div className="flex items-center gap-2 px-5 pb-2.5">
               {/* 회색을 채운 동그라미로 두었더니 이 한 줄만 무겁고 흐렸다. 선으로 그린
                   i는 바탕이 흰색이라 옆 글자와 같은 무게로 읽힌다. */}
-              <Info aria-hidden="true" className="size-[15px] shrink-0 text-muted-foreground" strokeWidth={2.2} />
+              <Info aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" strokeWidth={2.2} />
               <p className="m-0 flex-1 text-caption font-medium text-muted-foreground">매장을 누르면 지도가 열려요</p>
               <p className="m-0 shrink-0 text-caption font-medium text-muted-foreground">가까운 순</p>
             </div>
@@ -282,7 +282,7 @@ export default function NearbyStoresSheet({ gifticon, onClose }) {
                     onClick={() => setDetail(first)}
                     className="flex h-11 flex-1 items-center justify-center gap-2 rounded-md bg-primary text-[15px] font-bold text-primary-foreground"
                   >
-                    <MapPin className="size-[17px]" strokeWidth={2.2} />
+                    <MapPin className="size-4" strokeWidth={2.2} />
                     지도 보기
                   </button>
                   {first.lat != null && (
@@ -291,7 +291,7 @@ export default function NearbyStoresSheet({ gifticon, onClose }) {
                       onClick={() => openNavigation(first)}
                       className="flex h-11 flex-1 items-center justify-center gap-2 rounded-md border border-input bg-card text-[15px] font-semibold text-foreground/80"
                     >
-                      <Navigation className="size-[17px] text-primary" strokeWidth={2} />
+                      <Navigation className="size-4 text-primary" strokeWidth={2} />
                       길찾기
                     </button>
                   )}
@@ -301,7 +301,7 @@ export default function NearbyStoresSheet({ gifticon, onClose }) {
                       aria-label={`${first.name}에 전화 걸기`}
                       className="flex size-11 shrink-0 items-center justify-center rounded-md border border-input bg-card"
                     >
-                      <Phone className="size-[18px] text-primary" strokeWidth={2} />
+                      <Phone className="size-4 text-primary" strokeWidth={2} />
                     </a>
                   )}
                 </div>
@@ -343,12 +343,12 @@ export default function NearbyStoresSheet({ gifticon, onClose }) {
                         onClick={(e) => e.stopPropagation()}
                         className="flex size-10 shrink-0 items-center justify-center rounded-full border border-input bg-background"
                       >
-                        <Phone className="size-[17px] text-primary" strokeWidth={2} />
+                        <Phone className="size-4 text-primary" strokeWidth={2} />
                       </a>
                     )}
                     {/* ›를 전화 버튼 뒤로 옮겼다. 앞에 있으면 "줄 전체 → 화살표 → 전화"로
                         읽혀서 화살표가 무엇을 가리키는지 흐려진다. 뒤에 두면 줄의 끝맺음이 된다. */}
-                    <ChevronRight className="size-[17px] shrink-0 text-muted-foreground/60" strokeWidth={2.2} />
+                    <ChevronRight className="size-4 shrink-0 text-muted-foreground/60" strokeWidth={2.2} />
                   </li>
                 ))}
               </ul>

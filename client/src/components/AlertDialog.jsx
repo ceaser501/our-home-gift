@@ -68,8 +68,8 @@ export default function AlertDialog({
           그림자가 카드를 판에서 들어올린다. */}
       <div className="animate-splash-in relative w-full max-w-[322px] rounded-xl bg-card px-5 pt-[22px] pb-[18px] shadow-xl">
         <div className="flex flex-col items-center gap-[9px] text-center">
-          <span className={cn('flex size-[46px] items-center justify-center rounded-full', className)}>
-            <Icon className="size-[23px]" />
+          <span className={cn('flex size-12 items-center justify-center rounded-full', className)}>
+            <Icon className="size-5" />
           </span>
           <p className="m-0 text-[17.5px] leading-snug font-bold break-keep text-foreground">
             {title}

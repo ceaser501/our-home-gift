@@ -294,7 +294,7 @@ export default function StoreDetailSheet({ store, origin, onClose }) {
                 type="button"
                 onClick={() => setMapExpanded((on) => !on)}
                 aria-label={mapExpanded ? '지도 작게 보기' : '지도 크게 보기'}
-                className="absolute top-2 right-2 z-1 flex size-[34px] items-center justify-center rounded-lg border border-border bg-card/95 text-foreground shadow-sm"
+                className="absolute top-2 right-2 z-1 flex size-9 items-center justify-center rounded-lg border border-border bg-card/95 text-foreground shadow-sm"
               >
                 {mapExpanded ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
               </button>
@@ -373,13 +373,13 @@ export default function StoreDetailSheet({ store, origin, onClose }) {
             )}
             {store.address && (
               <p className="m-0 flex items-center gap-3 border-b border-border/40 px-0.5 py-3 text-sm">
-                <MapPin className="size-[17px] shrink-0 text-muted-foreground/70" strokeWidth={2} />
+                <MapPin className="size-4 shrink-0 text-muted-foreground/70" strokeWidth={2} />
                 <span className="min-w-0 font-medium break-keep text-foreground">{store.address}</span>
               </p>
             )}
             {store.phone && (
               <a href={phoneHref} className="m-0 flex items-center gap-3 border-b border-border/40 px-0.5 py-3 text-sm no-underline">
-                <Phone className="size-[17px] shrink-0 text-muted-foreground/70" strokeWidth={2} />
+                <Phone className="size-4 shrink-0 text-muted-foreground/70" strokeWidth={2} />
                 <span className="font-medium text-foreground">{store.phone}</span>
               </a>
             )}
@@ -389,14 +389,14 @@ export default function StoreDetailSheet({ store, origin, onClose }) {
             <div className="flex gap-3 border-b border-border/40 px-0.5 py-3">
               {/* 회색을 채운 동그라미였다. 위아래 줄(주소·전화·영업시간)은 다 선으로 그린
                   아이콘이라 이 줄만 무겁고, 채운 회색이 도리어 흐리게 읽혔다. */}
-              <Info className="mt-px size-[17px] shrink-0 text-muted-foreground/70" strokeWidth={2} />
+              <Info className="mt-px size-4 shrink-0 text-muted-foreground/70" strokeWidth={2} />
               <p className="m-0 flex-1 text-sm leading-relaxed font-medium break-keep text-foreground/80">
                 기프티콘 사용가능여부는 매장에 확인해주세요
               </p>
             </div>
             {/* 영업시간은 카카오가 API로 주지 않아서 앱 안에서는 보여줄 수 없다. 어디서 볼 수 있는지만 안내한다. */}
             <div className="flex items-center gap-3 px-0.5 py-3">
-              <Clock className="size-[17px] shrink-0 text-muted-foreground/70" strokeWidth={2} />
+              <Clock className="size-4 shrink-0 text-muted-foreground/70" strokeWidth={2} />
               <p className="m-0 flex-1 text-[13.5px] font-medium break-keep text-muted-foreground">
                 영업시간·리뷰는 카카오맵에서 볼 수 있어요
               </p>
@@ -414,7 +414,7 @@ export default function StoreDetailSheet({ store, origin, onClose }) {
               {phoneHref && (
                 <Button asChild className="h-12 flex-1 rounded-xl text-[15px] font-bold">
                   <a href={phoneHref}>
-                    <Phone className="size-[17px]" strokeWidth={2.2} /> 전화
+                    <Phone className="size-4" strokeWidth={2.2} /> 전화
                   </a>
                 </Button>
               )}
@@ -424,7 +424,7 @@ export default function StoreDetailSheet({ store, origin, onClose }) {
                   className="h-12 flex-1 rounded-xl text-[15px] font-semibold"
                   onClick={() => openTmapRoute({ name: store.name, lat: store.lat, lng: store.lng })}
                 >
-                  <Navigation className="size-[17px]" strokeWidth={2} /> 길찾기
+                  <Navigation className="size-4" strokeWidth={2} /> 길찾기
                 </Button>
               )}
             </div>

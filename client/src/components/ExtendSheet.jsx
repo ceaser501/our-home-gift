@@ -70,11 +70,11 @@ export default function ExtendSheet({ gifticon, onExtend, onClose }) {
   // 누르는 것에, 배경은 묶는 것에 쓴다.
   const target = (
     <div className="flex items-center gap-3 rounded-lg bg-secondary/60 p-[13px]">
-      <span className="relative flex size-[50px] shrink-0 items-center justify-center overflow-hidden rounded-xl bg-accent">
+      <span className="relative flex size-13 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-accent">
         {thumbUrl ? (
           <img src={thumbUrl} alt="" className="h-full w-full object-cover" />
         ) : (
-          <Ticket className="size-[22px] text-primary/60" />
+          <Ticket className="size-5 text-primary/60" />
         )}
         {expired && (
           <span className="absolute inset-0 flex items-center justify-center bg-black/45 text-[10px] font-bold text-white">
@@ -107,7 +107,7 @@ export default function ExtendSheet({ gifticon, onExtend, onClose }) {
                   type="button"
                   onClick={() => setStep(1)}
                   aria-label="이전 단계"
-                  className="-ml-1 flex size-[34px] shrink-0 items-center justify-center rounded-full bg-secondary text-foreground/80"
+                  className="-ml-1 flex size-9 shrink-0 items-center justify-center rounded-full bg-secondary text-foreground/80"
                 >
                   <ChevronLeft className="size-4.5" />
                 </button>
@@ -172,7 +172,7 @@ export default function ExtendSheet({ gifticon, onExtend, onClose }) {
                 rel="noreferrer"
                 className="flex items-center gap-3 rounded-lg border border-input bg-card px-3.5 py-[11px] text-foreground no-underline"
               >
-                <ExternalLink className="size-[18px] shrink-0 text-foreground/70" />
+                <ExternalLink className="size-4 shrink-0 text-foreground/70" />
                 <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                   <span className="text-[15.5px] font-bold">선물함 열기</span>
                   <span className="text-body font-medium break-keep text-muted-foreground">
@@ -258,7 +258,7 @@ export default function ExtendSheet({ gifticon, onExtend, onClose }) {
                   {thumbUrl ? (
                     <img src={thumbUrl} alt="" className="h-full w-full object-cover" />
                   ) : (
-                    <Ticket className="size-[19px] text-primary/60" />
+                    <Ticket className="size-5 text-primary/60" />
                   )}
                 </span>
                 <span className="m-0 min-w-0 flex-1 truncate text-[15px] font-semibold text-foreground/80">

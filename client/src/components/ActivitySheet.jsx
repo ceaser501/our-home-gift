@@ -124,7 +124,7 @@ function NoticeRow({ notice }) {
   return (
     <div className="flex items-start gap-3 border-b border-border/50 py-3 last:border-b-0">
       <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent">
-        <Megaphone className="size-[18px] text-primary" strokeWidth={2.2} />
+        <Megaphone className="size-4 text-primary" strokeWidth={2.2} />
       </span>
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="flex items-center gap-1.5">
@@ -154,7 +154,7 @@ function ActivityRow({ activity, isNew }) {
   return (
     <div className="flex items-center gap-3 border-b border-border/50 py-3 last:border-b-0">
       <span className={cn('flex size-9 shrink-0 items-center justify-center rounded-full', kind.bg)}>
-        <Icon className={cn('size-[18px]', kind.fg)} strokeWidth={2.2} />
+        <Icon className={cn('size-4', kind.fg)} strokeWidth={2.2} />
       </span>
       {/* 기프티콘 이름을 앞세우고 누가 무엇을 했는지는 아래에 둔다.
           "○○을(를) 썼어요"로 이으면 이름 끝 글자마다 조사가 달라져서, 어느 쪽으로
@@ -248,7 +248,7 @@ export default function ActivitySheet({
           <>
             <div className="flex flex-col items-center gap-3.5 px-[30px] pt-7 pb-[18px]">
               <span className="flex size-16 items-center justify-center rounded-full bg-secondary">
-                <BellOff className="size-[30px] text-muted-foreground/70" strokeWidth={1.8} />
+                <BellOff className="size-8 text-muted-foreground/70" strokeWidth={1.8} />
               </span>
               <div className="flex flex-col items-center gap-2">
                 <p className="m-0 text-[17px] font-bold text-foreground">아직 알림이 없어요</p>

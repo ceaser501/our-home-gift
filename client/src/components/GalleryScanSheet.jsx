@@ -337,7 +337,7 @@ function FoldBox({ tone, title, open, onToggle, children }) {
         className="flex w-full items-center gap-2.5 bg-muted/40 px-3 py-2.5"
       >
         <span className={cn('flex size-6 shrink-0 items-center justify-center rounded-full', bg)}>
-          <Icon className={cn('size-[13px]', fg)} strokeWidth={2.2} />
+          <Icon className={cn('size-3', fg)} strokeWidth={2.2} />
         </span>
         <span className="min-w-0 flex-1 text-left text-[13.5px] font-bold break-keep text-foreground">
           {title}
@@ -1683,9 +1683,9 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                   type="button"
                   onClick={() => handleDismiss(candidate)}
                   aria-label="기프티콘 아님"
-                  className="-mr-1 flex size-[34px] items-center justify-center rounded-md text-muted-foreground"
+                  className="-mr-1 flex size-9 items-center justify-center rounded-md text-muted-foreground"
                 >
-                  <X className="size-[18px]" />
+                  <X className="size-4" />
                 </button>
               )}
             </div>
@@ -1716,13 +1716,13 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
             >
               <span
                 className={cn(
-                  'flex size-[19px] shrink-0 items-center justify-center rounded-md',
+                  'flex size-5 shrink-0 items-center justify-center rounded-md',
                   voucherIds.includes(candidate.id)
                     ? 'bg-primary text-primary-foreground'
                     : 'border-[1.5px] border-input'
                 )}
               >
-                {voucherIds.includes(candidate.id) && <Check className="size-[12px]" strokeWidth={3.6} />}
+                {voucherIds.includes(candidate.id) && <Check className="size-3" strokeWidth={3.6} />}
               </span>
               <span
                 className={cn(
@@ -1940,12 +1940,12 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
             <div className="flex items-center gap-3">
               {/* 아무것도 못 넣었을 때는 초록 동그라미가 거짓말이 된다. */}
               {registered.length > 0 ? (
-                <span className="flex size-[38px] shrink-0 items-center justify-center rounded-full bg-success/12">
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-success/12">
                   <Check className="size-5 text-success" strokeWidth={2.6} />
                 </span>
               ) : (
-                <span className="flex size-[38px] shrink-0 items-center justify-center rounded-full bg-warning/15">
-                  <TriangleAlert className="size-[18px] text-warning" />
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-warning/15">
+                  <TriangleAlert className="size-4 text-warning" />
                 </span>
               )}
               <div className="flex min-w-0 flex-col gap-px">
@@ -2225,7 +2225,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                             result.noExpiry > 0 && 'border-b border-border/60'
                           )}
                         >
-                          <span className="flex size-[30px] shrink-0 items-center justify-center rounded-full bg-destructive/12">
+                          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-destructive/12">
                             <Info className="size-4 text-destructive" strokeWidth={2.2} />
                           </span>
                           <span className="flex min-w-0 flex-1 flex-col gap-px text-left">
@@ -2245,7 +2245,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                           </span>
                           <ChevronDown
                             className={cn(
-                              'size-[17px] shrink-0 text-muted-foreground/70 transition-transform',
+                              'size-4 shrink-0 text-muted-foreground/70 transition-transform',
                               failOpen && 'rotate-180'
                             )}
                             strokeWidth={2.2}
@@ -2300,7 +2300,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                           aria-expanded={noExpiryOpen}
                           className="flex w-full items-center gap-3 px-3.5 py-3"
                         >
-                          <span className="flex size-[30px] shrink-0 items-center justify-center rounded-full bg-[#f4f0e6]">
+                          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#f4f0e6]">
                             <CalendarClock className="size-4 text-[#a8842c]" strokeWidth={2.2} />
                           </span>
                           <span className="flex min-w-0 flex-1 flex-col gap-px text-left">
@@ -2313,7 +2313,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                           </span>
                           <ChevronDown
                             className={cn(
-                              'size-[17px] shrink-0 text-muted-foreground/70 transition-transform',
+                              'size-4 shrink-0 text-muted-foreground/70 transition-transform',
                               noExpiryOpen && 'rotate-180'
                             )}
                             strokeWidth={2.2}
