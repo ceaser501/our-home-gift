@@ -7,7 +7,7 @@
   body { margin:0; background:#3a3a44; font-family:Pretendard, system-ui, sans-serif;
          color:var(--foreground); -webkit-font-smoothing:antialiased; }
   .page { display:flex; gap:18px; align-items:flex-start; justify-content:center; padding:16px 12px 60px; }
-  .panel { position:sticky; top:16px; width:230px; flex:0 0 auto; background:var(--background);
+  .panel { position:sticky; top:16px; width:210px; flex:0 0 auto; background:var(--background);
            border:1px solid var(--border); border-radius:14px; padding:10px 12px; }
   .panel > span { display:block; font-size:10px; font-weight:800; letter-spacing:.04em;
                   color:var(--muted-foreground); margin:0 0 4px; }
@@ -21,15 +21,23 @@
   .note { font-size:11px; line-height:1.6; color:var(--muted-foreground); margin:10px 0 0; word-break:keep-all; }
   .note b { color:var(--foreground); }
 
+  /* ── 폰 — 시트는 화면 아래에 붙는다. 떼어 놓고 보면 칸이 실제보다 커 보인다. ── */
+  .phone { position:relative; width:375px; height:760px; flex:0 0 auto; overflow:hidden;
+           border-radius:24px; background:var(--background);
+           box-shadow:0 20px 50px -20px rgb(0 0 0/.6); display:flex; flex-direction:column; }
+  .phone .veil { position:absolute; inset:0; background:rgb(0 0 0/.5); }
+  .phone .behind { flex:1; padding:16px; }
+  .phone .behind .fake { height:64px; border-radius:16px; background:var(--muted); margin-bottom:12px; }
+
   /* ── 시트 — ui/sheet.jsx 값 그대로 ── */
-  .sheet { width:375px; flex:0 0 auto; border-radius:20px 20px 0 0; background:var(--card);
-           box-shadow:0 -8px 30px -10px rgb(0 0 0/.5); overflow:hidden; }
+  .sheet { position:absolute; inset-inline:0; bottom:0; border-radius:20px 20px 0 0;
+           background:var(--card); overflow:hidden; }
   .hdr { position:relative; padding:20px 56px 14px 18px; }
   .hdr h2 { margin:0; font-size:20px; line-height:1.2; font-weight:700; letter-spacing:-.025em; }
   .x { position:absolute; top:16px; right:16px; display:flex; width:34px; height:34px; align-items:center;
        justify-content:center; border-radius:999px; background:var(--muted); opacity:.8; }
   .x svg { width:16px; height:16px; }
-  .body { padding:0 18px 18px; }
+  .body { max-height:560px; overflow-y:auto; padding:0 18px 18px; }
   .lbl { display:block; margin:0 0 8px; font-size:14px; font-weight:600;
          color:color-mix(in oklab, var(--foreground) 80%, transparent); }
   .lbl + .lbl { margin-top:16px; }
@@ -52,7 +60,7 @@
 
   .cap { margin:22px 0 6px; font-size:10px; font-weight:800; letter-spacing:.05em;
          color:var(--muted-foreground); }
-  .read { margin-top:14px; border:1px solid var(--border); border-radius:12px; overflow:hidden;
+  .read { margin-top:12px; width:100%; border:1px solid var(--border); border-radius:12px; overflow:hidden;
           background:var(--background); }
   .read table { width:100%; border-collapse:collapse; font-size:11.5px; }
   .read th { text-align:left; font-size:10px; letter-spacing:.05em; font-weight:800;
@@ -91,9 +99,25 @@
       <b>등록 15.5</b>, <b>로그인 15</b>. 셋이 갈릴 까닭이 있어 보이지 않는다.<br><br>
       토큰은 <b>callout 16</b> 이 이 자리다 — 여러 줄로 흐르는 글이 아니라 한 줄 입력이지만,
       subtitle 도 16 이라 크기는 같다.</p>
+  <div class="read">
+    <table>
+      <tr><th>지금 쓰는 곳</th><th>높이</th><th>반지름</th><th>글자</th></tr>
+      <tbody>
+        <tr><td>이름 바꾸기</td><td>52</td><td>13</td><td>16.5 semibold</td></tr>
+        <tr><td>등록 · 상품명/번호</td><td>52</td><td>13</td><td>15.5</td></tr>
+        <tr><td>로그인 · 이메일</td><td>52</td><td>13</td><td>15</td></tr>
+        <tr><td>ui/input 기본값</td><td>40</td><td>10</td><td>14</td></tr>
+      </tbody>
+    </table>
+  </div>
   </div>
 
-  <div class="sheet">
+  <div class="phone">
+    <div class="behind">
+      <div class="fake"></div><div class="fake"></div><div class="fake"></div>
+    </div>
+    <div class="veil"></div>
+    <div class="sheet">
     <div class="hdr">
       <h2>이름 바꾸기</h2>
       <span class="x"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></span>
@@ -115,19 +139,9 @@
         <span class="btn">저장</span>
       </div>
     </div>
+    </div>
   </div>
 
-  <div class="read">
-    <table>
-      <tr><th>지금 쓰는 곳</th><th>높이</th><th>반지름</th><th>글자</th></tr>
-      <tbody>
-        <tr><td>이름 바꾸기</td><td>52</td><td>13</td><td>16.5 semibold</td></tr>
-        <tr><td>등록 · 상품명/번호</td><td>52</td><td>13</td><td>15.5</td></tr>
-        <tr><td>로그인 · 이메일</td><td>52</td><td>13</td><td>15</td></tr>
-        <tr><td>ui/input 기본값</td><td>40</td><td>10</td><td>14</td></tr>
-      </tbody>
-    </table>
-  </div>
 </div>
 
 <div id="selfcheck"></div>
