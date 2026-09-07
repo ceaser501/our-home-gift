@@ -1,16 +1,16 @@
-import { useState } from 'react';
-import { X } from 'lucide-react';
+import { useEffect, useRef, useState } from "react";
+import { X } from "lucide-react";
 import {
   Sheet,
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
-} from '@/components/ui/sheet';
-import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
-import { PRIMARY_BUTTON } from '../utils/sheetUi';
-import useBackClose from '../utils/useBackClose';
+} from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { PRIMARY_BUTTON } from "../utils/sheetUi";
+import useBackClose from "../utils/useBackClose";
 
 // 금액권을 얼마나 썼는지 받는 창.
 //
@@ -19,7 +19,7 @@ import useBackClose from '../utils/useBackClose';
 // 안 썼다고 하면 얼마가 남았는지 아무도 모른다. 그래서 쓴 금액을 받아 잔액을 남긴다.
 
 function won(amount) {
-  return `${Number(amount || 0).toLocaleString('ko-KR')}원`;
+  return `${Number(amount || 0).toLocaleString("ko-KR")}원`;
 }
 
 // 권종처럼 곁들여 적는 자리에서 쓰는 짧은 표기. '50,000원'은 여섯 자인데 '5만원'은 세 자다.
@@ -32,33 +32,78 @@ function shortWon(amount) {
 }
 
 function onlyDigits(value) {
-  return String(value ?? '').replace(/\D/g, '');
+  return String(value ?? "").replace(/\D/g, "");
+}
+
+// 숫자가 목표까지 굴러간다. 값이 툭 바뀌면 바뀐 줄 모르고 지나치는데, 굴러가면
+// 눈이 따라간다 — 저장을 누르기 전에 얼마가 남는지 보라고 놓은 숫자라서 그렇다.
+//
+// 지금 보이는 값에서 이어 달린다. 적는 도중에는 목표가 자꾸 바뀌는데(3 → 31 → 310),
+// 그때마다 처음부터 다시 달리면 숫자가 튄다. 뒤쫓게 두면 끊기지 않는다.
+function useCountTo(target, ms = 320) {
+  const [shown, setShown] = useState(target);
+  const shownRef = useRef(target);
+  const rafRef = useRef(0);
+
+  useEffect(() => {
+    const from = shownRef.current;
+    if (from === target) return undefined;
+
+    // 움직임을 줄여달라고 해둔 사람에게는 굴리지 않는다.
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+      shownRef.current = target;
+      setShown(target);
+      return undefined;
+    }
+
+    const t0 = performance.now();
+    const tick = (now) => {
+      const p = Math.min(1, (now - t0) / ms);
+      const eased = 1 - (1 - p) ** 3; // 끝에서 잦아든다
+      const v = Math.round(from + (target - from) * eased);
+      shownRef.current = v;
+      setShown(v);
+      if (p < 1) rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [target, ms]);
+
+  return shown;
 }
 
 // 계산대에서 두드릴 단위. 만원·오천원·천원이면 실제로 쓰는 금액은 대개 두 번에 닿는다.
 const QUICK = [
-  [10000, '+1만'],
-  [5000, '+5천'],
-  [1000, '+1천'],
+  [10000, "+1만"],
+  [5000, "+5천"],
+  [1000, "+1천"],
 ];
 
 // 칩은 늘리지 않고 글자 너비로 둔다. 넷이 폭을 꽉 채우고 나란히 서면 계산기 자판처럼
 // 보인다. 테두리를 빼고 회색으로 채운 것도 같은 까닭이다 — 선 넷이 사라지면 조용해진다.
 // 모서리 12 는 알약보다 덜 튀면서 입력 상자(8)와 결이 맞는 자리다.
 const CHIP =
-  'h-9 shrink-0 rounded-xl bg-secondary px-4 text-body font-semibold tabular-nums text-foreground';
+  "h-9 shrink-0 rounded-xl bg-secondary px-4 text-body font-semibold tabular-nums text-foreground";
 
 export default function SpendSheet({ gifticon, onSpend, onClose }) {
   // 뒤로가기로 이 창을 닫는다. 안 그러면 설치해서 쓸 때 앱이 통째로 꺼진다.
   useBackClose(onClose);
-  const [value, setValue] = useState('');
+  const [value, setValue] = useState("");
   const [saving, setSaving] = useState(false);
 
   const face = Number(gifticon.amount || 0);
   const left = Math.max(0, face - Number(gifticon.spent_amount || 0));
   const spent = Number(onlyDigits(value) || 0);
   const tooMuch = spent > left;
-  const leftRatio = face > 0 ? Math.min(100, (left / face) * 100) : 0;
+
+  // 막대는 세 토막이다 — 남을 것 / 이번에 쓸 것 / 이미 쓴 것.
+  // 적는 대로 첫 토막이 줄고 가운데 토막이 자란다. 저장을 누르기 전에 결과가 보인다.
+  const remain = Math.max(0, left - spent);
+  const usedFrom = face > 0 ? Math.min(100, (left / face) * 100) : 0;
+  const spendFrom = face > 0 ? Math.min(usedFrom, (remain / face) * 100) : 0;
+
+  // 막대는 CSS 가 굴리고(transition), 숫자는 여기서 굴린다. 둘의 시간을 맞춰둔다.
+  const shownRemain = useCountTo(remain);
 
   // 빠른 입력은 지금 값에 더하되 잔액에서 멈춘다. 넘겨놓고 빨간 글씨로 나무라는 것보다,
   // 애초에 못 넘게 하는 편이 계산대에서 손이 덜 간다.
@@ -89,7 +134,9 @@ export default function SpendSheet({ gifticon, onSpend, onClose }) {
             (App.jsx 의 onSpend), 이 이름 말고는 화면에 남는 단서가 없다. */}
         <SheetHeader>
           <SheetTitle>얼마 쓰셨어요?</SheetTitle>
-          <SheetDescription className="truncate">{gifticon.name}</SheetDescription>
+          <SheetDescription className="truncate">
+            {gifticon.name}
+          </SheetDescription>
         </SheetHeader>
 
         <div className="flex flex-col gap-4 px-5">
@@ -99,11 +146,17 @@ export default function SpendSheet({ gifticon, onSpend, onClose }) {
               막대가 받아갔으므로 숫자는 근거의 크기로 물러나도 된다. */}
           <div className="flex flex-col gap-[7px]">
             <div className="flex items-baseline justify-between gap-2.5">
+              {/* 적는 대로 '남을 금액'으로 바뀐다. 한때 이 자리는 늘 지금 잔액을 말하고,
+                  결과는 버튼이 '31,000원 쓰고 349,000원 남기기' 처럼 혼자 지고 있었다.
+                  그러면 '남는다'가 두 군데서 다른 숫자를 말한다. 결과를 근거 자리로
+                  되돌리니 버튼은 동작만 말하면 된다. */}
               <p className="m-0 flex items-baseline gap-1">
                 <span className="text-callout font-bold tabular-nums text-foreground">
-                  {won(left)}
+                  {won(shownRemain)}
                 </span>
-                <span className="text-body font-semibold text-foreground">남음</span>
+                <span className="text-body font-semibold text-foreground">
+                  남음
+                </span>
               </p>
               <span className="shrink-0 text-caption font-medium tabular-nums text-muted-foreground">
                 {shortWon(face)}권
@@ -111,12 +164,18 @@ export default function SpendSheet({ gifticon, onSpend, onClose }) {
             </div>
 
             {/* 배터리처럼 찬 만큼이 남은 돈이다. 숫자를 안 읽어도 대충 얼마인지 보인다.
-                색을 트랙 전체에 깔고 쓴 만큼을 회색으로 덮는다 — 채워진 쪽에 걸면 값이
-                바뀔 때마다 색이 늘었다 줄었다 해서 경계가 늘 같은 색이 된다. */}
+                색은 트랙 전체에 깔고 위에서 덮는다 — 채워진 쪽에 칠하면 값이 바뀔 때마다
+                칠한 것이 늘었다 줄었다 해서 경계가 늘 같은 색이 된다.
+
+                가운데 토막만 움직인다. 이미 쓴 회색은 이 창에서 변할 일이 없다. */}
             <div className="relative h-1.5 overflow-hidden rounded-full bg-gauge">
               <div
+                className="absolute inset-y-0 right-0 bg-gauge-soft transition-[left] duration-[320ms] ease-out motion-reduce:transition-none"
+                style={{ left: `${spendFrom}%` }}
+              />
+              <div
                 className="absolute inset-y-0 right-0 bg-secondary"
-                style={{ left: `${leftRatio}%` }}
+                style={{ left: `${usedFrom}%` }}
               />
             </div>
           </div>
@@ -135,9 +194,9 @@ export default function SpendSheet({ gifticon, onSpend, onClose }) {
                 inputMode="numeric"
                 autoFocus
                 aria-label="이번에 쓴 금액"
-                value={spent ? spent.toLocaleString('ko-KR') : ''}
+                value={spent ? spent.toLocaleString("ko-KR") : ""}
                 onChange={(e) => setValue(onlyDigits(e.target.value))}
-                placeholder={left.toLocaleString('ko-KR')}
+                placeholder={left.toLocaleString("ko-KR")}
                 className="min-w-0 flex-1 bg-transparent text-title font-bold tabular-nums text-foreground outline-none placeholder:font-normal placeholder:text-muted-foreground"
               />
               {/* 지우기는 값이 있을 때만, 지우는 자리에 둔다. 빈 칸 아래 '지우기' 버튼이
@@ -147,7 +206,7 @@ export default function SpendSheet({ gifticon, onSpend, onClose }) {
               {spent > 0 && (
                 <button
                   type="button"
-                  onClick={() => setValue('')}
+                  onClick={() => setValue("")}
                   aria-label="지우기"
                   className="-m-2 flex shrink-0 items-center justify-center p-2"
                 >
@@ -156,7 +215,9 @@ export default function SpendSheet({ gifticon, onSpend, onClose }) {
                   </span>
                 </button>
               )}
-              <span className="shrink-0 text-callout font-semibold text-muted-foreground">원</span>
+              <span className="shrink-0 text-callout font-semibold text-muted-foreground">
+                원
+              </span>
             </div>
 
             {/* 계산대에서 키패드를 여섯 번 누르는 대신 두 번으로 끝낸다.
@@ -164,11 +225,20 @@ export default function SpendSheet({ gifticon, onSpend, onClose }) {
                 썼어요' 라는 버튼이 아래에 따로 있어서 누르는 순간 저장까지 됐는데,
                 되돌릴 수 없는 동작은 아래 버튼 하나로 모으는 편이 안전하다. */}
             <div className="flex flex-wrap gap-2">
-              <button type="button" onClick={() => setValue(String(left))} className={CHIP}>
+              <button
+                type="button"
+                onClick={() => setValue(String(left))}
+                className={CHIP}
+              >
                 전액
               </button>
               {QUICK.map(([step, label]) => (
-                <button key={step} type="button" onClick={() => addQuick(step)} className={CHIP}>
+                <button
+                  key={step}
+                  type="button"
+                  onClick={() => addQuick(step)}
+                  className={CHIP}
+                >
                   {label}
                 </button>
               ))}
@@ -188,11 +258,9 @@ export default function SpendSheet({ gifticon, onSpend, onClose }) {
             size="lg"
             onClick={() => submit(spent)}
             disabled={saving || !spent || tooMuch}
-            className={cn(PRIMARY_BUTTON, 'mt-2')}
+            className={cn(PRIMARY_BUTTON, "mt-2")}
           >
-            {spent > 0 && spent < left
-              ? `${won(spent)} 쓰고 ${won(left - spent)} 남기기`
-              : '이만큼 썼어요'}
+            {spent > 0 ? `${won(spent)} 썼어요` : "이만큼 썼어요"}
           </Button>
         </div>
       </SheetContent>
