@@ -81,8 +81,21 @@ export default function RenameSheet({ title, label, hint, description, helper, i
               className="h-[52px] rounded-lg px-[15px] text-callout"
             />
             {/* 칸 아래 한 줄. 상자를 치지 않고 글자만 둔다 — footnote 는 12px 에 행간이
-                넓어서, 두 줄로 흐르는 짧은 안내에 맞는 자리다. */}
-            {helper && <p className="m-0 text-footnote text-muted-foreground">{helper}</p>}
+                넓어서, 두 줄로 흐르는 짧은 안내에 맞는 자리다.
+
+                ⓘ 는 상자에 있던 것을 그대로 가져왔다. 상자를 걷으면 이 줄이 그냥 회색
+                글자가 되어 앞줄과 구분이 안 되는데, 표 하나가 '이건 안내다'라고 말한다.
+
+                두 줄로 흐를 때 표가 가운데로 내려오지 않게 items-start 로 붙이고, 첫 줄의
+                가운데선에 맞춰 mt-0.5 만큼 내린다(줄 상자 19.2 에 표 16 이라 위아래 1.6). */}
+            {helper && (
+              <div className="flex items-start gap-1.5">
+                <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full bg-border text-[11px] font-bold text-muted-foreground">
+                  i
+                </span>
+                <p className="m-0 flex-1 text-footnote text-muted-foreground">{helper}</p>
+              </div>
+            )}
           </div>
 
           {/* 이름을 바꾸면 다른 화면의 값까지 바뀐다는 것은 저장하기 전에 읽어야 하는 말이다.
