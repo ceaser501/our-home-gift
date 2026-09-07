@@ -90,7 +90,8 @@ async function iosToken({ ask }) {
   //
   // 파이어베이스는 토큰이 만들어지면 알려준다. 그 소식을 기다린다. 안드로이드가 예전부터
   // 쓰던 방식과 같다(아래 androidToken의 'registration'). 시간을 재는 것은 영영 안 오는
-  // 경우를 위한 마지막 그물일 뿐이라 넉넉히 둔다.
+  // 경우를 위한 마지막 그물일 뿐이고, 안드로이드가 오래 써온 15초를 그대로 쓴다 —
+  // 이 자리는 사람이 스위치를 눌러놓고 기다리는 자리라 더 길게 잡을 이유가 없다.
   return await new Promise((resolve, reject) => {
     let handle = null;
     let settled = false;
@@ -99,7 +100,7 @@ async function iosToken({ ask }) {
       // 여기까지 왔으면 기다려서 될 일이 아니다. GoogleService-Info.plist가 빌드에
       // 안 들어갔거나 APNs 키가 안 붙은 경우가 대부분이다.
       () => finish(() => reject(new Error('알림 서버와 연결하지 못했어요. 잠시 뒤 다시 시도해주세요.'))),
-      30000
+      15000
     );
 
     function finish(fn) {

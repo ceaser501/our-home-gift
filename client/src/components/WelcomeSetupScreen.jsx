@@ -54,9 +54,16 @@ export default function WelcomeSetupScreen({ familyId, userId, onDone }) {
         // 위에서 통째로 불러오면 그 관문을 세우는 것만으로 서버 연결까지 딸려 온다.
         if (isNativeApp()) {
           const { enableNativePush } = await import('../nativePush');
-          // userId까지 넘긴다. 여기서는 실패를 조용히 넘기므로(권한 거부와 구분할 길이
-          // 없다), 켜려고 했다는 표시가 남아야 다음에 앱을 열 때 저절로 낫는다.
-          await enableNativePush({ familyId, userId });
+          // 기다리지 않는다.
+          //
+          // 권한 창은 부르는 순간 뜨지만, 토큰은 폰이 애플에 등록을 마쳐야 나온다.
+          // 그걸 기다리면 '준비하는 중…'에 붙들린 채 앱이 안 열린다 — 망이 느린 날
+          // 몇 초, 아예 안 오는 날은 마지막 그물이 걷힐 때까지다. 여기는 앱에 처음
+          // 들어가는 길목이라 그 자리에서 멈춰 서면 안 된다.
+          //
+          // 안 기다려도 된다. userId를 넘기면 '켜려고 했다'가 먼저 적히고, 토큰이 늦게
+          // 오든 못 오든 다음에 앱을 열 때 저절로 맞춰진다(nativePush.js).
+          enableNativePush({ familyId, userId }).catch(() => {});
         } else {
           const { subscribeToPush } = await import('../push');
           await subscribeToPush({ familyId });
