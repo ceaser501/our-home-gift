@@ -40,7 +40,7 @@ function onlyDigits(value) {
 //
 // 지금 보이는 값에서 이어 달린다. 적는 도중에는 목표가 자꾸 바뀌는데(3 → 31 → 310),
 // 그때마다 처음부터 다시 달리면 숫자가 튄다. 뒤쫓게 두면 끊기지 않는다.
-function useCountTo(target, ms = 320) {
+function useCountTo(target, ms = 560) {
   const [shown, setShown] = useState(target);
   const shownRef = useRef(target);
   const rafRef = useRef(0);
@@ -59,7 +59,9 @@ function useCountTo(target, ms = 320) {
     const t0 = performance.now();
     const tick = (now) => {
       const p = Math.min(1, (now - t0) / ms);
-      const eased = 1 - (1 - p) ** 3; // 끝에서 잦아든다
+      // 세제곱이면 앞에서 왈칵 가고 뒤가 길다 — 320ms 에서는 절반 시간에 이미 88%
+      // 가 지나간다. 제곱으로 눕히면 굴러가는 동안이 고르게 보인다.
+      const eased = 1 - (1 - p) ** 2; // 끝에서 잦아든다
       const v = Math.round(from + (target - from) * eased);
       shownRef.current = v;
       setShown(v);
@@ -102,7 +104,7 @@ export default function SpendSheet({ gifticon, onSpend, onClose }) {
   const usedFrom = face > 0 ? Math.min(100, (left / face) * 100) : 0;
   const spendFrom = face > 0 ? Math.min(usedFrom, (remain / face) * 100) : 0;
 
-  // 막대는 CSS 가 굴리고(transition), 숫자는 여기서 굴린다. 둘의 시간을 맞춰둔다.
+  // 막대는 CSS 가 굴리고(transition), 숫자는 여기서 굴린다. 둘 다 560ms 로 맞춰둔다.
   const shownRemain = useCountTo(remain);
 
   // 빠른 입력은 지금 값에 더하되 잔액에서 멈춘다. 넘겨놓고 빨간 글씨로 나무라는 것보다,
@@ -170,7 +172,7 @@ export default function SpendSheet({ gifticon, onSpend, onClose }) {
                 가운데 토막만 움직인다. 이미 쓴 회색은 이 창에서 변할 일이 없다. */}
             <div className="relative h-1.5 overflow-hidden rounded-full bg-gauge">
               <div
-                className="absolute inset-y-0 right-0 bg-gauge-soft transition-[left] duration-[320ms] ease-out motion-reduce:transition-none"
+                className="absolute inset-y-0 right-0 bg-gauge-soft transition-[left] duration-[560ms] ease-out motion-reduce:transition-none"
                 style={{ left: `${spendFrom}%` }}
               />
               <div
