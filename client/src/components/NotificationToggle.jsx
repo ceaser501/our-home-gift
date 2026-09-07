@@ -22,7 +22,9 @@ export default function NotificationToggle({ asRow = false, onChange }) {
   const [notice, setNotice] = useState(null);
 
   useEffect(() => {
-    (native ? isNativePushEnabled(user.id) : isPushEnabled())
+    // 가족 아이디까지 넘긴다. 토큰이 갈렸을 때 조용히 다시 적어두는 데 쓴다
+    // (nativePush.js의 isNativePushEnabled).
+    (native ? isNativePushEnabled(user.id, family.id) : isPushEnabled())
       .then(apply)
       .catch(() => apply(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps

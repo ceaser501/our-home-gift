@@ -662,16 +662,23 @@ export async function saveNativePushToken({ familyId, token }) {
   if (error) throw new Error(error.message);
 }
 
-export async function deleteMyNativePushTokens(userId) {
-  const { error } = await supabase.from('native_push_tokens').delete().eq('user_id', userId);
+// 토큰 하나만 지운다. 이 폰 것만이라는 뜻이다.
+//
+// 예전에는 이 계정의 토큰을 전부 지웠다. 폰 두 대에 같은 계정으로 로그인해두면 한쪽에서
+// 알림을 끄는 순간 다른 쪽도 같이 꺼졌다. 죽은 토큰이 쌓이는 것을 막으려던 것인데,
+// 그건 이제 서버가 한다 — FCM이 "없는 토큰"이라고 하면 발송 함수가 그 줄을 지운다
+// (supabase/functions/_shared/fcm.ts).
+export async function deleteNativePushToken(token) {
+  const { error } = await supabase.from('native_push_tokens').delete().eq('token', token);
   if (error) throw new Error(error.message);
 }
 
-export async function hasMyNativePushTokens(userId) {
+// 이 토큰이(=이 폰이) 등록돼 있는지. RLS가 내 줄만 보여주므로 남의 폰은 세지 않는다.
+export async function hasNativePushToken(token) {
   const { count, error } = await supabase
     .from('native_push_tokens')
     .select('id', { count: 'exact', head: true })
-    .eq('user_id', userId);
+    .eq('token', token);
   if (error) throw new Error(error.message);
   return (count ?? 0) > 0;
 }
