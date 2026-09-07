@@ -17,19 +17,26 @@ import DeleteAccountError from './DeleteAccountError';
 // 로딩 화면만 쓴다.
 
 // 여러 가족에 속해 있을 수 있어서, 마지막으로 보던 가족을 기억해뒀다가 다음에도 그대로 연다.
-const LAST_FAMILY_KEY = 'moacon:family-id';
+//
+// 계정마다 따로 적는다. 예전에는 한 칸을 같이 썼는데, 한 폰에서 계정을 갈아타면 뒤에
+// 들어온 계정이 앞 계정의 기억을 덮어썼다. 그러고 다시 앞 계정으로 돌아오면 적혀 있는
+// 가족이 자기 가족이 아니라서 못 찾고, 목록의 첫 번째로 열렸다. 실제로 그렇게 겪었다 —
+// 새로 만든 가족을 두고 늘 처음 만든 가족이 열렸다.
+function familyKey(userId) {
+  return `moacon:family-id:${userId}`;
+}
 
-function readLastFamilyId() {
+function readLastFamilyId(userId) {
   try {
-    return localStorage.getItem(LAST_FAMILY_KEY);
+    return localStorage.getItem(familyKey(userId));
   } catch {
     return null;
   }
 }
 
-function rememberFamilyId(id) {
+function rememberFamilyId(userId, id) {
   try {
-    localStorage.setItem(LAST_FAMILY_KEY, id);
+    localStorage.setItem(familyKey(userId), id);
   } catch {
     // 저장 못 해도 이번 실행 동안은 그대로 쓴다.
   }
@@ -78,9 +85,9 @@ export default function AuthGate({ children }) {
 
       // 폰 안에 적어둔 것이 먼저다. 앱을 다시 깔아 그게 없으면 families[0]인데, 그 차례는
       // 이제 서버가 '마지막으로 연 순서'로 세워 준다(family.js의 getMyFamilies).
-      const wanted = wantedId ?? readLastFamilyId();
+      const wanted = wantedId ?? readLastFamilyId(userId);
       const family = families.find((f) => f.id === wanted) ?? families[0];
-      rememberFamilyId(family.id);
+      rememberFamilyId(userId, family.id);
       // 서버에도 적어둔다. 기다리지 않는다 — 이게 늦어도 화면이 늦을 이유가 없다.
       touchFamily(family.id);
 

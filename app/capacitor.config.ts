@@ -48,6 +48,17 @@ const config: CapacitorConfig = {
     PushNotifications: {
       presentationOptions: ['alert', 'sound', 'badge'],
     },
+
+    // 아이폰은 같은 값을 여기서 읽는다.
+    //
+    // 아이폰 알림은 @capacitor-firebase/messaging 이 받는데, 그 플러그인은 위
+    // PushNotifications 칸을 쳐다보지 않는다. 그래서 이 줄이 없으면 앱이 앞에 떠
+    // 있는 동안 알림이 오기는 오는데 화면에 안 그려진다 — 서버 기록에는 '보냈다'로
+    // 남고 폰에서는 아무 일도 안 일어난다. 참여 신청을 넣고 승인 화면을 보고 있는
+    // 그 순간이 정확히 앱이 앞에 있는 때다.
+    FirebaseMessaging: {
+      presentationOptions: ['alert', 'badge', 'sound'],
+    },
   },
   // 파이어베이스 메시징 플러그인이 SwiftPM에서 이름이 겹치는 것을 피하는 설정.
   //
