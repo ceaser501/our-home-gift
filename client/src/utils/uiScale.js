@@ -101,6 +101,16 @@ export async function applyUiScale() {
   // 무시 구간만큼 빼고 따라간다. 빼기 때문에 그 위로는 예전과 같은 속도로 커진다.
   const system = await systemScale();
   const scale = clamp(platformBase() * Math.max(1, system - (FOLLOW_FROM - 1)));
+
+  // 값이 그대로면 손대지 않는다.
+  //
+  // 이 함수는 앱이 앞으로 올 때마다 돈다. 그때마다 다시 쓰면 값이 같아도 브라우저가
+  // zoom을 새로 먹은 것으로 보고 화면 전체를 다시 계산한다 — 목록이 빤짝하고 다시
+  // 그려지는 것이 그것이다. 폰 설정은 자주 바뀌는 값이 아니라 대개 여기서 끝난다.
+  if (scale === lastScale && document.documentElement.style.getPropertyValue('--ui-scale')) {
+    return scale;
+  }
+
   lastScale = scale;
   document.documentElement.style.setProperty('--ui-scale', String(scale));
 
