@@ -14,7 +14,7 @@ import Logo from './Logo';
 // 깔아두면 인트로가 한 번만 보이게 이어붙일 수 있다. 그때 AuthGate에 다시 끼우면 된다.
 export default function SplashScreen() {
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col items-center justify-center gap-4 bg-background px-6">
+    <div className="mx-auto flex min-h-[calc(100dvh/var(--ui-scale))] w-full max-w-[480px] flex-col items-center justify-center gap-4 bg-background px-6">
       <Logo className="animate-splash-in size-16" />
       <div className="animate-splash-in-delayed flex flex-col items-center gap-1.5">
         <h1 className="m-0 text-2xl font-bold tracking-tight text-foreground">모아콘</h1>

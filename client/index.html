@@ -44,6 +44,28 @@
         document.querySelector('meta[name="theme-color"]').content = isDark ? '#121216' : '#ffffff';
       })();
 
+      // 화면 크기도 그려지기 전에 정해둔다.
+      //
+      // 고른 값이 있으면 여기서 바로 건다. 앱이 뜬 뒤에 걸면 100%로 한 번 그렸다가
+      // 줄어들면서 화면이 눈에 띄게 튄다. 폰 설정을 따라가는 경우는 그 값을 물어보는
+      // 데 시간이 걸려서(네이티브 왕복) 여기서 알 수 없고, textScale.js가 곧 정한다.
+      //
+      // 여기 셈은 src/utils/textScale.js와 같아야 한다. 갤럭시는 같은 CSS px가 더 크게
+      // 그려져서 기준이 0.93이다.
+      (function () {
+        try {
+          var chosen = Number(localStorage.getItem('moacon:text-scale'));
+          if (!chosen) return;
+          var base = window.Capacitor && window.Capacitor.getPlatform
+            ? { android: 0.93, ios: 1 }[window.Capacitor.getPlatform()] || 1
+            : 1;
+          var scale = Math.min(1.15, Math.max(0.85, base * chosen));
+          document.documentElement.style.setProperty('--ui-scale', String(scale));
+        } catch (e) {
+          // 사생활 보호 모드 등. 기본 크기로 그리고, 곧 textScale.js가 다시 정한다.
+        }
+      })();
+
       // 크롬은 페이지가 뜨자마자 설치 가능 여부를 판단해 beforeinstallprompt를 던진다.
       // 리액트가 그려지기 전에 이벤트가 지나가버리면 설치 버튼을 영영 띄울 수 없으므로
       // (스플래시가 끝나고 로그인 화면이 뜰 때쯤이면 이미 늦다) 여기서 미리 붙잡아 둔다.

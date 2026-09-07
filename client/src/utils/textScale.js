@@ -1,6 +1,13 @@
 import { isNativeApp } from './browser';
 
-// 앱 글자 크기.
+// 앱 화면 크기.
+//
+// 글자만이 아니라 여백·버튼·아이콘까지 한꺼번에 움직인다. 폰의 「화면 확대/축소」가
+// 하는 일과 같다. 처음에는 글자만 키우고 줄였는데(웹뷰의 text zoom) 그것으로는
+// 반쪽이었다 — 글자는 줄어드는데 카드 여백과 버튼 높이는 그대로라, 화면의 덩치는
+// 그대로인 채 글자만 헐거워졌다.
+//
+// 거는 자리는 index.css의 --ui-scale 하나이고, html의 zoom이 그 값을 받는다.
 //
 // 폰 설정을 따라가는 것이 기본이다. 안드로이드는 그 일을 네이티브가 해왔는데
 // (MainActivity.java의 applySystemFontScale) 아이폰에는 그런 자리가 없었다. 웹뷰가
@@ -13,13 +20,9 @@ import { isNativeApp } from './browser';
 //   - 설정에서 직접 고른 사람: 그 값이 이긴다. 폰 설정을 어디서 바꾸는지 모르는
 //     경우가 더 많고, 폰 전체는 그대로 두고 이 앱만 크게 보고 싶은 경우도 있다.
 //
-// 폭은 90~115%다. 위를 115에서 끊는 이유는 예전에 130까지 따라가게 했다가 목록 카드의
-// 상품명·기한·버튼이 한 줄에서 어긋났기 때문이다 — 읽기 편하자고 키운 것이 도리어 못
-// 읽는 화면을 만든다. 글자만 커지고 칸은 그대로라 생기는 일이라, 칸을 함께 키우지 않는
-// 한 이 선을 넘을 수 없다.
-//
-// 아래를 90에서 여는 건 새로 열어준 쪽이다. 예전에는 100 아래로 안 내려가서, 폰 글자를
-// 작게 해둔 사람에게는 이 앱만 혼자 커 보였다.
+// 폭은 85~115%다. 칸이 글자와 함께 움직이므로 예전처럼 줄이 어긋나 깨질 일은 없다.
+// 그래도 상한을 두는 이유는 화면에 담기는 양이다 — 130%로 키우면 목록에 카드가 두 장
+// 겨우 들어가서, 크게 보려던 것이 도리어 매번 스크롤하는 화면이 된다.
 
 const KEY = 'moacon:text-scale';
 
@@ -41,9 +44,6 @@ export const MAX_TEXT_SCALE = 1.15;
 // 키운 사람은 예전과 똑같이 115%를 받는다.
 //
 // 줄어드는 사람은 기본 설정으로 쓰는 사람뿐이고, 그게 이 조정이 겨냥한 자리다.
-//
-// ⚠ 이건 글자만 줄인다. 카드 여백·버튼 높이는 그대로라서, 화면 전체의 덩치는 안 준다.
-//    그쪽까지 손보려면 목록 카드의 짜임을 다시 잡아야 한다.
 const PLATFORM_BASE = { android: 0.93, ios: 1 };
 
 function platformBase() {
@@ -114,19 +114,9 @@ export async function applyTextScale() {
   // 키워둔 사람이 이유 없이 손해를 본다.
   const scale = clamp(platformBase() * choice);
 
-  if (isNativeApp()) {
-    try {
-      const { TextZoom } = await import('@capacitor/text-zoom');
-      await TextZoom.set({ value: scale });
-      return choice;
-    } catch {
-      // 이 플러그인이 없는 옛 빌드다. 아래 CSS 쪽이 받아준다(아이폰에서는 그것만으로도 된다).
-    }
-  }
-
-  // 웹(사파리·크롬)이 가는 길. 앱에서는 위 플러그인이 이미 처리했으므로 여기까지 오지
-  // 않는다 — 둘 다 걸면 크기가 두 번 곱해진다.
-  document.documentElement.style.webkitTextSizeAdjust = `${Math.round(scale * 100)}%`;
+  // 거는 자리는 여기 하나다. index.css의 html { zoom: var(--ui-scale) }가 받아서
+  // 글자·여백·버튼·아이콘을 같은 비율로 움직인다. 웹과 앱이 같은 길을 쓴다.
+  document.documentElement.style.setProperty('--ui-scale', String(scale));
   return choice;
 }
 

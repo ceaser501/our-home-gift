@@ -23,52 +23,23 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(GalleryPlugin.class);
         super.onCreate(savedInstanceState);
         watchSystemBarInsets();
-        applySystemFontScale();
-    }
 
-    /**
-     * 폰 설정의 글자 크기를 화면에 반영한다.
-     *
-     * 웹뷰는 시스템 글자 크기를 무시하고 늘 100%로 그린다. 크롬은 반영하기 때문에,
-     * 글자를 키워둔 사람은 같은 화면인데 앱에서만 작게 보인다. 실제로 "웹보다 한 포인트씩
-     * 작아진 것 같다"는 말이 나왔다.
-     *
-     * 이 앱은 가족이 함께 쓴다. 글자를 키워두는 건 대개 그게 필요해서 키워둔 것이라,
-     * 그 설정을 따르는 게 맞다.
-     *
-     * 다만 그대로 따르지는 않는다. 안드로이드는 200%까지 허용하는데 그만큼 키우면 버튼
-     * 글자가 넘쳐 눌러야 할 것이 화면 밖으로 나간다.
-     *
-     * 처음에는 130%까지 따라갔는데, 폰 설정을 크게 해두고 열어보니 목록 카드의 칸이
-     * 어긋났다. 이 앱의 화면은 상품명·기한·버튼이 한 줄에 나란히 놓이는 곳이 많아서,
-     * 글자만 커지면 그 줄이 먼저 무너진다. 읽기 편하자고 키운 것이 도리어 못 읽는
-     * 화면을 만든다.
-     *
-     * 85~115% 안에서만 따라간다. 위는 칸이 유지되는 선이고, 아래는 폰 글자를 작게 해둔
-     * 사람을 위해 열어둔 쪽이다 — 예전에는 100 아래로 안 내려가서, 폰 전체를 작게 해둔
-     * 사람에게는 이 앱만 혼자 커 보였다.
-     *
-     * 그리고 기준 자체를 93%로 잡는다. 같은 CSS px가 갤럭시에서 아이폰보다 물리적으로
-     * 크게 그려져서(1인치에 138px 대 154px), 폰에 깔린 다른 앱들과 나란히 놓고 보면
-     * 모아콘만 커 보였다. 직접 대보고 안 것이다.
-     *
-     * 곱한 뒤에 자르는 순서가 중요하다. 상한 115는 그대로라서, 눈이 어두워 폰 글자를
-     * 키워둔 사람은 예전과 똑같이 115를 받는다 — 어차피 상한에 걸리는 자리다.
-     * 줄어드는 사람은 기본 설정으로 쓰는 사람뿐이고, 그게 이 조정이 겨냥한 자리다.
-     *
-     * 화면이 뜬 뒤에는 client/src/utils/textScale.js가 같은 자리를 다시 정한다
-     * (@capacitor/text-zoom). 설정에서 직접 고른 값이 있으면 그 값이 이긴다. 여기서
-     * 먼저 한 번 걸어두는 이유는 그 전에도 첫 화면이 그려지기 때문이다 — 안 걸어두면
-     * 100%로 한 번 그렸다가 바뀌면서 글자가 튄다. 그래서 두 곳의 셈이 같아야 한다.
-     */
-    private void applySystemFontScale() {
-        if (getBridge() == null) return;
-        WebView webView = getBridge().getWebView();
-        if (webView == null) return;
-
-        float scale = getResources().getConfiguration().fontScale;
-        int zoom = Math.round(scale * 100 * 0.93f);
-        webView.getSettings().setTextZoom(Math.max(85, Math.min(115, zoom)));
+        // 글자 배율(setTextZoom)은 여기서 건드리지 않는다.
+        //
+        // 한동안 시스템 글자 크기(Configuration.fontScale)를 읽어 여기서 걸었다. 웹뷰는
+        // 그 설정을 스스로 반영하지 않아서, 글자를 키워둔 사람이 이 앱에서만 작은 글씨를
+        // 보고 있었기 때문이다.
+        //
+        // 그런데 setTextZoom은 글자만 키운다. 카드 여백·버튼 높이·아이콘은 그대로라서,
+        // 키우면 한 줄에 놓인 상품명·기한·버튼이 어긋나고 줄이면 화면의 덩치는 그대로인
+        // 채 글자만 헐거워진다. 폰의 「화면 확대/축소」가 하는 일은 그게 아니라 전부를
+        // 같은 비율로 움직이는 것이다.
+        //
+        // 그래서 이 일을 화면 쪽으로 옮겼다 — client/src/utils/textScale.js가 시스템 값을
+        // 읽어(@capacitor/text-zoom의 getPreferred) index.css의 --ui-scale에 걸고, html의
+        // zoom이 화면 전체를 움직인다. 웹과 앱이 같은 길을 쓴다.
+        //
+        // 여기서 함께 걸면 두 배율이 곱해진다.
     }
 
     /**

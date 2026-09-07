@@ -95,7 +95,7 @@ export default function ExtendSheet({ gifticon, onExtend, onClose }) {
 
   return (
     <Sheet open onOpenChange={(open) => !open && onClose()}>
-      <SheetContent className="max-h-[92dvh] gap-0 overflow-y-auto pb-[var(--safe-bottom)]">
+      <SheetContent className="max-h-[calc(92dvh/var(--ui-scale))] gap-0 overflow-y-auto pb-[var(--safe-bottom)]">
         <SheetHeader className="gap-0 px-[18px] pr-14 pb-0">
           {/* 두 화면짜리라는 것을 먼저 보여준다. 안 보이면 1/2에서 '연장했어요'를 누른
               사람이 "끝난 건가" 하고 창을 닫는다. 만료된 것은 한 화면이라 안 띄운다. */}

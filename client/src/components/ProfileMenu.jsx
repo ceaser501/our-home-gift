@@ -129,7 +129,7 @@ export default function ProfileMenu({ onClose }) {
 
   return (
     <Sheet open onOpenChange={(open) => !open && onClose()}>
-      <SheetContent className="max-h-[92dvh] gap-0 overflow-y-auto pb-[var(--safe-bottom)]">
+      <SheetContent className="max-h-[calc(92dvh/var(--ui-scale))] gap-0 overflow-y-auto pb-[var(--safe-bottom)]">
         <SheetHeader className="px-[18px] pr-14 pb-3">
           <SheetTitle className="text-[19px] font-bold tracking-[-0.026em]">내 메뉴</SheetTitle>
         </SheetHeader>

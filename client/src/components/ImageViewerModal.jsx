@@ -21,7 +21,7 @@ export default function ImageViewerModal({ gifticon, onClose }) {
 
   return (
     <Sheet open onOpenChange={(open) => !open && onClose()}>
-      <SheetContent className="max-h-[92dvh] gap-0 overflow-y-auto pb-[var(--safe-bottom)]">
+      <SheetContent className="max-h-[calc(92dvh/var(--ui-scale))] gap-0 overflow-y-auto pb-[var(--safe-bottom)]">
         {/* 제목은 '원본 사진'으로 고정하고 상품명은 부제로 내린다. 이 창에서 먼저 알아야
             하는 것은 무엇을 보고 있는지이고, 어느 기프티콘인지는 방금 목록에서 눌러서 왔다.
             몇 장 중 몇 번째인지는 사진 위 오버레이에서 여기로 올렸다 — 사진을 안 가리고,

@@ -428,7 +428,7 @@ export default function App() {
   }
 
   return (
-    <div className="relative mx-auto flex min-h-dvh w-full max-w-[480px] flex-col overflow-x-hidden bg-background pb-22">
+    <div className="relative mx-auto flex min-h-[calc(100dvh/var(--ui-scale))] w-full max-w-[480px] flex-col overflow-x-hidden bg-background pb-22">
       {/* 당겨서 새로고침은 기프티콘뿐 아니라 가족 구성원까지 같이 다시 읽어오고,
           새 버전이 배포됐으면 화면 자체를 새로 연다. */}
       <PullToRefresh onRefresh={handlePullRefresh} />

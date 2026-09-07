@@ -32,10 +32,32 @@
   --ring: #5b4fe8;
   --radius: 1rem;
 
+  /* 화면 전체를 키우고 줄이는 값. 1이 기본이고 client/src/utils/textScale.js가 정한다.
+     아래 html의 zoom이 이 값을 받아 글자·여백·버튼·아이콘을 한꺼번에 움직인다. */
+  --ui-scale: 1;
+
   /* 화면 위아래에서 비워둬야 하는 높이.
-     아이폰의 노치와 홈 인디케이터는 env(safe-area-inset-*)로 정확히 알 수 있다. */
-  --safe-top: max(16px, env(safe-area-inset-top));
-  --safe-bottom: max(24px, env(safe-area-inset-bottom));
+     아이폰의 노치와 홈 인디케이터는 env(safe-area-inset-*)로 정확히 알 수 있다.
+
+     --ui-scale로 나눈다. 시스템 바 높이는 화면을 줄인다고 같이 줄어드는 값이 아니라
+     실제 기기의 높이인데, zoom은 여기 적힌 px까지 함께 줄여버린다. 그대로 두면 화면을
+     작게 본 사람의 헤더가 상태 바 밑으로 파고들고, 시트 맨 밑 버튼이 제스처 바에 물린다.
+     미리 나눠 두면 곱해진 뒤에 원래 높이가 된다. */
+  --safe-top: calc(max(16px, env(safe-area-inset-top)) / var(--ui-scale));
+  --safe-bottom: calc(max(24px, env(safe-area-inset-bottom)) / var(--ui-scale));
+}
+
+/* 화면 전체를 한 번에 키우고 줄인다.
+
+   글자만 키우는 방법(text zoom)을 먼저 썼는데 그것으로는 반쪽이었다. 글자는 줄어드는데
+   카드 여백·버튼 높이·아이콘은 그대로라, 화면의 덩치는 그대로인 채 글자만 헐거워졌다.
+   폰의 「화면 확대/축소」가 하는 일은 그게 아니라 전부를 같은 비율로 움직이는 것이다.
+
+   zoom은 그 일을 한 줄로 한다. 다만 뷰포트 단위(dvh)와 env()는 zoom을 모른 채 화면
+   기준으로 계산되므로, 그 둘을 쓰는 자리는 --ui-scale로 나눠 둔다. 위의 --safe-*와
+   시트의 max-h-[calc(92dvh/var(--ui-scale))]가 그것이다. */
+html {
+  zoom: var(--ui-scale);
 }
 
 /* 안드로이드 앱에서는 env(safe-area-inset-bottom)이 늘 0으로 나온다.
@@ -53,8 +75,8 @@
 
    실제 높이에 여유를 더해 쓴다. 바 높이에 딱 맞추면 버튼 가장자리가 바에 닿는다. */
 html.is-native-android {
-  --safe-top: calc(8px + var(--android-inset-top, 32px));
-  --safe-bottom: calc(16px + var(--android-inset-bottom, 56px));
+  --safe-top: calc((8px + var(--android-inset-top, 32px)) / var(--ui-scale));
+  --safe-bottom: calc((16px + var(--android-inset-bottom, 56px)) / var(--ui-scale));
 }
 
 /* 폰이 다크모드여도 앱은 항상 화이트가 기본이다. 헤더의 토글로 직접 다크를

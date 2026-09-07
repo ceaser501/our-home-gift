@@ -1928,7 +1928,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
           좇다가 마지막에 등록 버튼 앞에 서는 흐름이 거기에 걸려 있다. */}
       <SheetContent
         className={cn(
-          'max-h-[92dvh] gap-0 pb-[var(--safe-bottom)]',
+          'max-h-[calc(92dvh/var(--ui-scale))] gap-0 pb-[var(--safe-bottom)]',
           stage === 'registered' ? 'overflow-hidden' : 'overflow-y-auto'
         )}
       >

@@ -704,7 +704,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
 
   return (
     <Sheet open onOpenChange={(open) => !open && onClose()}>
-      <SheetContent className="max-h-[92dvh] gap-0 overflow-y-auto pb-[var(--safe-bottom)]">
+      <SheetContent className="max-h-[calc(92dvh/var(--ui-scale))] gap-0 overflow-y-auto pb-[var(--safe-bottom)]">
         {/* 초기화를 뺐다. 닫기 ✕ 바로 옆이라 손이 미끄러지면 적던 것이 다 날아갔고,
             글자만 있는 버튼이기도 했다. 폼 맨 아래로 옮겼다 — 다 적은 뒤에야 필요한
             동작이라 적기 시작하는 자리에 있을 이유가 없다. */}

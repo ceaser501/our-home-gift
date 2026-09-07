@@ -47,7 +47,7 @@ function SheetContent({ className, children, side = 'bottom', showClose = true, 
           side === 'bottom' &&
             cn(
               'inset-x-0 bottom-0 mx-auto w-full max-w-(--sheet-max-width) rounded-t-[20px] border-t',
-              'max-h-[92dvh]',
+              'max-h-[calc(92dvh/var(--ui-scale))]',
               'data-[state=closed]:animate-out data-[state=closed]:slide-out-to-bottom',
               'data-[state=open]:animate-in data-[state=open]:slide-in-from-bottom'
             ),

@@ -85,7 +85,7 @@ export default function ConsentScreen({ userId, onDone }) {
        위아래가 화면 밖으로 밀려나고, 넘친 만큼은 스크롤해도 안 나온다(작은 폰에서
        '동의하지 않고 나가기'가 통째로 잘렸다). 바깥은 스크롤만 맡고, 가운데 맞추기는
        안쪽의 my-auto가 한다 — 짧으면 가운데, 길면 위에서부터. */
-    <div className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col overflow-y-auto bg-background px-6">
+    <div className="mx-auto flex min-h-[calc(100dvh/var(--ui-scale))] w-full max-w-[480px] flex-col overflow-y-auto bg-background px-6">
       <div className="my-auto flex flex-col gap-5 py-7">
       <div className="flex flex-col items-center gap-2.5">
         <span className="flex size-12 items-center justify-center rounded-full bg-accent">

@@ -17,7 +17,7 @@ export default class ErrorBoundary extends Component {
     if (!this.state.message) return this.props.children;
 
     return (
-      <div className="flex min-h-dvh flex-col items-center justify-center gap-5 bg-background px-8 text-center">
+      <div className="flex min-h-[calc(100dvh/var(--ui-scale))] flex-col items-center justify-center gap-5 bg-background px-8 text-center">
         <div>
           <p className="m-0 text-lg font-semibold text-foreground">화면이 멈췄어요</p>
           <p className="m-0 pt-2 text-sm break-keep text-muted-foreground">앱을 다시 시작하면 돼요.</p>

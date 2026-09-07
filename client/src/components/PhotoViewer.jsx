@@ -10,12 +10,12 @@ import { cn } from '@/lib/utils';
 // 배경이 검정이었다. 기프티콘은 대개 흰 바탕 캡처라 검정 판이 할 일이 없는데, 흰 시트
 // 안에서 검은 사각형만 도드라져 사진보다 틀이 먼저 보였다.
 //
-// 높이는 화면 비율로 잡는다(62dvh). 시안은 452px로 못박았지만 이 시트는 max-h-[92dvh]
+// 높이는 화면 비율로 잡는다(62dvh). 시안은 452px로 못박았지만 이 시트는 max-h-[calc(92dvh/var(--ui-scale))]
 // 안에 살고, 세로 640px대 폰에서는 452px에 머리글과 버튼을 더하면 넘친다. 비율로 두면
 // 큰 폰에서는 452px보다 커지고 작은 폰에서는 안 넘친다.
 export function PhotoFrame({ src, alt }) {
   return (
-    <div className="flex h-[62dvh] items-center justify-center overflow-hidden rounded-[15px] border border-border bg-secondary/60">
+    <div className="flex h-[calc(62dvh/var(--ui-scale))] items-center justify-center overflow-hidden rounded-[15px] border border-border bg-secondary/60">
       <img src={src} alt={alt} className="max-h-full max-w-full object-contain" />
     </div>
   );

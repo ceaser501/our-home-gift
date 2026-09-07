@@ -86,7 +86,7 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
   if (invited && !pendingFor) {
     const who = invitedFamily ? `'${invitedFamily}' 가족에` : '가족에';
     return (
-      <div className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col bg-background">
+      <div className="mx-auto flex min-h-[calc(100dvh/var(--ui-scale))] w-full max-w-[480px] flex-col bg-background">
         <div className="flex flex-col items-center gap-4 bg-accent px-6 pt-[max(34px,var(--safe-top))] pb-7">
           <img src={`${import.meta.env.BASE_URL}icon.svg`} alt="모아콘" className="size-16" />
           <h1 className="m-0 text-center text-[22px] leading-[1.4] font-extrabold tracking-[-0.02em] break-keep text-foreground">
@@ -148,7 +148,7 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
 
   if (pendingFor) {
     return (
-      <div className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col overflow-y-auto bg-background px-6">
+      <div className="mx-auto flex min-h-[calc(100dvh/var(--ui-scale))] w-full max-w-[480px] flex-col overflow-y-auto bg-background px-6">
         <div className="my-auto flex flex-col items-center gap-5 py-7">
         <span className="flex size-14 items-center justify-center rounded-full bg-warning/12">
           <Clock className="size-7 text-warning" />
@@ -206,7 +206,7 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
 
   if (created) {
     return (
-      <div className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col overflow-y-auto bg-background px-6">
+      <div className="mx-auto flex min-h-[calc(100dvh/var(--ui-scale))] w-full max-w-[480px] flex-col overflow-y-auto bg-background px-6">
         <div className="my-auto flex flex-col items-center gap-5 py-7">
         <span className="flex size-14 items-center justify-center rounded-full bg-success/12">
           <Check className="size-7 text-success" strokeWidth={2.5} />
@@ -248,7 +248,7 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
   }
 
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col overflow-y-auto bg-background px-6">
+    <div className="mx-auto flex min-h-[calc(100dvh/var(--ui-scale))] w-full max-w-[480px] flex-col overflow-y-auto bg-background px-6">
       {/* 한 칸(16px)으로 통일한다. 예전에는 바깥이 20px인데 폼 위에 4px이 더 붙고 버튼
           위에는 12+4px이 붙어서, 같은 화면 안에 24px과 16px 두 간격이 섞여 있었다.
           '가족 이름' 위와 마지막 칸 아래가 서로 달라 보이던 것이 이것이다. */}

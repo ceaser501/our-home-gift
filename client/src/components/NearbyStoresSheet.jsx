@@ -141,7 +141,7 @@ export default function NearbyStoresSheet({ gifticon, onClose }) {
 
   return (
     <Sheet open onOpenChange={(open) => !open && onClose()}>
-      <SheetContent className="max-h-[92dvh] gap-0 overflow-y-auto pb-[var(--safe-bottom)]">
+      <SheetContent className="max-h-[calc(92dvh/var(--ui-scale))] gap-0 overflow-y-auto pb-[var(--safe-bottom)]">
         {/* 부제 두 줄을 걷었다. 설명이 매장 하나 자리를 먹었고, "가까운 순"과 "누르면
             열린다"는 목록 바로 위에 있어야 눈이 목록과 함께 읽는다(아래 안내 한 줄). */}
         <SheetHeader className="pr-14 pb-3">

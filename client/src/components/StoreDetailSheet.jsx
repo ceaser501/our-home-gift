@@ -253,7 +253,7 @@ export default function StoreDetailSheet({ store, origin, onClose }) {
 
   return (
     <Sheet open onOpenChange={(open) => !open && onClose()}>
-      <SheetContent className="max-h-[92dvh] gap-0 overflow-y-auto pb-[var(--safe-bottom)]">
+      <SheetContent className="max-h-[calc(92dvh/var(--ui-scale))] gap-0 overflow-y-auto pb-[var(--safe-bottom)]">
         <SheetHeader className="pr-14 pb-1">
           <SheetTitle className="flex min-w-0 items-center gap-2 text-[19px] font-bold tracking-[-0.026em]">
             <span className="min-w-0 truncate">{store.name}</span>
@@ -275,7 +275,7 @@ export default function StoreDetailSheet({ store, origin, onClose }) {
             className={cn(
               // 테두리를 걷었다. 회색 지도가 이미 면이라 테두리가 할 일이 없다.
               'relative w-full overflow-hidden rounded-[14px] bg-muted transition-[height] duration-300 ease-out',
-              mapExpanded ? 'h-[58dvh]' : 'h-45'
+              mapExpanded ? 'h-[calc(58dvh/var(--ui-scale))]' : 'h-45'
             )}
           >
             {mapState === 'embed' ? (

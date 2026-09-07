@@ -2,7 +2,7 @@
 // 그 뒤(로그인 직후 가족 정보 조회 등)에 잠깐 기다리는 순간에는 이 조용한 화면을 쓴다.
 export default function LoadingScreen() {
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-[480px] items-center justify-center bg-background px-6">
+    <div className="mx-auto flex min-h-[calc(100dvh/var(--ui-scale))] w-full max-w-[480px] items-center justify-center bg-background px-6">
       <span
         className="size-7 animate-spin rounded-full border-2 border-border border-t-foreground"
         role="status"

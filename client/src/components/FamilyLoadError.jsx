@@ -23,7 +23,7 @@ export default function FamilyLoadError({ onRetry }) {
   }
 
   return (
-    <div className="flex min-h-dvh flex-col items-center justify-center gap-5 px-9 pb-16">
+    <div className="flex min-h-[calc(100dvh/var(--ui-scale))] flex-col items-center justify-center gap-5 px-9 pb-16">
       <Logo className="size-14" />
 
       <div className="flex flex-col items-center gap-2 text-center">

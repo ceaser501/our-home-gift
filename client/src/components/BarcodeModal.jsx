@@ -134,7 +134,7 @@ export default function BarcodeModal({ gifticon, onClose, onUsed, onSpend }) {
 
   return (
     <Sheet open onOpenChange={(open) => !open && onClose()}>
-      <SheetContent className="max-h-[92dvh] gap-0 overflow-y-auto pb-[var(--safe-bottom)]">
+      <SheetContent className="max-h-[calc(92dvh/var(--ui-scale))] gap-0 overflow-y-auto pb-[var(--safe-bottom)]">
         {/* 상호가 제목과 표에 두 번 있었다. 제목(상호) + 부제(상품명)로 합치면 두 줄이
             사라지고, 그만큼 바코드와 버튼에 여백이 돌아간다.
             사진을 보는 동안에는 제목이 '원본 사진'으로 바뀐다 — 상품명은 바코드 화면에서
