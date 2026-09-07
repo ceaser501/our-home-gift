@@ -120,18 +120,18 @@ export default function UsageReportSheet({ onClose }) {
   return (
     <Sheet open onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="max-h-[calc(92dvh/var(--ui-scale))] gap-0 overflow-y-auto pb-[var(--safe-bottom)]">
-        <SheetHeader className="gap-0 pl-[18px] pb-3">
+        <SheetHeader className="gap-0 pb-3">
           <SheetTitle>사용 내역</SheetTitle>
           <p className="m-0 text-[13px] font-medium text-muted-foreground">{family.name}</p>
         </SheetHeader>
 
         {/* 결산이 먼저다. 목록은 "무엇을 썼나"를 하나씩 보는 자리이고, 결산은 그걸
             한눈에 요약해준다. 요약을 보고 나서 자세히 보는 순서가 자연스럽다. */}
-        <div className="px-[18px] pb-3.5">
+        <div className="px-5 pb-3.5">
           <FamilyReport gifticons={all} />
         </div>
 
-        <div className="flex flex-col px-[18px]">
+        <div className="flex flex-col px-5">
           {loading && <p className="py-8 text-center text-sm font-medium text-muted-foreground">불러오는 중…</p>}
           {!loading && error && <p className="py-8 text-center text-sm text-destructive">{error}</p>}
           {!loading && !error && rows.length === 0 && (

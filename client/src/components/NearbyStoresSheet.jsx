@@ -149,7 +149,7 @@ export default function NearbyStoresSheet({ gifticon, onClose }) {
         </SheetHeader>
 
         {(phase === 'locating' || phase === 'searching') && (
-          <div className="flex flex-col items-center gap-2.5 px-[18px] py-12">
+          <div className="flex flex-col items-center gap-2.5 px-5 py-12">
             {phase === 'locating' ? (
               <LocateFixed className="size-6 animate-pulse text-primary" />
             ) : (
@@ -235,7 +235,7 @@ export default function NearbyStoresSheet({ gifticon, onClose }) {
                 오른쪽 › 하나뿐이다. 그것도 회색이라 약하다. 이 한 줄이 가장 조용한
                 해결책이다 — 줄마다 '지도' 버튼을 넣으면 전화와 경쟁하고, 줄 전체를 회색
                 카드로 만들면 첫 카드의 연보라와 겹쳐 색이 너무 많아진다. */}
-            <div className="flex items-center gap-2 px-[18px] pb-2.5">
+            <div className="flex items-center gap-2 px-5 pb-2.5">
               {/* 회색을 채운 동그라미로 두었더니 이 한 줄만 무겁고 흐렸다. 선으로 그린
                   i는 바탕이 흰색이라 옆 글자와 같은 무게로 읽힌다. */}
               <Info aria-hidden="true" className="size-[15px] shrink-0 text-muted-foreground" strokeWidth={2.2} />
@@ -245,7 +245,7 @@ export default function NearbyStoresSheet({ gifticon, onClose }) {
 
             {/* 가장 가까운 한 곳만 카드로 세운다. 거리를 전부 포인트색으로 칠하면 다 같은
                 무게라 "제일 가까운 데가 어디냐"를 눈이 아니라 순서로 세어야 한다. */}
-            <div className="px-[18px] pb-3">
+            <div className="px-5 pb-3">
               <div className="flex flex-col gap-[11px] rounded-[15px] border-[1.5px] border-primary bg-primary/4 px-3.5 py-[13px]">
                 <button
                   type="button"
@@ -311,7 +311,7 @@ export default function NearbyStoresSheet({ gifticon, onClose }) {
             {/* 나머지는 끝까지 낸다. 세 곳에서 자르면 집 근처·회사 근처처럼 일부러 먼
                 매장을 고르려는 사람이 갈 곳을 못 찾는다. */}
             {rest.length > 0 && (
-              <ul className="m-0 flex list-none flex-col p-0 px-[18px]">
+              <ul className="m-0 flex list-none flex-col p-0 px-5">
                 {rest.map((store) => (
                   <li key={store.id} className="flex items-center gap-3 border-b border-border/50 px-1 py-3 last:border-b-0">
                     <button
@@ -357,7 +357,7 @@ export default function NearbyStoresSheet({ gifticon, onClose }) {
         )}
 
         {phase === 'done' && (
-          <p className="m-0 px-[18px] pt-3 text-center text-[11px] font-medium text-muted-foreground">
+          <p className="m-0 px-5 pt-3 text-center text-[11px] font-medium text-muted-foreground">
             장소 정보 제공: 카카오
           </p>
         )}

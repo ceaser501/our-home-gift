@@ -31,11 +31,11 @@ export default function NoticesSheet({ onClose }) {
   return (
     <Sheet open onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="max-h-[calc(92dvh/var(--ui-scale))] gap-0 overflow-y-auto pb-[var(--safe-bottom)]">
-        <SheetHeader className="pl-[18px] pb-3">
+        <SheetHeader className="pb-3">
           <SheetTitle>공지사항</SheetTitle>
         </SheetHeader>
 
-        <div className="flex flex-col gap-[11px] px-[18px]">
+        <div className="flex flex-col gap-[11px] px-5">
           {notices === null && <p className="py-8 text-center text-sm text-muted-foreground">불러오는 중…</p>}
 
           {notices?.length === 0 && <p className="py-8 text-center text-sm text-muted-foreground">아직 공지가 없어요.</p>}

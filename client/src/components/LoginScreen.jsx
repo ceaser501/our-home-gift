@@ -301,7 +301,7 @@ export default function LoginScreen() {
         inputMode="email"
         autoComplete="email"
         placeholder="you@example.com"
-        className="h-[52px] rounded-[13px] text-[15px]"
+        className="h-[52px] rounded-[13px] text-callout"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         required

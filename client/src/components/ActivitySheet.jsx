@@ -230,14 +230,14 @@ export default function ActivitySheet({
   return (
     <Sheet open onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="max-h-[calc(92dvh/var(--ui-scale))] gap-0 overflow-y-auto pb-[var(--safe-bottom)]">
-        <SheetHeader className="pl-[18px] pb-3">
+        <SheetHeader className="pb-3">
           <SheetTitle>알림</SheetTitle>
         </SheetHeader>
 
         {/* 중요 공지는 스크롤해도 안 사라진다. 아래로 내려가다 보면 놓치는데, 놓쳐도
             되는 것이면 애초에 중요 표시를 안 했을 것이다. */}
         {pinnedNotices.length > 0 && (
-          <div className="sticky top-0 z-10 flex flex-col gap-2 bg-background px-[18px] pb-3">
+          <div className="sticky top-0 z-10 flex flex-col gap-2 bg-background px-5 pb-3">
             {pinnedNotices.map((notice) => (
               <PinnedNotice key={notice.id} notice={notice} />
             ))}
@@ -262,12 +262,12 @@ export default function ActivitySheet({
 
             {/* 알림이 없는 사람 중 상당수는 푸시가 꺼져 있어서 없는 것이다. 그 스위치는
                 내 메뉴 안에 있어서 이 화면과 이어지지 않는다 — 여기서 바로 켤 수 있게 한다. */}
-            <div className="mx-[18px] mt-1.5 border-t border-border/50 pt-3.5">
+            <div className="mx-5 mt-1.5 border-t border-border/50 pt-3.5">
               <NotificationToggle asRow />
             </div>
           </>
         ) : (
-          <div className="flex flex-col px-[18px]">
+          <div className="flex flex-col px-5">
             {/* 안 읽은 것이 없으면 구역을 나누지 않는다. 한쪽이 비어 있는 칸막이는
                 칸막이가 아니라 그냥 줄 하나다. */}
             {/* 줄들을 한 겹으로 감싼다. 안 감싸면 마지막 줄의 last:border-b-0이 이 칸

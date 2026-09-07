@@ -870,7 +870,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
                 value={form.name}
                 onChange={(e) => updateField('name', e.target.value)}
                 required
-                className="h-[52px] rounded-[13px] text-[15.5px]"
+                className="h-[52px] rounded-[13px] text-callout"
               />
             </div>
 
@@ -881,7 +881,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
                   id="f-brand"
                   value={form.brand}
                   onChange={(e) => updateField('brand', e.target.value)}
-                  className="h-[52px] rounded-[13px] text-[15.5px]"
+                  className="h-[52px] rounded-[13px] text-callout"
                 />
               </div>
 
@@ -945,7 +945,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
                   value={readableCode(form.code)}
                   onChange={(e) => updateField('code', wrapCode(form.code, e.target.value))}
                   placeholder="직접 입력"
-                  className="h-[52px] rounded-[13px] text-[15.5px]"
+                  className="h-[52px] rounded-[13px] text-callout"
                 />
               </div>
 
@@ -965,7 +965,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
                       updateField('amount', onlyDigits(e.target.value));
                       setPriceSearchNote('');
                     }}
-                    className="h-[52px] rounded-[13px] pr-8 text-[15.5px] font-semibold tabular-nums"
+                    className="h-[52px] rounded-[13px] pr-8 text-callout font-semibold tabular-nums"
                   />
                   <span className="pointer-events-none absolute inset-y-0 right-[13px] flex items-center text-[15px] font-semibold text-muted-foreground">
                     원
@@ -1024,7 +1024,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
                   type="date"
                   value={form.expires_at}
                   onChange={(e) => updateField('expires_at', e.target.value)}
-                  className="moacon-date h-[52px] w-full rounded-[13px] bg-secondary/50 pr-9 text-[15.5px]"
+                  className="moacon-date h-[52px] w-full rounded-[13px] bg-secondary/50 pr-9 text-callout"
                 />
                 <ChevronDown
                   aria-hidden="true"

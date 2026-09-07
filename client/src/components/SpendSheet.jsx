@@ -69,12 +69,12 @@ export default function SpendSheet({ gifticon, onSpend, onClose }) {
       <SheetContent className="gap-0 pb-[var(--safe-bottom)]">
         {/* 제목 아래 부제로 상품명. 예전에는 본문 첫 줄이 상품명이라, 무엇을 적는 창인지
             묻는 제목과 어느 기프티콘인지가 같은 무게로 나란히 있었다. */}
-        <SheetHeader className="gap-0 pl-[18px] pb-3.5">
+        <SheetHeader className="gap-0 pb-3.5">
           <SheetTitle>얼마 쓰셨어요?</SheetTitle>
           <p className="m-0 truncate text-[13.5px] font-medium text-muted-foreground">{gifticon.name}</p>
         </SheetHeader>
 
-        <div className="flex flex-col gap-3.5 px-[18px]">
+        <div className="flex flex-col gap-3.5 px-5">
           {/* 얼마 쓸지 정하려면 남은 돈을 먼저 알아야 하는데, 그 값이 12px 회색 한 줄에
               묻혀 있었다. 이 화면에서 제일 큰 숫자가 되어야 하는 값이다.
               한 줄이던 설명을 왼쪽(남은 금액)·오른쪽(권종·쓴 금액)으로 갈랐다. */}

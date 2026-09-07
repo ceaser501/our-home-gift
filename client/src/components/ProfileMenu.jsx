@@ -130,14 +130,14 @@ export default function ProfileMenu({ onClose }) {
   return (
     <Sheet open onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="max-h-[calc(92dvh/var(--ui-scale))] gap-0 overflow-y-auto pb-[var(--safe-bottom)]">
-        <SheetHeader className="pl-[18px] pb-3">
+        <SheetHeader className="pb-3">
           <SheetTitle>내 메뉴</SheetTitle>
         </SheetHeader>
 
         {/* 이름은 여기 크게 적혀 있는데 아래 '내 정보 · 내 이름' 줄에서 또 보여주고 있었다.
             같은 값이 한 화면에 두 번 나온 셈이라, 그 줄을 걷고 바꾸는 길만 이 카드로 들인다.
             구역이 하나 줄었다. */}
-        <div className="mx-[18px] mb-3.5 flex items-center gap-3 rounded-[14px] bg-secondary/60 px-3.5 py-[13px]">
+        <div className="mx-5 mb-3.5 flex items-center gap-3 rounded-[14px] bg-secondary/60 px-3.5 py-[13px]">
           <span
             className={`flex size-[46px] shrink-0 items-center justify-center rounded-full text-sm font-bold text-white ${
               memberTagColorClass(me) ?? OWNER_TAG_PALETTE[0]
@@ -163,7 +163,7 @@ export default function ProfileMenu({ onClose }) {
         {/* 구역을 여섯에서 셋으로 묶었다. '소식'과 '기록'은 각각 한 줄뿐이라 제목이 내용보다
             컸다. 줄 사이는 2px로 붙이고 구역 사이만 20px로 벌린다 — 눈이 쉬는 곳은 줄
             사이가 아니라 구역과 구역 사이다. */}
-        <div className="flex flex-col gap-5 px-[18px]">
+        <div className="flex flex-col gap-5 px-5">
           {/* 줄 차례는 첫 설정 화면(WelcomeSetupScreen)과 같다. 거기서 세 스위치를 보고
               들어온 사람이 나중에 여기서 다시 찾을 때, 두 화면의 차례가 다르면 같은
               스위치인 줄 알아보지 못한다.

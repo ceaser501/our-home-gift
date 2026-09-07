@@ -43,11 +43,11 @@ export default function RenameSheet({ title, label, hint, description, initialVa
   return (
     <Sheet open onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="gap-0 pb-[var(--safe-bottom)]">
-        <SheetHeader className="pl-[18px] pb-3.5">
+        <SheetHeader className="pb-3.5">
           <SheetTitle>{title}</SheetTitle>
         </SheetHeader>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-3.5 px-[18px]">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3.5 px-5">
           <div className="flex flex-col gap-[7px]">
             <div className="flex items-baseline justify-between gap-2">
               {/* hint는 라벨 옆 한마디다. 바뀌는 곳이 한 군데뿐이라 아래 안내 상자까지
@@ -81,7 +81,7 @@ export default function RenameSheet({ title, label, hint, description, initialVa
               autoComplete="off"
               autoFocus
               required
-              className="h-[52px] rounded-[13px] border-[1.5px] border-primary px-[15px] text-[16.5px] font-semibold"
+              className="h-[52px] rounded-[13px] px-[15px] text-callout"
             />
           </div>
 

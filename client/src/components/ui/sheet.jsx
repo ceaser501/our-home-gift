@@ -77,10 +77,17 @@ function SheetContent({ className, children, side = 'bottom', showClose = true, 
             아이폰에서 "잘 안 눌린다"는 말이 여기서 나왔다. 애플이 권하는 최소
             과녁이 44pt다. 음수 마진으로 넓혀서 보이는 위치는 그대로 둔다. */}
         {showClose && (
-          <SheetPrimitive.Close className="absolute top-4 right-4 -m-[5px] flex size-11 items-center justify-center focus:outline-hidden">
-            <span className="flex size-[34px] items-center justify-center rounded-full bg-muted opacity-80 transition-opacity hover:opacity-100">
-              <XIcon className="size-4" />
-            </span>
+          // X 만 남기고 뒤의 회색 동그라미를 걷었다. 시트에서 유일하게 채워진 덩어리라
+          // 제목보다 먼저 눈에 들어왔는데, 닫기는 먼저 볼 것이 아니다.
+          //
+          // 크기는 제목과 같은 20. 자리는 제목의 가운데선에 맞춘다 — 헤더 위 여백 20 에
+          // 제목 줄 상자 24 의 절반을 더하면 32 이고, 누를 자리 44 의 절반이 22 이므로
+          // 위에서 10 이다. 앞서는 16 에 앉아 있어서 제목보다 4px 아래로 처져 있었다.
+          //
+          // 오른쪽 8 은 X 의 오른쪽 끝을 본문 여백 20 에 맞추기 위한 값이다(8 + (44-20)/2).
+          // 보이는 것은 20px 글자 하나지만 누를 자리는 44 를 지킨다.
+          <SheetPrimitive.Close className="absolute top-2.5 right-2 flex size-11 items-center justify-center text-muted-foreground focus:outline-hidden">
+            <XIcon className="size-5" />
             <span className="sr-only">닫기</span>
           </SheetPrimitive.Close>
         )}
@@ -90,10 +97,14 @@ function SheetContent({ className, children, side = 'bottom', showClose = true, 
 }
 
 function SheetHeader({ className, ...props }) {
-  // pr-14 는 오른쪽 위 닫기 버튼(top-4 right-4, 44px 과녁)을 피하는 자리다. 그 버튼을
-  // 껍데기가 그리므로 피하는 여백도 껍데기가 갖는다. 열일곱 시트가 전부 이 값을 손으로
-  // 적어 왔는데, 하나라도 빠뜨리면 제목이 X 아래로 들어간다.
-  return <div data-slot="sheet-header" className={cn('flex flex-col gap-1 px-5 pt-5 pr-14', className)} {...props} />;
+  // pr-15 는 오른쪽 위 닫기 버튼을 피하는 자리다. 그 버튼을 껍데기가 그리므로 피하는
+  // 여백도 껍데기가 갖는다. 열일곱 시트가 전부 이 값을 손으로 적어 왔는데, 하나라도
+  // 빠뜨리면 제목이 X 아래로 들어간다.
+  //
+  // 14(56) 였다가 15(60) 로 늘렸다. 동그라미를 34 에서 40 으로 키우면서 44px 과녁이
+  // 왼쪽으로 2px 더 나왔고, 그만큼 제목과 겹쳤다. 보이는 것은 안 바뀌었는데 누를 자리가
+  // 자라서 생긴 겹침이라 화면만 봐서는 안 보인다.
+  return <div data-slot="sheet-header" className={cn('flex flex-col gap-1 px-5 pt-5 pr-15', className)} {...props} />;
 }
 
 function SheetTitle({ className, ...props }) {

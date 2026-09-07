@@ -265,7 +265,7 @@ export default function StoreDetailSheet({ store, origin, onClose }) {
           </SheetTitle>
         </SheetHeader>
 
-        <div className="flex flex-col gap-3 px-[18px] pt-2">
+        <div className="flex flex-col gap-3 px-5 pt-2">
           {/* 지도를 못 그릴 때도 자리를 비워두지 않고 이유를 보여준다. 조용히 사라지면
               설정이 빠진 건지 원래 없는 건지 알 수 없어서 고치기도 어렵다. */}
           {/* 지도를 크게 볼 때도 새 창을 띄우지 않는다. 이 창 자체가 이미 목록 위에 겹쳐

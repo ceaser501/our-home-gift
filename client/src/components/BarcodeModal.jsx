@@ -139,7 +139,7 @@ export default function BarcodeModal({ gifticon, onClose, onUsed, onSpend }) {
             사라지고, 그만큼 바코드와 버튼에 여백이 돌아간다.
             사진을 보는 동안에는 제목이 '원본 사진'으로 바뀐다 — 상품명은 바코드 화면에서
             이미 봤고, 여기서 알아야 하는 것은 "지금 어디에 있나"다. */}
-        <SheetHeader className="gap-0 pl-[18px] pb-3">
+        <SheetHeader className="gap-0 pb-3">
           <div className="flex items-center gap-2.5">
             {view === 'photo' && (
               <button
@@ -178,7 +178,7 @@ export default function BarcodeModal({ gifticon, onClose, onUsed, onSpend }) {
         </SheetHeader>
 
         {view === 'code' && (
-        <div className="flex flex-col gap-[11px] px-[18px]">
+        <div className="flex flex-col gap-[11px] px-5">
           {/* 등록할 때 적어둔 메모. "엄마, 아래 바코드를 매장에서 보여주세요" 같은 안내를
               바코드 바로 위에서 읽을 수 있게 한다. 그냥 글만 있으면 이게 안내문인지
               앱이 하는 말인지 헷갈려서, 누가 남긴 메모인지 이름표를 함께 보여준다.
@@ -334,7 +334,7 @@ export default function BarcodeModal({ gifticon, onClose, onUsed, onSpend }) {
         )}
 
         {view === 'photo' && (
-          <div className="flex flex-col gap-[11px] px-[18px]">
+          <div className="flex flex-col gap-[11px] px-5">
             <PhotoDeck
               photos={photos}
               index={photoIndex}
