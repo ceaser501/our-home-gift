@@ -31,6 +31,16 @@ export function currentUiScale() {
   return lastScale;
 }
 
+// 폰 글자를 한 눈금 키운 정도는 따라가지 않는다.
+//
+// 갤럭시 눈금은 아홉 칸이고 세 번째가 기본(1.0)이다. 네 번째가 1.08인데, 이건 눈이
+// 어두워 키운 것이라기보다 취향에 가깝다. 그것까지 따라가면 화면이 106%가 되어 목록에
+// 담기는 카드가 줄어든다.
+//
+// 그래서 1.1까지는 무시하고, 그 위로만 따라간다. 다섯 번째(1.3)부터가 진짜 "안 보여서
+// 키운" 자리다.
+const FOLLOW_FROM = 1.1;
+
 // 하한은 플랫폼 기준 그 자체다. 폰 글자를 키운 사람만 위로 올라가고, 아래로는 안 간다.
 //
 // 한동안 아래로도 따라갔다(하한 85%). 폰 글자를 작게 해둔 사람에게 이 앱만 혼자 커
@@ -88,7 +98,9 @@ async function systemScale() {
 export async function applyUiScale() {
   // 곱한 뒤에 자른다. 순서를 바꾸면 상한이 115에서 107로 함께 내려가고, 폰 글자를
   // 키워둔 사람이 이유 없이 손해를 본다.
-  const scale = clamp(platformBase() * Math.max(1, await systemScale()));
+  // 무시 구간만큼 빼고 따라간다. 빼기 때문에 그 위로는 예전과 같은 속도로 커진다.
+  const system = await systemScale();
+  const scale = clamp(platformBase() * Math.max(1, system - (FOLLOW_FROM - 1)));
   lastScale = scale;
   document.documentElement.style.setProperty('--ui-scale', String(scale));
 

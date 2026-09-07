@@ -23,23 +23,31 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(GalleryPlugin.class);
         super.onCreate(savedInstanceState);
         watchSystemBarInsets();
+        pinTextZoom();
+    }
 
-        // 글자 배율(setTextZoom)은 여기서 건드리지 않는다.
-        //
-        // 한동안 시스템 글자 크기(Configuration.fontScale)를 읽어 여기서 걸었다. 웹뷰는
-        // 그 설정을 스스로 반영하지 않아서, 글자를 키워둔 사람이 이 앱에서만 작은 글씨를
-        // 보고 있었기 때문이다.
-        //
-        // 그런데 setTextZoom은 글자만 키운다. 카드 여백·버튼 높이·아이콘은 그대로라서,
-        // 키우면 한 줄에 놓인 상품명·기한·버튼이 어긋나고 줄이면 화면의 덩치는 그대로인
-        // 채 글자만 헐거워진다. 폰의 「화면 확대/축소」가 하는 일은 그게 아니라 전부를
-        // 같은 비율로 움직이는 것이다.
-        //
-        // 그래서 이 일을 화면 쪽으로 옮겼다 — client/src/utils/textScale.js가 시스템 값을
-        // 읽어(@capacitor/text-zoom의 getPreferred) index.css의 --ui-scale에 걸고, html의
-        // zoom이 화면 전체를 움직인다. 웹과 앱이 같은 길을 쓴다.
-        //
-        // 여기서 함께 걸면 두 배율이 곱해진다.
+    /**
+     * 웹뷰가 스스로 하는 글자 확대를 100%로 묶어둔다.
+     *
+     * 크기를 정하는 자리는 화면 쪽 한 곳이다 — client/src/utils/uiScale.js가 시스템 값을
+     * 읽어(@capacitor/text-zoom의 getPreferred) index.css의 --ui-scale에 걸고, html의
+     * zoom이 글자·여백·버튼·아이콘을 한꺼번에 움직인다. 여기서 글자에 배율을 또 걸면
+     * 두 값이 곱해진다.
+     *
+     * 한동안 여기서 fontScale을 읽어 setTextZoom으로 걸었다. 그것을 "배율을 더하는 코드"로
+     * 보고 걷어냈는데, 실은 웹뷰가 스스로 하던 확대를 묶어두는 코드였다. 걷어내자 웹뷰가
+     * 시스템 글자 배율(최대 2.0배)을 그대로 먹기 시작했고, 거기에 zoom 1.15가 또 곱해져
+     * 글자만 두 배가 됐다. 폰 글자를 키우면 상품명이 잘리고 '사용완료'가 버튼 밖으로
+     * 넘쳤다 — 칸은 1.15배인데 글자는 2.3배였으니 당연한 일이다.
+     *
+     * 100으로 못 박아두면 그 곱셈이 사라진다. 시스템 글자 크기를 따라가는 일은 화면 쪽이
+     * 이미 하고 있으므로 잃는 것도 없다.
+     */
+    private void pinTextZoom() {
+        if (getBridge() == null) return;
+        WebView webView = getBridge().getWebView();
+        if (webView == null) return;
+        webView.getSettings().setTextZoom(100);
     }
 
     /**
@@ -97,6 +105,9 @@ public class MainActivity extends BridgeActivity {
     public void onResume() {
         super.onResume();
         if (getBridge() != null) pushInsets(getBridge().getWebView());
+        // 폰 설정에서 글자 크기를 바꾸고 돌아오는 길. 그때 웹뷰가 제 배율을 다시 잡을 수
+        // 있어서 한 번 더 못 박는다.
+        pinTextZoom();
     }
 
     private void pushInsets(final WebView webView) {
