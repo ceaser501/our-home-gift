@@ -67,18 +67,25 @@ export default function SpendSheet({ gifticon, onSpend, onClose }) {
   return (
     <Sheet open onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="gap-0 pb-[var(--safe-bottom)]">
-        {/* 제목 아래 부제로 상품명. 예전에는 본문 첫 줄이 상품명이라, 무엇을 적는 창인지
-            묻는 제목과 어느 기프티콘인지가 같은 무게로 나란히 있었다. */}
-        <SheetHeader className="gap-0">
+        {/* 상품명은 부제가 아니라 값이다. 부제는 '이 창이 무엇인지'를 말하는 자리인데
+            (기한 연장 창의 '기한이 지나도 5년 안이면 환불받을 수 있어요'가 그렇다),
+            상품명은 어느 기프티콘인지를 가리키는 값이라 아래 상태 칸에 함께 있어야 한다.
+
+            한때 본문 첫 줄에 있던 것을 제목 아래로 올렸는데, 그때 고치려던 것은 '제목과
+            같은 무게로 나란히 서 있는 것'이었다. 무게는 아래에서도 낮출 수 있다. */}
+        <SheetHeader>
           <SheetTitle>얼마 쓰셨어요?</SheetTitle>
-          <p className="m-0 truncate text-[13.5px] font-medium text-muted-foreground">{gifticon.name}</p>
         </SheetHeader>
 
         <div className="flex flex-col gap-3.5 px-5">
           {/* 얼마 쓸지 정하려면 남은 돈을 먼저 알아야 하는데, 그 값이 12px 회색 한 줄에
               묻혀 있었다. 이 화면에서 제일 큰 숫자가 되어야 하는 값이다.
               한 줄이던 설명을 왼쪽(남은 금액)·오른쪽(권종·쓴 금액)으로 갈랐다. */}
-          <div className="flex items-end justify-between gap-3 rounded-[14px] bg-secondary/60 px-[15px] py-[13px]">
+          <div className="flex flex-col gap-2.5 rounded-[14px] bg-secondary/60 px-[15px] py-[13px]">
+            {/* 어느 기프티콘의 잔액인지. 값을 말하는 줄이라 남은 금액과 한 칸에 둔다. */}
+            <p className="m-0 truncate text-body font-semibold text-foreground">{gifticon.name}</p>
+
+            <div className="flex items-end justify-between gap-3">
             <div className="flex flex-col gap-0.5">
               <span className="text-[12.5px] font-semibold text-muted-foreground">
                 지금 남은 금액
@@ -95,6 +102,7 @@ export default function SpendSheet({ gifticon, onSpend, onClose }) {
                   {won(already)} 씀
                 </>
               )}
+            </div>
             </div>
           </div>
 
