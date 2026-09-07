@@ -242,6 +242,7 @@ export default function AuthGate({ children }) {
     return withNotice(
       <WelcomeSetupScreen
         familyId={familyState.family.id}
+        userId={session.user.id}
         onDone={() => {
           markWelcomeSetupDone(session.user.id);
           setWelcomeDone(true);

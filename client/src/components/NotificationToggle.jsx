@@ -44,7 +44,7 @@ export default function NotificationToggle({ asRow = false, onChange }) {
         await (native ? disableNativePush(user.id) : unsubscribeFromPush(user.id));
         apply(false);
       } else {
-        await (native ? enableNativePush({ familyId: family.id }) : subscribeToPush({ familyId: family.id }));
+        await (native ? enableNativePush({ familyId: family.id, userId: user.id }) : subscribeToPush({ familyId: family.id }));
         apply(true);
       }
     } catch (err) {

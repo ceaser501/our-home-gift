@@ -30,7 +30,7 @@ import { isServiceWorkerSupported } from '../utils/serviceWorker';
 //   위치   목록 위 띠의 '켜기'를 누를 때
 //
 // 여기서 셋을 다 물으면 권한 창이 연달아 뜬다. 그러면 무엇을 허락하는 창인지 흐려진다.
-export default function WelcomeSetupScreen({ familyId, onDone }) {
+export default function WelcomeSetupScreen({ familyId, userId, onDone }) {
   const scanAvailable = isGalleryScanSupported();
   // 알림을 켤 수 있는 폰인지. 앱은 파이어베이스로, 웹은 브라우저 구독으로 간다.
   const pushAvailable = isNativeApp() || (isServiceWorkerSupported() && 'PushManager' in window);
@@ -54,7 +54,9 @@ export default function WelcomeSetupScreen({ familyId, onDone }) {
         // 위에서 통째로 불러오면 그 관문을 세우는 것만으로 서버 연결까지 딸려 온다.
         if (isNativeApp()) {
           const { enableNativePush } = await import('../nativePush');
-          await enableNativePush({ familyId });
+          // userId까지 넘긴다. 여기서는 실패를 조용히 넘기므로(권한 거부와 구분할 길이
+          // 없다), 켜려고 했다는 표시가 남아야 다음에 앱을 열 때 저절로 낫는다.
+          await enableNativePush({ familyId, userId });
         } else {
           const { subscribeToPush } = await import('../push');
           await subscribeToPush({ familyId });

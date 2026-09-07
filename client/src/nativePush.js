@@ -63,36 +63,71 @@ async function iosToken({ ask }) {
     : await FirebaseMessaging.checkPermissions();
   if (permission.receive !== 'granted') {
     if (!ask) return null;
-    throw new Error('알림 권한을 허용해주셔야 켤 수 있어요.');
+    throw permissionDenied();
   }
+
+  // 이미 받아둔 것이 있으면 그걸로 끝이다. 두 번째부터는 늘 여기서 끝난다.
+  const ready = await FirebaseMessaging.getToken()
+    .then((r) => r.token || null)
+    .catch(() => null);
+  if (ready) return ready;
+
+  // 확인하는 때(ask=false)는 여기까지다. 오래전에 받아둔 것을 읽는 자리라, 없으면
+  // 없는 것이다 — 여기서 기다리면 내 메뉴가 그만큼 늦게 뜬다.
+  if (!ask) return null;
 
   // 권한을 막 받은 직후에는 토큰이 아직 없다.
   //
   // 허락을 누른 그 순간 iOS가 애플(APNs)에 등록을 시작하고, 파이어베이스는 그 등록이
   // 끝나야 FCM 토큰을 내준다. 그사이에 물으면 빈손이거나 "No APNS token specified"로
-  // 튕긴다. 대개 1초 안쪽이라 몇 번 다시 물어보면 온다.
+  // 튕긴다.
   //
   // 첫 설정 화면에서 알림을 켜고 시작했는데 내 메뉴에서는 꺼져 있던 것이 이것이었다.
-  // 거기서는 실패를 조용히 넘기게 되어 있어서(권한 거부와 구분할 길이 없다), 켠 적이
-  // 없는 것과 똑같은 모습이 됐다. 안드로이드는 등록이 끝나면 알려주는 길이 있어서
-  // 이 문제가 없었고, 그래서 아이폰에서만 났다.
-  // 다시 묻는 것은 방금 켠 때(ask)뿐이다. 화면을 그리며 확인하는 때(ask=false)는 이미
-  // 오래전에 받아둔 토큰을 읽는 자리라, 없으면 없는 것이다 — 거기서 2초를 기다리면
-  // 내 메뉴가 그만큼 늦게 뜬다.
-  const tries = ask ? 6 : 1;
-  for (let i = 0; i < tries; i += 1) {
-    try {
-      const { token } = await FirebaseMessaging.getToken();
-      if (token) return token;
-    } catch {
-      // 아직 준비가 안 된 것이다. 마지막 판이면 아래에서 알린다.
-    }
-    if (i < tries - 1) await new Promise((resolve) => setTimeout(resolve, 400));
-  }
+  //
+  // 몇 밀리초 쉬었다 다시 물어보는 식으로 한 번 고쳤다가 되돌렸다. 얼마나 걸릴지는
+  // 우리가 정하는 값이 아니다 — 망이 느리거나 애플 쪽이 밀리면 몇 초가 걸릴 수 있고,
+  // 그때 몇 번을 물어볼지 미리 정해둔 숫자는 결국 찍은 것이다.
+  //
+  // 파이어베이스는 토큰이 만들어지면 알려준다. 그 소식을 기다린다. 안드로이드가 예전부터
+  // 쓰던 방식과 같다(아래 androidToken의 'registration'). 시간을 재는 것은 영영 안 오는
+  // 경우를 위한 마지막 그물일 뿐이라 넉넉히 둔다.
+  return await new Promise((resolve, reject) => {
+    let handle = null;
+    let settled = false;
 
-  // GoogleService-Info.plist 가 빌드에 안 들어갔거나 APNs 키가 안 붙은 경우다.
-  if (ask) throw new Error('알림 서버와 연결하지 못했어요. 잠시 뒤 다시 시도해주세요.');
-  return null;
+    const timer = setTimeout(
+      // 여기까지 왔으면 기다려서 될 일이 아니다. GoogleService-Info.plist가 빌드에
+      // 안 들어갔거나 APNs 키가 안 붙은 경우가 대부분이다.
+      () => finish(() => reject(new Error('알림 서버와 연결하지 못했어요. 잠시 뒤 다시 시도해주세요.'))),
+      30000
+    );
+
+    function finish(fn) {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      handle?.remove();
+      fn();
+    }
+
+    FirebaseMessaging.addListener('tokenReceived', ({ token }) => {
+      if (token) finish(() => resolve(token));
+    })
+      .then((h) => {
+        handle = h;
+        // 소식이 먼저 오고 손잡이가 나중에 올 수 있다. 그때는 여기서 치운다.
+        if (settled) h.remove();
+      })
+      .catch(() => finish(() => reject(new Error('알림 서버와 연결하지 못했어요. 잠시 뒤 다시 시도해주세요.'))));
+  });
+}
+
+// 권한을 거절한 것과 그 밖의 실패를 갈라서 알린다. 켜기를 부른 쪽이 "켜려고 했다"는
+// 것을 적어둘지 정하는 데 쓴다 — 거절한 사람에게는 적어두면 안 된다.
+function permissionDenied() {
+  const err = new Error('알림 권한을 허용해주셔야 켤 수 있어요.');
+  err.permissionDenied = true;
+  return err;
 }
 
 // 안드로이드는 지금까지 잘 돌던 길이라 그대로 둔다.
@@ -102,7 +137,7 @@ async function androidToken({ ask }) {
     : await PushNotifications.checkPermissions();
   if (permission.receive !== 'granted') {
     if (!ask) return null;
-    throw new Error('알림 권한을 허용해주셔야 켤 수 있어요.');
+    throw permissionDenied();
   }
 
   return await new Promise((resolve, reject) => {
@@ -136,10 +171,29 @@ async function deviceToken({ ask }) {
 }
 
 // 켜기. 권한을 묻고, 토큰을 받아, 서버에 적는다.
-export async function enableNativePush({ familyId }) {
-  const token = await deviceToken({ ask: true });
-  await saveNativePushToken({ familyId, token });
-  return token;
+//
+// 켜려고 했다는 것을 먼저 적어둔다(userId를 준 경우).
+//
+// 토큰을 받는 일은 우리 손 밖이다. 폰이 애플에 등록하고 파이어베이스가 토큰을 만들어
+// 주기까지 기다리는 것이라, 망이 끊기거나 애플 쪽이 밀리면 못 받고 끝날 수 있다.
+// 그러면 사용자는 켰는데 안 켜진 것이 되고, 그걸 알 방법도 없다.
+//
+// 적어두면 다음에 앱을 열 때 저절로 낫는다 — isNativePushEnabled가 이 표시를 보고,
+// 토큰은 있는데 서버에 없으면 조용히 다시 적어둔다. 기다리는 시간을 얼마로 잡든
+// 놓치는 경우가 남는데, 그 뒤를 이 표시가 받는다.
+//
+// 권한을 거절한 경우는 지운다. 그건 안 켜기로 한 것이라, 나중에 다른 이유로 권한을
+// 주었을 때 묻지도 않고 켜지면 안 된다.
+export async function enableNativePush({ familyId, userId }) {
+  if (userId) rememberOn(userId, true);
+  try {
+    const token = await deviceToken({ ask: true });
+    await saveNativePushToken({ familyId, token });
+    return token;
+  } catch (err) {
+    if (userId && err?.permissionDenied) rememberOn(userId, false);
+    throw err;
+  }
 }
 
 // 끄기. 이 폰의 토큰만 지운다.

@@ -62,7 +62,9 @@ describe('앱에서의 사용기한 알림', () => {
     await act(async () => render(<NotificationToggle asRow />));
     await act(async () => row().click());
 
-    expect(enableNativePush).toHaveBeenCalledWith({ familyId: 'fam-1' });
+    // userId도 함께 넘어가야 한다. 켜다가 토큰을 못 받고 끝났을 때, 켜려고 했다는
+    // 표시를 남겨두는 것이 그 뒤를 받는다(nativePush.js의 enableNativePush).
+    expect(enableNativePush).toHaveBeenCalledWith({ familyId: 'fam-1', userId: 'me' });
     expect(subscribeToPush).not.toHaveBeenCalled();
     expect(isOn()).toBe(true);
   });
