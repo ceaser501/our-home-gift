@@ -3,7 +3,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { PRIMARY_BUTTON, SECONDARY_BUTTON } from '../utils/sheetUi';
+import { cn } from '@/lib/utils';
+import { ACTION_ROW, ACTION_PRIMARY, ACTION_CANCEL } from '../utils/sheetUi';
 import useBackClose from '../utils/useBackClose';
 
 const MAX_LENGTH = 20;
@@ -103,11 +104,11 @@ export default function RenameSheet({ title, label, hint, description, initialVa
           {/* 세로로 쌓는다. 가로 반반은 저장이 절반 폭이라 주 동작으로 안 읽힌다.
               취소에도 테두리를 둔다 — 이 앱에는 글자만 있는 버튼이 없고, 둘은 채움 여부로
               갈린다(저장은 보라 채움, 취소는 테두리). */}
-          <div className="flex flex-col gap-2 pt-0.5">
-            <Button type="submit" disabled={!trimmed || saving} className={PRIMARY_BUTTON}>
+          <div className={cn(ACTION_ROW, 'pt-0.5')}>
+            <Button type="submit" disabled={!trimmed || saving} className={ACTION_PRIMARY}>
               {saving ? '바꾸는 중…' : '저장'}
             </Button>
-            <Button type="button" variant="outline" onClick={onClose} className={SECONDARY_BUTTON}>
+            <Button type="button" variant="outline" onClick={onClose} className={ACTION_CANCEL}>
               취소
             </Button>
           </div>
