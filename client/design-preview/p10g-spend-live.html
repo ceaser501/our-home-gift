@@ -1,0 +1,133 @@
+<!doctype html>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>금액 입력 — 막대를 입력에 잇기</title>
+<script type="module" src="/src/index.css"></script>
+<style>
+  body { margin:0; background:#3a3a44; font-family:Pretendard, system-ui, sans-serif;
+         -webkit-font-smoothing:antialiased; }
+  .page { display:flex; gap:20px; align-items:flex-start; justify-content:center;
+          padding:16px 14px 80px; flex-wrap:wrap; }
+  .col { width:375px; flex:0 0 auto; }
+  .cap { color:#fff; font-size:13px; font-weight:800; margin:0 0 3px; }
+  .sub { color:#b8b8c4; font-size:11px; line-height:1.5; margin:0 0 8px; min-height:76px; }
+  .st  { color:#9d9daa; font-size:10px; font-weight:700; margin:12px 0 4px; }
+
+  .sheet { background:var(--background); border-radius:16px 16px 0 0; overflow:hidden;
+           box-shadow:0 -2px 24px rgba(0,0,0,.28); color:var(--foreground); }
+  .hd  { display:flex; flex-direction:column; gap:4px; padding:20px 60px 20px 20px; position:relative; }
+  .ttl { font-size:20px; line-height:1.2; font-weight:700; letter-spacing:-.025em; margin:0; }
+  .x   { position:absolute; top:10px; right:10px; width:44px; height:44px; display:flex;
+         align-items:center; justify-content:center; color:var(--muted-foreground); }
+  .x svg { width:24px; height:24px; }
+  .bd  { padding:0 20px 20px; display:flex; flex-direction:column; gap:16px; }
+  .desc { margin:0; font-size:14px; line-height:1.5; font-weight:500; color:var(--muted-foreground);
+          overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+  /* 세 토막이다 — 남을 것 / 이번에 쓸 것 / 이미 쓴 것.
+     '이번에 쓸 것'은 남을 것과 같은 계열이되 옅다. 지금 손에서 덜어내는 중인 몫이라
+     이미 지나간 회색과는 다른 상태다. */
+  .track { position:relative; height:6px; border-radius:99px; overflow:hidden;
+           background:color-mix(in srgb, var(--primary) 75%, var(--background)); }
+  .now   { position:absolute; top:0; bottom:0; right:0;
+           background:color-mix(in srgb, var(--primary) 26%, var(--background)); }
+  .used  { position:absolute; top:0; bottom:0; right:0; background:var(--secondary); }
+
+  .box  { display:flex; height:56px; align-items:center; gap:10px; border-radius:8px;
+          border:1.5px solid var(--primary); background:var(--card); padding:0 16px; }
+  .box .v { flex:1; font-size:20px; font-weight:700; font-variant-numeric:tabular-nums; }
+  .box .w { font-size:16px; font-weight:600; color:var(--muted-foreground); }
+  .clr { width:24px; height:24px; flex:0 0 auto; border:0; padding:0; border-radius:99px;
+         background:var(--border); color:var(--muted-foreground); display:flex;
+         align-items:center; justify-content:center; }
+  .clr svg { width:14px; height:14px; }
+  .chips { display:flex; gap:8px; }
+  .chips button { height:36px; padding:0 16px; border-radius:12px; border:0;
+                  background:var(--secondary); font-size:14px; font-weight:600;
+                  color:var(--foreground); font-family:inherit; font-variant-numeric:tabular-nums; }
+  .btnP { height:52px; border-radius:8px; border:0; background:var(--primary);
+          color:var(--primary-foreground); font-size:15.5px; font-weight:700;
+          display:flex; align-items:center; justify-content:center; font-family:inherit; }
+  .tab { font-variant-numeric:tabular-nums; }
+  .mut { color:var(--muted-foreground); }
+  .bal { margin:0; display:flex; align-items:baseline; gap:4px; }
+  .bal .n { font-size:16px; font-weight:700; letter-spacing:-.025em; }
+  .bal .s { font-size:14px; font-weight:600; }
+  .bal .o { font-size:14px; font-weight:500; color:var(--muted-foreground);
+            text-decoration:line-through; }
+</style>
+
+<script>
+  const XSVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+    stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>`;
+  const FACE = 500000, LEFT = 380000;
+  const won = (n) => n.toLocaleString('ko-KR') + '원';
+
+  // 갈래마다 잔액 줄과 버튼 글이 다르다
+  const V = {
+    '가': ['잇지 않음 (지금)',
+      '막대는 늘 380,000 을 가리키고 입력과 무관하다. 결과는 버튼이 혼자 지고 있어서 "31,000원 쓰고 349,000원 남기기" 처럼 길어진다. 「남는다」가 두 군데서 다른 숫자를 말한다.',
+      (s) => `<span class="n tab">${won(LEFT)}</span><span class="s">남음</span>`,
+      (s) => s > 0 && s < LEFT ? `${won(s)} 쓰고 ${won(LEFT - s)} 남기기` : '이만큼 썼어요',
+      false],
+    '나': ['이어서 값만 바꿈',
+      '적는 대로 잔액 줄이 남을 금액으로 바뀌고 막대도 줄어든다. 결과가 근거 자리로 돌아와서 버튼은 동작만 한다. 대신 원래 잔액(380,000)이 화면에서 사라진다.',
+      (s) => `<span class="n tab">${won(LEFT - s)}</span><span class="s">남음</span>`,
+      (s) => s > 0 ? `${won(s)} 썼어요` : '이만큼 썼어요',
+      true],
+    '다': ['이으면서 원래 값도 남김',
+      '380,000 에 줄을 긋고 그 옆에 349,000 을 놓는다. 얼마에서 얼마로 가는지가 한 줄에 다 있다. 대신 줄이 길어져서 권종(50만원권)이 밀린다.',
+      (s) => s > 0
+        ? `<span class="o tab">${won(LEFT)}</span><span class="n tab">${won(LEFT - s)}</span><span class="s">남음</span>`
+        : `<span class="n tab">${won(LEFT)}</span><span class="s">남음</span>`,
+      (s) => s > 0 ? `${won(s)} 썼어요` : '이만큼 썼어요',
+      true],
+  };
+
+  const bar = (spent, live) => {
+    const remain = live ? LEFT - spent : LEFT;
+    return `<div class="track">
+      ${live && spent > 0 ? `<div class="now" style="left:${(remain / FACE) * 100}%"></div>` : ''}
+      <div class="used" style="left:${(LEFT / FACE) * 100}%"></div>
+    </div>`;
+  };
+
+  const sheet = (k, spent) => {
+    const [, , balFn, btnFn, live] = V[k];
+    return `<div class="sheet">
+      <div class="hd"><p class="ttl">얼마 쓰셨어요?</p>
+        <p class="desc">카페 아메리카노 T 2잔 + 딸기 생크림 케이크</p>
+        <span class="x">${XSVG}</span></div>
+      <div class="bd">
+        <div style="display:flex;flex-direction:column;gap:7px">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px">
+            <p class="bal">${balFn(spent)}</p>
+            <span class="mut tab" style="font-size:12px;font-weight:500;flex:0 0 auto">50만원권</span>
+          </div>
+          ${bar(spent, live)}
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div class="box"><span class="v tab">${spent.toLocaleString('ko-KR')}</span>
+            <button class="clr">${XSVG}</button><span class="w">원</span></div>
+          <div class="chips"><button>전액</button><button>+1만</button
+            ><button>+5천</button><button>+1천</button></div>
+        </div>
+        <button class="btnP" style="margin-top:8px">${btnFn(spent)}</button>
+      </div>
+    </div>`;
+  };
+
+  addEventListener('DOMContentLoaded', () => {
+    const page = document.querySelector('.page');
+    Object.entries(V).forEach(([k, [name, note]]) => {
+      const col = document.createElement('div');
+      col.className = 'col';
+      col.innerHTML = `<p class="cap">${k} · ${name}</p><p class="sub">${note}</p>`
+        + `<p class="st">31,000원 적었을 때 — 조금 쓰는 경우</p>` + sheet(k, 31000)
+        + `<p class="st">250,000원 적었을 때 — 많이 쓰는 경우</p>` + sheet(k, 250000);
+      page.appendChild(col);
+    });
+  });
+</script>
+
+<div class="page"></div>
