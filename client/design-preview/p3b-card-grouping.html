@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>카드 안 간격 나누기</title>
+<!-- 운영과 똑같은 토큰·글꼴을 그대로 싣는다. 근사치를 넣으면 헛것을 보게 된다. -->
+<script type="module" src="/src/index.css"></script>
+<style>
+  body { background: #ececed; padding: 20px 16px 60px; }
+  .pv { max-width: 980px; margin: 0 auto; }
+  .pv-h1 { font-size: 20px; font-weight: 700; color: #1c1e27; margin: 0 0 4px; }
+  .pv-lead { font-size: 13px; color: #71717f; margin: 0 0 26px; line-height: 1.6; }
+  .pv-sec { margin-bottom: 34px; }
+  .pv-h2 { font-size: 15px; font-weight: 700; color: #1c1e27; margin: 0 0 3px; }
+  .pv-note { font-size: 12px; color: #71717f; margin: 0 0 10px; line-height: 1.6; }
+  .pv-grid { display: grid; gap: 14px; }
+  .pv-2 { grid-template-columns: 1fr 1fr; }
+  .pv-3 { grid-template-columns: 1fr 1fr 1fr; }
+  /* 이 화면은 남의 창에서 열린다. 칸이 좁아지면 320px 상자가 찌그러져서
+     "여백이 넓다/좁다"는 판단이 통째로 어긋난다. 좁으면 칸 수를 줄인다. */
+  @media (max-width: 1040px) { .pv-3 { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 700px)  { .pv-3, .pv-2 { grid-template-columns: 1fr; } }
+  .pv-stage > * { flex: 0 0 auto; }
+  .pv-col { min-width: 0; }
+  .pv-tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 8px;
+            border-radius: 99px; margin-bottom: 6px; letter-spacing: -0.2px; }
+  .pv-now  { background: #e7e7ec; color: #71717f; }
+  .pv-new  { background: #e0ddff; color: #4a3fd0; }
+  .pv-opt  { background: #ffe9c9; color: #8a5626; }
+  .pv-stage { background: #ececed; border-radius: 12px; padding: 16px; display: flex;
+              align-items: flex-start; justify-content: center; }
+  .pv-stage.dark { background: #2a2a31; }
+  .pv-rule { border: 0; border-top: 1px solid #dcdce2; margin: 34px 0; }
+</style>
+
+<!-- 스타일이 덜 실렸는지 스스로 검사한다.
+     Tailwind 는 파일을 훑어서 쓰인 클래스만 만든다. 그런데 dev 서버가 이 폴더보다
+     먼저 떠 있으면 새 파일을 못 훑어서, 앱에 없는 클래스(pt-4.5 같은)가 조용히
+     무시된다. 값이 0으로 그려지는데 화면은 멀쩡해 보여서 알아채기 어렵다.
+     실제로 한 번 그렇게 어긋난 것을 보고 판단할 뻔했다. -->
+<script>
+window.addEventListener('load', function () {
+  var used = new Set();
+  document.querySelectorAll('[class]').forEach(function (e) {
+    e.classList.forEach(function (c) { used.add(c); });
+  });
+  var host = document.createElement('div');
+  // 색을 물려받지 않게 표식 색을 깔아둔다. 그래야 text-* / border-* 가 실제로
+  // 색을 바꿨는지 알 수 있다(기본값과 같으면 안 바뀐 것처럼 보인다).
+  // 글자 크기도 흔치 않은 값으로 깔아둔다. 탐침이 16px 을 물려받으면 text-callout(16px)이
+  // 기본값과 같아 보여서 "빠졌다"고 잘못 짚는다.
+  host.style.cssText = 'position:absolute;left:-9999px;top:0;color:rgb(1,2,3);border-color:rgb(1,2,3);border-style:solid;font-size:7px';
+  document.body.appendChild(host);
+  var base = document.createElement('div');
+  host.appendChild(base);
+  function snap(el) {
+    var s = getComputedStyle(el);
+    return [s.padding, s.margin, s.gap, s.fontSize, s.lineHeight, s.borderRadius,
+            s.height, s.borderWidth, s.color, s.borderColor, s.backgroundColor].join('|');
+  }
+  var baseSnap = snap(base);
+  // 여백·크기 클래스만 본다. 색은 기본값과 같아 보일 수 있어 오탐이 난다.
+  var care = /^(p|px|py|pt|pr|pb|pl|m|mx|my|mt|mr|mb|ml|gap|space-[xy]|size|h|w|text|rounded|leading|border)-/;
+  // border-border 는 index.css 의 @layer base 가 * 에 이미 걸어둔 기본값이라
+  // 따로 붙여도 달라지는 것이 없다. 빠진 것이 아니라 이미 들어 있는 것이다.
+  // border-border / border-input 은 예외다. index.css 의 @layer base 가 * 에 이미
+  // border-border 를 걸어뒀고, --border 와 --input 이 같은 값이라 둘 다 기본값과
+  // 구분되지 않는다. 빠진 것이 아니라 이미 그 색인 것이다.
+  var ignore = /-0(\.5)?$|^w-full$|^min-w-0$|^shrink-0$|^border-(border|input)$|^text-(left|center|right)$/;
+  var dead = [];
+  used.forEach(function (c) {
+    if (!care.test(c) || ignore.test(c) || /^pv-/.test(c)) return;
+    var d = document.createElement('div');
+    d.className = c;
+    host.appendChild(d);
+    if (snap(d) === baseSnap) dead.push(c);
+    d.remove();
+  });
+  host.remove();
+  if (!dead.length) return;
+  var bar = document.createElement('div');
+  bar.style.cssText = 'position:sticky;top:0;z-index:99;background:#d32822;color:#fff;' +
+    'padding:12px 16px;font-size:13px;line-height:1.6;border-radius:10px;margin-bottom:18px';
+  bar.innerHTML = '<b>⚠ 스타일이 덜 실렸습니다 — 이 화면의 값을 믿지 마세요.</b><br>' +
+    'dev 서버가 이 폴더보다 먼저 떠서 Tailwind 가 새 클래스를 못 만들었습니다. ' +
+    '서버를 재시작한 뒤 새로고침해주세요.<br><span style="opacity:.85">빠진 것: ' +
+    dead.sort().join(', ') + '</span>';
+  var wrap = document.querySelector('.pv');
+  wrap.insertBefore(bar, wrap.firstChild);
+});
+</script>
+</head>
+<style>
+  /* 어느 틈이 어느 단계인지 눈에 보이게 색으로 표시한다 */
+  .mark { position:relative; }
+  .mark::after { content: attr(data-g); position:absolute; right:-4px; top:50%;
+    transform:translateY(-50%); font-size:9px; font-weight:700; padding:1px 5px;
+    border-radius:99px; white-space:nowrap; font-family:'IBM Plex Mono',monospace; }
+  .g-micro::after   { content:'micro 4';   background:#dbeafe; color:#1e40af; }
+  .g-tight::after   { content:'tight 8';   background:#e0ddff; color:#4a3fd0; }
+  .g-related::after { content:'related 12';background:#ffe9c9; color:#8a5626; }
+  .g-section::after { content:'section 24';background:#d1fae5; color:#065f46; }
+  .gapbar { background:repeating-linear-gradient(45deg,#c8c5e2 0 3px,transparent 3px 6px); border-radius:2px; }
+</style>
+<body><div class="pv">
+
+<p class="pv-h1">카드 안 어디가 tight 이고 어디가 related 인가</p>
+<p class="pv-lead">빗금 친 띠가 간격이고, 옆 라벨이 그 단계다. 실제 화면에는 안 보이는 표시다.<br>
+  <span style="color:#8a5626">앞 시안은 카드 안쪽을 전부 tight 8 로 균일하게 줬는데, 그건
+  <b>GifticonCard 에 이미 적힌 의도와 어긋난다</b> — "앞의 둘은 상품 정보라 붙어 있고, 언제까지 써야 하는지는
+  성격이 달라서 따로 앉힌다"고 적혀 있다. 칩은 다른 덩이다.</span></p>
+
+<div class="pv-sec">
+  <p class="pv-h2">① 칩 앞 간격 <span style="color:#4a3fd0">(정할 것)</span></p>
+  <p class="pv-note">메타·이름·금액은 "이게 뭔지"를 말하는 한 덩이라 tight 8. 칩은 "언제까지"라 성격이 다르다.</p>
+  <div class="pv-grid pv-2">
+    <div class="pv-col"><span class="pv-tag pv-now">전부 tight 8</span><div class="pv-note" style="margin-bottom:6px">앞 시안 · 네 줄이 한 덩이로 뭉친다</div><div class="pv-stage" style="display:block;overflow-x:auto"><ul class="m-0 flex list-none flex-col p-0" style="width:335px"><li class="overflow-hidden rounded-xl border border-border bg-card shadow-sm" style="list-style:none;width:335px">
+  <div class="flex gap-3 p-3">
+    <span class="flex size-16 shrink-0 items-center justify-center rounded-lg bg-secondary"><svg class="size-6 text-primary/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v14"/></svg></span>
+    <div class="flex min-w-0 flex-1 flex-col">
+      <span class="text-caption text-muted-foreground">태수 · 스타벅스 · 카페</span>
+      <div class="gapbar mark g-tight" style="height:8px"></div>
+      <p class="m-0 truncate text-subtitle font-bold text-foreground">아이스 카페 아메리카노 T</p>
+      <div class="gapbar mark g-tight" style="height:8px"></div>
+      <p class="m-0 text-body text-muted-foreground">9,000원</p>
+      <div class="gapbar mark g-tight" style="height:8px"></div>
+      <span class="inline-block self-start rounded-full bg-destructive/15 px-2 text-caption font-bold text-destructive-text"
+            style="padding-top:4px;padding-bottom:4px">D-3 · 2026.08.31까지</span>
+    </div>
+  </div>
+  <div class="flex border-t border-border">
+    <span class="flex flex-1 items-center justify-center py-2.5 text-caption font-semibold text-foreground">매장</span>
+    <span class="flex flex-1 items-center justify-center border-l border-border py-2.5 text-caption font-semibold text-foreground">찜하기</span>
+    <span class="flex flex-1 items-center justify-center border-l border-border py-2.5 text-caption font-semibold text-foreground">사용완료</span>
+  </div>
+</li><div class="gapbar mark g-related" style="height:12px"></div><li class="overflow-hidden rounded-xl border border-border bg-card shadow-sm" style="list-style:none;width:335px">
+  <div class="flex gap-3 p-3">
+    <span class="flex size-16 shrink-0 items-center justify-center rounded-lg bg-secondary"><svg class="size-6 text-primary/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v14"/></svg></span>
+    <div class="flex min-w-0 flex-1 flex-col">
+      <span class="text-caption text-muted-foreground">태수 · 스타벅스 · 카페</span>
+      <div class="gapbar mark g-tight" style="height:8px"></div>
+      <p class="m-0 truncate text-subtitle font-bold text-foreground">아이스 카페 아메리카노 T</p>
+      <div class="gapbar mark g-tight" style="height:8px"></div>
+      <p class="m-0 text-body text-muted-foreground">9,000원</p>
+      <div class="gapbar mark g-tight" style="height:8px"></div>
+      <span class="inline-block self-start rounded-full bg-destructive/15 px-2 text-caption font-bold text-destructive-text"
+            style="padding-top:4px;padding-bottom:4px">D-3 · 2026.08.31까지</span>
+    </div>
+  </div>
+  <div class="flex border-t border-border">
+    <span class="flex flex-1 items-center justify-center py-2.5 text-caption font-semibold text-foreground">매장</span>
+    <span class="flex flex-1 items-center justify-center border-l border-border py-2.5 text-caption font-semibold text-foreground">찜하기</span>
+    <span class="flex flex-1 items-center justify-center border-l border-border py-2.5 text-caption font-semibold text-foreground">사용완료</span>
+  </div>
+</li></ul></div></div>
+    <div class="pv-col"><span class="pv-tag pv-new">칩 앞만 related 12</span><div class="pv-note" style="margin-bottom:6px">주석의 의도대로 · 상품 정보 / 기한 두 덩이</div><div class="pv-stage" style="display:block;overflow-x:auto"><ul class="m-0 flex list-none flex-col p-0" style="width:335px"><li class="overflow-hidden rounded-xl border border-border bg-card shadow-sm" style="list-style:none;width:335px">
+  <div class="flex gap-3 p-3">
+    <span class="flex size-16 shrink-0 items-center justify-center rounded-lg bg-secondary"><svg class="size-6 text-primary/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v14"/></svg></span>
+    <div class="flex min-w-0 flex-1 flex-col">
+      <span class="text-caption text-muted-foreground">태수 · 스타벅스 · 카페</span>
+      <div class="gapbar mark g-tight" style="height:8px"></div>
+      <p class="m-0 truncate text-subtitle font-bold text-foreground">아이스 카페 아메리카노 T</p>
+      <div class="gapbar mark g-tight" style="height:8px"></div>
+      <p class="m-0 text-body text-muted-foreground">9,000원</p>
+      <div class="gapbar mark g-related" style="height:12px"></div>
+      <span class="inline-block self-start rounded-full bg-destructive/15 px-2 text-caption font-bold text-destructive-text"
+            style="padding-top:4px;padding-bottom:4px">D-3 · 2026.08.31까지</span>
+    </div>
+  </div>
+  <div class="flex border-t border-border">
+    <span class="flex flex-1 items-center justify-center py-2.5 text-caption font-semibold text-foreground">매장</span>
+    <span class="flex flex-1 items-center justify-center border-l border-border py-2.5 text-caption font-semibold text-foreground">찜하기</span>
+    <span class="flex flex-1 items-center justify-center border-l border-border py-2.5 text-caption font-semibold text-foreground">사용완료</span>
+  </div>
+</li><div class="gapbar mark g-related" style="height:12px"></div><li class="overflow-hidden rounded-xl border border-border bg-card shadow-sm" style="list-style:none;width:335px">
+  <div class="flex gap-3 p-3">
+    <span class="flex size-16 shrink-0 items-center justify-center rounded-lg bg-secondary"><svg class="size-6 text-primary/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v14"/></svg></span>
+    <div class="flex min-w-0 flex-1 flex-col">
+      <span class="text-caption text-muted-foreground">태수 · 스타벅스 · 카페</span>
+      <div class="gapbar mark g-tight" style="height:8px"></div>
+      <p class="m-0 truncate text-subtitle font-bold text-foreground">아이스 카페 아메리카노 T</p>
+      <div class="gapbar mark g-tight" style="height:8px"></div>
+      <p class="m-0 text-body text-muted-foreground">9,000원</p>
+      <div class="gapbar mark g-related" style="height:12px"></div>
+      <span class="inline-block self-start rounded-full bg-destructive/15 px-2 text-caption font-bold text-destructive-text"
+            style="padding-top:4px;padding-bottom:4px">D-3 · 2026.08.31까지</span>
+    </div>
+  </div>
+  <div class="flex border-t border-border">
+    <span class="flex flex-1 items-center justify-center py-2.5 text-caption font-semibold text-foreground">매장</span>
+    <span class="flex flex-1 items-center justify-center border-l border-border py-2.5 text-caption font-semibold text-foreground">찜하기</span>
+    <span class="flex flex-1 items-center justify-center border-l border-border py-2.5 text-caption font-semibold text-foreground">사용완료</span>
+  </div>
+</li></ul></div></div>
+  </div>
+</div>
+
+<div class="pv-sec">
+  <p class="pv-h2">② 그러면 카드 사이는 <span style="color:#4a3fd0">(정할 것)</span></p>
+  <p class="pv-note">칩 앞이 12 가 되면 카드 사이도 12 라 <b>카드 안과 카드 밖이 같은 간격</b>이 된다.
+    테두리와 그림자가 갈라주기는 하지만, 근접성만 보면 구분이 없다.</p>
+  <div class="pv-grid pv-2">
+    <div class="pv-col"><span class="pv-tag pv-now">카드 사이 12 · related</span><div class="pv-note" style="margin-bottom:6px">안과 밖이 같다</div><div class="pv-stage" style="display:block;overflow-x:auto"><ul class="m-0 flex list-none flex-col p-0" style="width:335px"><li class="overflow-hidden rounded-xl border border-border bg-card shadow-sm" style="list-style:none;width:335px">
+  <div class="flex gap-3 p-3">
+    <span class="flex size-16 shrink-0 items-center justify-center rounded-lg bg-secondary"><svg class="size-6 text-primary/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v14"/></svg></span>
+    <div class="flex min-w-0 flex-1 flex-col">
+      <span class="text-caption text-muted-foreground">태수 · 스타벅스 · 카페</span>
+      <div class="gapbar mark g-tight" style="height:8px"></div>
+      <p class="m-0 truncate text-subtitle font-bold text-foreground">아이스 카페 아메리카노 T</p>
+      <div class="gapbar mark g-tight" style="height:8px"></div>
+      <p class="m-0 text-body text-muted-foreground">9,000원</p>
+      <div class="gapbar mark g-related" style="height:12px"></div>
+      <span class="inline-block self-start rounded-full bg-destructive/15 px-2 text-caption font-bold text-destructive-text"
+            style="padding-top:4px;padding-bottom:4px">D-3 · 2026.08.31까지</span>
+    </div>
+  </div>
+  <div class="flex border-t border-border">
+    <span class="flex flex-1 items-center justify-center py-2.5 text-caption font-semibold text-foreground">매장</span>
+    <span class="flex flex-1 items-center justify-center border-l border-border py-2.5 text-caption font-semibold text-foreground">찜하기</span>
+    <span class="flex flex-1 items-center justify-center border-l border-border py-2.5 text-caption font-semibold text-foreground">사용완료</span>
+  </div>
+</li><div class="gapbar mark g-related" style="height:12px"></div><li class="overflow-hidden rounded-xl border border-border bg-card shadow-sm" style="list-style:none;width:335px">
+  <div class="flex gap-3 p-3">
+    <span class="flex size-16 shrink-0 items-center justify-center rounded-lg bg-secondary"><svg class="size-6 text-primary/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v14"/></svg></span>
+    <div class="flex min-w-0 flex-1 flex-col">
+      <span class="text-caption text-muted-foreground">태수 · 스타벅스 · 카페</span>
+      <div class="gapbar mark g-tight" style="height:8px"></div>
+      <p class="m-0 truncate text-subtitle font-bold text-foreground">아이스 카페 아메리카노 T</p>
+      <div class="gapbar mark g-tight" style="height:8px"></div>
+      <p class="m-0 text-body text-muted-foreground">9,000원</p>
+      <div class="gapbar mark g-related" style="height:12px"></div>
+      <span class="inline-block self-start rounded-full bg-destructive/15 px-2 text-caption font-bold text-destructive-text"
+            style="padding-top:4px;padding-bottom:4px">D-3 · 2026.08.31까지</span>
+    </div>
+  </div>
+  <div class="flex border-t border-border">
+    <span class="flex flex-1 items-center justify-center py-2.5 text-caption font-semibold text-foreground">매장</span>
+    <span class="flex flex-1 items-center justify-center border-l border-border py-2.5 text-caption font-semibold text-foreground">찜하기</span>
+    <span class="flex flex-1 items-center justify-center border-l border-border py-2.5 text-caption font-semibold text-foreground">사용완료</span>
+  </div>
+</li></ul></div></div>
+    <div class="pv-col"><span class="pv-tag pv-new">카드 사이 24 · section</span><div class="pv-note" style="margin-bottom:6px">밖이 더 넓다 — 카드가 낱장으로 선다</div><div class="pv-stage" style="display:block;overflow-x:auto"><ul class="m-0 flex list-none flex-col p-0" style="width:335px"><li class="overflow-hidden rounded-xl border border-border bg-card shadow-sm" style="list-style:none;width:335px">
+  <div class="flex gap-3 p-3">
+    <span class="flex size-16 shrink-0 items-center justify-center rounded-lg bg-secondary"><svg class="size-6 text-primary/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v14"/></svg></span>
+    <div class="flex min-w-0 flex-1 flex-col">
+      <span class="text-caption text-muted-foreground">태수 · 스타벅스 · 카페</span>
+      <div class="gapbar mark g-tight" style="height:8px"></div>
+      <p class="m-0 truncate text-subtitle font-bold text-foreground">아이스 카페 아메리카노 T</p>
+      <div class="gapbar mark g-tight" style="height:8px"></div>
+      <p class="m-0 text-body text-muted-foreground">9,000원</p>
+      <div class="gapbar mark g-related" style="height:12px"></div>
+      <span class="inline-block self-start rounded-full bg-destructive/15 px-2 text-caption font-bold text-destructive-text"
+            style="padding-top:4px;padding-bottom:4px">D-3 · 2026.08.31까지</span>
+    </div>
+  </div>
+  <div class="flex border-t border-border">
+    <span class="flex flex-1 items-center justify-center py-2.5 text-caption font-semibold text-foreground">매장</span>
+    <span class="flex flex-1 items-center justify-center border-l border-border py-2.5 text-caption font-semibold text-foreground">찜하기</span>
+    <span class="flex flex-1 items-center justify-center border-l border-border py-2.5 text-caption font-semibold text-foreground">사용완료</span>
+  </div>
+</li><div class="gapbar mark g-section" style="height:24px"></div><li class="overflow-hidden rounded-xl border border-border bg-card shadow-sm" style="list-style:none;width:335px">
+  <div class="flex gap-3 p-3">
+    <span class="flex size-16 shrink-0 items-center justify-center rounded-lg bg-secondary"><svg class="size-6 text-primary/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v14"/></svg></span>
+    <div class="flex min-w-0 flex-1 flex-col">
+      <span class="text-caption text-muted-foreground">태수 · 스타벅스 · 카페</span>
+      <div class="gapbar mark g-tight" style="height:8px"></div>
+      <p class="m-0 truncate text-subtitle font-bold text-foreground">아이스 카페 아메리카노 T</p>
+      <div class="gapbar mark g-tight" style="height:8px"></div>
+      <p class="m-0 text-body text-muted-foreground">9,000원</p>
+      <div class="gapbar mark g-related" style="height:12px"></div>
+      <span class="inline-block self-start rounded-full bg-destructive/15 px-2 text-caption font-bold text-destructive-text"
+            style="padding-top:4px;padding-bottom:4px">D-3 · 2026.08.31까지</span>
+    </div>
+  </div>
+  <div class="flex border-t border-border">
+    <span class="flex flex-1 items-center justify-center py-2.5 text-caption font-semibold text-foreground">매장</span>
+    <span class="flex flex-1 items-center justify-center border-l border-border py-2.5 text-caption font-semibold text-foreground">찜하기</span>
+    <span class="flex flex-1 items-center justify-center border-l border-border py-2.5 text-caption font-semibold text-foreground">사용완료</span>
+  </div>
+</li></ul></div></div>
+  </div>
+</div>
+
+<div class="pv-sec">
+  <p class="pv-h2">③ 규칙으로 적으면</p>
+  <div class="scroll"><table>
+    <thead><tr><th>자리</th><th>단계</th><th>왜</th></tr></thead>
+    <tbody>
+      <tr><td>메타 ↔ 상품명</td><td class="v">tight 8</td><td>둘 다 "이게 뭔지"</td></tr>
+      <tr><td>상품명 ↔ 금액</td><td class="v">tight 8</td><td>같은 상품 정보</td></tr>
+      <tr><td>금액 ↔ D-day 칩</td><td class="v">related 12</td><td>"언제까지"는 성격이 다른 덩이</td></tr>
+      <tr><td>카드 ↔ 카드</td><td class="v">section 24 ?</td><td>안쪽 최대(12)보다 넓어야 낱장으로 선다</td></tr>
+    </tbody>
+  </table></div>
+  <div class="pv-note">덩이 안쪽 8 &lt; 덩이 사이 12 &lt; 카드 사이 24. 이 부등호가 서면 눈이 저절로 묶어 읽는다.</div>
+</div>
+</div></body></html>

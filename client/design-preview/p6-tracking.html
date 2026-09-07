@@ -1,0 +1,148 @@
+<!doctype html>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>자간이 하는 일</title>
+<script type="module" src="/src/index.css"></script>
+<style>
+  body { margin:0; background:var(--muted); font-family:Pretendard, system-ui, sans-serif;
+         color:var(--foreground); -webkit-font-smoothing:antialiased; }
+  .wrap { max-width:375px; margin:0 auto; padding:20px 16px 90px; }
+  h1 { font-size:22px; font-weight:800; margin:0 0 6px; letter-spacing:-.02em; }
+  .lede { font-size:13px; line-height:1.65; color:var(--muted-foreground); margin:0 0 18px; word-break:keep-all; }
+  .lede b { color:var(--foreground); }
+
+  .panel { position:sticky; top:0; z-index:5; background:var(--background); border:1px solid var(--border);
+           border-radius:14px; padding:12px 14px; margin-bottom:18px; box-shadow:0 6px 20px -12px rgb(0 0 0/.35); }
+  .panel > span { display:block; font-size:11px; font-weight:800; letter-spacing:.04em;
+                  color:var(--muted-foreground); margin-bottom:6px; }
+  .opts { display:flex; gap:6px; }
+  label.opt { flex:1; }
+  label.opt input { position:absolute; opacity:0; pointer-events:none; }
+  label.opt span { display:block; text-align:center; font-size:12px; font-weight:700; padding:7px 8px;
+                   border-radius:9px; border:1px solid var(--border); color:var(--muted-foreground); cursor:pointer; }
+  label.opt input:checked + span { background:var(--primary); border-color:var(--primary); color:var(--primary-foreground); }
+
+  .row { background:var(--card); border:1px solid var(--border); border-radius:12px;
+         padding:11px 13px; margin-bottom:9px; }
+  .meta { display:flex; align-items:baseline; gap:6px; font-size:10px; font-weight:800;
+          letter-spacing:.05em; color:var(--muted-foreground); margin-bottom:5px; }
+  .meta b { color:var(--foreground); font-size:10px; }
+  .meta .n { margin-left:auto; font-variant-numeric:tabular-nums; font-weight:700; }
+  .pair > div { position:relative; }
+  .pair > div + div { margin-top:3px; }
+  .pair .tag { position:absolute; right:0; bottom:0;
+               font-size:9px; font-weight:800; letter-spacing:.05em; color:var(--muted-foreground);
+               background:var(--card); padding-left:6px; }
+  .sample { display:inline-block; max-width:calc(100% - 30px); word-break:keep-all;
+            box-shadow:inset -1px 0 0 color-mix(in oklab, var(--primary) 35%, transparent); }
+  .off .sample.b { letter-spacing:normal !important; }
+  .diff { margin-top:5px; font-size:10.5px; font-variant-numeric:tabular-nums; color:var(--muted-foreground); }
+  .diff b { color:var(--foreground); }
+
+  .sec { margin:26px 0 8px; font-size:11px; font-weight:800; letter-spacing:.05em; color:var(--muted-foreground); }
+  .note { font-size:12px; line-height:1.65; color:var(--muted-foreground); margin:16px 0 0; word-break:keep-all; }
+  .note b { color:var(--foreground); }
+  code { font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:11px; }
+  #selfcheck { display:none; position:fixed; inset:auto 0 0 0; z-index:99; background:var(--destructive);
+               color:#fff; font-size:12px; font-weight:700; padding:10px 14px; text-align:center; }
+</style>
+
+<div class="wrap">
+  <h1>자간이 실제로 하는 일</h1>
+  <p class="lede">위가 <b>지금(자간 있음)</b>, 아래가 <b>0</b>. 같은 글을 겹쳐 보지 말고
+    두 줄이 얼마나 다른지만 보면 된다. 옆에 한 글자당 몇 px 인지와 줄 전체가 몇 px 줄어드는지를
+    적어 두었다.</p>
+
+  <div class="panel">
+    <span>보기</span>
+    <div class="opts">
+      <label class="opt"><input type="radio" name="v" value="both" checked><span>둘 다</span></label>
+      <label class="opt"><input type="radio" name="v" value="on"><span>지금만</span></label>
+      <label class="opt"><input type="radio" name="v" value="off"><span>0 만</span></label>
+    </div>
+  </div>
+
+  <div class="sec">① 본문 크기 — 12.5 ~ 17.5px · 60곳</div>
+  <div id="body"></div>
+
+  <div class="sec">② 큰 제목 — 19 ~ 27px · 23곳</div>
+  <div id="head"></div>
+
+  <div class="sec">③ 코드·번호 — font-mono, 자간을 넓힌다 · 5곳</div>
+  <div id="mono"></div>
+
+  <p class="note"><b>③은 자간이 아니라 다른 일이다.</b> 가족 코드와 바코드 번호는 읽어서
+    따라 치는 값이라 한 글자씩 떼어놓는 것이고, 글줄을 다듬는 것과 목적이 다르다.
+    같은 <code>tracking</code> 속성을 쓸 뿐이다.</p>
+</div>
+
+<div id="selfcheck"></div>
+
+<script>
+// [크기, 굵기, 지금 자간, 곳 수, 글, 어디]
+const BODY = [
+  [12.5, 500, '-0.01em',  2, '사용기한이 있어야 알려드릴 수 있어요', '안내문'],
+  [13,   600, '-0.01em',  7, '바코드가 작게 찍힌 사진은 뺐어요', '보조 설명'],
+  [13.5, 600, '-0.01em',  4, '가족에게 기프티콘을 나눠 보세요', '항목 이름'],
+  [14.5, 600, '-0.015em', 5, '2026.08.31까지 · 32,000원', '기한·금액'],
+  [15,   600, '-0.015em', 11, '아이스 카페 아메리카노 T', '버튼·목록'],
+  [15.5, 600, '-0.015em', 11, '카페 아메리카노 T 2잔 + 케이크', '상품명'],
+  [17,   700, '-0.02em',  4, '아직 알림이 없어요', '작은 제목'],
+  [17.5, 700, '-0.02em',  2, '이 기프티콘을 지울까요?', '다이얼로그 제목'],
+];
+const HEAD = [
+  [19, 700, '-0.026em', 13, '기프티콘 등록하기', '시트 제목'],
+  [21, 700, '-0.028em',  5, '우리집 기프티콘함', '화면 제목'],
+  [25, 800, '-0.025em',  1, '함께 모아요', '온보딩'],
+  [27, 800, '-0.025em',  1, '모아콘', '로그인'],
+];
+const MONO = [
+  [15, 600, '0.02em',  1, '8012 3456 7890 1234', '바코드 번호'],
+  [29, 700, '0.14em',  1, 'K7Q2XM', '가족 코드'],
+  [34, 700, '0.16em',  1, 'K7Q2XM', '가족 코드 · 큰 것'],
+  [15, 600, '0.12em',  2, 'K7Q2XM', '코드 입력칸'],
+];
+
+const px = (em, size) => (parseFloat(em) * size);
+const row = ([size, weight, tr, n, text, where], mono) => {
+  const per = px(tr, size);
+  const chars = [...text].length;
+  const total = per * (chars - 1);
+  const st = `font-size:${size}px;font-weight:${weight};line-height:1.35;${mono ? 'font-family:ui-monospace,SFMono-Regular,Menlo,monospace;' : ''}`;
+  return `<div class="row">
+    <div class="meta">${where}<b>${size}px</b> <code>${tr}</code><span class="n">${n}곳</span></div>
+    <div class="pair">
+      <div><div class="sample a" style="${st}letter-spacing:${tr}">${text}</div><span class="tag">지금</span></div>
+      <div><div class="sample b" style="${st}letter-spacing:normal">${text}</div><span class="tag">0</span></div>
+    </div>
+    <div class="diff">한 글자당 <b>${per.toFixed(2)}px</b> · 이 줄 전체 <b>${total > 0 ? '+' : ''}${total.toFixed(1)}px</b></div>
+  </div>`;
+};
+
+document.getElementById('body').innerHTML = BODY.map(r => row(r, false)).join('');
+document.getElementById('head').innerHTML = HEAD.map(r => row(r, false)).join('');
+document.getElementById('mono').innerHTML = MONO.map(r => row(r, true)).join('');
+
+const apply = () => {
+  const v = document.querySelector('input[name="v"]:checked').value;
+  document.querySelectorAll('.pair > div').forEach((d, i) => {
+    const isOff = d.querySelector('.sample.b');
+    d.style.display = v === 'both' ? '' : (v === 'off') === !!isOff ? '' : 'none';
+  });
+};
+document.querySelectorAll('input').forEach(i => i.addEventListener('change', apply));
+apply();
+
+addEventListener('load', () => setTimeout(() => {
+  const bad = [];
+  if (getComputedStyle(document.body).backgroundColor === 'rgba(0, 0, 0, 0)') bad.push('index.css 미로드');
+  const a = document.querySelector('.sample.a'), b = document.querySelector('.sample.b');
+  if (a.getBoundingClientRect().width === b.getBoundingClientRect().width)
+    bad.push('자간 있는 줄과 0인 줄의 너비가 같다 — 자간이 안 걸렸다');
+  if (bad.length) {
+    const el = document.getElementById('selfcheck');
+    el.textContent = '시안이 실제와 다르다: ' + bad.join(' · ');
+    el.style.display = 'block';
+  }
+}, 250));
+</script>

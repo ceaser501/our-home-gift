@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>P4 · Sheet</title>
+<!-- 운영과 똑같은 토큰·글꼴을 그대로 싣는다. 근사치를 넣으면 헛것을 보게 된다. -->
+<script type="module" src="/src/index.css"></script>
+<style>
+  body { background: #ececed; padding: 20px 16px 60px; }
+  .pv { max-width: 980px; margin: 0 auto; }
+  .pv-h1 { font-size: 20px; font-weight: 700; color: #1c1e27; margin: 0 0 4px; }
+  .pv-lead { font-size: 13px; color: #71717f; margin: 0 0 26px; line-height: 1.6; }
+  .pv-sec { margin-bottom: 34px; }
+  .pv-h2 { font-size: 15px; font-weight: 700; color: #1c1e27; margin: 0 0 3px; }
+  .pv-note { font-size: 12px; color: #71717f; margin: 0 0 10px; line-height: 1.6; }
+  .pv-grid { display: grid; gap: 14px; }
+  .pv-2 { grid-template-columns: 1fr 1fr; }
+  .pv-3 { grid-template-columns: 1fr 1fr 1fr; }
+  /* 이 화면은 남의 창에서 열린다. 칸이 좁아지면 320px 상자가 찌그러져서
+     "여백이 넓다/좁다"는 판단이 통째로 어긋난다. 좁으면 칸 수를 줄인다. */
+  @media (max-width: 1040px) { .pv-3 { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 700px)  { .pv-3, .pv-2 { grid-template-columns: 1fr; } }
+  .pv-stage > * { flex: 0 0 auto; }
+  .pv-col { min-width: 0; }
+  .pv-tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 8px;
+            border-radius: 99px; margin-bottom: 6px; letter-spacing: -0.2px; }
+  .pv-now  { background: #e7e7ec; color: #71717f; }
+  .pv-new  { background: #e0ddff; color: #4a3fd0; }
+  .pv-opt  { background: #ffe9c9; color: #8a5626; }
+  .pv-stage { background: #ececed; border-radius: 12px; padding: 16px; display: flex;
+              align-items: flex-start; justify-content: center; }
+  .pv-stage.dark { background: #2a2a31; }
+  .pv-rule { border: 0; border-top: 1px solid #dcdce2; margin: 34px 0; }
+</style>
+
+<!-- 스타일이 덜 실렸는지 스스로 검사한다.
+     Tailwind 는 파일을 훑어서 쓰인 클래스만 만든다. 그런데 dev 서버가 이 폴더보다
+     먼저 떠 있으면 새 파일을 못 훑어서, 앱에 없는 클래스(pt-4.5 같은)가 조용히
+     무시된다. 값이 0으로 그려지는데 화면은 멀쩡해 보여서 알아채기 어렵다.
+     실제로 한 번 그렇게 어긋난 것을 보고 판단할 뻔했다. -->
+<script>
+window.addEventListener('load', function () {
+  var used = new Set();
+  document.querySelectorAll('[class]').forEach(function (e) {
+    e.classList.forEach(function (c) { used.add(c); });
+  });
+  var host = document.createElement('div');
+  // 색을 물려받지 않게 표식 색을 깔아둔다. 그래야 text-* / border-* 가 실제로
+  // 색을 바꿨는지 알 수 있다(기본값과 같으면 안 바뀐 것처럼 보인다).
+  // 글자 크기도 흔치 않은 값으로 깔아둔다. 탐침이 16px 을 물려받으면 text-callout(16px)이
+  // 기본값과 같아 보여서 "빠졌다"고 잘못 짚는다.
+  host.style.cssText = 'position:absolute;left:-9999px;top:0;color:rgb(1,2,3);border-color:rgb(1,2,3);border-style:solid;font-size:7px';
+  document.body.appendChild(host);
+  var base = document.createElement('div');
+  host.appendChild(base);
+  function snap(el) {
+    var s = getComputedStyle(el);
+    return [s.padding, s.margin, s.gap, s.fontSize, s.lineHeight, s.borderRadius,
+            s.height, s.borderWidth, s.color, s.borderColor, s.backgroundColor].join('|');
+  }
+  var baseSnap = snap(base);
+  // 여백·크기 클래스만 본다. 색은 기본값과 같아 보일 수 있어 오탐이 난다.
+  var care = /^(p|px|py|pt|pr|pb|pl|m|mx|my|mt|mr|mb|ml|gap|space-[xy]|size|h|w|text|rounded|leading|border)-/;
+  // border-border 는 index.css 의 @layer base 가 * 에 이미 걸어둔 기본값이라
+  // 따로 붙여도 달라지는 것이 없다. 빠진 것이 아니라 이미 들어 있는 것이다.
+  // border-border / border-input 은 예외다. index.css 의 @layer base 가 * 에 이미
+  // border-border 를 걸어뒀고, --border 와 --input 이 같은 값이라 둘 다 기본값과
+  // 구분되지 않는다. 빠진 것이 아니라 이미 그 색인 것이다.
+  var ignore = /-0(\.5)?$|^w-full$|^min-w-0$|^shrink-0$|^border-(border|input)$|^text-(left|center|right)$/;
+  var dead = [];
+  used.forEach(function (c) {
+    if (!care.test(c) || ignore.test(c) || /^pv-/.test(c)) return;
+    var d = document.createElement('div');
+    d.className = c;
+    host.appendChild(d);
+    if (snap(d) === baseSnap) dead.push(c);
+    d.remove();
+  });
+  host.remove();
+  if (!dead.length) return;
+  var bar = document.createElement('div');
+  bar.style.cssText = 'position:sticky;top:0;z-index:99;background:#d32822;color:#fff;' +
+    'padding:12px 16px;font-size:13px;line-height:1.6;border-radius:10px;margin-bottom:18px';
+  bar.innerHTML = '<b>⚠ 스타일이 덜 실렸습니다 — 이 화면의 값을 믿지 마세요.</b><br>' +
+    'dev 서버가 이 폴더보다 먼저 떠서 Tailwind 가 새 클래스를 못 만들었습니다. ' +
+    '서버를 재시작한 뒤 새로고침해주세요.<br><span style="opacity:.85">빠진 것: ' +
+    dead.sort().join(', ') + '</span>';
+  var wrap = document.querySelector('.pv');
+  wrap.insertBefore(bar, wrap.firstChild);
+});
+</script>
+</head>
+<body><div class="pv">
+
+<p class="pv-h1">P4 · Sheet / SheetHeader</p>
+<p class="pv-lead">같은 조합이 시트 18개에 복사돼 있다. 세어보니 <b>pr-14 는 18곳 전부</b>, <b>pb-1 은 14곳</b>,
+  <b>pb-[var(--safe-bottom)] 은 18개 파일 전부</b>다. 반복을 프리미티브가 갖게 한다.<br>
+  <span style="color:#8a5626">확인한 사실: SheetTitle 은 Step 2 에서 이미 text-title(20)로 바뀌어 있다. 아래 ②는 되돌아보기용 비교다.</span></p>
+
+<div class="pv-sec">
+  <p class="pv-h2">① 헤더 여백 — 호출부가 매번 붙이던 것을 프리미티브로</p>
+  <p class="pv-note">겉모습은 같아야 한다(같으면 성공이다). 달라지는 건 호출부 코드 18곳에서 <code>className="pr-14 pb-1"</code>이 사라진다는 것.</p>
+  <div class="pv-grid pv-2">
+    <div class="pv-col"><span class="pv-tag pv-now">지금</span><div class="pv-note" style="margin-bottom:6px">SheetHeader 기본 px-5 pt-5 gap-1 + 호출부가 pr-14 pb-1 추가</div><div class="pv-stage" style="padding:0"><div class="relative w-full max-w-[360px] rounded-t-2xl border-t border-border bg-card">
+  <span class="absolute top-4 right-4 flex size-9 items-center justify-center rounded-full bg-muted opacity-80"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></span>
+  <div class="flex flex-col gap-1 px-5 pt-5 pr-14 pb-1">
+    <p class="m-0 text-title font-semibold text-foreground">기프티콘 추가</p>
+    <p class="m-0 text-body text-muted-foreground">사진을 올리면 이름과 기한을 읽어드려요.</p>
+  </div>
+  <div class="flex flex-col gap-3 px-5 pt-2">
+    <span class="h-10 rounded-md border border-input bg-card"></span>
+    <span class="h-10 rounded-md border border-input bg-card"></span>
+    <button class="h-12 w-full rounded-lg bg-primary text-callout font-medium text-primary-foreground">저장하기</button>
+  </div>
+  <div class="h-6"></div>
+</div></div></div>
+    <div class="pv-col"><span class="pv-tag pv-new">통합 후</span><div class="pv-note" style="margin-bottom:6px">SheetHeader 가 pr-14 pb-1 까지 소유 · 호출부는 &lt;SheetHeader&gt; 만</div><div class="pv-stage" style="padding:0"><div class="relative w-full max-w-[360px] rounded-t-2xl border-t border-border bg-card">
+  <span class="absolute top-4 right-4 flex size-9 items-center justify-center rounded-full bg-muted opacity-80"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></span>
+  <div class="flex flex-col gap-1 px-5 pt-5 pr-14 pb-1">
+    <p class="m-0 text-title font-semibold text-foreground">기프티콘 추가</p>
+    <p class="m-0 text-body text-muted-foreground">사진을 올리면 이름과 기한을 읽어드려요.</p>
+  </div>
+  <div class="flex flex-col gap-3 px-5 pt-2">
+    <span class="h-10 rounded-md border border-input bg-card"></span>
+    <span class="h-10 rounded-md border border-input bg-card"></span>
+    <button class="h-12 w-full rounded-lg bg-primary text-callout font-medium text-primary-foreground">저장하기</button>
+  </div>
+  <div class="h-6"></div>
+</div></div></div>
+  </div>
+</div>
+
+<div class="pv-sec">
+  <p class="pv-h2">② 시트 제목 크기 — 이미 적용된 것 확인</p>
+  <div class="pv-grid pv-2">
+    <div class="pv-col"><span class="pv-tag pv-now">Step 2 이전</span><div class="pv-note" style="margin-bottom:6px">text-callout 16px</div><div class="pv-stage" style="padding:0"><div class="relative w-full max-w-[360px] rounded-t-2xl border-t border-border bg-card">
+  <span class="absolute top-4 right-4 flex size-9 items-center justify-center rounded-full bg-muted opacity-80"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></span>
+  <div class="flex flex-col gap-1 px-5 pt-5 pr-14 pb-1">
+    <p class="m-0 text-callout font-semibold text-foreground">기프티콘 추가</p>
+    <p class="m-0 text-body text-muted-foreground">사진을 올리면 이름과 기한을 읽어드려요.</p>
+  </div>
+  <div class="flex flex-col gap-3 px-5 pt-2">
+    <span class="h-10 rounded-md border border-input bg-card"></span>
+    <span class="h-10 rounded-md border border-input bg-card"></span>
+    <button class="h-12 w-full rounded-lg bg-primary text-callout font-medium text-primary-foreground">저장하기</button>
+  </div>
+  <div class="h-6"></div>
+</div></div></div>
+    <div class="pv-col"><span class="pv-tag pv-new">지금</span><div class="pv-note" style="margin-bottom:6px">text-title 20px</div><div class="pv-stage" style="padding:0"><div class="relative w-full max-w-[360px] rounded-t-2xl border-t border-border bg-card">
+  <span class="absolute top-4 right-4 flex size-9 items-center justify-center rounded-full bg-muted opacity-80"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></span>
+  <div class="flex flex-col gap-1 px-5 pt-5 pr-14 pb-1">
+    <p class="m-0 text-title font-semibold text-foreground">기프티콘 추가</p>
+    <p class="m-0 text-body text-muted-foreground">사진을 올리면 이름과 기한을 읽어드려요.</p>
+  </div>
+  <div class="flex flex-col gap-3 px-5 pt-2">
+    <span class="h-10 rounded-md border border-input bg-card"></span>
+    <span class="h-10 rounded-md border border-input bg-card"></span>
+    <button class="h-12 w-full rounded-lg bg-primary text-callout font-medium text-primary-foreground">저장하기</button>
+  </div>
+  <div class="h-6"></div>
+</div></div></div>
+  </div>
+</div>
+
+<div class="pv-sec">
+  <p class="pv-h2">③ 하단 safe-area — 시트가 기본으로 갖게</p>
+  <p class="pv-note">보라색 띠가 안드로이드 제스처 바에 물리지 않도록 비워두는 자리다. 지금은 시트마다 손으로 붙이고 있어서, 새 시트를 만들 때 빠뜨리면 맨 아래 버튼이 안 눌린다.</p>
+  <div class="pv-grid pv-2">
+    <div class="pv-col"><span class="pv-tag pv-now">안 붙인 시트</span><div class="pv-note" style="margin-bottom:6px">pb 없음 · 버튼이 바닥에 닿는다</div><div class="pv-stage" style="padding:0"><div class="relative w-full max-w-[360px] rounded-t-2xl border-t border-border bg-card">
+  <span class="absolute top-4 right-4 flex size-9 items-center justify-center rounded-full bg-muted opacity-80"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></span>
+  <div class="flex flex-col gap-1 px-5 pt-5 pr-14 pb-1">
+    <p class="m-0 text-title font-semibold text-foreground">기프티콘 추가</p>
+    <p class="m-0 text-body text-muted-foreground">사진을 올리면 이름과 기한을 읽어드려요.</p>
+  </div>
+  <div class="flex flex-col gap-3 px-5 pt-2">
+    <span class="h-10 rounded-md border border-input bg-card"></span>
+    <span class="h-10 rounded-md border border-input bg-card"></span>
+    <button class="h-12 w-full rounded-lg bg-primary text-callout font-medium text-primary-foreground">저장하기</button>
+  </div>
+  <div class="h-3"></div>
+</div></div></div>
+    <div class="pv-col"><span class="pv-tag pv-new">SheetContent 기본값</span><div class="pv-note" style="margin-bottom:6px">pb-[var(--safe-bottom)] · 웹 24px, 안드로이드 앱은 실측값</div><div class="pv-stage" style="padding:0"><div class="relative w-full max-w-[360px] rounded-t-2xl border-t border-border bg-card">
+  <span class="absolute top-4 right-4 flex size-9 items-center justify-center rounded-full bg-muted opacity-80"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></span>
+  <div class="flex flex-col gap-1 px-5 pt-5 pr-14 pb-1">
+    <p class="m-0 text-title font-semibold text-foreground">기프티콘 추가</p>
+    <p class="m-0 text-body text-muted-foreground">사진을 올리면 이름과 기한을 읽어드려요.</p>
+  </div>
+  <div class="flex flex-col gap-3 px-5 pt-2">
+    <span class="h-10 rounded-md border border-input bg-card"></span>
+    <span class="h-10 rounded-md border border-input bg-card"></span>
+    <button class="h-12 w-full rounded-lg bg-primary text-callout font-medium text-primary-foreground">저장하기</button>
+  </div>
+  <div class="h-6 pt-4"><div class="h-full w-full bg-primary/10"></div></div>
+</div></div></div>
+  </div>
+</div>
+</div></body></html>

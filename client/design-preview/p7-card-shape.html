@@ -1,0 +1,244 @@
+<!doctype html>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>카드 형태 바꾸기</title>
+<script type="module" src="/src/index.css"></script>
+<style>
+  body { margin:0; background:var(--muted); font-family:Pretendard, system-ui, sans-serif;
+         color:var(--foreground); -webkit-font-smoothing:antialiased; }
+  .wrap { max-width:375px; margin:0 auto; padding:20px 16px 90px; }
+  h1 { font-size:22px; font-weight:800; margin:0 0 6px; letter-spacing:-.025em; }
+  .lede { font-size:13px; line-height:1.65; color:var(--muted-foreground); margin:0 0 16px; word-break:keep-all; }
+  .lede b { color:var(--foreground); }
+
+  .panel { position:sticky; top:0; z-index:5; background:var(--background); border:1px solid var(--border);
+           border-radius:14px; padding:12px 14px; margin-bottom:16px; box-shadow:0 6px 20px -12px rgb(0 0 0/.35); }
+  .panel > span { display:block; font-size:11px; font-weight:800; letter-spacing:.04em;
+                  color:var(--muted-foreground); margin-bottom:6px; }
+  .panel > span + span { margin-top:10px; padding-top:10px; border-top:1px dashed var(--border); }
+  .opts { display:flex; gap:6px; }
+  label.opt { flex:1; }
+  label.opt input { position:absolute; opacity:0; pointer-events:none; }
+  label.opt span { display:block; text-align:center; font-size:12px; font-weight:700; padding:7px 8px;
+                   border-radius:9px; border:1px solid var(--border); color:var(--muted-foreground); cursor:pointer; }
+  label.opt input:checked + span { background:var(--primary); border-color:var(--primary); color:var(--primary-foreground); }
+
+  /* ── 목록: 카드가 아니다. 흰 줄이 화면 끝까지 꽉 차고, 사이 8px 회색 띠만이 가른다.
+     테두리도 모서리 둥글림도 그림자도 없다. wrap 의 좌우 여백을 음수 마진으로 벗는다. ── */
+  ul.list { list-style:none; margin:0 -16px; padding:0; }
+  ul.list > li { background:var(--card); }
+  ul.list > li + li { margin-top:8px; }
+
+  /* 버튼 줄은 사진 아래까지 카드 전체 폭을 쓴다. 글 칸 안에 두면 사진에 눌려
+     '매장'이 두 줄로 접힌다. */
+  .card { display:flex; flex-direction:column; padding:14px 16px; }
+  .top { display:flex; gap:12px; }
+  .col { display:flex; min-width:0; flex:1; flex-direction:column; }
+
+  .brand { font-size:14px; line-height:1.2; font-weight:500; color:var(--muted-foreground);
+           overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .name { margin-top:6px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
+          overflow:hidden; font-size:16px; line-height:1.375; font-weight:600; word-break:keep-all; }
+  .facts { margin-top:10px; display:flex; flex-wrap:wrap; align-items:center; gap:var(--cg, 6px); }
+  /* 금액이 앞에 설 때는 기한 무리와 벌려 준다 — 붙어 있으면 한 값으로 읽힌다 */
+  .facts .lead { margin-right:2px; }
+  .dday { flex:0 0 auto; border-radius:999px; padding:2px 10px; font-size:12px; font-weight:700;
+          line-height:1.4; font-variant-numeric:tabular-nums; background:var(--destructive); color:#fff; }
+  .val { font-size:14px; line-height:1.5; font-weight:500; color:var(--muted-foreground);
+         font-variant-numeric:tabular-nums; }
+
+  /* 사진 — 오른쪽. 소유자는 그 모서리에 동그라미로 */
+  .thumbwrap { position:relative; flex:0 0 auto; align-self:flex-start; }
+  .thumb { display:flex; align-items:center; justify-content:center; overflow:hidden;
+           border-radius:var(--radius-lg); background:var(--accent);
+           width:var(--thumbW, 64px); height:var(--thumbH, 64px); }
+  .thumb.ghost { background:transparent; border:1px dashed var(--border); }
+  .thumb svg { width:24px; height:24px; color:color-mix(in oklab, var(--primary) 55%, transparent); }
+  .who { position:absolute; right:-4px; bottom:-4px; display:flex; align-items:center; justify-content:center;
+         width:24px; height:24px; border-radius:999px; font-size:12px; font-weight:700; color:#fff;
+         box-shadow:0 0 0 2px var(--card); }
+
+  /* 아래 줄 — 구분선 세 칸을 걷고 한 줄로 */
+  .acts { display:flex; align-items:center; gap:16px; margin-top:12px; }
+  .act { display:inline-flex; flex:0 0 auto; align-items:center; gap:5px; white-space:nowrap;
+         background:none; border:0; padding:0; font-size:14px; font-weight:600;
+         color:var(--muted-foreground); }
+  .act svg { width:17px; height:17px; flex:0 0 auto; }
+  .act.on { color:var(--primary); }
+  .act.done { margin-left:auto; color:var(--primary); }
+  .more { color:var(--muted-foreground); font-size:16px; letter-spacing:1px; }
+
+  .sec { margin:24px 0 8px; font-size:11px; font-weight:800; letter-spacing:.05em; color:var(--muted-foreground); }
+  table.t { width:100%; border-collapse:collapse; font-size:11.5px; margin-top:12px;
+            border:1px solid var(--border); border-radius:12px; overflow:hidden; background:var(--background); }
+  table.t th { text-align:left; font-size:10px; letter-spacing:.05em; font-weight:800;
+               color:var(--muted-foreground); background:var(--muted); padding:7px 9px; }
+  table.t td { padding:6px 9px; border-top:1px solid var(--border); vertical-align:top; }
+  table.t td:first-child { color:var(--muted-foreground); white-space:nowrap; }
+  .warn { color:var(--destructive-text); font-weight:700; }
+  .ok { color:var(--success-text); font-weight:700; }
+  .note { font-size:12px; line-height:1.65; color:var(--muted-foreground); margin:16px 0 0; word-break:keep-all; }
+  .note b { color:var(--foreground); }
+  code { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:11px; }
+  #selfcheck { display:none; position:fixed; inset:auto 0 0 0; z-index:99; background:var(--destructive);
+               color:#fff; font-size:12px; font-weight:700; padding:10px 14px; text-align:center; }
+</style>
+
+<div class="wrap">
+  <h1>카드 형태 바꾸기</h1>
+  <p class="lede">카드가 아니라 <b>흰 줄</b>이다. 화면 끝까지 꽉 차고, 가르는 것은 사이 8px 회색 띠 하나다 —
+    테두리도 모서리 둥글림도 그림자도 없다. <b>사진이 오른쪽</b>, 소유자는 사진
+    모서리 동그라미, <b>D-day 는 셋째 줄 칩</b>으로 돌아오고, 아래 버튼은 칸을 걷고 한 줄이
+    된다. 카드 사이는 <b>8px 회색 띠</b>다.</p>
+
+  <div class="panel">
+    <span>사진 크기</span>
+    <div class="opts">
+      <label class="opt"><input type="radio" name="t" value="64" checked><span>64 정사각</span></label>
+      <label class="opt"><input type="radio" name="t" value="72"><span>72 정사각</span></label>
+      <label class="opt"><input type="radio" name="t" value="p"><span>72×88 세로</span></label>
+    </div>
+    <span>사진 자리</span>
+    <div class="opts">
+      <label class="opt"><input type="radio" name="s" value="r" checked><span>오른쪽 · 안</span></label>
+      <label class="opt"><input type="radio" name="s" value="l"><span>왼쪽 · 지금</span></label>
+    </div>
+    <span>셋째 줄 차례 — D-3 은 기한을 말하는 값이다</span>
+    <div class="opts">
+      <label class="opt"><input type="radio" name="o" value="a"><span>D · 금액 · 기한</span></label>
+      <label class="opt"><input type="radio" name="o" value="b" checked><span>D · 기한 · 금액</span></label>
+      <label class="opt"><input type="radio" name="o" value="c"><span>금액 · D · 기한</span></label>
+    </div>
+    <span>칩 ↔ 글 사이</span>
+    <div class="opts">
+      <label class="opt"><input type="radio" name="cg" value="4"><span>4</span></label>
+      <label class="opt"><input type="radio" name="cg" value="6" checked><span>6</span></label>
+      <label class="opt"><input type="radio" name="cg" value="8"><span>8</span></label>
+    </div>
+  </div>
+
+  <ul class="list" id="stage"></ul>
+
+  <div class="sec">스케일 밖으로 나가는 값</div>
+  <table class="t">
+    <tr><th>자리</th><th>안</th><th>가까운 토큰</th></tr>
+    <tbody id="gaps"></tbody>
+  </table>
+
+  <p class="note" id="tail"></p>
+</div>
+
+<div id="selfcheck"></div>
+
+<script>
+const I = {
+  pin: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>',
+  heart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.5-1.5 3-3.4 3-5.5A5.5 5.5 0 0 0 12 5.5 5.5 5.5 0 0 0 2 8.5c0 2.1 1.5 4 3 5.5l7 7Z"/></svg>',
+  heartOn: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 14c1.5-1.5 3-3.4 3-5.5A5.5 5.5 0 0 0 12 5.5 5.5 5.5 0 0 0 2 8.5c0 2.1 1.5 4 3 5.5l7 7Z"/></svg>',
+  check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m9 12 2 2 4-4"/></svg>',
+  ticket: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v14"/></svg>',
+};
+
+const CARDS = [
+  { brand:'스타벅스', name:'카페 아메리카노 T 2잔 + 딸기 생크림 케이크',
+    dday:'D-3', amt:'32,000원', date:'8월 31일까지', who:'태', hue:'var(--primary)', liked:0 },
+  { brand:'파리바게뜨', name:'부드러운 생크림 카스텔라',
+    dday:null, amt:'7,500원', date:'2027년 1월 15일까지', who:'엽', hue:'#d64c86', liked:0 },
+  { brand:'배스킨라빈스', name:'파인트 아이스크림',
+    dday:'D-6', amt:'8,900원', date:'9월 3일까지', who:'태', hue:'var(--primary)', liked:1 },
+];
+
+document.getElementById('stage').innerHTML = CARDS.map(c => `
+  <li><div class="card">
+    <div class="top">
+    <div class="col">
+      <span class="brand">${c.brand}</span>
+      <span class="name">${c.name}</span>
+      <div class="facts" data-amt="${c.amt}" data-date="${c.date}" data-dday="${c.dday || ''}"></div>
+    </div>
+    <div class="thumbwrap">
+      <span class="thumb">${I.ticket}</span>
+      <span class="who" style="background:${c.hue}">${c.who}</span>
+    </div>
+    </div>
+    <div class="acts">
+      <button class="act">${I.pin}매장</button>
+      <button class="act ${c.liked ? 'on' : ''}">${c.liked ? I.heartOn : I.heart}${c.liked ? '찜함' : '찜하기'}</button>
+      <button class="act more">···</button>
+      <button class="act done">${I.check}사용완료</button>
+    </div>
+  </div></li>`).join('');
+
+const GAPS = [
+  ['카드 패딩', '14 × 16', 'p-3 12 / p-4 16', 1],
+  ['브랜드', '14 · medium', 'text-body 14', 0],
+  ['상품명', '16 · semibold', 'text-callout 16', 0],
+  ['브랜드↔상품명', '6', 'tight 8 / micro 4', 1],
+  ['상품명↔사실줄', '10', 'related 12', 1],
+  ['사실줄↔버튼줄', '12', 'related 12', 0],
+  ['D-day 칩', 'caption 12 · px-2.5 py-0.5', 'caption · px-2 py-0.5', 1],
+  ['금액·기한', 'text-body 14', 'text-body 14', 0],
+  ['버튼 글자', 'text-body 14', 'text-body 14', 0],
+  ['버튼 아이콘', '17', 'size-4 16', 1],
+  ['버튼 사이', '16', 'section 24 / related 12', 1],
+  ['소유자 원', '24 · caption 12', 'size-6 24 · caption', 0],
+  ['카드 사이 띠', '8', 'tight 8', 0],
+  ['줄 모서리', '없음', '— 테두리도 없음', 0],
+];
+document.getElementById('gaps').innerHTML = GAPS.map(([a, b, c, off]) =>
+  `<tr><td>${a}</td><td class="${off ? 'warn' : 'ok'}">${b}</td><td>${c}</td></tr>`).join('');
+
+// D-3 과 '8월 31일까지'는 같은 사실이다. 그 사이에 금액이 끼면 한 덩이로 안 읽힌다.
+const ORDER = {
+  a: (d, a, t) => `${d}<span class="val">${a} · ${t}</span>`,
+  b: (d, a, t) => `${d}<span class="val">${t} · ${a}</span>`,
+  c: (d, a, t) => `<span class="val lead">${a} ·</span>${d}<span class="val">${t}</span>`,
+};
+
+const apply = () => {
+  const o = document.querySelector('input[name="o"]:checked').value;
+  document.querySelector('.wrap').style.setProperty(
+    '--cg', document.querySelector('input[name="cg"]:checked').value + 'px');
+  document.querySelectorAll('.facts').forEach(f => {
+    const dd = f.dataset.dday ? `<span class="dday">${f.dataset.dday}</span>` : '';
+    f.innerHTML = ORDER[o](dd, f.dataset.amt, f.dataset.date);
+  });
+  const t = document.querySelector('input[name="t"]:checked').value;
+  const w = document.querySelector('.wrap');
+  w.style.setProperty('--thumbW', t === 'p' ? '72px' : t + 'px');
+  w.style.setProperty('--thumbH', t === 'p' ? '88px' : t + 'px');
+  const right = document.querySelector('input[name="s"]:checked').value === 'r';
+  document.querySelectorAll('.top').forEach(c => { c.style.flexDirection = right ? 'row' : 'row-reverse'; });
+  document.querySelectorAll('.who').forEach(e => {
+    e.style.right = right ? '-4px' : 'auto'; e.style.left = right ? 'auto' : '-4px';
+  });
+  const off = GAPS.filter(g => g[3]).length;
+  document.getElementById('tail').innerHTML =
+    `<b>스케일 밖이 ${off}곳이다.</b> 대부분 1~2px 차이라 토큰으로 당겨도 모양이 거의 안 변한다. ` +
+    `다만 <b>버튼 사이 16</b>은 간격 스케일(4·8·12·24)에 없는 값이라 12 나 24 중 하나를 골라야 하고, ` +
+    `<b>카드 패딩 14×16</b>도 위아래와 좌우를 다르게 줄지 정해야 한다.`;
+};
+document.querySelectorAll('input').forEach(i => i.addEventListener('change', apply));
+apply();
+
+addEventListener('load', () => setTimeout(() => {
+  const bad = [];
+  if (getComputedStyle(document.body).backgroundColor === 'rgba(0, 0, 0, 0)') bad.push('index.css 미로드');
+  const th = document.querySelector('.thumb');
+  if (parseFloat(getComputedStyle(th).borderRadius) !== 14) bad.push('--radius-lg 가 14가 아니다');
+  const row = document.querySelector('.list > li');
+  if (parseFloat(getComputedStyle(row).borderRadius) !== 0) bad.push('줄 모서리가 둥글다');
+  if (Math.round(row.getBoundingClientRect().width) !== 375) bad.push('줄이 화면 끝까지 안 찬다: ' + row.getBoundingClientRect().width.toFixed(0));
+  const li = document.querySelectorAll('.list > li');
+  const band = li[1].getBoundingClientRect().top - li[0].getBoundingClientRect().bottom;
+  if (Math.round(band) !== 8) bad.push('카드 사이 띠가 8px 이 아니다: ' + band.toFixed(1));
+  for (const a of document.querySelectorAll('.acts')) {
+    if (a.getBoundingClientRect().height > 26) { bad.push('버튼 줄이 접혔다'); break; }
+  }
+  if (bad.length) {
+    const el = document.getElementById('selfcheck');
+    el.textContent = '시안이 실제와 다르다: ' + bad.join(' · ');
+    el.style.display = 'block';
+  }
+}, 250));
+</script>

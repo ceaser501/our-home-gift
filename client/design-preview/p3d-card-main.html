@@ -1,0 +1,229 @@
+<!doctype html>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>main 카드 세 줄</title>
+<script type="module" src="/src/index.css"></script>
+<style>
+  body { margin:0; background:var(--muted); font-family:Pretendard, system-ui, sans-serif;
+         color:var(--foreground); -webkit-font-smoothing:antialiased; }
+  .wrap { max-width:375px; margin:0 auto; padding:20px 16px 80px; }
+  /* 실제 폭으로 못 박는다. 이름이 몇 줄로 접히는지가 폭에 걸려 있어서,
+     넓게 그리면 두 줄짜리가 한 줄로 보인다 — 목록에서 제일 흔한 모양을 못 보게 된다.
+     App 은 max-w-[480px] 에 px-4 라 375 화면에서 카드가 343 이다. */
+  h1 { font-size:22px; font-weight:800; margin:0 0 6px; letter-spacing:-.02em; }
+  .lede { font-size:13px; line-height:1.65; color:var(--muted-foreground); margin:0 0 20px; word-break:keep-all; }
+  .lede b { color:var(--foreground); }
+  .panel { position:sticky; top:0; z-index:5; background:var(--background); border:1px solid var(--border);
+           border-radius:14px; padding:12px 14px; margin-bottom:18px; box-shadow:0 6px 20px -12px rgb(0 0 0/.35); }
+  .ctl + .ctl { margin-top:10px; padding-top:10px; border-top:1px dashed var(--border); }
+  .ctl > span { display:block; font-size:11px; font-weight:800; letter-spacing:.04em;
+                color:var(--muted-foreground); margin-bottom:6px; }
+  .opts { display:flex; gap:6px; flex-wrap:wrap; }
+  label.opt { flex:1 1 auto; }
+  label.opt input { position:absolute; opacity:0; pointer-events:none; }
+  label.opt span { display:block; text-align:center; font-size:12px; font-weight:700; padding:7px 8px;
+                   border-radius:9px; border:1px solid var(--border); color:var(--muted-foreground);
+                   cursor:pointer; white-space:nowrap; }
+  label.opt input:checked + span { background:var(--primary); border-color:var(--primary); color:var(--primary-foreground); }
+
+  .caseLbl { font-size:11px; font-weight:800; letter-spacing:.04em; color:var(--muted-foreground);
+             margin:18px 0 7px; }
+
+  /* ── main 의 카드 값 그대로 ── */
+  .card { position:relative; overflow:hidden; border-radius:16px; border:1px solid var(--border); background:var(--card); }
+  .card + .card { margin-top:14px; } /* GifticonList 의 gap-3.5 */
+  .body { position:relative; display:flex; gap:12px; padding:13px;
+          align-items:var(--valign, stretch); }
+  .thumbwrap { position:relative; flex:0 0 auto; }
+  .thumb { display:flex; width:62px; height:62px; align-items:center; justify-content:center;
+           overflow:hidden; border-radius:12px; background:var(--accent); }
+  .thumb svg { width:24px; height:24px; color:color-mix(in oklab, var(--primary) 55%, transparent); }
+  .dday { position:absolute; top:-6px; left:-6px; border-radius:999px; padding:1px 7px;
+          font-size:11px; font-weight:700; font-variant-numeric:tabular-nums; line-height:1.4;
+          box-shadow:0 0 0 2px var(--card);
+          background:var(--destructive); color:#fff; }
+  .dday.calm { background:color-mix(in oklab, var(--foreground) 80%, transparent); color:var(--background); }
+  .col { position:relative; display:flex; min-width:0; flex:1; flex-direction:column; }
+
+  .l1 { display:flex; align-items:center; gap:6px; }
+  .l1 i { width:6px; height:6px; border-radius:999px; background:var(--primary); flex:0 0 auto; }
+  .l1 span { min-width:0; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+             font-size:12px; line-height:1.333; font-weight:500; color:var(--muted-foreground); }
+  .l2 { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
+        font-size:15.5px; line-height:1.375; letter-spacing:-.018em; font-weight:600;
+        word-break:keep-all; margin-top:var(--g1, 8px); }
+  .l3 { display:flex; flex-wrap:wrap; align-items:center; column-gap:8px; row-gap:2px;
+        margin-top:var(--g2, 0px); }
+  .date { font-size:14.5px; font-weight:600; white-space:nowrap; font-variant-numeric:tabular-nums;
+          line-height:var(--lh, 1.5); color:var(--destructive-text); }
+  .bar  { width:1px; height:12px; flex:0 0 auto; background:var(--border); }
+  .amt  { font-size:15px; font-weight:700; font-variant-numeric:tabular-nums;
+          line-height:var(--lh, 1.5); }
+
+  .showbox .l1 span, .showbox .l2, .showbox .date, .showbox .amt {
+    background:color-mix(in oklab, var(--primary) 10%, transparent);
+    box-shadow:inset 0 0 0 1px color-mix(in oklab, var(--primary) 22%, transparent); }
+  .showbox .thumb { outline:1px dashed color-mix(in oklab, var(--primary) 40%, transparent); outline-offset:2px; }
+
+  .acts { display:flex; border-top:1px solid var(--border); }
+  .acts button { flex:1; padding:0; height:44px; font-size:13px; font-weight:600;
+                 background:none; border:0; color:var(--foreground); }
+  .acts button + button { border-left:1px solid var(--border); }
+
+  .read { margin-top:16px; border:1px solid var(--border); border-radius:12px;
+          background:var(--background); overflow:hidden; }
+  .read table { width:100%; border-collapse:collapse; font-size:12px; }
+  .read th { text-align:left; font-weight:800; color:var(--muted-foreground); font-size:10px;
+             letter-spacing:.05em; padding:8px 12px; background:var(--muted); }
+  .read td { padding:8px 12px; border-top:1px solid var(--border); font-variant-numeric:tabular-nums; }
+  .read td:first-child { color:var(--muted-foreground); }
+  .read td.v { text-align:right; font-weight:800; }
+  .read td.v i { font-style:normal; font-weight:500; color:var(--muted-foreground); }
+  .note { font-size:12px; line-height:1.65; color:var(--muted-foreground); margin:16px 0 0; word-break:keep-all; }
+  .note b { color:var(--foreground); }
+  #selfcheck { display:none; position:fixed; inset:auto 0 0 0; z-index:99; background:var(--destructive);
+               color:#fff; font-size:12px; font-weight:700; padding:10px 14px; text-align:center; }
+</style>
+
+<div class="wrap">
+  <h1>main 의 카드로 다시</h1>
+  <p class="lede">D-day 는 썸네일 왼쪽 위 모서리, 셋째 줄은 <b>기한 | 금액</b> 한 줄이다.
+    그러니 "상품명 ↔ 금액"은 <b>상품명 ↔ 기한줄</b> 간격이다.
+    치수는 main 그대로 — 카드 폭 343, 썸네일 62, 패딩 13, 칸 사이 12, 카드 사이 14.</p>
+
+  <div class="panel">
+    <div class="ctl"><span>① 메타 ↔ 상품명</span><div class="opts" id="c1"></div></div>
+    <div class="ctl"><span>② 상품명 ↔ 기한줄</span><div class="opts" id="c2"></div></div>
+    <div class="ctl"><span>기한·금액 행간</span>
+      <div class="opts">
+        <label class="opt"><input type="radio" name="lh" value="1.5" checked><span>1.5 → ②는 0</span></label>
+        <label class="opt"><input type="radio" name="lh" value="1.2"><span>1.2 → ②는 2</span></label>
+      </div></div>
+    <div class="ctl"><span>사진과 글의 세로 맞춤 <b style="color:var(--primary)">— 위 맞춤으로 정함</b></span>
+      <div class="opts">
+        <label class="opt"><input type="radio" name="va" value="stretch" checked><span>위 맞춤 · 정함</span></label>
+        <label class="opt"><input type="radio" name="va" value="center"><span>가운데</span></label>
+      </div></div>
+    <div class="ctl"><span>line-box 보기</span>
+      <div class="opts">
+        <label class="opt"><input type="radio" name="bx" value="0" checked><span>끄기</span></label>
+        <label class="opt"><input type="radio" name="bx" value="1"><span>켜기</span></label>
+      </div></div>
+  </div>
+
+  <div id="stage"></div>
+
+  <div class="read">
+    <table>
+      <tr><th>자리</th><th style="text-align:right">적은 값 → 보이는 틈</th></tr>
+      <tr><td>메타 ↔ 상품명</td><td class="v" id="r1"></td></tr>
+      <tr><td>상품명 ↔ 기한줄</td><td class="v" id="r2"></td></tr>
+      <tr><td>카드 윗여백 <i>(잉크까지)</i></td><td class="v" id="r5"></td></tr>
+      <tr><td>카드 아랫여백 <i>(잉크까지)</i></td><td class="v" id="r6"></td></tr>
+      <tr><td>글 칸 높이 <i>(한 줄 이름)</i></td><td class="v" id="r3"></td></tr>
+      <tr><td>글 칸 높이 <i>(두 줄 이름)</i></td><td class="v" id="r4"></td></tr>
+    </table>
+  </div>
+
+  <p class="note"><b>두 안의 간격은 같다.</b> 1.5·0 은 6.9, 1.2·2 는 6.7 — 눈으로 못 가른다.
+    다른 것은 <b>카드 아랫여백</b>이다. 1.5 는 기한줄 아래에 행간이 남긴 빈 칸 4px 이 그대로
+    붙어서 아래가 위보다 2px 두껍다. 1.2 는 위아래가 맞는다. 그 2px 을 위해 14px 에
+    촘촘한 짝을 하나 더 만들 값어치가 있는지가 고를 거리다.</p>
+
+  <p class="note"><b>사진은 위 맞춤 — 지금 main 그대로 둔다.</b> 가운데로 내리면 이름이 한 줄이냐
+    두 줄이냐에 따라 사진이 카드마다 다른 높이에 앉는다. 그러면 왼쪽 모서리의 D-day 도 같이
+    흔들려서, 목록을 내릴 때 D-day 가 왼쪽에 세로로 줄맞춰 보이게 하려던 자리 옮김이 헛일이 된다.
+    라디오는 확인용으로 남겨둔다.</p>
+</div>
+
+<div id="selfcheck"></div>
+
+<script>
+const STEPS = [0, 2, 4, 6, 8, 12];
+for (const [id, name, def] of [['c1','g1',8], ['c2','g2',0]]) {
+  document.getElementById(id).innerHTML = STEPS.map(v =>
+    `<label class="opt"><input type="radio" name="${name}" value="${v}"${v===def?' checked':''}><span>${v}</span></label>`
+  ).join('');
+}
+
+const TICKET = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+  stroke-linecap="round" stroke-linejoin="round"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v14"/></svg>`;
+
+function card(name, amount, calm) {
+  return `<div class="card"><div class="body">
+    <div class="thumbwrap"><span class="thumb">${TICKET}</span><span class="dday${calm ? ' calm' : ''}">${calm ? 'D-25' : 'D-3'}</span></div>
+    <div class="col">
+      <div class="l1"><i></i><span>태수 · 스타벅스</span></div>
+      <div class="l2">${name}</div>
+      <div class="l3"><span class="date">26.08.31까지</span>${
+        amount ? `<span class="bar"></span><span class="amt">${amount}</span>` : ''
+      }</div>
+    </div>
+  </div>
+  <div class="acts"><button>매장</button><button>찜하기</button><button>사용완료</button></div></div>`;
+}
+
+document.getElementById('stage').innerHTML =
+  `<div class="caseLbl">이름 한 줄</div>` + card('아이스 아메리카노 T', '9,000원') +
+  `<div class="caseLbl">이름 두 줄 — 목록에는 이게 더 많다</div>` +
+  card('카페 아메리카노 T 2잔 + 딸기 생크림 케이크', '32,000원') +
+  `<div class="caseLbl">금액 없음 · 기한 넉넉</div>` + card('부드러운 생크림 카스텔라', null, true);
+
+const val = n => document.querySelector(`input[name="${n}"]:checked`).value;
+const wrap = document.querySelector('.wrap');
+let lastLh = '1.5';
+
+function apply() {
+  const lh = val('lh');
+  // 행간을 바꾸면 ② 의 짝도 같이 옮긴다 — 1.5 면 0, 1.2 면 2 로 정한 것이라
+  if (lh !== lastLh) {
+    const want = lh === '1.5' ? '0' : '2';
+    const el = document.querySelector(`input[name="g2"][value="${want}"]`);
+    if (el) el.checked = true;
+    lastLh = lh;
+  }
+  const g1 = +val('g1'), g2 = +val('g2');
+  wrap.style.setProperty('--g1', g1 + 'px');
+  wrap.style.setProperty('--g2', g2 + 'px');
+  wrap.style.setProperty('--lh', lh);
+  wrap.style.setProperty('--valign', val('va'));
+  document.body.classList.toggle('showbox', val('bx') === '1');
+
+  const half = (size, l) => (size * l - size) / 2;
+  const h1 = half(12, 1.333), h2 = half(15.5, 1.375), h3 = half(14.5, +lh);
+  const r = s => document.querySelector(s).getBoundingClientRect();
+  const l1r = r('.l1 span'), l2r = r('.l2'), dtr = r('.date');
+  const fmt = (id, g, v) => {
+    document.getElementById(id).innerHTML = `${g} <i>→</i> ${v.toFixed(1)}px`;
+  };
+  fmt('r1', g1, (l2r.top + h2) - (l1r.bottom - h1));
+  fmt('r2', g2, (dtr.top + h3) - (l2r.bottom - h2));
+
+  // 여백은 글자 상자가 아니라 잉크까지 잰다. 행간이 남긴 빈 칸은 눈에 여백으로 보인다.
+  const b = r('.body');
+  const top = l1r.top + h1 - b.top;
+  const bot = b.bottom - (dtr.bottom - h3);
+  document.getElementById('r5').innerHTML = `${top.toFixed(1)}px`;
+  document.getElementById('r6').innerHTML =
+    `${bot.toFixed(1)}px${Math.abs(bot - top) > 1 ? ` <i>· 위보다 ${(bot - top).toFixed(1)} 두껍다</i>` : ' <i>· 위와 같다</i>'}`;
+
+  const cols = document.querySelectorAll('.col');
+  document.getElementById('r3').innerHTML = `${cols[0].getBoundingClientRect().height.toFixed(1)}px <i>vs 사진 62</i>`;
+  document.getElementById('r4').innerHTML = `${cols[1].getBoundingClientRect().height.toFixed(1)}px <i>vs 사진 62</i>`;
+}
+document.querySelectorAll('input').forEach(i => i.addEventListener('change', apply));
+apply();
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(apply);
+
+addEventListener('load', () => setTimeout(() => {
+  const bad = [];
+  if (getComputedStyle(document.body).backgroundColor === 'rgba(0, 0, 0, 0)') bad.push('index.css 미로드');
+  const n = document.querySelector('.l2');
+  if (Math.round(parseFloat(getComputedStyle(n).lineHeight)) !== 21) bad.push('상품명 행간 이상');
+  if (bad.length) {
+    const el = document.getElementById('selfcheck');
+    el.textContent = '시안이 실제와 다르다: ' + bad.join(' · ');
+    el.style.display = 'block';
+  }
+}, 200));
+</script>

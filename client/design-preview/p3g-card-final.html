@@ -1,0 +1,313 @@
+<!doctype html>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>카드 위계 확정안</title>
+<script type="module" src="/src/index.css"></script>
+<style>
+  body { margin:0; background:var(--muted); font-family:Pretendard, system-ui, sans-serif;
+         color:var(--foreground); -webkit-font-smoothing:antialiased; }
+  .wrap { max-width:375px; margin:0 auto; padding:20px 16px 80px; }
+  h1 { font-size:22px; font-weight:800; margin:0 0 6px; letter-spacing:-.02em; }
+  .lede { font-size:13px; line-height:1.65; color:var(--muted-foreground); margin:0 0 14px; word-break:keep-all; }
+  .lede b { color:var(--foreground); }
+  .spec { display:grid; grid-template-columns:auto 1fr; gap:4px 10px; font-size:12px;
+          background:var(--background); border:1px solid var(--border); border-radius:12px;
+          padding:11px 13px; margin-bottom:18px; }
+  .spec dt { font-weight:800; color:var(--muted-foreground); white-space:nowrap; }
+  .spec dd { margin:0; color:var(--foreground); }
+
+  .panel { position:sticky; top:0; z-index:5; background:var(--background); border:1px solid var(--border);
+           border-radius:14px; padding:12px 14px; margin-bottom:16px; box-shadow:0 6px 20px -12px rgb(0 0 0/.35); }
+  .panel > span { display:block; font-size:11px; font-weight:800; letter-spacing:.04em;
+                  color:var(--muted-foreground); margin-bottom:6px; }
+  .opts { display:flex; gap:6px; }
+  label.opt { flex:1; }
+  label.opt input { position:absolute; opacity:0; pointer-events:none; }
+  label.opt span { display:block; text-align:center; font-size:12px; font-weight:700; padding:7px 8px;
+                   border-radius:9px; border:1px solid var(--border); color:var(--muted-foreground); cursor:pointer; }
+  label.opt input:checked + span { background:var(--primary); border-color:var(--primary); color:var(--primary-foreground); }
+
+  #stage li { list-style:none; }
+  #stage li + .cap { margin-top:20px; }
+  .card { position:relative; overflow:hidden; border:1px solid var(--border); background:var(--card);
+          border-radius:16px; }
+  .card.locked { background:color-mix(in oklab, var(--muted) 40%, var(--card)); border-color:color-mix(in oklab, var(--border) 60%, transparent); }
+  .body { position:relative; display:flex; gap:12px; padding:12px; }
+  .thumbwrap { position:relative; flex:0 0 auto; }
+  .thumb { position:relative; display:flex; width:64px; height:64px; align-items:center; justify-content:center;
+           overflow:hidden; border-radius:var(--radius-lg); background:var(--accent); }
+  .thumb svg { width:24px; height:24px; color:color-mix(in oklab, var(--primary) 55%, transparent); }
+  .thumb .veil { position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+                 background:rgb(0 0 0/.45); color:#fff; font-size:12px; font-weight:700; }
+  .dday { position:absolute; top:-6px; left:-6px; border-radius:999px; padding:2px 8px; font-size:12px;
+          font-weight:700; font-variant-numeric:tabular-nums; line-height:1.2;
+          box-shadow:0 0 0 2px var(--card); background:var(--destructive); color:#fff; }
+  .dday.calm { background:color-mix(in oklab, var(--foreground) 80%, transparent); color:var(--background); }
+  .col { position:relative; display:flex; min-width:0; flex:1; flex-direction:column; }
+
+  .l1 { display:flex; align-items:center; gap:6px; }
+  .l1 i { width:6px; height:6px; border-radius:999px; background:var(--primary); flex:0 0 auto; }
+  .l1 span { min-width:0; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+             font-size:12px; line-height:1.2; font-weight:500; color:var(--muted-foreground); }
+  .l2 { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
+        line-height:1.375; letter-spacing:-.02em; word-break:keep-all; margin-top:8px; }
+  .l3 { display:flex; flex-wrap:wrap; align-items:center; column-gap:8px; row-gap:2px;
+        margin-top:var(--g3, 0px); }
+  /* 칩은 테두리와 패딩이 글자보다 위로 올라와서, 같은 값을 줘도 더 붙어 보인다 */
+  .chip .l3.haschip { margin-top:var(--g3c, 6px); }
+  .date { white-space:nowrap; font-variant-numeric:tabular-nums; line-height:1.5; }
+  .bar { width:1px; height:12px; flex:0 0 auto; background:var(--border); }
+  .amt { font-variant-numeric:tabular-nums; line-height:1.5; }
+  .amt small { font-size:12px; font-weight:500; color:var(--muted-foreground); margin-left:2px; }
+  /* 지금 — 점선 칩 */
+  .chip .noexp { align-self:flex-start; border:1px dashed var(--input, var(--border)); border-radius:999px;
+                 padding:2px 10px; font-weight:700; color:var(--muted-foreground); white-space:nowrap; }
+  /* 글자 — 줄의 나머지와 같은 꼴 */
+  .plain .noexp { font-weight:var(--rowW, 600); color:var(--muted-foreground); white-space:nowrap; }
+  /* 옅게 · 굵기로 — 색은 그대로 두고 굵기만 낮춘다. 대비를 안 잃는 유일한 길이다.
+     muted-foreground 가 4.65:1 로 이미 바닥이라 그보다 옅으면서 4.5 를 넘는 색이 없다. */
+  .thin .noexp { font-weight:400; color:var(--muted-foreground); white-space:nowrap; }
+  /* 옅게 · 색으로 — text-disabled. 3.48:1 이라 4.5 에 못 미친다.
+     토큰 주석에도 "비활성 텍스트 전용"이라 적혀 있는데 이건 읽어야 하는 값이다. */
+  .faint .noexp { font-weight:var(--rowW, 600); color:var(--text-disabled); white-space:nowrap; }
+  /* 글자 · warning — 채워 넣어야 할 일이라고 말한다 */
+  .warn .noexp { font-weight:var(--rowW, 600); color:var(--warning-text); white-space:nowrap; }
+  .acts { display:flex; border-top:1px solid var(--border); }
+  .acts button { flex:1; height:44px; background:none; border:0; color:var(--foreground);
+                 font-weight:600; font-size:14px; }
+  .acts button + button { border-left:1px solid var(--border); }
+
+  /* ── 정한 것 ── */
+  .tok .l2   { font-size:16px; font-weight:600; color:var(--foreground); }
+  .tok .date { font-size:14px; font-weight:var(--rowW, 600); }
+  .tok .amt  { font-size:14px; font-weight:var(--rowW, 600); color:var(--amtC, var(--muted-foreground-strong)); }
+  .tok .noexp{ font-size:14px; }
+  .now .noexp{ font-size:13px; }
+  /* ── 견줌 — main 그대로 ── */
+  .now .l2   { font-size:15.5px; font-weight:600; color:var(--foreground); letter-spacing:-.018em; }
+  .now .date { font-size:14.5px; font-weight:600; }
+  .now .amt  { font-size:15px; font-weight:700; color:var(--foreground); }
+  .now .noexp{ font-size:13px; }
+
+  .urgent .date { color:var(--destructive-text); }
+  .calm   .date { color:var(--muted-foreground); }
+  .locked .l2, .locked .amt { color:var(--muted-foreground); font-weight:500; }
+
+  .cap { font-size:11px; font-weight:800; letter-spacing:.04em; color:var(--muted-foreground);
+         margin:20px 0 6px; }
+  #stage > .cap:first-child { margin-top:0; }
+  .note { font-size:12px; line-height:1.65; color:var(--muted-foreground); margin:22px 0 0; word-break:keep-all; }
+  .note b { color:var(--foreground); }
+  #selfcheck { display:none; position:fixed; inset:auto 0 0 0; z-index:99; background:var(--destructive);
+               color:#fff; font-size:12px; font-weight:700; padding:10px 14px; text-align:center; }
+</style>
+
+<div class="wrap">
+  <h1>크기는 하나만, 나머지는 색과 굵기로</h1>
+  <p class="lede">상품명만 크게 세우고, 기한과 금액은 <b>14 로 내리되 다른 것으로 튀게</b> 한다.
+    색이 세 단으로 선다 — 상품명 16.07:1, 금액 6.56:1, 기한 4.65:1. 넷 다 4.5 를 넘는다.</p>
+  <dl class="spec">
+    <dt>상품명</dt><dd>16 · semibold · <code style="font-size:11px">foreground</code> — 주인공</dd>
+    <dt>기한</dt><dd>14 · semibold · <b style="color:var(--destructive-text)">빨강</b>(긴급) / 회색 — 긴급</dd>
+    <dt>금액</dt><dd>14 · 기한과 <b>같은 굵기·같은 색</b> — 참고</dd>
+    <dt>기한 없음</dt><dd>글자 · <code style="font-size:11px">warning-text</code> 5.04:1</dd>
+  </dl>
+
+  <div class="panel">
+    <span>기한·금액 굵기 — 한 줄이라 같이 간다</span>
+    <div class="opts">
+      <label class="opt"><input type="radio" name="w" value="500"><span>medium 500</span></label>
+      <label class="opt"><input type="radio" name="w" value="600" checked><span>semibold 600</span></label>
+      <label class="opt"><input type="radio" name="w" value="700"><span>bold 700</span></label>
+    </div>
+    <span style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--border)">금액 색 — 이제 둘을 가르는 건 이것뿐</span>
+    <div class="opts">
+      <label class="opt"><input type="radio" name="ac" value="var(--muted-foreground)" checked><span>기한과 같게</span></label>
+      <label class="opt"><input type="radio" name="ac" value="var(--muted-foreground-strong)"><span>한 단 진하게</span></label>
+      <label class="opt"><input type="radio" name="ac" value="var(--foreground)"><span>진한색</span></label>
+    </div>
+    <span style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--border)">상품명 ↔ 셋째 줄
+      <b id="gapRead" style="float:right;font-weight:700;color:var(--foreground)"></b></span>
+    <div class="opts" id="gapOpts"></div>
+    <span style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--border)">기한 없음을 어떻게 적나</span>
+    <p id="noexpWarn" style="display:none;margin:0 0 6px;font-size:11px;font-weight:700;color:var(--destructive-text)"></p>
+    <div class="opts">
+      <label class="opt"><input type="radio" name="n" value="chip"><span>칩</span></label>
+      <label class="opt"><input type="radio" name="n" value="plain"><span>글자</span></label>
+      <label class="opt"><input type="radio" name="n" value="thin"><span>굵기↓</span></label>
+      <label class="opt"><input type="radio" name="n" value="faint"><span>색↓</span></label>
+      <label class="opt"><input type="radio" name="n" value="warn" checked><span>warn</span></label>
+    </div>
+    <div id="gcBlock">
+      <span style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--border);display:block;font-size:11px;font-weight:800;letter-spacing:.04em;color:var(--muted-foreground);margin-bottom:6px">└ 칩일 때만 벌리기
+        <b id="gapReadC" style="float:right;font-weight:700;color:var(--foreground)"></b></span>
+      <div class="opts" id="gapOptsC"></div>
+    </div>
+    <span style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--border)">셋째 줄 차례</span>
+    <div class="opts">
+      <label class="opt"><input type="radio" name="o" value="de"><span>기한 → 금액</span></label>
+      <label class="opt"><input type="radio" name="o" value="ed" checked><span>금액 → 기한</span></label>
+    </div>
+    <span style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--border)">견주기</span>
+    <div class="opts">
+      <label class="opt"><input type="radio" name="v" value="tok" checked><span>정한 것</span></label>
+      <label class="opt"><input type="radio" name="v" value="now"><span>지금 main</span></label>
+    </div>
+  </div>
+
+  <div id="stage"></div>
+
+  <p class="note"><b>셋째 카드가 여태 안 그리던 경우다</b> — 기한은 없고 금액은 있다.
+    <code style="font-size:11px">유효기한 미입력</code> 점선 칩 옆에 세로선과 금액이 붙는다.
+    있고 없고의 네 조합을 다 세웠다.</p>
+
+  <p class="note"><b>차례를 바꾸면 잃는 것이 있다.</b> 지금 기한이 앞인 까닭은 카드마다
+    자리가 같아야 해서다 — main 주석에 <b>"예전에는 금액이 있으면 기한이 한 칸 밀려서
+    카드마다 자리가 달랐다. 훑을 때 눈이 매번 기한을 다시 찾아야 했다"</b>고 적혀 있다.
+    기한이 없는 카드도 점선 칩이 그 자리를 채워서 첫 칸은 늘 찬다.<br><br>
+    금액을 앞에 두면 <b>넷째 카드</b>(금액 없음)에서 기한이 왼쪽 끝으로 당겨져, 다른
+    카드의 금액과 같은 자리에 선다. 그 어긋남을 보려면 라디오를 옮겨 넷째와 첫째를 나란히
+    보면 된다.</p>
+
+  <p class="note"><b>굵기를 맞추면 둘을 가르는 것은 색 하나만 남는다.</b> 그런데 지금
+    배치는 뒤집혀 있다 — 금액이 <code style="font-size:11px">muted-foreground-strong</code>
+    (#5a5a68) 로 <b>넉넉한 기한</b>(#71717f) 보다 진하다. 참고인 쪽이 더 튄다.
+    긴급한 카드는 빨강이 갈라주니 이 어긋남은 <b>둘째 카드</b>에서만 보인다 —
+    목록에는 그런 카드가 훨씬 많다.<br><br>
+    금액 색 라디오로 세 자리를 옮겨 볼 수 있다. <b>기한과 같게</b> 하면 색으로도 안 갈려서
+    세로선 하나만 남고, <b>진한색</b>은 상품명과 붙는다.</p>
+
+  <p class="note">main 은 이 줄을 반대로 봤다 — <b>"훑을 때 실제로 찾는 값이 언제까지와
+    얼마 둘"</b>이라 키웠다고 적혀 있다. 지금 정한 것은 그중 하나를 참고로 내리는 것이다.
+    긴급한 기한 하나만 튀게 하려는 뜻이면 이쪽이 맞다.</p>
+</div>
+
+<div id="selfcheck"></div>
+
+<script>
+const TICKET = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+  stroke-linecap="round" stroke-linejoin="round"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v14"/></svg>`;
+
+// 목록에서 실제로 섞여 나오는 다섯 모양
+const CARDS = [
+  { tag:'기한 O · 금액 O — 긴급', dday:'D-3', urgent:1, meta:'태수 · 스타벅스',
+    name:'카페 아메리카노 T 2잔 + 딸기 생크림 케이크', date:'26.08.31까지', amt:'32,000원' },
+  { tag:'기한 O · 금액 O — 넉넉', dday:'D-25', urgent:0, meta:'수진 · 배스킨라빈스',
+    name:'파인트 아이스크림', date:'26.09.22까지', amt:'9,900원' },
+  { tag:'기한 X · 금액 O — 안 그리고 있던 경우', dday:null, urgent:0, meta:'태수 · 이디야커피',
+    name:'부드러운 생크림 카스텔라', date:null, amt:'5,500원' },
+  { tag:'기한 O · 금액 X', dday:'D-40', urgent:0, meta:'수진 · 파리바게뜨',
+    name:'모카 생크림 케이크', date:'26.10.08까지', amt:null },
+  { tag:'기한 X · 금액 X', dday:null, urgent:0, meta:'태수 · 올리브영',
+    name:'클렌징 폼', date:null, amt:null },
+  { tag:'금액권 잔액', dday:'D-12', urgent:0, meta:'수진 · 신세계 · 5만원권',
+    name:'신세계상품권', date:'26.09.09까지', amt:'23,500원', left:1 },
+  { tag:'기한 X — 여덟 장 중 셋이 미입력이면', dday:null, urgent:0, meta:'태수 · 교보문고',
+    name:'교보문고 북캐시', date:null, amt:'10,000원' },
+  { tag:'기한 O · 금액 O — 넉넉', dday:'D-88', urgent:0, meta:'수진 · CU',
+    name:'델라페 아이스컵', date:'26.11.24까지', amt:'1,600원' },
+];
+
+const render = () => {
+  const v = document.querySelector('input[name="v"]:checked').value;
+  const order = document.querySelector('input[name="o"]:checked').value;
+  document.getElementById('stage').innerHTML = CARDS.map(c => {
+  const dateEl = c.date
+    ? `<span class="date">${c.date}</span>`
+    : `<span class="noexp">유효기한 미입력</span>`;
+  const amtEl = c.amt
+    ? `<span class="amt">${c.amt}${c.left ? '<small>남음</small>' : ''}</span>` : '';
+  const bar = amtEl ? '<span class="bar"></span>' : '';
+  const line = order === 'de' ? dateEl + bar + amtEl : amtEl + (amtEl ? '<span class="bar"></span>' : '') + dateEl;
+  const chip = c.date ? '' : ' haschip';
+  return `
+    <li class="card ${v} ${c.urgent ? 'urgent' : 'calm'} ${c.locked ? 'locked' : ''}">
+      <div class="body">
+        <div class="thumbwrap">
+          <span class="thumb">${TICKET}${c.locked ? `<span class="veil">${c.locked}</span>` : ''}</span>
+          ${c.dday && !c.locked ? `<span class="dday${c.urgent ? '' : ' calm'}">${c.dday}</span>` : ''}
+        </div>
+        <div class="col">
+          <div class="l1"><i></i><span>${c.meta}</span></div>
+          <div class="l2">${c.name}</div>
+          <div class="l3${chip}">${line}</div>
+        </div>
+      </div>
+      <div class="acts"><button>매장</button><button>찜하기</button><button>사용완료</button></div>
+    </li>`;
+  }).join('');
+  // 꼬리표는 카드 바깥에 — 카드 안에 넣으면 실물과 달라 보인다
+  document.querySelectorAll('#stage > li').forEach((li, i) => {
+    const t = document.createElement('p');
+    t.className = 'cap'; t.textContent = CARDS[i].tag;
+    li.before(t);
+  });
+};
+document.getElementById('gapOpts').innerHTML = [0, 2, 4, 6].map(v =>
+  `<label class="opt"><input type="radio" name="g" value="${v}"${v === 2 ? ' checked' : ''}><span>${v}</span></label>`
+).join('');
+document.getElementById('gapOptsC').innerHTML = [2, 4, 6, 8].map(v =>
+  `<label class="opt"><input type="radio" name="gc" value="${v}"${v === 6 ? ' checked' : ''}><span>${v}</span></label>`
+).join('');
+
+const applyW = () => {
+  const w = document.querySelector('.wrap');
+  w.style.setProperty('--rowW', document.querySelector('input[name="w"]:checked').value);
+  w.style.setProperty('--amtC', document.querySelector('input[name="ac"]:checked').value);
+  w.style.setProperty('--g3', document.querySelector('input[name="g"]:checked').value + 'px');
+  w.style.setProperty('--g3c', document.querySelector('input[name="gc"]:checked').value + 'px');
+  const n = document.querySelector('input[name="n"]:checked').value;
+  w.classList.remove('chip', 'plain', 'thin', 'faint', 'warn'); w.classList.add(n);
+  const warn = { faint: '색으로 옅게 하면 3.48:1 — 4.5 미달',
+                 warn: 'warning 5.04:1 · 목록에 색이 둘이 된다' }[n] || '';
+  document.getElementById('noexpWarn').textContent = warn;
+  document.getElementById('noexpWarn').style.display = warn ? '' : 'none';
+  // 칩을 안 쓰면 따로 벌릴 까닭도 없다. 규칙 하나가 같이 사라진다.
+  document.getElementById('gcBlock').style.display = n === 'chip' ? '' : 'none';
+};
+
+// 적은 값과 눈에 보이는 틈이 다르다. 행간이 위아래로 남긴 빈 칸이 더해지므로 잰 값을 적는다.
+const half = el => { const c = getComputedStyle(el);
+  return (parseFloat(c.lineHeight) - parseFloat(c.fontSize)) / 2; };
+const readGap = () => {
+  // 글자일 때는 잉크까지, 칩일 때는 테두리까지 잰다. 칩은 테두리가 먼저 눈에 닿는다.
+  const row = [...document.querySelectorAll('#stage li')].find(li => !li.querySelector('.haschip'));
+  const rowC = [...document.querySelectorAll('#stage li')].find(li => li.querySelector('.haschip'));
+  if (row) {
+    const l2 = row.querySelector('.l2'), sub = row.querySelector('.l3 > *');
+    const ink = (sub.getBoundingClientRect().top + half(sub)) - (l2.getBoundingClientRect().bottom - half(l2));
+    document.getElementById('gapRead').textContent = `보이는 틈 ${ink.toFixed(1)}px`;
+  }
+  if (rowC && document.querySelector('.wrap').classList.contains('chip')) {
+    const l2 = rowC.querySelector('.l2'), chip = rowC.querySelector('.noexp');
+    const ink = chip.getBoundingClientRect().top - (l2.getBoundingClientRect().bottom - half(l2));
+    document.getElementById('gapReadC').textContent = `테두리까지 ${ink.toFixed(1)}px`;
+  }
+};
+document.querySelectorAll('input').forEach(i => i.addEventListener('change', () => { applyW(); render(); readGap();
+for (const ms of [400, 1200]) setTimeout(readGap, ms); }));
+applyW(); render(); readGap();
+for (const ms of [400, 1200]) setTimeout(readGap, ms);
+
+addEventListener('load', () => setTimeout(() => {
+  const bad = [];
+  if (getComputedStyle(document.body).backgroundColor === 'rgba(0, 0, 0, 0)') bad.push('index.css 미로드');
+  if (parseFloat(getComputedStyle(document.querySelector('.thumb')).borderRadius) !== 14)
+    bad.push('--radius-lg 가 14가 아니다');
+  const d = document.querySelector('.urgent .date');
+  if (getComputedStyle(d).color === getComputedStyle(document.querySelector('.calm .date')).color)
+    bad.push('임박·넉넉 색이 같다');
+  const g = s => getComputedStyle(document.querySelector(s));
+  const want = document.querySelector('input[name="w"]:checked').value;
+  if (g('.tok .amt').fontWeight !== want || g('.tok .date').fontWeight !== want)
+    bad.push('기한·금액 굵기가 안 맞는다');
+  if (g('.tok .l2').color === g('.tok .amt').color) bad.push('상품명과 금액 색이 같다');
+  const opts = [...document.querySelectorAll('.opts')];
+  if (opts.some(o => o.querySelectorAll('label').length > 5)) bad.push('라디오가 한 줄에 안 들어간다');
+  if (bad.length) {
+    const el = document.getElementById('selfcheck');
+    el.textContent = '시안이 실제와 다르다: ' + bad.join(' · ');
+    el.style.display = 'block';
+  }
+}, 250));
+</script>

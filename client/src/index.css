@@ -1,6 +1,13 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* 문서와 시안은 훑지 않는다. Tailwind 는 소스를 글로 읽어서 클래스처럼 생긴 것을
+   전부 주워 담는데, 감사 문서에는 "지웠다"고 적은 클래스가 그대로 적혀 있어서
+   지운 것이 CSS 로 되살아난다. 한 번 그렇게 4,419바이트가 늘었다.
+   경로는 이 파일 기준이다 — 앞의 ../ 를 빼면 안 걸린다. */
+@source not "../**/*.md";
+@source not "../design-preview/**";
+
 /* 글꼴을 앱이 들고 다닌다.
  *
  * 예전에는 font-family 목록에 'Pretendard'라고 이름만 적혀 있고 파일이 없었다. 폰에
@@ -221,6 +228,42 @@ html.is-native-android {
   --radius-md: calc(var(--radius) - 6px);
   --radius-lg: calc(var(--radius) - 2px);
   --radius-xl: var(--radius);
+
+  /* 글자 크기를 역할로 부른다. 화면에 text-[15.5px] 같은 수가 300곳 넘게 흩어져 있는데,
+     그 수들은 이름이 없어서 옆자리와 같은 일을 하는지 알 수가 없다. 크기마다 줄 간격을
+     붙여 둔 것은 둘이 늘 같이 움직이기 때문이다.
+
+     같은 크기가 두 종인 자리가 둘 있다. 12px 의 caption 과 footnote, 16px 의 subtitle 과
+     callout — 크기는 같은데 하는 일이 달라서 줄 간격이 갈린다. 한 줄로 서는 칩·제목은
+     좁게, 여러 줄로 흐르는 안내문은 넓게. 토큰의 줄 간격 하나를 올려서는 못 푼다. */
+  --text-caption: 0.75rem; /* 12px — 칩·배지·메타 */
+  --text-caption--line-height: 1.2;
+  --text-footnote: 0.75rem; /* 12px — 여러 줄 안내문 */
+  --text-footnote--line-height: 1.6;
+  --text-body: 0.875rem; /* 14px — 기본 본문 */
+  --text-body--line-height: 1.5;
+  --text-callout: 1rem; /* 16px — 여러 줄로 흐르는 강조 본문 */
+  --text-callout--line-height: 1.5;
+  --text-subtitle: 1rem; /* 16px — 한 줄로 서는 작은 제목 */
+  --text-subtitle--line-height: 1.2;
+  --text-title: 1.25rem; /* 20px — 시트·섹션 제목 */
+  --text-title--line-height: 1.2;
+  --text-heading: 1.5rem; /* 24px — 화면 제목 */
+  --text-heading--line-height: 1.2;
+  --text-display: 1.75rem; /* 28px — 로그인·온보딩 큰 제목 */
+  --text-display--line-height: 1.2;
+
+  /* 자간. 본문에는 안 쓴다 — 기본값 0 이다.
+     89곳에 12종이 흩어져 있었는데 크기가 커질수록 조여지는 램프였다. 뜻은 맞았지만
+     0.005em 단위로 갈라져 있었고, 본문 크기에서 그건 한 글자당 0.25px 아래다. 한글은
+     네모틀이라 글자마다 좌우 여백을 이미 품고 있어서, 본문에서 더 조이면 얻는 것 없이
+     읽기만 나빠진다 — 60대가 읽는 화면이다. 19px 위로는 한 글자당 0.5~0.8px 이라
+     실제로 덩어리로 묶여 보인다. */
+  --tracking-heading: -0.025em; /* 19px 이상 제목 */
+
+  /* 이건 자간이라기보다 '한 글자씩 떼기'다. 읽어서 따라 치는 값이라 글줄을 다듬는 것과
+     목적이 다르다. 제목 자간과 한 무더기로 두면 제목을 조일 때 코드까지 같이 움직인다. */
+  --tracking-code: 0.12em; /* 가족 코드 K7Q2XM — 여섯 글자를 하나씩 떼어 읽는다 */
 }
 
 @layer base {

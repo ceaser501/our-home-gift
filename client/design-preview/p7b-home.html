@@ -1,0 +1,512 @@
+<!doctype html>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>홈 화면에서 카드 견주기</title>
+<script type="module" src="/src/index.css"></script>
+<style>
+  body { margin:0; background:#3a3a44; font-family:Pretendard, system-ui, sans-serif;
+         color:var(--foreground); -webkit-font-smoothing:antialiased; }
+  /* 판을 폰 위에 쌓았더니 화면이 밀려 안 보였다. 넓으면 옆에, 좁으면 접는다. */
+  .page { display:flex; gap:18px; align-items:flex-start; justify-content:center; padding:14px 12px 60px; }
+
+  .panel { position:sticky; top:14px; width:250px; flex:0 0 auto; max-height:calc(100dvh - 40px);
+           overflow-y:auto; background:var(--background); border:1px solid var(--border);
+           border-radius:14px; padding:10px 12px; }
+  .panel > span { display:block; font-size:10px; font-weight:800; letter-spacing:.04em;
+                  color:var(--muted-foreground); margin:0 0 4px; }
+  .panel > span + span { margin-top:8px; }
+  .opts { display:flex; gap:4px; }
+  label.opt { flex:1; min-width:0; }
+  label.opt input { position:absolute; opacity:0; pointer-events:none; }
+  label.opt span { display:block; text-align:center; font-size:11px; font-weight:700; padding:5px 3px;
+                   border-radius:7px; border:1px solid var(--border); color:var(--muted-foreground);
+                   cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  label.opt input:checked + span { background:var(--primary); border-color:var(--primary); color:var(--primary-foreground); }
+
+  #toggle { display:none; }
+  @media (max-width: 700px) {
+    .page { flex-direction:column; align-items:center; }
+    #toggle { display:block; position:fixed; top:10px; right:10px; z-index:60; border:0;
+              border-radius:999px; background:var(--primary); color:#fff; font-family:inherit;
+              font-size:12px; font-weight:700; padding:8px 14px; box-shadow:0 4px 12px -4px rgb(0 0 0/.4); }
+    .panel { position:fixed; inset:0 0 auto 0; width:auto; max-height:70dvh; border-radius:0;
+             z-index:55; box-shadow:0 10px 30px -10px rgb(0 0 0/.5); }
+    .panel[hidden] { display:none; }
+  }
+
+  /* ── 폰 ── */
+  .phone { position:relative; width:375px; height:760px; overflow:hidden;
+           border-radius:24px; box-shadow:0 20px 50px -20px rgb(0 0 0/.6);
+           background:var(--background); display:flex; flex-direction:column; }
+  .scroll { flex:1; overflow-y:auto; overscroll-behavior:contain; }
+  .phone .tag { position:absolute; top:0; left:0; z-index:40; font-size:10px; font-weight:800;
+                letter-spacing:.05em; color:#fff; background:rgb(0 0 0/.55);
+                padding:4px 9px; border-radius:0 0 8px 0; }
+
+  /* 헤더 — Header.jsx */
+  header { padding:10px 16px; }
+  .hrow { display:flex; align-items:center; gap:6px; }
+  .logo { width:32px; height:32px; flex:0 0 auto; border-radius:7px; background:var(--primary);
+          display:flex; align-items:center; justify-content:center; color:#fff; font-weight:800; font-size:15px; }
+  .fam { display:flex; min-width:0; align-items:center; gap:2px; margin-right:auto; padding-left:4px; }
+  .fam h1 { margin:0; font-size:19px; font-weight:700; letter-spacing:-.025em; white-space:nowrap;
+            overflow:hidden; text-overflow:ellipsis; }
+  .hbtn { position:relative; width:42px; height:42px; flex:0 0 auto; border-radius:12px;
+          display:flex; align-items:center; justify-content:center; color:color-mix(in oklab, var(--foreground) 70%, transparent); }
+  .hbtn svg { width:20px; height:20px; }
+  .me { width:32px; height:32px; border-radius:999px; background:var(--primary); color:#fff;
+        display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; }
+
+  /* 매장 안내 띠 — NearbyBanner.jsx */
+  .nearby { display:flex; width:100%; align-items:center; gap:11px; background:var(--accent);
+            padding:13px 12px 13px 14px; }
+  .nearby .ic { width:32px; height:32px; flex:0 0 auto; border-radius:10px;
+                background:color-mix(in oklab, var(--primary) 12%, transparent);
+                display:flex; align-items:center; justify-content:center; }
+  .nearby .ic svg { width:17px; height:17px; color:var(--primary); }
+  .nearby .txt { min-width:0; flex:1; font-size:13.5px; line-height:normal; font-weight:500;
+                 word-break:keep-all; color:color-mix(in oklab, var(--foreground) 80%, transparent); }
+  .nearby .go { flex:0 0 auto; height:34px; border-radius:10px; background:var(--primary); color:#fff;
+                padding:0 14px; font-size:13.5px; font-weight:700; display:flex; align-items:center; }
+
+  /* 거르개 — FilterBar.jsx */
+  .filter { position:sticky; top:0; z-index:10; display:flex; flex-direction:column; gap:10px;
+            border-bottom:1px solid var(--border); background:var(--background); padding:11px 0 10px; }
+  .frow { display:flex; gap:7px; padding:0 16px; }
+  .fbtn { display:flex; height:40px; flex:0 0 auto; align-items:center; gap:4px; border-radius:11px;
+          border:1px solid var(--input, var(--border)); background:var(--card); padding:0 11px;
+          font-size:13px; font-weight:600; }
+  .fbtn svg { width:14px; height:14px; color:var(--muted-foreground); }
+  .search { position:relative; flex:1; }
+  .search svg { position:absolute; top:50%; left:12px; width:16px; height:16px;
+                transform:translateY(-50%); color:var(--muted-foreground); }
+  .search input { width:100%; height:40px; border-radius:11px; border:1px solid var(--input, var(--border));
+                  background:var(--background); padding:0 36px; font-size:14px; font-family:inherit;
+                  color:var(--foreground); box-sizing:border-box; }
+  .chips { display:flex; gap:5px; overflow-x:auto; padding:0 16px 4px; scrollbar-width:none; }
+  .chips::-webkit-scrollbar { display:none; }
+  .chip { display:flex; height:32px; flex:0 0 auto; align-items:center; gap:4px; border-radius:999px;
+          border:1px solid var(--input, var(--border)); background:var(--card); padding:0 10px;
+          font-size:13px; font-weight:500; white-space:nowrap; }
+  .chip.on { border-color:var(--primary); background:var(--primary); color:var(--primary-foreground); font-weight:600; }
+  .chip .n { font-variant-numeric:tabular-nums; opacity:.7; }
+
+  main { display:flex; flex:1; flex-direction:column; padding:12px 16px 20px; }
+  /* 목록 칸 자체를 회색으로. 그러면 흰 줄이 회색 판 위에 놓인 것이 되고,
+     줄 사이 8px 은 따로 색을 칠할 것 없이 그 회색이 비쳐 보인다. */
+  main.bleed { padding:var(--gap, 12px) 0 20px; background:var(--band, var(--muted)); }
+
+  /* 기한 안 적은 띠 — GifticonList.jsx */
+  .missing { margin:0 0 12px; display:flex; align-items:flex-start; gap:8px; border-radius:12px;
+             border:1px solid var(--border); background:color-mix(in oklab, var(--muted) 40%, transparent);
+             padding:10px 14px; font-size:13px; line-height:1.625; font-weight:500;
+             color:var(--muted-foreground); word-break:keep-all; }
+  /* 이 띠만 카드 꼴로 남아 있으면 혼자 좁아 보인다. 아래 줄들과 같은 흰 종이로
+     맞춘다 — 모서리도 테두리도 걷고 화면 끝까지, 아래 8 만 띄운다. */
+  main.bleed .missing { margin:0 0 var(--gap, 12px); padding:12px var(--ph, 16px); border:0; border-radius:0;
+                        background:var(--background); }
+  .missing svg { width:16px; height:16px; flex:0 0 auto; margin-top:2px; }
+  .missing b { color:var(--foreground); font-weight:700; }
+  .missing .hide { flex:0 0 auto; font-size:12.5px; font-weight:600; text-decoration:underline;
+                   text-underline-offset:2px; white-space:nowrap; }
+
+  ul.list { list-style:none; margin:0; padding:0; }
+
+  /* ── 지금 카드 ── */
+  .now { position:relative; overflow:hidden; border-radius:16px; border:1px solid var(--border);
+         background:var(--card); }
+  .now + .now { margin-top:14px; }
+  .now .body { position:relative; display:flex; gap:12px; padding:12px; }
+  .now .thumbwrap { position:relative; flex:0 0 auto; }
+  .now .thumb { display:flex; width:64px; height:64px; align-items:center; justify-content:center;
+                overflow:hidden; border-radius:var(--radius-lg); background:var(--accent); }
+  .now .dday { position:absolute; top:-6px; left:-6px; border-radius:999px; padding:2px 8px; font-size:12px;
+               font-weight:700; line-height:1.2; box-shadow:0 0 0 2px var(--card);
+               background:var(--destructive); color:#fff; font-variant-numeric:tabular-nums; }
+  .now .col { display:flex; min-width:0; flex:1; flex-direction:column; }
+  .now .l1 { display:flex; align-items:center; gap:6px; font-size:12px; line-height:1.2;
+             font-weight:500; color:var(--muted-foreground); }
+  .now .l1 i { width:6px; height:6px; border-radius:999px; flex:0 0 auto; }
+  .now .l1 span { min-width:0; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .now .l2 { margin-top:8px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
+             overflow:hidden; font-size:16px; line-height:1.375; letter-spacing:-.02em;
+             font-weight:600; word-break:keep-all; }
+  .now .l3 { margin-top:2px; display:flex; flex-wrap:wrap; align-items:center; column-gap:16px;
+             row-gap:2px; overflow:hidden; }
+  .now .amt { font-size:14px; font-weight:600; line-height:1.5; color:var(--muted-foreground);
+              font-variant-numeric:tabular-nums; }
+  .now .date { position:relative; font-size:14px; font-weight:600; line-height:1.5;
+               white-space:nowrap; font-variant-numeric:tabular-nums; color:var(--muted-foreground); }
+  .now .date.urgent { color:var(--destructive-text); }
+  .now .date.bar::before { content:''; position:absolute; top:50%; right:100%; margin-right:8px;
+                           width:1px; height:12px; transform:translateY(-50%); background:var(--border); }
+  .now .date.miss { color:var(--warning-text); }
+  .now .acts { display:flex; border-top:1px solid var(--border); }
+  .now .acts button { flex:1; height:44px; background:none; border:0; color:var(--foreground);
+                      font-weight:600; font-size:14px; display:flex; align-items:center;
+                      justify-content:center; gap:6px; }
+  .now .acts button + button { border-left:1px solid var(--border); }
+  .now .more { position:absolute; top:8px; right:6px; width:32px; height:32px; border-radius:10px;
+               display:flex; align-items:center; justify-content:center;
+               color:color-mix(in oklab, var(--muted-foreground) 60%, transparent); }
+
+  /* ── 새 안 — 줄 ── */
+  .new { background:var(--background); padding:var(--pv, 14px) var(--ph, 16px); }
+  /* 같은 속을 카드 꼴로도 담아 본다. 회색 판 위에 흰 카드가 뜨는 모양이라 테두리는 안
+     쓴다 — 판이 이미 가르고 있는데 선을 더하면 두 번 가르는 것이 된다. */
+  main.boxed .new { margin-left:16px; margin-right:16px; border-radius:var(--radius-xl, 16px); }
+  main.boxed .missing { margin-left:16px; margin-right:16px; border-radius:var(--radius-xl, 16px); }
+  .new + .new { margin-top:var(--gap, 12px); }
+  .new .top { display:flex; gap:12px; }
+  .new .col { display:flex; min-width:0; flex:1; flex-direction:column; }
+  .new .brand { font-size:14px; line-height:1.2; font-weight:500; color:var(--muted-foreground);
+                overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .new .name { margin-top:var(--gBrand, 6px); display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
+               overflow:hidden; font-size:16px; line-height:1.375; letter-spacing:-.02em;
+               font-weight:600; word-break:keep-all; }
+  .new .facts { margin-top:var(--gFacts, 10px); display:flex; flex-wrap:wrap; align-items:center; gap:6px; }
+  .new .dday { flex:0 0 auto; border-radius:999px; padding:2px 10px; font-size:12px; font-weight:700;
+               line-height:1.4; background:var(--destructive); color:#fff; font-variant-numeric:tabular-nums; }
+  .new .val { font-size:14px; line-height:1.5; font-weight:500; color:var(--muted-foreground);
+              font-variant-numeric:tabular-nums; }
+  .new .val.miss { color:var(--warning-text); font-weight:600; }
+  .new .thumbwrap { position:relative; flex:0 0 auto; align-self:flex-start; }
+  /* 기프티콘 사진은 대개 세로로 길다. 정사각으로 자르면 상품이 잘려 나간다. */
+  .new .thumb { display:flex; width:72px; height:88px; align-items:center; justify-content:center;
+                overflow:hidden; border-radius:var(--radius-lg); background:var(--accent); }
+  /* 소유자를 어디에 둘지 세 갈래 */
+  .new .brandWho, .new .whoBadge { display:none; }
+  .list.whoLine .new .who { display:none; }
+  .list.whoLine .new .brandWho { display:inline; }
+  .list.whoBadge .new .who { display:none; }
+  .list.whoBadge .new .whoBadge { display:flex; }
+  /* 사진 오른쪽 위 — 예전 D-day 자리. 이름이 통째로 들어간다. */
+  .new .whoBadge { position:absolute; top:4px; right:4px; align-items:center; border-radius:999px;
+                   padding:2px 7px; font-size:12px; line-height:1.3; font-weight:700; color:#fff;
+                   max-width:calc(100% - 8px); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  /* 사진 장수는 원래 이 모서리를 쓴다. 둘이 겹치면 장수를 왼쪽 위로 비킨다. */
+  .new .pcount { position:absolute; top:4px; left:4px; border-radius:999px; padding:1px 6px;
+                 font-size:12px; font-weight:700; line-height:1.3; color:#fff; background:rgb(0 0 0/.6); }
+
+  /* D-day 를 사진 모서리에 얹는 갈래. 사진이 오른쪽으로 갔으니 우상단이 바깥 모서리고,
+     아래 사용완료와 오른쪽 끝에서 줄이 맞는다. 급한 것에만 달리므로 한 화면에 한둘이다. */
+  /* 위로만 걸친다. 오른쪽으로도 내밀면 아래 사용완료(줄 끝에서 16)보다 6px 더 나가서
+     오른쪽 세로줄이 깨진다. 사진이 왼쪽에 있던 시절에는 바깥으로 내밀어도 그 줄을
+     건드리지 않았다. */
+  .new .ddayPin { position:absolute; top:-6px; right:0; border-radius:999px; padding:2px 8px;
+                  font-size:12px; font-weight:700; line-height:1.3; font-variant-numeric:tabular-nums;
+                  background:var(--destructive); color:#fff; box-shadow:0 0 0 2px var(--background); }
+  .new .ddayPin { display:none; }
+  .list.ddayPin .new .ddayPin { display:block; }
+  .list.ddayPin .new .facts .dday { display:none; }
+  .new .brandWho i { display:inline-block; width:var(--dot, 6px); height:var(--dot, 6px);
+                     border-radius:999px; margin-right:5px; vertical-align:1px; }
+  /* 점을 걷으면 이름만 남는다. 이름이 이미 누구인지 말하고 있어서 색은 훑기를 돕는
+     덤인데, 줄마다 켜지면 그 덤이 목록을 시끄럽게 한다. */
+  .list.dotOff .new .brandWho i { display:none; }
+  /* 이름에 색을 입히는 길도 있는데 대비가 걸린다 — 분홍(#d64c86)이 흰 줄 위에서
+     4.01:1 로 4.5 에 못 미친다. 가족 색은 사람이 고르는 값이라 다 통과시킬 수가 없다. */
+  .list.dotName .new .brandWho i { display:none; }
+  .list.dotName .new .brandWho { color:var(--whoC); font-weight:600; }
+  .new .who { position:absolute; right:-4px; bottom:-4px; display:flex; align-items:center;
+              justify-content:center; width:24px; height:24px; border-radius:999px; font-size:12px;
+              font-weight:700; color:#fff; box-shadow:0 0 0 2px var(--background); }
+  .new .acts { display:flex; align-items:center; gap:var(--gAct, 16px); margin-top:12px; }
+  .new .act { display:inline-flex; flex:0 0 auto; align-items:center; gap:5px; white-space:nowrap;
+              background:none; border:0; padding:0; font-size:14px; font-weight:600;
+              color:var(--muted-foreground); }
+  .new .act svg { width:16px; height:16px; flex:0 0 auto; }
+  .new .act.on { color:var(--primary); }
+  .new .act.done { margin-left:auto; color:var(--primary); }
+  .new .more { font-size:16px; letter-spacing:1px; }
+
+  .thumb svg { width:24px; height:24px; color:color-mix(in oklab, var(--primary) 55%, transparent); }
+
+  /* 아래 + 버튼 */
+  .fab { position:absolute; right:24px; bottom:24px; z-index:20; width:56px; height:56px;
+         border-radius:999px; background:var(--primary); color:#fff; display:flex;
+         align-items:center; justify-content:center; box-shadow:0 8px 20px -6px rgb(91 79 232/.5); }
+  .fab svg { width:28px; height:28px; }
+  .scan { position:absolute; right:24px; bottom:88px; z-index:20; width:44px; height:44px;
+          border-radius:999px; border:1px solid var(--border); background:var(--card);
+          display:flex; align-items:center; justify-content:center; box-shadow:0 4px 10px -4px rgb(0 0 0/.25); }
+  .scan svg { width:20px; height:20px; }
+
+  #selfcheck { display:none; position:fixed; inset:auto 0 0 0; z-index:99; background:var(--destructive);
+               color:#fff; font-size:12px; font-weight:700; padding:10px 14px; text-align:center; }
+</style>
+
+<button id="toggle" type="button">설정</button>
+<div class="page">
+  <div class="panel" id="panel">
+    <span>기프티콘 줄만 바꾼다 — 나머지 화면은 그대로</span>
+    <div class="opts">
+      <label class="opt"><input type="radio" name="v" value="now" checked><span>지금</span></label>
+      <label class="opt"><input type="radio" name="v" value="new"><span>새 안</span></label>
+    </div>
+    <span>새 안 · 담는 꼴</span>
+    <div class="opts">
+      <label class="opt"><input type="radio" name="sh" value="full" checked><span>꽉 찬 줄</span></label>
+      <label class="opt"><input type="radio" name="sh" value="boxed"><span>카드</span></label>
+    </div>
+    <span>새 안 · 줄 사이</span>
+    <div class="opts">
+      <label class="opt"><input type="radio" name="g" value="8"><span>8</span></label>
+      <label class="opt"><input type="radio" name="g" value="12" checked><span>12</span></label>
+      <label class="opt"><input type="radio" name="g" value="16"><span>16</span></label>
+      <label class="opt"><input type="radio" name="g" value="24"><span>24</span></label>
+    </div>
+    <span>새 안 · 소유자를 어디에</span>
+    <div class="opts">
+      <label class="opt"><input type="radio" name="w" value="whoDot" checked><span>모서리 원</span></label>
+      <label class="opt"><input type="radio" name="w" value="whoBadge"><span>우상단 이름</span></label>
+      <label class="opt"><input type="radio" name="w" value="whoLine"><span>브랜드 줄</span></label>
+    </div>
+    <span>새 안 · D-day 자리</span>
+    <div class="opts">
+      <label class="opt"><input type="radio" name="dd" value="ddayRow" checked><span>사실줄 칩</span></label>
+      <label class="opt"><input type="radio" name="dd" value="ddayPin"><span>사진 우상단</span></label>
+    </div>
+    <span>새 안 · 브랜드 줄일 때 소유자 색</span>
+    <div class="opts">
+      <label class="opt"><input type="radio" name="d" value="dotOn" checked><span>점</span></label>
+      <label class="opt"><input type="radio" name="d" value="dotSm"><span>작은 점 4</span></label>
+      <label class="opt"><input type="radio" name="d" value="dotOff"><span>점 없음</span></label>
+      <label class="opt"><input type="radio" name="d" value="dotName"><span>이름 색</span></label>
+    </div>
+    <span>새 안 · 버튼 사이</span>
+    <div class="opts">
+      <label class="opt"><input type="radio" name="ga" value="12"><span>12</span></label>
+      <label class="opt"><input type="radio" name="ga" value="16" checked><span>16</span></label>
+      <label class="opt"><input type="radio" name="ga" value="24"><span>24</span></label>
+    </div>
+    <span>새 안 · 줄 안쪽 여백 (위아래 × 좌우)</span>
+    <div class="opts">
+      <label class="opt"><input type="radio" name="p" value="12,16"><span>12×16</span></label>
+      <label class="opt"><input type="radio" name="p" value="14,16" checked><span>14×16</span></label>
+      <label class="opt"><input type="radio" name="p" value="16,16"><span>16×16</span></label>
+    </div>
+    <span>새 안 · 브랜드 ↔ 상품명</span>
+    <div class="opts">
+      <label class="opt"><input type="radio" name="gb" value="4"><span>4</span></label>
+      <label class="opt"><input type="radio" name="gb" value="6" checked><span>6</span></label>
+      <label class="opt"><input type="radio" name="gb" value="8"><span>8</span></label>
+    </div>
+    <span>새 안 · 상품명 ↔ 사실줄</span>
+    <div class="opts">
+      <label class="opt"><input type="radio" name="gf" value="8"><span>8</span></label>
+      <label class="opt"><input type="radio" name="gf" value="10" checked><span>10</span></label>
+      <label class="opt"><input type="radio" name="gf" value="12"><span>12</span></label>
+    </div>
+    <span>새 안 · 목록 칸 바탕색 (f7f7f9 / e7e7ec / f0efff)</span>
+    <div class="opts">
+      <label class="opt"><input type="radio" name="b" value="var(--muted)" checked><span>muted</span></label>
+      <label class="opt"><input type="radio" name="b" value="var(--border)"><span>border</span></label>
+      <label class="opt"><input type="radio" name="b" value="var(--accent)"><span>accent</span></label>
+    </div>
+  </div>
+
+  <div class="phone">
+    <span class="tag" id="tag"></span>
+    <div class="scroll">
+      <header>
+        <div class="hrow">
+          <span class="logo">모</span>
+          <span class="fam"><h1>우리집</h1>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;color:color-mix(in oklab,var(--muted-foreground) 70%,transparent)"><path d="m6 9 6 6 6-6"/></svg>
+          </span>
+          <span class="hbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
+          <span class="hbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/></svg></span>
+          <span class="hbtn"><span class="me">태수</span></span>
+        </div>
+      </header>
+
+      <div class="nearby">
+        <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg></span>
+        <span class="txt">근처 <b>스타벅스</b>에서 쓸 수 있는 기프티콘이 2개 있어요.</span>
+        <span class="go">보기</span>
+      </div>
+
+      <div class="filter">
+        <div class="frow">
+          <span class="fbtn">쓸 수 있는 것
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+          </span>
+          <span class="search">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            <input placeholder="상품명·브랜드 찾기" readonly />
+          </span>
+        </div>
+        <div class="chips">
+          <span class="chip on">전체 <span class="n">12</span></span>
+          <span class="chip">카페 <span class="n">5</span></span>
+          <span class="chip">베이커리 <span class="n">3</span></span>
+          <span class="chip">상품권 <span class="n">2</span></span>
+          <span class="chip">치킨 <span class="n">2</span></span>
+        </div>
+      </div>
+
+      <main id="main">
+        <div class="missing">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4M16 2v4M3 10h13"/><rect x="3" y="4" width="18" height="18" rx="2"/><path d="m17 17 4 4M21 17l-4 4"/></svg>
+          <span style="flex:1">사용기한을 안 적은 기프티콘 <b>1개</b>.<br />사용기한이 있어야 알려드릴 수 있어요.</span>
+          <span class="hide">숨기기</span>
+        </div>
+        <ul class="list whoDot" id="list"></ul>
+      </main>
+    </div>
+
+    <span class="scan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="12" r="3"/></svg></span>
+    <span class="fab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
+  </div>
+</div>
+
+<div id="selfcheck"></div>
+
+<script>
+const I = {
+  ticket: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v14"/></svg>',
+  pin: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>',
+  heart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.5-1.5 3-3.4 3-5.5A5.5 5.5 0 0 0 12 5.5 5.5 5.5 0 0 0 2 8.5c0 2.1 1.5 4 3 5.5l7 7Z"/></svg>',
+  heartOn: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 14c1.5-1.5 3-3.4 3-5.5A5.5 5.5 0 0 0 12 5.5 5.5 5.5 0 0 0 2 8.5c0 2.1 1.5 4 3 5.5l7 7Z"/></svg>',
+  check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m9 12 2 2 4-4"/></svg>',
+  dots: '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>',
+};
+
+const G = [
+  { who:'태수', hue:'var(--primary)', brand:'스타벅스', cat:'카페',
+    name:'카페 아메리카노 T 2잔 + 딸기 생크림 케이크',
+    dday:'D-3', urgent:1, amt:'32,000원', date:'8월 31일까지', dateLong:'26.08.31까지', liked:0 },
+  { who:'클로이', hue:'#d64c86', brand:'파리바게뜨', cat:'베이커리', photos:3,
+    name:'부드러운 생크림 카스텔라',
+    dday:null, urgent:0, amt:'7,500원', date:'2027년 1월 15일까지', dateLong:'27.01.15까지', liked:0 },
+  { who:'태수', hue:'var(--primary)', brand:'배스킨라빈스', cat:'카페',
+    name:'파인트 아이스크림', dday:'D-6', urgent:1, amt:'8,900원',
+    date:'9월 3일까지', dateLong:'26.09.03까지', liked:1 },
+  { who:'클로이', hue:'#d64c86', brand:'교촌치킨', cat:'치킨',
+    name:'교촌 허니콤보', dday:null, urgent:0, amt:'23,000원',
+    date:null, dateLong:null, liked:0 },
+  { who:'태수', hue:'var(--primary)', brand:'신세계', cat:'상품권',
+    name:'신세계상품권 50만원권', dday:null, urgent:0, amt:'380,000원 남음',
+    date:'2027년 12월 27일까지', dateLong:'27.12.27까지', liked:0 },
+];
+
+const nowCard = g => `
+  <li class="now">
+    <div class="body">
+      <div class="thumbwrap">
+        <span class="thumb">${I.ticket}</span>
+        ${g.urgent ? `<span class="dday">${g.dday}</span>` : ''}
+      </div>
+      <div class="col">
+        <div class="l1"><i style="background:${g.hue}"></i><span>${g.who} · ${g.brand}</span></div>
+        <div class="l2">${g.name}</div>
+        <div class="l3">
+          <span class="amt">${g.amt}</span>
+          ${g.dateLong
+            ? `<span class="date bar ${g.urgent ? 'urgent' : ''}">${g.dateLong}</span>`
+            : `<span class="date bar miss">유효기한 미입력</span>`}
+        </div>
+      </div>
+      <span class="more">${I.dots}</span>
+    </div>
+    <div class="acts"><button>매장</button><button>찜하기</button><button>사용완료</button></div>
+  </li>`;
+
+const newRow = g => `
+  <li class="new">
+    <div class="top">
+      <div class="col">
+        <span class="brand"><span class="brandWho" style="--whoC:${g.hue}"><i style="background:${g.hue}"></i>${g.who} · </span>${g.brand}</span>
+        <span class="name">${g.name}</span>
+        <div class="facts">
+          ${g.dday ? `<span class="dday">${g.dday}</span>` : ''}
+          ${g.date
+            ? `<span class="val">${g.date} · ${g.amt}</span>`
+            : `<span class="val miss">유효기한 미입력</span><span class="val">· ${g.amt}</span>`}
+        </div>
+      </div>
+      <div class="thumbwrap">
+        <span class="thumb">${I.ticket}</span>
+        <span class="who" style="background:${g.hue}">${g.who[0]}</span>
+        <span class="whoBadge" style="background:${g.hue}">${g.who}</span>
+        ${g.dday ? `<span class="ddayPin">${g.dday}</span>` : ''}
+        ${g.photos > 1 ? `<span class="pcount">${g.photos}</span>` : ''}
+      </div>
+    </div>
+    <div class="acts">
+      <button class="act">${I.pin}매장</button>
+      <button class="act ${g.liked ? 'on' : ''}">${g.liked ? I.heartOn : I.heart}${g.liked ? '찜함' : '찜하기'}</button>
+      <button class="act more">···</button>
+      <button class="act done">${I.check}사용완료</button>
+    </div>
+  </li>`;
+
+const render = () => {
+  const v = document.querySelector('input[name="v"]:checked').value;
+  const mn = document.getElementById('main');
+  mn.style.setProperty('--band', document.querySelector('input[name="b"]:checked').value);
+  mn.style.setProperty('--gap', document.querySelector('input[name="g"]:checked').value + 'px');
+  const V = n => document.querySelector(`input[name="${n}"]:checked`).value;
+  const [pv, ph] = V('p').split(',');
+  mn.style.setProperty('--pv', pv + 'px');
+  mn.style.setProperty('--ph', ph + 'px');
+  mn.style.setProperty('--gBrand', V('gb') + 'px');
+  mn.style.setProperty('--gFacts', V('gf') + 'px');
+  mn.style.setProperty('--gAct', V('ga') + 'px');
+  const shape = document.querySelector('input[name="sh"]:checked').value;
+  document.getElementById('main').className =
+    v === 'new' ? 'bleed' + (shape === 'boxed' ? ' boxed' : '') : '';
+  const list = document.getElementById('list');
+  const dot = document.querySelector('input[name="d"]:checked').value;
+  list.className = 'list ' + document.querySelector('input[name="w"]:checked').value + ' ' + dot
+    + ' ' + document.querySelector('input[name="dd"]:checked').value;
+  mn.style.setProperty('--dot', dot === 'dotSm' ? '4px' : '6px');
+  list.innerHTML = G.map(v === 'new' ? newRow : nowCard).join('');
+  document.getElementById('tag').textContent = v === 'new' ? '새 안 — 줄' : '지금 — 카드';
+};
+const tg = document.getElementById('toggle');
+const pn = document.getElementById('panel');
+const narrow = () => matchMedia('(max-width: 700px)').matches;
+const sync = () => { if (narrow()) pn.hidden = true; else pn.hidden = false; };
+tg.addEventListener('click', () => { pn.hidden = !pn.hidden; });
+addEventListener('resize', sync);
+sync();
+
+document.querySelectorAll('input').forEach(i => i.addEventListener('change', render));
+render();
+
+addEventListener('load', () => setTimeout(() => {
+  const bad = [];
+  if (getComputedStyle(document.body).backgroundColor === 'rgba(0, 0, 0, 0)') bad.push('index.css 미로드');
+  const p = document.querySelector('.phone').getBoundingClientRect();
+  if (Math.round(p.width) !== 375) bad.push('폰 폭이 375가 아니다');
+  // 새 안에서 줄이 화면 끝까지 차는지
+  const el = document.querySelector('input[name="v"][value="new"]');
+  el.checked = true; el.dispatchEvent(new Event('change', { bubbles: true }));
+  const row = document.querySelector('.new').getBoundingClientRect();
+  const boxed = document.getElementById('main').classList.contains('boxed');
+  const want = boxed ? 343 : 375;
+  if (Math.round(row.width) !== want)
+    bad.push(`새 안 줄 폭이 ${want} 가 아니다: ` + row.width.toFixed(0));
+  const m = getComputedStyle(document.getElementById('main')).backgroundColor;
+  const r = getComputedStyle(document.querySelector('.new')).backgroundColor;
+  if (m === r) bad.push('목록 바탕과 줄 색이 같다 — 줄이 안 갈린다');
+  const mi = document.querySelector('main.bleed .missing');
+  if (mi && Math.round(mi.getBoundingClientRect().width) !== 375)
+    bad.push('안내 띠만 좁다: ' + mi.getBoundingClientRect().width.toFixed(0));
+  const th = document.querySelector('.new .thumb').getBoundingClientRect();
+  if (Math.round(th.width) !== 72 || Math.round(th.height) !== 88)
+    bad.push('사진이 72×88 이 아니다: ' + th.width.toFixed(0) + '×' + th.height.toFixed(0));
+  for (const a of document.querySelectorAll('.new .acts')) {
+    if (a.getBoundingClientRect().height > 26) { bad.push('버튼 줄이 접혔다'); break; }
+  }
+  document.querySelector('input[name="v"][value="now"]').checked = true;
+  document.querySelector('input[name="v"][value="now"]').dispatchEvent(new Event('change', { bubbles: true }));
+  if (bad.length) {
+    const e = document.getElementById('selfcheck');
+    e.textContent = '시안이 실제와 다르다: ' + bad.join(' · ');
+    e.style.display = 'block';
+  }
+}, 300));
+</script>

@@ -1,0 +1,193 @@
+<!doctype html>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>카드 글자 간격</title>
+<script type="module" src="/src/index.css"></script>
+<style>
+  body { margin: 0; background: var(--muted); font-family: Pretendard, system-ui, sans-serif;
+         color: var(--foreground); -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 420px; margin: 0 auto; padding: 20px 20px 80px; }
+  h1 { font-size: 22px; font-weight: 800; margin: 0 0 6px; letter-spacing: -.02em; }
+  .lede { font-size: 13px; line-height: 1.65; color: var(--muted-foreground); margin: 0 0 22px; word-break: keep-all; }
+  .lede b { color: var(--foreground); }
+  .panel { position: sticky; top: 0; z-index: 5; background: var(--background);
+           border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px; margin-bottom: 18px;
+           box-shadow: 0 6px 20px -12px rgb(0 0 0 / .35); }
+  .ctl + .ctl { margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border); }
+  .ctl > span { display: block; font-size: 11px; font-weight: 800; letter-spacing: .04em;
+                color: var(--muted-foreground); margin-bottom: 6px; }
+  .opts { display: flex; gap: 6px; flex-wrap: wrap; }
+  label.opt { flex: 1 1 auto; }
+  label.opt input { position: absolute; opacity: 0; pointer-events: none; }
+  label.opt span { display: block; text-align: center; font-size: 12px; font-weight: 700;
+                   padding: 7px 8px; border-radius: 9px; border: 1px solid var(--border);
+                   color: var(--muted-foreground); cursor: pointer; white-space: nowrap; }
+  label.opt input:checked + span { background: var(--primary); border-color: var(--primary);
+                                   color: var(--primary-foreground); }
+
+  /* 실제 카드 — GifticonCard 의 값 그대로 */
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+          overflow: hidden; box-shadow: 0 1px 2px rgb(0 0 0 / .05); }
+  .card + .card { margin-top: var(--cardgap, 12px); }
+  .body { display: flex; gap: 12px; padding: 12px; position: relative; }
+  .thumb { width: 68px; height: 68px; flex: 0 0 auto; border-radius: 12px;
+           border: 1px solid var(--border); background: var(--accent);
+           display: flex; align-items: center; justify-content: center; }
+  .thumb svg { width: 24px; height: 24px; color: color-mix(in oklab, var(--primary) 60%, transparent); }
+  .col { min-width: 0; flex: 1; display: flex; flex-direction: column; }
+
+  .meta  { font-size: 12px; line-height: 1.2; color: var(--muted-foreground);
+           display: flex; align-items: center; gap: 6px; padding-right: 28px; }
+  .dot   { width: 6px; height: 6px; border-radius: 999px; background: var(--primary); flex: 0 0 auto; }
+  .name  { font-size: 16px; line-height: 1.2; font-weight: 700; margin: 0;
+           padding-right: 28px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .price { font-size: 14px; line-height: var(--priceLh, 1.5); color: var(--muted-foreground); margin: 0; }
+  .chip  { align-self: flex-start; font-size: 12px; line-height: 1.2; font-weight: 700;
+           border-radius: 999px; padding: 2px 8px;
+           background: color-mix(in oklab, var(--destructive) 12%, transparent); color: var(--destructive-text); }
+
+  /* 간격은 마진으로 — 실제 카드가 마진을 쓴다 */
+  .name  { margin-top: var(--g1, 2px); }
+  .price { margin-top: var(--g2, 2px); }
+  .chip  { margin-top: var(--g3, 4px); }
+
+  /* line-box 를 눈에 보이게: 글자 뒤에 깔린 띠가 line-height 가 만든 상자다 */
+  .showbox .meta, .showbox .name, .showbox .price {
+    background: color-mix(in oklab, var(--primary) 9%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--primary) 20%, transparent); }
+  .showbox .meta { background-clip: padding-box; }
+
+  .acts { display: flex; border-top: 1px solid var(--border); }
+  .acts button { flex: 1; padding: 11px 0; font-size: 13px; font-weight: 700;
+                 background: none; border: 0; color: var(--foreground); }
+  .acts button + button { border-left: 1px solid var(--border); }
+
+  .read { margin-top: 14px; border: 1px solid var(--border); border-radius: 12px;
+          background: var(--background); overflow: hidden; }
+  .read table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .read th { text-align: left; font-weight: 800; color: var(--muted-foreground);
+             font-size: 10px; letter-spacing: .05em; padding: 8px 12px; background: var(--muted); }
+  .read td { padding: 8px 12px; border-top: 1px solid var(--border); font-variant-numeric: tabular-nums; }
+  .read td:first-child { color: var(--muted-foreground); }
+  .read td.v { text-align: right; font-weight: 800; }
+  .read td.v i { font-style: normal; font-weight: 500; color: var(--muted-foreground); }
+  .flag { color: var(--destructive-text); }
+  .note { font-size: 12px; line-height: 1.6; color: var(--muted-foreground);
+          margin: 16px 0 0; word-break: keep-all; }
+  .note b { color: var(--foreground); }
+  #selfcheck { display: none; position: fixed; inset: auto 0 0 0; z-index: 99;
+               background: var(--destructive); color: #fff; font-size: 12px; font-weight: 700;
+               padding: 10px 14px; text-align: center; }
+</style>
+
+<div class="wrap">
+  <h1>적은 값과 보이는 틈이 다르다</h1>
+  <p class="lede">글자마다 <b>line-box</b>(행간이 만드는 상자)가 다르다. 금액은 <b>body 14/1.5</b>라
+    글자 위아래로 3.5px 씩 여백을 품고 있어서, 상품명과 같은 8을 줘도 그 자리만 13px 로 보인다.
+    <b>균일한 gap 이 균일한 틈을 만들지 않는다.</b> 아래 띠를 켜면 그 상자가 보인다.</p>
+
+  <div class="panel">
+    <div class="ctl"><span>메타 ↔ 상품명</span><div class="opts" id="c1"></div></div>
+    <div class="ctl"><span>상품명 ↔ 금액</span><div class="opts" id="c2"></div></div>
+    <div class="ctl"><span>금액 ↔ 칩</span><div class="opts" id="c3"></div></div>
+    <div class="ctl"><span>금액 행간 — 한 줄짜리에 본문 1.5 가 맞나</span>
+      <div class="opts">
+        <label class="opt"><input type="radio" name="lh" value="1.5" checked><span>1.5 지금</span></label>
+        <label class="opt"><input type="radio" name="lh" value="1.2"><span>1.2 촘촘</span></label>
+      </div></div>
+    <div class="ctl"><span>카드 ↔ 카드</span>
+      <div class="opts">
+        <label class="opt"><input type="radio" name="cg" value="8"><span>8</span></label>
+        <label class="opt"><input type="radio" name="cg" value="12" checked><span>12</span></label>
+        <label class="opt"><input type="radio" name="cg" value="24"><span>24</span></label>
+      </div></div>
+    <div class="ctl"><span>line-box 보기</span>
+      <div class="opts">
+        <label class="opt"><input type="radio" name="bx" value="0" checked><span>끄기</span></label>
+        <label class="opt"><input type="radio" name="bx" value="1"><span>켜기</span></label>
+      </div></div>
+  </div>
+
+  <div id="stage"></div>
+
+  <div class="read">
+    <table>
+      <tr><th>자리</th><th style="text-align:right">적은 값 → 보이는 틈</th></tr>
+      <tr><td>메타 ↔ 상품명</td><td class="v" id="r1"></td></tr>
+      <tr><td>상품명 ↔ 금액</td><td class="v" id="r2"></td></tr>
+      <tr><td>금액 ↔ 칩</td><td class="v" id="r3"></td></tr>
+      <tr><td>카드 ↔ 카드</td><td class="v" id="r4"></td></tr>
+    </table>
+  </div>
+
+  <p class="note">지금 코드는 <b>2 · 2 · 4</b> 다 — 보이는 틈으로는 4.8 / 7.1 / 11.5.
+    앞 시안의 <b>8 · 8 · 8</b> 은 10.8 / 13.1 / 15.5 라 뚝뚝 떨어져 보인다.
+    <b>보이는 틈</b> 쪽 숫자를 보며 고르면 된다.</p>
+</div>
+
+<div id="selfcheck"></div>
+
+<script>
+const STEPS = [0, 2, 4, 6, 8, 12];
+for (const [id, name, def] of [['c1','g1',2], ['c2','g2',2], ['c3','g3',4]]) {
+  document.getElementById(id).innerHTML = STEPS.map(v =>
+    `<label class="opt"><input type="radio" name="${name}" value="${v}"${v===def?' checked':''}><span>${v}</span></label>`
+  ).join('');
+}
+
+const CARD = `
+  <div class="card"><div class="body">
+    <span class="thumb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+      stroke-linecap="round" stroke-linejoin="round"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v14"/></svg></span>
+    <div class="col">
+      <span class="meta"><i class="dot"></i>태수 · 스타벅스 · 카페</span>
+      <p class="name">아이스 카페 아메리카노 T</p>
+      <p class="price">9,000원</p>
+      <span class="chip">D-3 · 2026.08.31까지</span>
+    </div>
+  </div>
+  <div class="acts"><button>매장</button><button>찜하기</button><button>사용완료</button></div></div>`;
+document.getElementById('stage').innerHTML = CARD + CARD;
+
+const val = n => document.querySelector(`input[name="${n}"]:checked`).value;
+const root = document.documentElement;
+
+function apply() {
+  const g1 = +val('g1'), g2 = +val('g2'), g3 = +val('g3');
+  const lh = +val('lh'), cg = +val('cg');
+  const wrap = document.querySelector('.wrap');
+  wrap.style.setProperty('--g1', g1 + 'px');
+  wrap.style.setProperty('--g2', g2 + 'px');
+  wrap.style.setProperty('--g3', g3 + 'px');
+  wrap.style.setProperty('--priceLh', lh);
+  wrap.style.setProperty('--cardgap', cg + 'px');
+  document.body.classList.toggle('showbox', val('bx') === '1');
+
+  // 보이는 틈 = 적은 값 + 위 글자의 아래 여백 + 아래 글자의 위 여백
+  const half = (size, l) => (size * l - size) / 2;
+  const hMeta = half(12, 1.2), hName = half(16, 1.2), hPrice = half(14, lh), hChip = 2; // 칩은 패딩 2
+  const show = (id, g, extra) => {
+    const v = g + extra;
+    document.getElementById(id).innerHTML = `${g} <i>→</i> ${v.toFixed(1)}px`;
+  };
+  show('r1', g1, hMeta + hName);
+  show('r2', g2, hName + hPrice);
+  show('r3', g3, hPrice + hChip);
+  document.getElementById('r4').innerHTML = `${cg} <i>→</i> ${cg}px <i>(상자끼리라 그대로)</i>`;
+}
+document.querySelectorAll('input').forEach(i => i.addEventListener('change', apply));
+apply();
+
+// 자체 점검 — 토큰이 안 붙었으면 화면이 거짓말을 한다
+addEventListener('load', () => setTimeout(() => {
+  const bad = [];
+  if (getComputedStyle(document.body).backgroundColor === 'rgba(0, 0, 0, 0)') bad.push('index.css 미로드');
+  const name = document.querySelector('.name');
+  if (Math.round(parseFloat(getComputedStyle(name).lineHeight)) !== 19) bad.push('상품명 행간 이상');
+  if (bad.length) {
+    const el = document.getElementById('selfcheck');
+    el.textContent = '시안이 실제와 다르다: ' + bad.join(' · ');
+    el.style.display = 'block';
+  }
+}, 200));
+</script>

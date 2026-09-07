@@ -1,0 +1,161 @@
+<!doctype html>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>코드와 번호의 글자 떼기</title>
+<script type="module" src="/src/index.css"></script>
+<style>
+  body { margin:0; background:var(--muted); font-family:Pretendard, system-ui, sans-serif;
+         color:var(--foreground); -webkit-font-smoothing:antialiased; }
+  .wrap { max-width:375px; margin:0 auto; padding:20px 16px 90px; }
+  h1 { font-size:22px; font-weight:800; margin:0 0 6px; letter-spacing:-.025em; }
+  .lede { font-size:13px; line-height:1.65; color:var(--muted-foreground); margin:0 0 18px; word-break:keep-all; }
+  .lede b { color:var(--foreground); }
+  .sec { margin:26px 0 8px; font-size:11px; font-weight:800; letter-spacing:.05em; color:var(--muted-foreground); }
+  .sub { font-size:12px; line-height:1.6; color:var(--muted-foreground); margin:0 0 10px; word-break:keep-all; }
+  .sub b { color:var(--foreground); }
+
+  .case { background:var(--card); border:1px solid var(--border); border-radius:12px;
+          padding:11px 13px; margin-bottom:9px; }
+  .cap { display:flex; align-items:baseline; gap:6px; font-size:10px; font-weight:800;
+         letter-spacing:.05em; color:var(--muted-foreground); margin-bottom:7px; }
+  .cap .n { margin-left:auto; font-variant-numeric:tabular-nums; }
+  .cap .pick { color:var(--primary); }
+
+  /* 바코드 상자 — 리더기 때문에 늘 흰 바탕이다 */
+  .bc { background:#fff; border:1px solid var(--border); border-radius:10px; padding:10px; }
+  .bcrow { display:flex; align-items:center; gap:8px; }
+  .bcnum { margin:0; flex:1; min-width:0; text-align:center; font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+           font-size:15px; font-weight:600; font-variant-numeric:tabular-nums; word-break:break-all; color:#17171c; }
+  .copy { flex:0 0 auto; width:32px; height:32px; border-radius:8px; border:1px solid var(--border);
+          background:var(--card); display:flex; align-items:center; justify-content:center; }
+  .copy svg { width:16px; height:16px; color:var(--muted-foreground); }
+  .over { margin-top:6px; font-size:10.5px; font-variant-numeric:tabular-nums; color:var(--muted-foreground); }
+  .over b { color:var(--foreground); }
+  .over .bad { color:var(--destructive-text); font-weight:800; }
+
+  .code { margin:0; text-align:center; font-weight:700; color:var(--foreground); }
+  .code.mono { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
+  .box { background:var(--accent); border-radius:18px; padding:16px; }
+  .box .label { margin:0 0 8px; text-align:center; font-size:13.5px; font-weight:600;
+                color:color-mix(in oklab, var(--primary) 70%, transparent); }
+  .field { display:flex; align-items:center; height:48px; padding:0 14px; border-radius:13px;
+           border:1px solid var(--input, var(--border)); background:var(--background);
+           font-size:15.5px; text-transform:uppercase; }
+  .field.mono { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
+  .field.ph { color:var(--muted-foreground); font-family:Pretendard, system-ui, sans-serif; letter-spacing:normal; }
+
+  .note { font-size:12px; line-height:1.65; color:var(--muted-foreground); margin:16px 0 0; word-break:keep-all; }
+  .note b { color:var(--foreground); }
+  code { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:11px; }
+  #selfcheck { display:none; position:fixed; inset:auto 0 0 0; z-index:99; background:var(--destructive);
+               color:#fff; font-size:12px; font-weight:700; padding:10px 14px; text-align:center; }
+</style>
+
+<div class="wrap">
+  <h1>따라 치는 값은 자간이 아니다</h1>
+  <p class="lede">가족 코드와 바코드 번호는 <b>읽어서 옮겨 적는 값</b>이라 한 글자씩
+    떼어놓는 것이지, 글줄을 다듬는 것이 아니다. 지금 네 곳에 0.02 · 0.12 · 0.14 · 0.16em
+    이 흩어져 있다.</p>
+
+  <div class="sec">① 바코드 번호 — 15px · 1곳</div>
+  <p class="sub">이 줄에는 이미 <code>groupDigits</code>가 네 자리씩 <b>띄어쓰기로</b> 끊어
+    놓았다. 자간이 또 할 일이 남았는지가 물음이다. 옆에 복사 버튼이 붙고, 주석에
+    <b>"20px + 자간 + 복사 버튼이 한 줄을 넘겼다"</b>고 적혀 있다 — 넘치면 값을 잃는다.</p>
+  <div id="bc"></div>
+
+  <div class="sec">② 가족 코드 — 6자리 · 4곳</div>
+  <p class="sub">0.12 · 0.14 · 0.16em 이 크기별로 다르게 붙어 있었다. 하나로 묶어도 되는지
+    본다.</p>
+  <div id="code"></div>
+
+  <div class="sec">③ 34px 자리에 고정폭이 안 붙어 있다</div>
+  <p class="sub">코드 표시 넷 중 셋은 <code>font-mono</code>인데 <b>FamilyOnboarding 의
+    34px 만 본문 서체</b>다. 따라 치는 값이라 <b>0 과 O</b>, <b>1 과 l</b>이 갈려야 하는
+    자리다.</p>
+  <div id="mono"></div>
+</div>
+
+<div id="selfcheck"></div>
+
+<script>
+const COPY = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+  stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`;
+const NUM = '8801234 5678901 2345';  // groupDigits 를 거친 20자리 — 긴 쪽
+
+document.getElementById('bc').innerHTML = [
+  ['0', '자간 없음 — 띄어쓰기가 이미 끊는다'],
+  ['0.02em', '지금 값'],
+  ['0.12em', '코드와 같게 하면'],
+].map(([tr, why], i) => `
+  <div class="case">
+    <div class="cap">${why}<span class="n ${tr === '0.02em' ? 'pick' : ''}">${tr}</span></div>
+    <div class="bc"><div class="bcrow">
+      <p class="bcnum" style="letter-spacing:${tr}">${NUM}</p>
+      <span class="copy">${COPY}</span>
+    </div></div>
+    <div class="over" data-i="${i}"></div>
+  </div>`).join('');
+
+document.getElementById('code').innerHTML = [
+  [34, '온보딩 — 만든 직후 코드', ['0.12em', '0.16em']],
+  [29, '가족 관리 — 코드 보기', ['0.12em', '0.14em']],
+  [15.5, '코드 입력칸', ['0.12em']],
+].map(([size, where, opts]) => `
+  <div class="case">
+    <div class="cap">${where}<span class="n">${size}px</span></div>
+    ${opts.map(tr => `
+      <div style="display:flex;align-items:center;gap:8px;margin-top:6px">
+        ${size === 15.5
+          ? `<span class="field mono" style="flex:1;letter-spacing:${tr}">K7Q2XM</span>`
+          : `<p class="code mono" style="flex:1;font-size:${size}px;line-height:1.15;letter-spacing:${tr}">K7Q2XM</p>`}
+        <span style="flex:0 0 46px;font-size:10px;font-weight:800;color:var(--muted-foreground);font-variant-numeric:tabular-nums">${tr}</span>
+      </div>`).join('')}
+  </div>`).join('');
+
+document.getElementById('mono').innerHTML = `
+  <div class="case">
+    <div class="cap">지금 — 본문 서체<span class="n">34px</span></div>
+    <div class="box">
+      <p class="label">초대 코드</p>
+      <p class="code" style="font-size:34px;line-height:1.15;letter-spacing:0.12em">O0Il1S5</p>
+    </div>
+  </div>
+  <div class="case">
+    <div class="cap">고정폭을 붙이면<span class="n pick">34px</span></div>
+    <div class="box">
+      <p class="label">초대 코드</p>
+      <p class="code mono" style="font-size:34px;line-height:1.15;letter-spacing:0.12em">O0Il1S5</p>
+    </div>
+  </div>
+  <p class="note">위아래를 견주면 <b>O 와 0</b>, <b>I 와 l 과 1</b>이 갈리는지 보인다.
+    실제 코드에 어떤 글자가 나오는지에 달렸다 — 여섯 자리에 저 글자가 하나라도 들어오면
+    전화로 불러 줄 때 막힌다.</p>`;
+
+const measure = () => {
+  document.querySelectorAll('.over').forEach(el => {
+    const box = el.previousElementSibling.querySelector('.bcrow');
+    const num = box.querySelector('.bcnum');
+    const line = num.getBoundingClientRect().height;
+    const one = parseFloat(getComputedStyle(num).fontSize) * 1.2;
+    const lines = Math.max(1, Math.round(line / one));
+    el.innerHTML = lines > 1
+      ? `번호 칸 <b>${num.getBoundingClientRect().width.toFixed(0)}px</b> · <span class="bad">${lines}줄로 넘침</span>`
+      : `번호 칸 <b>${num.getBoundingClientRect().width.toFixed(0)}px</b> · 한 줄`;
+  });
+};
+measure();
+for (const ms of [400, 1200]) setTimeout(measure, ms);
+
+addEventListener('load', () => setTimeout(() => {
+  const bad = [];
+  if (getComputedStyle(document.body).backgroundColor === 'rgba(0, 0, 0, 0)') bad.push('index.css 미로드');
+  const m = document.querySelector('.code.mono'), n = document.querySelector('.code:not(.mono)');
+  if (m && n && getComputedStyle(m).fontFamily === getComputedStyle(n).fontFamily)
+    bad.push('고정폭과 본문 서체가 같다 — 견줄 수가 없다');
+  if (bad.length) {
+    const el = document.getElementById('selfcheck');
+    el.textContent = '시안이 실제와 다르다: ' + bad.join(' · ');
+    el.style.display = 'block';
+  }
+}, 250));
+</script>

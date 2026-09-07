@@ -1,0 +1,201 @@
+<!doctype html>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>카드 통째 토큰화</title>
+<script type="module" src="/src/index.css"></script>
+<style>
+  body { margin:0; background:var(--muted); font-family:Pretendard, system-ui, sans-serif;
+         color:var(--foreground); -webkit-font-smoothing:antialiased; }
+  .wrap { max-width:375px; margin:0 auto; padding:20px 16px 80px; }
+  h1 { font-size:22px; font-weight:800; margin:0 0 6px; letter-spacing:-.02em; }
+  .lede { font-size:13px; line-height:1.65; color:var(--muted-foreground); margin:0 0 20px; word-break:keep-all; }
+  .lede b { color:var(--foreground); }
+  .panel { position:sticky; top:0; z-index:5; background:var(--background); border:1px solid var(--border);
+           border-radius:14px; padding:12px 14px; margin-bottom:18px; box-shadow:0 6px 20px -12px rgb(0 0 0/.35); }
+  .panel > span { display:block; font-size:11px; font-weight:800; letter-spacing:.04em;
+                  color:var(--muted-foreground); margin-bottom:6px; }
+  .opts { display:flex; gap:6px; }
+  label.opt { flex:1; }
+  label.opt input { position:absolute; opacity:0; pointer-events:none; }
+  label.opt span { display:block; text-align:center; font-size:12px; font-weight:700; padding:7px 8px;
+                   border-radius:9px; border:1px solid var(--border); color:var(--muted-foreground); cursor:pointer; }
+  label.opt input:checked + span { background:var(--primary); border-color:var(--primary); color:var(--primary-foreground); }
+
+  .caseLbl { display:flex; align-items:baseline; gap:8px; font-size:11px; font-weight:800;
+             letter-spacing:.04em; color:var(--muted-foreground); margin:20px 0 7px; }
+  .caseLbl b { font-size:11px; }
+  .caseLbl .h { margin-left:auto; font-variant-numeric:tabular-nums; font-weight:700; }
+
+  .card { position:relative; overflow:hidden; border:1px solid var(--border); background:var(--card);
+          border-radius:16px; }
+  .body { position:relative; display:flex; }
+  .thumbwrap { position:relative; flex:0 0 auto; }
+  .thumb { display:flex; align-items:center; justify-content:center; overflow:hidden; background:var(--accent); }
+  .thumb svg { color:color-mix(in oklab, var(--primary) 55%, transparent); }
+  .dday { position:absolute; top:-6px; left:-6px; border-radius:999px; font-weight:700;
+          font-variant-numeric:tabular-nums; line-height:1.4; box-shadow:0 0 0 2px var(--card);
+          background:var(--destructive); color:#fff; }
+  .col { position:relative; display:flex; min-width:0; flex:1; flex-direction:column; }
+  .l1 { display:flex; align-items:center; gap:6px; }
+  .l1 i { width:6px; height:6px; border-radius:999px; background:var(--primary); flex:0 0 auto; }
+  .l1 span { min-width:0; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+             font-weight:500; color:var(--muted-foreground); }
+  .l2 { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
+        font-weight:600; word-break:keep-all; }
+  .l3 { display:flex; flex-wrap:wrap; align-items:center; column-gap:8px; row-gap:2px; }
+  .date { font-weight:600; white-space:nowrap; font-variant-numeric:tabular-nums; color:var(--destructive-text); }
+  .bar { width:1px; flex:0 0 auto; background:var(--border); }
+  .amt { font-weight:700; font-variant-numeric:tabular-nums; }
+  .acts { display:flex; border-top:1px solid var(--border); }
+  .acts button { flex:1; height:44px; background:none; border:0; color:var(--foreground); font-weight:600; }
+  .acts button + button { border-left:1px solid var(--border); }
+
+  /* ── 지금 — main 그대로 ── */
+  .now .body   { gap:12px; padding:13px; }
+  .now .thumb  { width:62px; height:62px; border-radius:12px; }
+  .now .thumb svg { width:24px; height:24px; }
+  .now .dday   { padding:1px 7px; font-size:11px; }
+  .now .l1 span{ font-size:12px; line-height:1.333; }
+  .now .l2     { font-size:15.5px; line-height:1.375; letter-spacing:-.018em; margin-top:5px; }
+  .now .l3     { margin-top:5px; }
+  .now .date   { font-size:14.5px; line-height:1.5; }
+  .now .amt    { font-size:15px; line-height:1.5; }
+  .now .bar    { height:12px; }
+  .now .acts button { font-size:13px; }
+
+  /* ── 토큰 — 스케일 안의 값만 ── */
+  .tok .body   { gap:12px; padding:12px; }
+  .tok .thumb  { width:64px; height:64px; border-radius:var(--radius-lg); }
+  .tok .thumb svg { width:24px; height:24px; }
+  .tok .dday   { padding:2px 8px; font-size:12px; }
+  .tok .l1 span{ font-size:12px; line-height:1.2; }
+  .tok .l2     { font-size:16px; line-height:1.375; letter-spacing:-.02em; margin-top:8px; }
+  .tok .l3     { margin-top:0; }
+  .tok .date   { font-size:16px; line-height:1.5; }
+  .tok .amt    { font-size:16px; line-height:1.5; }
+  .tok .bar    { height:12px; }
+  .tok .acts button { font-size:14px; }
+
+  .diff .l1 span, .diff .l2, .diff .date, .diff .amt, .diff .dday {
+    outline:1px dashed color-mix(in oklab, var(--primary) 45%, transparent); outline-offset:1px; }
+
+  table.map { width:100%; border-collapse:collapse; font-size:11.5px; margin-top:18px;
+              border:1px solid var(--border); border-radius:12px; overflow:hidden; background:var(--background); }
+  table.map th { text-align:left; font-size:10px; letter-spacing:.05em; font-weight:800;
+                 color:var(--muted-foreground); background:var(--muted); padding:7px 9px; }
+  table.map td { padding:6px 9px; border-top:1px solid var(--border); vertical-align:top; }
+  table.map td:first-child { color:var(--muted-foreground); white-space:nowrap; }
+  table.map code { font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:10.5px; }
+  .up { color:var(--destructive-text); font-weight:700; }
+  .same { color:var(--success-text); font-weight:700; }
+  .note { font-size:12px; line-height:1.65; color:var(--muted-foreground); margin:16px 0 0; word-break:keep-all; }
+  .note b { color:var(--foreground); }
+  #selfcheck { display:none; position:fixed; inset:auto 0 0 0; z-index:99; background:var(--destructive);
+               color:#fff; font-size:12px; font-weight:700; padding:10px 14px; text-align:center; }
+</style>
+
+<div class="wrap">
+  <h1>카드 통째 토큰화</h1>
+  <p class="lede">카드 안 임의값 <b>19개</b>를 스케일 안의 값으로 옮기면 어디가 얼마나
+    움직이는지. 위가 지금(main), 아래가 토큰이다. 앞서 정한 <b>메타↔상품명 8 · 상품명↔기한줄 0 ·
+    사진 위 맞춤</b>이 아래에 들어가 있다.</p>
+
+  <div class="panel">
+    <span>바뀐 자리 표시</span>
+    <div class="opts">
+      <label class="opt"><input type="radio" name="d" value="0" checked><span>끄기</span></label>
+      <label class="opt"><input type="radio" name="d" value="1"><span>켜기</span></label>
+    </div>
+  </div>
+
+  <div id="stage"></div>
+
+  <table class="map">
+    <tr><th>자리</th><th>지금</th><th>토큰</th><th>움직임</th></tr>
+    <tbody id="maprows"></tbody>
+  </table>
+
+  <p class="note"><b>13 과 15 는 스케일이 못 정한다.</b> 하단 버튼 13 은 12 와 14 로부터 똑같이
+    떨어져 있고, 금액 15 도 14 와 16 사이다. 여기서는 둘 다 큰 쪽으로 보냈다 — 60대가 읽는
+    목록이고, 훑을 때 실제로 찾는 값이 기한과 금액이라 작아질 이유가 없다.</p>
+</div>
+
+<div id="selfcheck"></div>
+
+<script>
+const TICKET = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+  stroke-linecap="round" stroke-linejoin="round"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v14"/></svg>`;
+
+const card = kind => `<div class="card ${kind}"><div class="body">
+    <div class="thumbwrap"><span class="thumb">${TICKET}</span><span class="dday">D-3</span></div>
+    <div class="col">
+      <div class="l1"><i></i><span>태수 · 스타벅스</span></div>
+      <div class="l2">카페 아메리카노 T 2잔 + 딸기 생크림 케이크</div>
+      <div class="l3"><span class="date">26.08.31까지</span><span class="bar"></span><span class="amt">32,000원</span></div>
+    </div>
+  </div>
+  <div class="acts"><button>매장</button><button>찜하기</button><button>사용완료</button></div></div>`;
+
+document.getElementById('stage').innerHTML =
+  `<div class="caseLbl">지금 · main<span class="h" id="hNow"></span></div>` + card('now') +
+  `<div class="caseLbl">토큰<span class="h" id="hTok"></span></div>` + card('tok');
+
+// 옮김표. 값이 왜 그리로 가는지는 코드 주석이 아니라 이 표가 말한다.
+const MAP = [
+  ['카드 패딩',    'p-[13px]',        'p-3 · 12',            -1],
+  ['사진',         'size-[62px]',     'size-16 · 64',        +2],
+  ['사진 반지름',  'rounded-xl · 12', 'rounded-lg · 14',     +2],
+  ['사진↔글',      'gap-3 · 12',      'gap-3 · 12',           0],
+  ['메타',         'text-xs · 12',    'text-caption · 12',    0],
+  ['메타↔상품명',  'gap-[5px]',       'mt-2 · 8',            +3],
+  ['상품명',       'text-[15.5px]',   'text-callout · 16',  +0.5],
+  ['상품명 자간',  '-0.018em',        '-0.02em',              0],
+  ['상품명↔기한줄','gap-[5px]',       '0',                   -5],
+  ['기한',         'text-[14.5px]',   'text-callout · 16',  +1.5],
+  ['금액',         'text-[15px]',     'text-callout · 16',    +1],
+  ['남음',         'text-[12.5px]',   'text-caption · 12',  -0.5],
+  ['D-day 글자',   'text-[11px]',     'text-caption · 12',   +1],
+  ['D-day 패딩',   'px-[7px] py-[1px]','px-2 py-0.5 · 8·2',  +1],
+  ['구분선',       'h-[12px]',        'h-3 · 12',             0],
+  ['⋮ 반지름',     'rounded-[10px]',  'rounded-md · 10',      0],
+  ['⋮ 옵티컬',     '-mt-[3px]',       '-mt-0.5 · 2',         -1],
+  ['정보 아이콘',  'size-[17px]',     'size-4 · 16',         -1],
+  ['하단 버튼',    'text-[13px]',     'text-body · 14',      +1],
+];
+document.getElementById('maprows').innerHTML = MAP.map(([n, a, b, d]) => {
+  const cls = d === 0 ? 'same' : 'up';
+  const txt = d === 0 ? '그대로' : (d > 0 ? '+' : '') + d;
+  return `<tr><td>${n}</td><td><code>${a}</code></td><td><code>${b}</code></td><td class="${cls}">${txt}</td></tr>`;
+}).join('');
+
+const apply = () => {
+  document.body.classList.toggle('diff',
+    document.querySelector('input[name="d"]:checked').value === '1');
+  const h = s => document.querySelector(s).getBoundingClientRect().height.toFixed(1) + 'px';
+  document.getElementById('hNow').textContent = h('.now');
+  document.getElementById('hTok').textContent = h('.tok');
+};
+document.querySelectorAll('input').forEach(i => i.addEventListener('change', apply));
+apply();
+// index.css 는 모듈로 늦게 붙는다. 그 전에 잰 높이는 스타일이 하나도 안 걸린 상태의
+// 값이라 60px 씩 크게 나온다. fonts.ready 로는 못 잡는다 — 폰트가 CSS 보다 먼저 끝난다.
+// 카드가 실제로 자리를 잡을 때마다 다시 잰다.
+// 콜백 안에서 바로 재면 아직 한 번 더 움직일 것이 남아 있다. 다음 그림 차례로 미룬다.
+const ro = new ResizeObserver(() => requestAnimationFrame(apply));
+for (const el of document.querySelectorAll('.card, .col, .l2')) ro.observe(el);
+// 그래도 마지막 한 번을 놓친다. 다 앉은 뒤에 두 번 더 재고 끝낸다 — 읽기 값 하나 때문에
+// 반응형으로 붙들 일이 아니다.
+for (const ms of [400, 1200]) setTimeout(apply, ms);
+
+addEventListener('load', () => setTimeout(() => {
+  const bad = [];
+  if (getComputedStyle(document.body).backgroundColor === 'rgba(0, 0, 0, 0)') bad.push('index.css 미로드');
+  const r = getComputedStyle(document.querySelector('.tok .thumb')).borderRadius;
+  if (parseFloat(r) !== 14) bad.push('--radius-lg 가 14가 아니다: ' + r);
+  if (bad.length) {
+    const el = document.getElementById('selfcheck');
+    el.textContent = '시안이 실제와 다르다: ' + bad.join(' · ');
+    el.style.display = 'block';
+  }
+}, 250));
+</script>

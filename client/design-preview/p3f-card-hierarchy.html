@@ -1,0 +1,150 @@
+<!doctype html>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>카드 세 줄의 위계</title>
+<script type="module" src="/src/index.css"></script>
+<style>
+  body { margin:0; background:var(--muted); font-family:Pretendard, system-ui, sans-serif;
+         color:var(--foreground); -webkit-font-smoothing:antialiased; }
+  .wrap { max-width:375px; margin:0 auto; padding:20px 16px 80px; }
+  h1 { font-size:22px; font-weight:800; margin:0 0 6px; letter-spacing:-.02em; }
+  .lede { font-size:13px; line-height:1.65; color:var(--muted-foreground); margin:0 0 8px; word-break:keep-all; }
+  .lede b { color:var(--foreground); }
+  blockquote { margin:12px 0 20px; padding:10px 12px; border-left:3px solid var(--primary);
+               background:var(--background); border-radius:0 10px 10px 0;
+               font-size:12px; line-height:1.6; color:var(--muted-foreground); word-break:keep-all; }
+  blockquote b { color:var(--foreground); }
+
+  .opt { margin:22px 0 0; }
+  .optHead { display:flex; align-items:baseline; gap:8px; margin-bottom:4px; }
+  .tag { font-size:10px; font-weight:800; letter-spacing:.06em; padding:3px 7px; border-radius:6px;
+         background:var(--accent); color:var(--muted-foreground); }
+  .tag.pick { background:var(--primary); color:var(--primary-foreground); }
+  .optHead h2 { font-size:14px; font-weight:800; margin:0; letter-spacing:-.01em; }
+  .sizes { margin-left:auto; font-size:11px; font-weight:700; font-variant-numeric:tabular-nums;
+           color:var(--muted-foreground); }
+  .why { font-size:12px; line-height:1.6; color:var(--muted-foreground); margin:0 0 8px; word-break:keep-all; }
+  .why b { color:var(--foreground); }
+
+  .card { position:relative; overflow:hidden; border:1px solid var(--border); background:var(--card);
+          border-radius:16px; }
+  .card + .card { margin-top:10px; }
+  .body { position:relative; display:flex; gap:12px; padding:12px; }
+  .thumbwrap { position:relative; flex:0 0 auto; }
+  .thumb { display:flex; width:64px; height:64px; align-items:center; justify-content:center;
+           overflow:hidden; border-radius:var(--radius-lg); background:var(--accent); }
+  .thumb svg { width:24px; height:24px; color:color-mix(in oklab, var(--primary) 55%, transparent); }
+  .dday { position:absolute; top:-6px; left:-6px; border-radius:999px; padding:2px 8px; font-size:12px;
+          font-weight:700; font-variant-numeric:tabular-nums; line-height:1.2;
+          box-shadow:0 0 0 2px var(--card); background:var(--destructive); color:#fff; }
+  .col { position:relative; display:flex; min-width:0; flex:1; flex-direction:column; }
+  .l1 { display:flex; align-items:center; gap:6px; }
+  .l1 i { width:6px; height:6px; border-radius:999px; background:var(--primary); flex:0 0 auto; }
+  .l1 span { min-width:0; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+             font-size:12px; line-height:1.2; font-weight:500; color:var(--muted-foreground); }
+  .l2 { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
+        line-height:1.375; letter-spacing:-.02em; font-weight:600; word-break:keep-all; margin-top:8px; }
+  .l3 { display:flex; flex-wrap:wrap; align-items:center; column-gap:8px; row-gap:2px; }
+  .date { font-weight:600; white-space:nowrap; font-variant-numeric:tabular-nums;
+          line-height:1.5; color:var(--destructive-text); }
+  .bar { width:1px; height:12px; flex:0 0 auto; background:var(--border); }
+  .amt { font-weight:700; font-variant-numeric:tabular-nums; line-height:1.5; }
+  .acts { display:flex; border-top:1px solid var(--border); }
+  .acts button { flex:1; height:44px; background:none; border:0; color:var(--foreground);
+                 font-weight:600; font-size:14px; }
+  .acts button + button { border-left:1px solid var(--border); }
+
+  .note { font-size:12px; line-height:1.65; color:var(--muted-foreground); margin:24px 0 0; word-break:keep-all; }
+  .note b { color:var(--foreground); }
+  table.t { width:100%; border-collapse:collapse; font-size:11.5px; margin-top:14px;
+            border:1px solid var(--border); border-radius:12px; overflow:hidden; background:var(--background); }
+  table.t th { text-align:left; font-size:10px; letter-spacing:.05em; font-weight:800;
+               color:var(--muted-foreground); background:var(--muted); padding:7px 9px; }
+  table.t td { padding:7px 9px; border-top:1px solid var(--border); font-variant-numeric:tabular-nums; }
+  table.t td:first-child { color:var(--muted-foreground); }
+  #selfcheck { display:none; position:fixed; inset:auto 0 0 0; z-index:99; background:var(--destructive);
+               color:#fff; font-size:12px; font-weight:700; padding:10px 14px; text-align:center; }
+</style>
+
+<div class="wrap">
+  <h1>셋을 다 16 으로 보내면</h1>
+  <p class="lede">main 은 상품명 15.5 · 금액 15 · 기한 14.5 로 0.5px 씩 세 단을 뒀다.
+    스케일에서 가장 가까운 칸이 셋 다 <b>16</b> 이라, 옮기면 눌러 붙는다.</p>
+  <blockquote>이 줄만 상품명(15.5px)에 <b>가깝게</b> 키웠다. 목록을 훑을 때 실제로 찾는 값이
+    언제까지와 얼마 둘이라, 13px 로는 상품명 아래 부속처럼 읽혔다.
+    <br>— <b>GifticonCard.jsx</b> 주석</blockquote>
+  <p class="lede">"가깝게"지 "같게"가 아니다. 스케일에 그 사이 칸이 없어서 생긴 일이다.</p>
+
+  <div id="stage"></div>
+
+  <table class="t">
+    <tr><th>안</th><th>상품명</th><th>금액</th><th>기한</th><th>카드 높이</th></tr>
+    <tbody id="rows"></tbody>
+  </table>
+
+  <p class="note"><b>C 로 가면 스케일에 15 가 들어온다.</b> 카드만의 이야기가 아니다 —
+    앱 전체에서 15 가 42곳, 15.5 가 45곳으로 셋째·둘째로 많이 쓰이는 크기다. 87곳이
+    갈 자리를 얻는다. 대신 12 · 14 · 15 · 16 이 되어 위쪽만 1px 간격이 된다.</p>
+</div>
+
+<div id="selfcheck"></div>
+
+<script>
+const TICKET = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+  stroke-linecap="round" stroke-linejoin="round"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v14"/></svg>`;
+
+// [키, 뱃지, 제목, 까닭, 상품명, 금액, 기한, 고른 것인가]
+const OPTS = [
+  ['main', '지금', 'main — 0.5px 씩 세 단', '스케일에 없는 값이다. 견주어 보는 기준으로만 둔다.', 15.5, 15, 14.5, 0],
+  ['a', 'A', '위계 — 상품명만 크게', '기한·금액을 body 14 로 내린다. 상품명이 확실히 앞선다. 다만 main 이 "부속처럼 읽힌다"며 버린 그 모양으로 돌아간다.', 16, 14, 14, 0],
+  ['b', 'B', '나란히 — 셋 다 16', '앞 시안이 이것이었다. 크기로는 위계가 없고 두께와 색이 대신 진다 — 상품명 semibold 진한색, 금액 bold, 기한 붉은색.', 16, 16, 16, 1],
+  ['c', 'C', '15 를 스케일에 들인다', 'main 의 뜻 그대로다. 상품명 16, 기한·금액 15 — 가깝되 같지는 않다. 스케일이 12·14·15·16 이 된다.', 16, 15, 15, 0],
+];
+
+document.getElementById('stage').innerHTML = OPTS.map(([k, tag, title, why, n, a, d, pick]) => `
+  <div class="opt">
+    <div class="optHead">
+      <span class="tag${pick ? ' pick' : ''}">${tag}</span>
+      <h2>${title.replace(/^[^—]*— /, '')}</h2>
+      <span class="sizes">${n} · ${a} · ${d}</span>
+    </div>
+    <p class="why">${why}</p>
+    <div class="card" data-k="${k}"><div class="body">
+      <div class="thumbwrap"><span class="thumb">${TICKET}</span><span class="dday">D-3</span></div>
+      <div class="col">
+        <div class="l1"><i></i><span>태수 · 스타벅스</span></div>
+        <div class="l2" style="font-size:${n}px">카페 아메리카노 T 2잔 + 딸기 생크림 케이크</div>
+        <div class="l3">
+          <span class="date" style="font-size:${d}px">26.08.31까지</span>
+          <span class="bar"></span>
+          <span class="amt" style="font-size:${a}px">32,000원</span>
+        </div>
+      </div>
+    </div>
+    <div class="acts"><button>매장</button><button>찜하기</button><button>사용완료</button></div></div>
+  </div>`).join('');
+
+const draw = () => {
+  document.getElementById('rows').innerHTML = OPTS.map(([k, tag, , , n, a, d]) => {
+    const h = document.querySelector(`.card[data-k="${k}"]`).getBoundingClientRect().height;
+    return `<tr><td>${tag}</td><td>${n}</td><td>${a}</td><td>${d}</td><td>${h.toFixed(1)}px</td></tr>`;
+  }).join('');
+};
+draw();
+// index.css 가 모듈로 늦게 붙는다. 다 앉은 뒤에 다시 잰다.
+const ro = new ResizeObserver(() => requestAnimationFrame(draw));
+for (const el of document.querySelectorAll('.card')) ro.observe(el);
+for (const ms of [400, 1200]) setTimeout(draw, ms);
+
+addEventListener('load', () => setTimeout(() => {
+  const bad = [];
+  if (getComputedStyle(document.body).backgroundColor === 'rgba(0, 0, 0, 0)') bad.push('index.css 미로드');
+  if (parseFloat(getComputedStyle(document.querySelector('.thumb')).borderRadius) !== 14)
+    bad.push('--radius-lg 가 14가 아니다');
+  if (bad.length) {
+    const el = document.getElementById('selfcheck');
+    el.textContent = '시안이 실제와 다르다: ' + bad.join(' · ');
+    el.style.display = 'block';
+  }
+}, 250));
+</script>
