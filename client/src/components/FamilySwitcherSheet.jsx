@@ -81,7 +81,7 @@ export default function FamilySwitcherSheet({ onClose, initialCode = '' }) {
   return (
     <Sheet open onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="max-h-[calc(92dvh/var(--ui-scale))] gap-0 overflow-y-auto pb-[var(--safe-bottom)]">
-        <SheetHeader className="pb-1">
+        <SheetHeader>
           <SheetTitle>{title}</SheetTitle>
         </SheetHeader>
 

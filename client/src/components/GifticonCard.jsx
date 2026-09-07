@@ -47,10 +47,10 @@ function CardMenuSheet({ gifticon, onClose, onEdit, onDelete }) {
   return (
     <Sheet open onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="gap-0 pb-[var(--safe-bottom)]">
-        <SheetHeader className="pb-1">
+        <SheetHeader>
           <SheetTitle className="truncate">{gifticon.name}</SheetTitle>
         </SheetHeader>
-        <div className="flex flex-col px-5 pt-2">
+        <div className="flex flex-col px-5">
           <button
             type="button"
             onClick={() => choose(onEdit)}

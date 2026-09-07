@@ -104,7 +104,9 @@ function SheetHeader({ className, ...props }) {
   // 14(56) 였다가 15(60) 로 늘렸다. 동그라미를 34 에서 40 으로 키우면서 44px 과녁이
   // 왼쪽으로 2px 더 나왔고, 그만큼 제목과 겹쳤다. 보이는 것은 안 바뀌었는데 누를 자리가
   // 자라서 생긴 겹침이라 화면만 봐서는 안 보인다.
-  return <div data-slot="sheet-header" className={cn('flex flex-col gap-1 px-5 pt-5 pr-15', className)} {...props} />;
+  // 사방 20 이다. 아래만 12 로 좁던 것을 위와 맞췄다 — 제목 잉크를 기준으로 재면
+  // 위가 22(패딩 20 + 행간 여백 2)인데 아래는 14 였다.
+  return <div data-slot="sheet-header" className={cn('flex flex-col gap-1 p-5 pr-15', className)} {...props} />;
 }
 
 function SheetTitle({ className, ...props }) {

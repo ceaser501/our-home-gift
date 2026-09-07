@@ -139,7 +139,7 @@ export default function BarcodeModal({ gifticon, onClose, onUsed, onSpend }) {
             사라지고, 그만큼 바코드와 버튼에 여백이 돌아간다.
             사진을 보는 동안에는 제목이 '원본 사진'으로 바뀐다 — 상품명은 바코드 화면에서
             이미 봤고, 여기서 알아야 하는 것은 "지금 어디에 있나"다. */}
-        <SheetHeader className="gap-0 pb-3">
+        <SheetHeader className="gap-0">
           <div className="flex items-center gap-2.5">
             {view === 'photo' && (
               <button
