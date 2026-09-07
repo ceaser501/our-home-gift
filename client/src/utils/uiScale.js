@@ -22,7 +22,7 @@ const CACHE_KEY = 'moacon:ui-scale';
 export const MIN_UI_SCALE = 0.85;
 export const MAX_UI_SCALE = 1.15;
 
-// 안드로이드만 기준을 7% 내린다.
+// 안드로이드만 기준을 4% 내린다.
 //
 // 같은 CSS px가 두 폰에서 물리적으로 다른 크기로 그려진다. 갤럭시 S25는 기본 설정에서
 // 1인치에 138px이 들어가고 아이폰 15/16은 154px이 들어간다 — 같은 15.5px 글자가
@@ -32,10 +32,13 @@ export const MAX_UI_SCALE = 1.15;
 // 놓고 대보고 안 것이다. "안드로이드가 원래 크고 다른 앱도 다 그렇다"는 이론이 실물과
 // 달랐다.
 //
+// 처음에는 7%(0.93)로 잡았다가 되돌렸다. 계산으로는 11% 차이를 메우는 값이었는데,
+// 폰에 깔고 보니 이번에는 다른 앱들보다 작았다. 숫자가 맞아도 눈이 아니라면 눈을 따른다.
+//
 // 상한은 그대로 115%다. 곱한 뒤에 자르기 때문에, 눈이 어두워 폰 글자를 다섯 눈금 이상
 // 키운 사람은 예전과 똑같이 115%를 받는다 — 어차피 상한에 걸리는 자리라 이 조정으로
 // 잃는 것이 없다. 줄어드는 사람은 기본 설정으로 쓰는 사람뿐이고, 그게 겨냥한 자리다.
-const PLATFORM_BASE = { android: 0.93, ios: 1 };
+const PLATFORM_BASE = { android: 0.96, ios: 1 };
 
 function platformBase() {
   return PLATFORM_BASE[window.Capacitor?.getPlatform?.()] ?? 1;
