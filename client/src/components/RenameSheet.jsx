@@ -94,10 +94,12 @@ export default function RenameSheet({ title, label, hint, helper, initialValue =
                 눈이 속는 만큼만 되돌리는 값이라 옵티컬 보정이지 들여쓰기가 아니다. */}
             {helper && (
               <div className="flex items-start gap-1.5 pl-1">
-                <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full bg-border text-[11px] font-bold text-muted-foreground">
+                <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full bg-border text-caption font-bold text-muted-foreground">
                   i
                 </span>
-                <p className="m-0 flex-1 text-footnote text-muted-foreground">{helper}</p>
+                {/* footnote(12/1.6)에서 body(14)로 한 단 올렸다. 12 는 이 창에서 제일 작은
+                    글자였는데, 저장을 누르기 전에 읽어야 하는 말이 제일 작으면 앞뒤가 안 맞는다. */}
+                <p className="m-0 flex-1 text-body text-muted-foreground">{helper}</p>
               </div>
             )}
           </div>
