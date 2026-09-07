@@ -78,7 +78,7 @@ export default function RenameSheet({ title, label, hint, description, helper, i
               // 보이는 라벨을 걷었으므로 이름은 여기로 넘긴다. 없으면 화면 낭독기가
               // '편집' 이라고만 읽고 무엇을 적는 칸인지 말해주지 못한다.
               aria-label={label}
-              className="h-[52px] rounded-lg px-[15px] text-callout"
+              className="h-[52px] rounded-lg px-4 text-callout"
             />
             {/* 칸 아래 한 줄. 상자를 치지 않고 글자만 둔다 — footnote 는 12px 에 행간이
                 넓어서, 두 줄로 흐르는 짧은 안내에 맞는 자리다.
@@ -88,8 +88,12 @@ export default function RenameSheet({ title, label, hint, description, helper, i
 
                 두 줄로 흐를 때 표가 가운데로 내려오지 않게 items-start 로 붙이고, 첫 줄의
                 가운데선에 맞춰 mt-0.5 만큼 내린다(줄 상자 19.2 에 표 16 이라 위아래 1.6). */}
+            {/* 칸 글자와 같은 자리에서 시작한다. 왼쪽 선은 창의 다른 것들과 20 으로
+                맞아 있었는데, 칸의 둥근 모서리가 눈을 안쪽으로 당겨서 헬퍼만 왼쪽으로
+                튀어나와 보였다. 헬퍼는 창이 아니라 그 칸에 딸린 말이라, 칸 안쪽 선에
+                맞추는 편이 맞다. */}
             {helper && (
-              <div className="flex items-start gap-1.5">
+              <div className="flex items-start gap-1.5 pl-4">
                 <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full bg-border text-[11px] font-bold text-muted-foreground">
                   i
                 </span>
