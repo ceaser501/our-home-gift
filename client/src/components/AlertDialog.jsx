@@ -1,6 +1,7 @@
 import { createPortal } from 'react-dom';
 import { AlertCircle, AlertTriangle, CheckCircle2, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ACTION_ROW, ACTION_PRIMARY, ACTION_CANCEL } from '../utils/sheetUi';
 import { cn } from '@/lib/utils';
 import useBackClose from '../utils/useBackClose';
 
@@ -100,14 +101,18 @@ export default function AlertDialog({
           </ul>
         )}
 
-        <div className={cn('mt-[18px] flex gap-2', stacked ? 'flex-col' : 'flex-row-reverse')}>
+        {/* 나란히 놓을 때는 시트의 확정·취소 짝과 같은 치수를 쓴다. 앞서는 flex-1 rounded-xl
+            만 주어서 버튼 기본 높이(40)에 반지름 16 으로 나왔다 — 같은 앱의 다른 창들이
+            52 · 13 인데 알림 창만 작고 둥글었다.
+
+            세로로 쌓는 경우(되돌릴 수 없는 선택)는 폭이 꽉 차므로 ACTION_ROW 를 쓰지 않고
+            같은 버튼 치수만 가져온다. */}
+        <div className={cn('mt-[18px] gap-2', stacked ? 'flex flex-col' : ACTION_ROW)}>
           <Button
             type="button"
             variant={tone === 'danger' ? 'destructive' : 'default'}
             onClick={asking ? onConfirm : onClose}
-            className={cn(
-              stacked ? 'h-[50px] w-full rounded-[13px] text-[15.5px] font-bold' : 'flex-1 rounded-xl'
-            )}
+            className={cn(ACTION_PRIMARY, stacked && 'w-full')}
           >
             {confirmLabel}
           </Button>
@@ -116,11 +121,7 @@ export default function AlertDialog({
               type="button"
               variant="outline"
               onClick={onClose}
-              className={cn(
-                stacked
-                  ? 'h-12 w-full rounded-xl text-[14.5px] font-semibold text-foreground/80'
-                  : 'flex-1 rounded-xl'
-              )}
+              className={cn(ACTION_CANCEL, stacked && 'w-full')}
             >
               {cancelLabel}
             </Button>

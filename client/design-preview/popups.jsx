@@ -61,9 +61,12 @@ const PHONE = `
 function Bar({ cur }) {
   return (
     <nav
+      // 한 줄로 두고 옆으로 민다. 두 줄 넘게 쌓이면 130px 를 덮어서, 시트 위쪽(제목)과
+      // 화면 위에 붙는 것(거르개)이 그 아래로 숨는다.
       style={{
-        position: 'fixed', insetInline: 0, top: 0, zIndex: 100, display: 'flex', flexWrap: 'wrap',
-        gap: 6, padding: '8px 12px', background: '#1b1b21', fontSize: 12, fontWeight: 700,
+        position: 'fixed', insetInline: 0, top: 0, zIndex: 100, display: 'flex',
+        gap: 6, padding: '6px 10px', background: '#1b1b21', fontSize: 11, fontWeight: 700,
+        overflowX: 'auto', whiteSpace: 'nowrap', scrollbarWidth: 'none',
         pointerEvents: 'auto',
       }}
     >
@@ -72,7 +75,7 @@ function Bar({ cur }) {
           key={k}
           href={`?v=${k}`}
           style={{
-            padding: '5px 10px', borderRadius: 999, textDecoration: 'none',
+            padding: '4px 9px', borderRadius: 999, textDecoration: 'none', flex: '0 0 auto',
             background: cur === k ? '#5b4fe8' : 'transparent',
             color: cur === k ? '#fff' : '#9b9ba6',
           }}
@@ -121,7 +124,7 @@ function App() {
           padding: '10px 14px', textAlign: 'center',
         }}
       />
-      <div style={{ height: '100dvh' }} />
+      <div style={{ height: 40 }} />
 
       {cur === 'rename1' && (
         <RenameSheet
