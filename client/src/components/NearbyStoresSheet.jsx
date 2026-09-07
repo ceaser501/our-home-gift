@@ -145,7 +145,7 @@ export default function NearbyStoresSheet({ gifticon, onClose }) {
         {/* 부제 두 줄을 걷었다. 설명이 매장 하나 자리를 먹었고, "가까운 순"과 "누르면
             열린다"는 목록 바로 위에 있어야 눈이 목록과 함께 읽는다(아래 안내 한 줄). */}
         <SheetHeader className="pb-3">
-          <SheetTitle className="text-[19px] font-bold tracking-heading">{query} 주변 매장</SheetTitle>
+          <SheetTitle>{query} 주변 매장</SheetTitle>
         </SheetHeader>
 
         {(phase === 'locating' || phase === 'searching') && (

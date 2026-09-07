@@ -97,8 +97,17 @@ function SheetHeader({ className, ...props }) {
 }
 
 function SheetTitle({ className, ...props }) {
+  // 기본값이 16 이었는데 열 시트가 19 로 덮어쓰고 있었다. 기본값이 틀린 것이라 실제로
+  // 쓰는 값으로 맞춘다. 19 는 스케일에 없어서 title(20)로 올린다 — 뜻도 그 자리다.
+  //
+  // 덮어쓰지 않던 넷(가족 바꾸기·고르개·카드 메뉴·구성원)은 16 에서 20 으로 오른다.
+  // 그 넷은 제목이 부제(14)와 2px 차이라 제목으로 서지 못하고 있었다.
   return (
-    <SheetPrimitive.Title data-slot="sheet-title" className={cn('text-base font-semibold text-foreground', className)} {...props} />
+    <SheetPrimitive.Title
+      data-slot="sheet-title"
+      className={cn('text-title font-bold tracking-heading text-foreground', className)}
+      {...props}
+    />
   );
 }
 

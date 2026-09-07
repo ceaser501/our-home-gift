@@ -231,7 +231,7 @@ export default function ActivitySheet({
     <Sheet open onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="max-h-[calc(92dvh/var(--ui-scale))] gap-0 overflow-y-auto pb-[var(--safe-bottom)]">
         <SheetHeader className="pl-[18px] pb-3">
-          <SheetTitle className="text-[19px] font-bold tracking-heading">알림</SheetTitle>
+          <SheetTitle>알림</SheetTitle>
         </SheetHeader>
 
         {/* 중요 공지는 스크롤해도 안 사라진다. 아래로 내려가다 보면 놓치는데, 놓쳐도

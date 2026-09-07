@@ -726,7 +726,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
         {/* 등록 중에는 오른쪽 위에 버튼이 하나 더 붙어서, 닫기 하나만 피하는 껍데기 값(pr-14)
             으로는 모자란다. 그때만 더 벌린다. */}
         <SheetHeader className={cn('pb-3', mode === 'create' && hasAnything && 'pr-28')}>
-          <SheetTitle className="text-[19px] font-bold tracking-heading">
+          <SheetTitle>
             {mode === 'create' ? '기프티콘 추가' : '기프티콘 수정'}
           </SheetTitle>
         </SheetHeader>

@@ -121,7 +121,7 @@ export default function UsageReportSheet({ onClose }) {
     <Sheet open onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="max-h-[calc(92dvh/var(--ui-scale))] gap-0 overflow-y-auto pb-[var(--safe-bottom)]">
         <SheetHeader className="gap-0 pl-[18px] pb-3">
-          <SheetTitle className="text-[19px] font-bold tracking-heading">사용 내역</SheetTitle>
+          <SheetTitle>사용 내역</SheetTitle>
           <p className="m-0 text-[13px] font-medium text-muted-foreground">{family.name}</p>
         </SheetHeader>
 

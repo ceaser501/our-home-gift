@@ -1949,7 +1949,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                 </span>
               )}
               <div className="flex min-w-0 flex-col gap-px">
-                <SheetTitle className="text-[19px] font-bold tracking-heading break-keep">
+                <SheetTitle className="break-keep">
                   {registered.length > 0 ? `${registered.length}개를 등록했어요` : '등록할 게 없었어요'}
                 </SheetTitle>
                 {/* 이 앱에서 등록은 곧 공유다. 그 말을 여기서 한 번 해둔다. */}
@@ -1962,11 +1962,11 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
             /* 부제로 '사진 N장에서 · 빼려면 ✕'를 달아뒀다가 걷었다. 몇 장을 봤는지는
                상세내역이 이미 말하고, ✕는 눌러보면 아는 것이라 굳이 설명할 자리가
                아니었다. 제목 한 줄이면 된다. */
-            <SheetTitle className="text-[19px] font-bold tracking-heading break-keep">
+            <SheetTitle className="break-keep">
               기프티콘 {keptCount}개를 찾았어요
             </SheetTitle>
           ) : (
-            <SheetTitle className="text-[19px] font-bold tracking-heading">
+            <SheetTitle>
               {picked ? '기프티콘 등록' : '기프티콘 찾기'}
             </SheetTitle>
           )}

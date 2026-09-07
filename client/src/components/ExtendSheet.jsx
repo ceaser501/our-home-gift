@@ -119,7 +119,7 @@ export default function ExtendSheet({ gifticon, onExtend, onClose }) {
 
           {/* 제목이 그대로 이 화면의 할 일이다. 창 이름('기한 늘리기')을 따로 얹지
               않는다 — 두 번 읽을 것이 없다. */}
-          <SheetTitle className="mt-3 text-[21px] leading-[1.38] font-bold tracking-heading break-keep">
+          <SheetTitle className="mt-3 leading-[1.38] break-keep">
             {expired ? (
               '기한이 지났어요'
             ) : step === 1 ? (

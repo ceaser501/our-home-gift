@@ -32,7 +32,7 @@ export default function NoticesSheet({ onClose }) {
     <Sheet open onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="max-h-[calc(92dvh/var(--ui-scale))] gap-0 overflow-y-auto pb-[var(--safe-bottom)]">
         <SheetHeader className="pl-[18px] pb-3">
-          <SheetTitle className="text-[19px] font-bold tracking-heading">공지사항</SheetTitle>
+          <SheetTitle>공지사항</SheetTitle>
         </SheetHeader>
 
         <div className="flex flex-col gap-[11px] px-[18px]">

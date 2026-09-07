@@ -131,7 +131,7 @@ export default function ProfileMenu({ onClose }) {
     <Sheet open onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="max-h-[calc(92dvh/var(--ui-scale))] gap-0 overflow-y-auto pb-[var(--safe-bottom)]">
         <SheetHeader className="pl-[18px] pb-3">
-          <SheetTitle className="text-[19px] font-bold tracking-heading">내 메뉴</SheetTitle>
+          <SheetTitle>내 메뉴</SheetTitle>
         </SheetHeader>
 
         {/* 이름은 여기 크게 적혀 있는데 아래 '내 정보 · 내 이름' 줄에서 또 보여주고 있었다.
