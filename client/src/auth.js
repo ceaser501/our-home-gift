@@ -187,8 +187,22 @@ export async function signInWithNaver() {
   await openAuthPage(authorizeUrl.toString());
 }
 
+// 이 기기만 로그아웃한다.
+//
+// scope를 안 주면 supabase는 global로 본다 — 그 계정의 모든 기기가 함께 로그아웃된다.
+// 갤럭시로 등록하던 중에 "로그인이 필요해요. 직접 입력해주세요"가 뜬 것이 이것이었다.
+// 아이폰에서 계정을 바꾸려고 로그아웃했더니 손에 들고 있지도 않은 갤럭시의 세션까지
+// 서버에서 지워졌다.
+//
+// 갤럭시 쪽은 그걸 알 방법이 없다. 토큰은 아직 폰 안에 있고 만료 시각도 안 지났으니
+// 화면은 계속 로그인된 모습이다. 그런데 사진을 올리는 순간 Edge Function이 그 토큰으로
+// 서버에 사람을 물어보고(guard.ts의 requireUser), 서버는 "그런 세션 없다"고 답한다.
+// 로그인 화면으로 튕기지도 않고 등록만 안 되는, 가장 알기 어려운 모양이 된다.
+//
+// 알림 토큰을 계정이 아니라 폰 기준으로 바꾼 것과 같은 이야기다. 한 사람이 폰 두 대를
+// 쓰는 것이 이 앱에서는 예외가 아니라 기본이다 — 가족이 나눠 쓰는 앱이라서.
 export async function signOut() {
-  const { error } = await supabase.auth.signOut();
+  const { error } = await supabase.auth.signOut({ scope: 'local' });
   if (error) throw new Error(error.message);
 }
 
