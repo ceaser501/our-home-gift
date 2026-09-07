@@ -19,6 +19,18 @@ import { isNativeApp } from './browser';
 
 const CACHE_KEY = 'moacon:ui-scale';
 
+// 마지막으로 화면에 건 값. 내 메뉴의 버전 줄이 이걸 함께 적는다.
+//
+// 이 값이 안 보이면 크기 이야기를 할 수가 없다. 폰 설정 눈금이 몇 번째인지, 그게
+// 배수로 얼마인지, 하한에 걸렸는지가 전부 안 보이는 채로 "크다/작다"만 오간다.
+// 실제로 폰 설정을 옮겨가며 보는 동안 앱은 85%였는데 기본 설정 사용자는 98%를 보고
+// 있었고, 그 13% 차이를 아무도 몰랐다. 문의를 받을 때도 같은 값이 필요하다.
+let lastScale = 1;
+
+export function currentUiScale() {
+  return lastScale;
+}
+
 export const MIN_UI_SCALE = 0.85;
 export const MAX_UI_SCALE = 1.15;
 
@@ -69,6 +81,7 @@ export async function applyUiScale() {
   // 곱한 뒤에 자른다. 순서를 바꾸면 상한이 115에서 107로 함께 내려가고, 폰 글자를
   // 키워둔 사람이 이유 없이 손해를 본다.
   const scale = clamp(platformBase() * (await systemScale()));
+  lastScale = scale;
   document.documentElement.style.setProperty('--ui-scale', String(scale));
 
   // 다음에 앱을 열 때 index.html이 그려지기 전에 쓸 수 있게 적어둔다. 폰에 물어보는
