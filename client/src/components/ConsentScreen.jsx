@@ -91,7 +91,7 @@ export default function ConsentScreen({ userId, onDone }) {
         <span className="flex size-12 items-center justify-center rounded-full bg-accent">
           <FileCheck2 className="size-6 text-primary" />
         </span>
-        <h1 className="m-0 text-center text-[21px] font-bold tracking-[-0.028em] break-keep text-foreground">
+        <h1 className="m-0 text-center text-[21px] font-bold tracking-heading break-keep text-foreground">
           시작하기 전에 확인해주세요
         </h1>
         <p className="m-0 text-center text-[14.5px] font-medium text-muted-foreground">
@@ -112,7 +112,7 @@ export default function ConsentScreen({ userId, onDone }) {
           )}
         >
           <CheckCircle checked={allAgreed} />
-          <span className="flex-1 text-[16px] font-bold tracking-[-0.015em] text-foreground">전체 동의</span>
+          <span className="flex-1 text-[16px] font-bold text-foreground">전체 동의</span>
         </button>
 
         <div className="flex flex-col px-1">

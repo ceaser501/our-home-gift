@@ -89,7 +89,7 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
       <div className="mx-auto flex min-h-[calc(100dvh/var(--ui-scale))] w-full max-w-[480px] flex-col bg-background">
         <div className="flex flex-col items-center gap-4 bg-accent px-6 pt-[max(34px,var(--safe-top))] pb-7">
           <img src={`${import.meta.env.BASE_URL}icon.svg`} alt="모아콘" className="size-16" />
-          <h1 className="m-0 text-center text-[22px] leading-[1.4] font-bold tracking-[-0.02em] break-keep text-foreground">
+          <h1 className="m-0 text-center text-[22px] leading-[1.4] font-bold tracking-heading break-keep text-foreground">
             {who}
             <br />
             초대받았어요
@@ -98,14 +98,14 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
               '이제 이름만 적으면 된다'가 눈에 들어오게 한다. */}
           <div className="flex items-center gap-2.5 rounded-xl border border-primary/25 bg-card px-3.5 py-2.5">
             <span className="text-[13.5px] font-semibold text-primary/80">초대 코드</span>
-            <span className="font-mono text-[16px] font-bold tracking-[0.12em] text-foreground">{code}</span>
+            <span className="font-mono text-[16px] font-bold tracking-code text-foreground">{code}</span>
             <Check className="size-4 shrink-0 text-success" strokeWidth={2.4} />
           </div>
         </div>
 
         <form onSubmit={handleJoin} className="flex flex-1 flex-col gap-5 px-6 pt-6 pb-[max(24px,var(--safe-bottom))]">
           <div className="flex flex-col gap-2">
-            <Label htmlFor="invited-name" className="text-base font-bold tracking-[-0.015em]">
+            <Label htmlFor="invited-name" className="text-base font-bold">
               가족에게 어떻게 보일 이름인가요?
             </Label>
             <Input
@@ -153,7 +153,7 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
         <span className="flex size-14 items-center justify-center rounded-full bg-warning/12">
           <Clock className="size-7 text-warning" />
         </span>
-        <h1 className="m-0 text-[21px] font-bold tracking-[-0.028em] text-foreground">승인을 기다리는 중</h1>
+        <h1 className="m-0 text-[21px] font-bold tracking-heading text-foreground">승인을 기다리는 중</h1>
         <p className="m-0 text-center text-[15px] break-keep text-muted-foreground">
           {pendingFor}에 참여를 신청했어요.
         </p>
@@ -211,7 +211,7 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
         <span className="flex size-14 items-center justify-center rounded-full bg-success/12">
           <Check className="size-7 text-success" strokeWidth={2.5} />
         </span>
-        <h1 className="m-0 text-center text-[21px] font-bold tracking-[-0.028em] break-keep text-foreground">
+        <h1 className="m-0 text-center text-[21px] font-bold tracking-heading break-keep text-foreground">
           {created.name}을 만들었어요
         </h1>
         <p className="m-0 text-center text-[15px] leading-relaxed break-keep text-muted-foreground">
@@ -225,7 +225,7 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
             코드를 안 보내고 그냥 넘어가게 됐다 — 이 화면이 있는 이유가 그 코드다. */}
         <div className="flex w-full flex-col gap-3 rounded-[18px] bg-accent px-5 py-5">
           <p className="m-0 text-center text-[13.5px] font-semibold text-primary/70">초대 코드</p>
-          <p className="m-0 text-center text-[34px] font-bold tracking-[0.16em] text-foreground">
+          <p className="m-0 text-center text-[34px] font-bold tracking-heading text-foreground">
             {created.invite_code}
           </p>
           <CopyButton
@@ -265,7 +265,7 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
         <span className="flex size-11 items-center justify-center rounded-full bg-accent">
           <Users className="size-[22px] text-primary" />
         </span>
-        <h1 className="m-0 text-center text-[20px] font-bold tracking-[-0.028em] text-foreground">
+        <h1 className="m-0 text-center text-[20px] font-bold tracking-heading text-foreground">
           가족 공간을 만들어요
         </h1>
         <p className="m-0 text-center text-[14.5px] leading-relaxed font-medium break-keep text-muted-foreground">
@@ -306,7 +306,7 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
             type="button"
             onClick={() => setMode(value)}
             className={cn(
-              'flex-1 rounded-[10px] py-2 text-[15px] font-semibold tracking-[-0.015em] transition-colors',
+              'flex-1 rounded-[10px] py-2 text-[15px] font-semibold transition-colors',
               mode === value ? 'bg-card text-foreground shadow-xs' : 'text-muted-foreground'
             )}
           >
@@ -378,7 +378,7 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
                    '6자리 코드'라는 예시 문구가 이미 적힌 코드처럼 보인다. */
                 className={cn(
                   'h-12 rounded-[13px] text-[15.5px] uppercase',
-                  code && 'font-mono tracking-[0.12em]'
+                  code && 'font-mono tracking-code'
                 )}
                 maxLength={6}
                 autoComplete="off"

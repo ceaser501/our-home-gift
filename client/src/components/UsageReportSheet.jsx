@@ -121,7 +121,7 @@ export default function UsageReportSheet({ onClose }) {
     <Sheet open onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="max-h-[calc(92dvh/var(--ui-scale))] gap-0 overflow-y-auto pb-[var(--safe-bottom)]">
         <SheetHeader className="gap-0 px-[18px] pr-14 pb-3">
-          <SheetTitle className="text-[19px] font-bold tracking-[-0.026em]">사용 내역</SheetTitle>
+          <SheetTitle className="text-[19px] font-bold tracking-heading">사용 내역</SheetTitle>
           <p className="m-0 text-[13px] font-medium text-muted-foreground">{family.name}</p>
         </SheetHeader>
 
@@ -145,7 +145,7 @@ export default function UsageReportSheet({ onClose }) {
               {/* 칩이 모두 같은 보라이던 자리다. 그러면 누가 많이 썼는지를 색으로 알 수
                   없고 숫자를 하나씩 읽어야 한다. 이름표 색으로 막대를 그리면 길이로
                   한눈에 보이고, 아래 목록의 점 색과도 이어진다. */}
-              <p className="m-0 pb-2 text-[14.5px] font-bold tracking-[-0.015em]">누가 썼나요</p>
+              <p className="m-0 pb-2 text-[14.5px] font-bold">누가 썼나요</p>
               <div className="flex flex-col gap-2 pb-4">
                 {summary.map((person) => (
                   <div key={person.name} className="flex items-center gap-2.5">
@@ -183,7 +183,7 @@ export default function UsageReportSheet({ onClose }) {
 
               <div className="flex items-center justify-between gap-2 pt-1">
                 <div className="flex items-baseline gap-[7px]">
-                  <p className="m-0 text-[14.5px] font-bold tracking-[-0.015em]">사용한 기프티콘</p>
+                  <p className="m-0 text-[14.5px] font-bold">사용한 기프티콘</p>
                   <p className="m-0 text-[13px] font-semibold tabular-nums text-muted-foreground">{filtered.length}개</p>
                 </div>
                 {/* 사람으로 거른다. 가족이 넷이면 내가 쓴 것을 찾는 데만도 스무 줄을
@@ -238,7 +238,7 @@ export default function UsageReportSheet({ onClose }) {
                         {row.thumb_url && <img src={row.thumb_url} alt="" className="size-full object-cover" />}
                       </span>
                       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                        <span className="truncate text-[15px] font-semibold tracking-[-0.015em] text-foreground">
+                        <span className="truncate text-[15px] font-semibold text-foreground">
                           {row.name}
                         </span>
                         <span className="flex items-center gap-1.5">

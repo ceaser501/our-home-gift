@@ -82,7 +82,7 @@ export default function ExtendSheet({ gifticon, onExtend, onClose }) {
         )}
       </span>
       <span className="flex min-w-0 flex-1 flex-col gap-[3px]">
-        <span className="truncate text-[15.5px] font-bold tracking-[-0.015em] text-foreground">{gifticon.name}</span>
+        <span className="truncate text-[15.5px] font-bold text-foreground">{gifticon.name}</span>
         {/* D-day를 날짜보다 앞에 둔다. '2026.08.23까지 · D-1' 순서로는 제일 급한 값이
             줄 끝에 있어서, 긴 날짜를 다 읽고 나서야 며칠 남았는지를 안다. */}
         <span className={cn('flex items-baseline gap-[5px]', urgent ? 'text-destructive' : 'text-muted-foreground')}>
@@ -119,7 +119,7 @@ export default function ExtendSheet({ gifticon, onExtend, onClose }) {
 
           {/* 제목이 그대로 이 화면의 할 일이다. 창 이름('기한 늘리기')을 따로 얹지
               않는다 — 두 번 읽을 것이 없다. */}
-          <SheetTitle className="mt-3 text-[21px] leading-[1.38] font-bold tracking-[-0.026em] break-keep">
+          <SheetTitle className="mt-3 text-[21px] leading-[1.38] font-bold tracking-heading break-keep">
             {expired ? (
               '기한이 지났어요'
             ) : step === 1 ? (
@@ -162,7 +162,7 @@ export default function ExtendSheet({ gifticon, onExtend, onClose }) {
               >
                 <ExternalLink className="size-[18px] shrink-0 text-foreground/70" />
                 <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                  <span className="text-[15.5px] font-bold tracking-[-0.015em]">선물함 열기</span>
+                  <span className="text-[15.5px] font-bold">선물함 열기</span>
                   <span className="text-[13px] font-medium break-keep text-muted-foreground">
                     카카오톡 기프티콘이라면
                   </span>
@@ -199,7 +199,7 @@ export default function ExtendSheet({ gifticon, onExtend, onClose }) {
                 className="flex items-center gap-[11px] rounded-[14px] border border-border px-3.5 py-3 text-foreground no-underline"
               >
                 <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                  <span className="text-[14.5px] font-bold tracking-[-0.015em] break-keep">
+                  <span className="text-[14.5px] font-bold break-keep">
                     카카오톡 선물하기 상품인가요?
                   </span>
                   <span className="text-[13px] font-medium break-keep text-muted-foreground">
@@ -253,7 +253,7 @@ export default function ExtendSheet({ gifticon, onExtend, onClose }) {
                     <Ticket className="size-[19px] text-primary/60" />
                   )}
                 </span>
-                <span className="m-0 min-w-0 flex-1 truncate text-[15px] font-semibold tracking-[-0.015em] text-foreground/80">
+                <span className="m-0 min-w-0 flex-1 truncate text-[15px] font-semibold text-foreground/80">
                   {gifticon.name}
                 </span>
               </div>
@@ -273,7 +273,7 @@ export default function ExtendSheet({ gifticon, onExtend, onClose }) {
                 </span>
                 <div className="flex flex-col items-end gap-[3px]">
                   <span className="text-[12.5px] font-bold text-primary">변경 후</span>
-                  <span className="text-xl font-bold tracking-[-0.02em] tabular-nums text-foreground">
+                  <span className="text-xl font-bold tracking-heading tabular-nums text-foreground">
                     {next ? formatDate(next) : '날짜를 골라주세요'}
                   </span>
                 </div>

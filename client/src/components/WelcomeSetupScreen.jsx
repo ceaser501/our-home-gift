@@ -75,7 +75,7 @@ export default function WelcomeSetupScreen({ familyId, onDone }) {
     <div className="mx-auto flex min-h-[calc(100dvh/var(--ui-scale))] w-full max-w-[480px] flex-col bg-background px-6">
       <div className="flex flex-1 flex-col justify-center gap-7 py-10">
         <div className="flex flex-col gap-2">
-          <h1 className="m-0 text-[25px] leading-[1.32] font-bold tracking-[-0.03em] break-keep text-foreground">
+          <h1 className="m-0 text-[25px] leading-[1.32] font-bold tracking-heading break-keep text-foreground">
             시작하기 전에
             <br />
             {countWord} 가지만 켜둘게요
@@ -156,7 +156,7 @@ function SetupRow({ icon: Icon, label, hint, on, onToggle }) {
     >
       <Icon className="size-[22px] shrink-0 text-foreground/70" />
       <span className="flex min-w-0 flex-1 flex-col gap-1">
-        <span className="text-[16px] font-semibold tracking-[-0.015em] text-foreground">{label}</span>
+        <span className="text-[16px] font-semibold text-foreground">{label}</span>
         <span className="text-[13.5px] leading-[1.5] font-medium break-keep text-muted-foreground">{hint}</span>
       </span>
       <SwitchTrack on={on} />

@@ -44,7 +44,7 @@ export function SettingSwitchRow({ icon: Icon, label, hint, on, onToggle, disabl
     >
       <Icon className="size-5 shrink-0 text-foreground/70" />
       <span className="flex min-w-0 flex-1 flex-col">
-        <span className="text-[15.5px] tracking-[-0.015em] text-foreground">{label}</span>
+        <span className="text-[15.5px] text-foreground">{label}</span>
         {hint && <span className="mt-0.5 text-[13px] font-medium break-keep text-muted-foreground">{hint}</span>}
       </span>
       <SwitchTrack on={on} />
@@ -79,7 +79,7 @@ export function SettingLinkRow({ icon: Icon, label, hint, onClick, href, returnT
       {/* 이름만으로 무슨 일이 일어나는지 안 서는 줄이 있다. 그때만 한 줄 덧붙인다 —
           모든 줄에 붙이면 설명이 규칙이 아니라 무늬가 된다. */}
       <span className="flex min-w-0 flex-1 flex-col gap-0.5 text-left">
-        <span className="text-[15.5px] tracking-[-0.015em] text-foreground">{label}</span>
+        <span className="text-[15.5px] text-foreground">{label}</span>
         {hint && <span className="text-[13px] break-keep text-muted-foreground">{hint}</span>}
       </span>
       <Mark
@@ -117,7 +117,7 @@ export function SettingLinkRow({ icon: Icon, label, hint, onClick, href, returnT
 export function SettingSection({ label, children }) {
   return (
     <div className="flex flex-col gap-0.5">
-      <p className="m-0 pb-1 text-[13px] font-bold tracking-[-0.01em] text-muted-foreground">{label}</p>
+      <p className="m-0 pb-1 text-[13px] font-bold text-muted-foreground">{label}</p>
       {children}
     </div>
   );

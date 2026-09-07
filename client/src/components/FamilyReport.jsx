@@ -57,11 +57,11 @@ export default function FamilyReport({ gifticons }) {
           쓴 개수 하나를 크게 두고 놓친 금액을 맞은편에 붙이면 둘만 읽어도 끝난다. */}
       <div className="flex items-end justify-between gap-3">
         <div className="flex flex-col gap-[3px]">
-          <p className="m-0 text-[13px] font-semibold tracking-[-0.01em] text-muted-foreground">
+          <p className="m-0 text-[13px] font-semibold text-muted-foreground">
             {stat.scope} 받은 기프티콘 {stat.received}개 중
           </p>
           <p className="m-0 flex items-baseline gap-[5px]">
-            <span className="text-[27px] leading-none font-bold tracking-[-0.025em] tabular-nums text-foreground">
+            <span className="text-[27px] leading-none font-bold tracking-heading tabular-nums text-foreground">
               {stat.used}개
             </span>
             <span className="text-[15px] font-semibold text-foreground/80">썼어요</span>
@@ -71,7 +71,7 @@ export default function FamilyReport({ gifticons }) {
         {stat.missedAmount > 0 && (
           <div className="flex shrink-0 flex-col items-end gap-0.5">
             <p className="m-0 text-xs font-semibold text-muted-foreground">놓친 금액</p>
-            <p className="m-0 text-[16.5px] font-bold tracking-[-0.01em] tabular-nums text-destructive">
+            <p className="m-0 text-[16.5px] font-bold tabular-nums text-destructive">
               {formatWon(stat.missedAmount)}
             </p>
           </div>

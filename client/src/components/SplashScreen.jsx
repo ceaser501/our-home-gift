@@ -17,7 +17,7 @@ export default function SplashScreen() {
     <div className="mx-auto flex min-h-[calc(100dvh/var(--ui-scale))] w-full max-w-[480px] flex-col items-center justify-center gap-4 bg-background px-6">
       <Logo className="animate-splash-in size-16" />
       <div className="animate-splash-in-delayed flex flex-col items-center gap-1.5">
-        <h1 className="m-0 text-2xl font-bold tracking-tight text-foreground">모아콘</h1>
+        <h1 className="m-0 text-2xl font-bold tracking-heading text-foreground">모아콘</h1>
         <p className="m-0 text-center text-sm break-keep text-muted-foreground">
           우리 가족 기프티콘 서랍
         </p>

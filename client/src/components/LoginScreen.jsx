@@ -334,7 +334,7 @@ export default function LoginScreen() {
             안 깎으면 둥근 로고 뒤에 네모난 그림자가 깔린다 — rounded-2xl이 거기 있던
             이유가 그것이었다. drop-shadow는 그림 모양을 따라간다. */}
         <Logo className="size-14 [filter:drop-shadow(0_6px_14px_rgba(138,92,255,0.32))]" />
-        <h1 className="m-0 text-[22px] font-bold tracking-[-0.03em] text-foreground">모아콘</h1>
+        <h1 className="m-0 text-[22px] font-bold tracking-heading text-foreground">모아콘</h1>
         {/* 이 앱의 중심은 가족과 함께 보는 것이다. 개인용으로 방향을 틀면 카카오톡 선물함과
             겨루는 싸움이 되고, 유일한 차별점을 잃는다. 그래서 문구에서 가족을 빼지 않는다.
             다만 그것이 "가족이 있어야 쓸 수 있다"는 조건처럼 읽히면 혼자 쓰려던 사람이

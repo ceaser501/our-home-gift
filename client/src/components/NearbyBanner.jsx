@@ -677,7 +677,7 @@ export default function NearbyBanner({ gifticons, onPick }) {
             잘리는 순서를 정하면 그 걱정이 없어진다 — 매장 이름만 min-w-0으로 줄어들고
             거리와 개수는 shrink-0이라 이름이 아무리 길어도 끝까지 남는다.
             거리를 보라로 — 이 띠에서 갈까 말까를 정하는 값이다. */}
-        <span className="min-w-0 truncate text-[13.5px] font-bold tracking-[-0.01em] text-foreground">
+        <span className="min-w-0 truncate text-[13.5px] font-bold text-foreground">
           {best.store}
         </span>
         <span className="shrink-0 text-[13px] font-bold tabular-nums text-primary">

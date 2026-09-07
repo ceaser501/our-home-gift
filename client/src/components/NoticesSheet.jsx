@@ -32,7 +32,7 @@ export default function NoticesSheet({ onClose }) {
     <Sheet open onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="max-h-[calc(92dvh/var(--ui-scale))] gap-0 overflow-y-auto pb-[var(--safe-bottom)]">
         <SheetHeader className="px-[18px] pr-14 pb-3">
-          <SheetTitle className="text-[19px] font-bold tracking-[-0.026em]">공지사항</SheetTitle>
+          <SheetTitle className="text-[19px] font-bold tracking-heading">공지사항</SheetTitle>
         </SheetHeader>
 
         <div className="flex flex-col gap-[11px] px-[18px]">
@@ -55,7 +55,7 @@ export default function NoticesSheet({ onClose }) {
                 <span className="shrink-0 rounded-[5px] bg-primary px-[7px] py-0.5 text-[11px] font-bold text-primary-foreground">
                   진행 중
                 </span>
-                <h3 className="m-0 min-w-0 flex-1 text-[15.5px] font-bold tracking-[-0.015em] break-keep text-foreground">
+                <h3 className="m-0 min-w-0 flex-1 text-[15.5px] font-bold break-keep text-foreground">
                   {notice.title}
                 </h3>
               </div>
@@ -75,14 +75,14 @@ export default function NoticesSheet({ onClose }) {
               '지난 공지'가 세 번 나오던 것을 구역 제목 한 번으로 줄였다. */}
           {past.length > 0 && (
             <div className="flex items-center gap-[7px] pt-[3px]">
-              <span className="text-[13.5px] font-bold tracking-[-0.01em] text-muted-foreground">지난 공지</span>
+              <span className="text-[13.5px] font-bold text-muted-foreground">지난 공지</span>
               <span className="h-px flex-1 bg-border/60" />
             </div>
           )}
 
           {past.map((notice) => (
             <article key={notice.id} className="border-b border-border/50 pb-[13px] last:border-b-0">
-              <h3 className="m-0 text-[15.5px] font-semibold tracking-[-0.015em] break-keep text-foreground/80">
+              <h3 className="m-0 text-[15.5px] font-semibold break-keep text-foreground/80">
                 {notice.title}
               </h3>
               {notice.body && (

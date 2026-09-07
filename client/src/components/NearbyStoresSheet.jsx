@@ -145,7 +145,7 @@ export default function NearbyStoresSheet({ gifticon, onClose }) {
         {/* 부제 두 줄을 걷었다. 설명이 매장 하나 자리를 먹었고, "가까운 순"과 "누르면
             열린다"는 목록 바로 위에 있어야 눈이 목록과 함께 읽는다(아래 안내 한 줄). */}
         <SheetHeader className="pr-14 pb-3">
-          <SheetTitle className="text-[19px] font-bold tracking-[-0.026em]">{query} 주변 매장</SheetTitle>
+          <SheetTitle className="text-[19px] font-bold tracking-heading">{query} 주변 매장</SheetTitle>
         </SheetHeader>
 
         {(phase === 'locating' || phase === 'searching') && (
@@ -170,7 +170,7 @@ export default function NearbyStoresSheet({ gifticon, onClose }) {
             </span>
 
             <div className="flex flex-col items-center gap-2">
-              <p className="m-0 text-[17.5px] font-bold tracking-[-0.02em]">{error.title}</p>
+              <p className="m-0 text-[17.5px] font-bold">{error.title}</p>
               {error.denied ? (
                 <p className="m-0 text-center text-sm leading-relaxed font-medium break-keep text-foreground/70">
                   가까운 순으로 보여드리려면
@@ -192,7 +192,7 @@ export default function NearbyStoresSheet({ gifticon, onClose }) {
                 (브라우저에는 설정 화면이 없어서 버튼이 안 뜬다 — 글만 남는다.) */}
             {error.denied && (
               <div className="flex w-full flex-col gap-1.5 rounded-[13px] bg-secondary px-[15px] py-[13px]">
-                <p className="m-0 text-[13px] font-bold tracking-[-0.01em] text-foreground/80">켜는 방법</p>
+                <p className="m-0 text-[13px] font-bold text-foreground/80">켜는 방법</p>
                 <p className="m-0 text-[13.5px] leading-relaxed font-medium break-keep text-foreground/70">
                   위치 → <b className="font-bold text-foreground">앱 사용 중에만 허용</b>
                 </p>
@@ -256,7 +256,7 @@ export default function NearbyStoresSheet({ gifticon, onClose }) {
                       줄바꿈된 것처럼 읽혔다. 안 갈리게 하려던 것이 갈린 것처럼 보인 셈이다.
                       shrink-0과 nowrap 둘 다 걸어야 옆 상호가 길어도 안 밀린다. */}
                   <span className="flex shrink-0 items-baseline gap-px pt-0.5 whitespace-nowrap">
-                    <span className="text-[17px] font-bold tracking-[-0.02em] text-primary tabular-nums">
+                    <span className="text-[17px] font-bold text-primary tabular-nums">
                       {firstDistance?.value ?? '?'}
                     </span>
                     <span className="text-[11.5px] font-semibold text-primary/75">{firstDistance?.unit ?? ''}</span>
@@ -265,7 +265,7 @@ export default function NearbyStoresSheet({ gifticon, onClose }) {
                     <span className="self-start rounded-[5px] bg-primary px-1.5 py-0.5 text-[11px] font-bold text-primary-foreground">
                       가장 가까움
                     </span>
-                    <span className="truncate text-[15.5px] font-bold tracking-[-0.015em] text-foreground">
+                    <span className="truncate text-[15.5px] font-bold text-foreground">
                       {first.name}
                     </span>
                     {first.address && (
@@ -327,7 +327,7 @@ export default function NearbyStoresSheet({ gifticon, onClose }) {
                       {/* 전화번호 숫자 줄은 걷었다. 옆에 전화 버튼이 있어 번호를 눈으로
                           읽을 일이 없고, 3줄이 2줄이 되어 목록이 그만큼 짧아진다. */}
                       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                        <span className="truncate text-[15.5px] font-semibold tracking-[-0.015em] text-foreground">
+                        <span className="truncate text-[15.5px] font-semibold text-foreground">
                           {store.name}
                         </span>
                         {store.address && (

@@ -133,10 +133,10 @@ export default function FamilySwitcherSheet({ onClose, initialCode = '' }) {
                         />
                       </span>
                       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                        <span className="truncate text-base font-semibold tracking-[-0.015em] text-foreground">
+                        <span className="truncate text-base font-semibold text-foreground">
                           {item.name}
                         </span>
-                        <span className="text-[12.5px] font-medium tracking-[-0.01em] text-muted-foreground">
+                        <span className="text-[12.5px] font-medium text-muted-foreground">
                           {isCurrent ? '지금 보는 중' : '눌러서 바꾸기'}
                         </span>
                       </div>
@@ -157,7 +157,7 @@ export default function FamilySwitcherSheet({ onClose, initialCode = '' }) {
                 '이름 바꾸기'도 뺐다. 목록의 세 번째 항목처럼 보여서, 누르면 가족이 바뀔 것처럼
                 읽혔다. 이름 바꾸기는 가족 관리 안에 있다. */}
             <div className="mt-4 flex flex-col gap-2 px-5">
-              <p className="m-0 px-0.5 text-[13px] font-bold tracking-[-0.01em] text-muted-foreground">가족 추가하기</p>
+              <p className="m-0 px-0.5 text-[13px] font-bold text-muted-foreground">가족 추가하기</p>
               <div className="flex gap-2">
                 <Button
                   variant="outline"
@@ -216,7 +216,7 @@ export default function FamilySwitcherSheet({ onClose, initialCode = '' }) {
                   placeholder="6자리 코드"
                   /* 고정폭 글꼴과 넓은 자간은 값이 들어온 뒤에만 쓴다. 빈 칸에 미리 걸면
                      예시 문구가 이미 적힌 코드처럼 보인다. */
-                  className={cn('uppercase', code && 'font-mono tracking-[0.12em]')}
+                  className={cn('uppercase', code && 'font-mono tracking-code')}
                   maxLength={6}
                   autoComplete="off"
                   autoFocus

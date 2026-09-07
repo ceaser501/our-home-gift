@@ -41,7 +41,7 @@ export default function Header() {
           onClick={() => setSwitcherOpen(true)}
           className="mr-auto flex min-w-0 items-center gap-0.5 pl-1 text-left"
         >
-          <h1 className="m-0 truncate text-[19px] font-bold tracking-[-0.026em] text-foreground">{family.name}</h1>
+          <h1 className="m-0 truncate text-[19px] font-bold tracking-heading text-foreground">{family.name}</h1>
           <ChevronDown className="size-4 shrink-0 text-muted-foreground/70" strokeWidth={2.4} />
         </button>
 

@@ -724,7 +724,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
             수정 창에는 안 그린다. 거기서 지울 것은 이미 저장해둔 내용이라, 지우는
             것으로 보이지만 실제로는 되돌릴 것이 없다. 고칠 것만 고치고 나가면 된다. */}
         <SheetHeader className={cn('pb-3', mode === 'create' && hasAnything ? 'pr-28' : 'pr-14')}>
-          <SheetTitle className="text-[19px] font-bold tracking-[-0.026em]">
+          <SheetTitle className="text-[19px] font-bold tracking-heading">
             {mode === 'create' ? '기프티콘 추가' : '기프티콘 수정'}
           </SheetTitle>
         </SheetHeader>
@@ -762,7 +762,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
                 <Plus className="size-[26px] text-primary-foreground" strokeWidth={2.1} />
               </span>
               <span className="flex flex-col items-center gap-1">
-                <span className="text-base font-bold tracking-[-0.015em] text-foreground">사진 고르기</span>
+                <span className="text-base font-bold text-foreground">사진 고르기</span>
                 {/* 두 줄이 하는 말이 다르다. 앞은 사진을 올리면 무슨 일이 생기는지,
                     뒤는 여러 장을 골라도 된다는 것.
                     뒷줄을 고쳤다. 예전에는 '기프티콘별로 나눠 담아요'였는데, 지금은

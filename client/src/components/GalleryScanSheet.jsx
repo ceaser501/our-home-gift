@@ -339,7 +339,7 @@ function FoldBox({ tone, title, open, onToggle, children }) {
         <span className={cn('flex size-6 shrink-0 items-center justify-center rounded-full', bg)}>
           <Icon className={cn('size-[13px]', fg)} strokeWidth={2.2} />
         </span>
-        <span className="min-w-0 flex-1 text-left text-[13.5px] font-bold tracking-[-0.015em] break-keep text-foreground">
+        <span className="min-w-0 flex-1 text-left text-[13.5px] font-bold break-keep text-foreground">
           {title}
         </span>
         <ChevronDown
@@ -1546,7 +1546,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
         {picked ? (
           <div className="flex flex-col gap-0.5 rounded-[10px] bg-muted/50 px-2.5 py-2.5">
             <span className="text-xs font-medium text-muted-foreground">고른 사진</span>
-            <span className="text-base font-bold tracking-[-0.02em] tabular-nums text-foreground">{scanned}</span>
+            <span className="text-base font-bold tabular-nums text-foreground">{scanned}</span>
           </div>
         ) : (
           <div className="flex gap-[7px]">
@@ -1556,7 +1556,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                 className="flex flex-1 flex-col gap-0.5 rounded-[10px] bg-muted/50 px-2.5 py-2.5"
               >
                 <span className="truncate text-xs font-medium text-muted-foreground">{folder.label}</span>
-                <span className="text-base font-bold tracking-[-0.02em] tabular-nums text-foreground">
+                <span className="text-base font-bold tabular-nums text-foreground">
                   {folder.count}
                 </span>
               </div>
@@ -1638,7 +1638,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                   <span className="shrink-0 text-[12.5px] text-muted-foreground/70">{candidate.bucket}</span>
                 )}
               </div>
-              <span className="mt-0.5 truncate text-[15.5px] leading-snug font-semibold tracking-[-0.015em] text-foreground">
+              <span className="mt-0.5 truncate text-[15.5px] leading-snug font-semibold text-foreground">
                 {info?.name || (broken ? '못 읽었어요' : candidate.code)}
               </span>
               {/* 기한과 금액을 세로선으로 나눈다(목록·등록 창과 같은 형태). 가운뎃점으로
@@ -1949,7 +1949,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                 </span>
               )}
               <div className="flex min-w-0 flex-col gap-px">
-                <SheetTitle className="text-[19px] font-bold tracking-[-0.026em] break-keep">
+                <SheetTitle className="text-[19px] font-bold tracking-heading break-keep">
                   {registered.length > 0 ? `${registered.length}개를 등록했어요` : '등록할 게 없었어요'}
                 </SheetTitle>
                 {/* 이 앱에서 등록은 곧 공유다. 그 말을 여기서 한 번 해둔다. */}
@@ -1962,11 +1962,11 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
             /* 부제로 '사진 N장에서 · 빼려면 ✕'를 달아뒀다가 걷었다. 몇 장을 봤는지는
                상세내역이 이미 말하고, ✕는 눌러보면 아는 것이라 굳이 설명할 자리가
                아니었다. 제목 한 줄이면 된다. */
-            <SheetTitle className="text-[19px] font-bold tracking-[-0.026em] break-keep">
+            <SheetTitle className="text-[19px] font-bold tracking-heading break-keep">
               기프티콘 {keptCount}개를 찾았어요
             </SheetTitle>
           ) : (
-            <SheetTitle className="text-[19px] font-bold tracking-[-0.026em]">
+            <SheetTitle className="text-[19px] font-bold tracking-heading">
               {picked ? '기프티콘 등록' : '기프티콘 찾기'}
             </SheetTitle>
           )}
@@ -2067,7 +2067,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                     숫자만 보라로 둔다 — 계속 바뀌는 값이라, 색으로 잡아두면 눈이
                     그것만 따라간다. */}
                 <div className="flex items-baseline justify-between gap-2.5">
-                  <span className="min-w-0 truncate text-[15px] font-semibold tracking-[-0.015em] text-foreground">
+                  <span className="min-w-0 truncate text-[15px] font-semibold text-foreground">
                     {workingLabel}
                   </span>
                   <span className="shrink-0 text-[13.5px] font-bold tabular-nums text-primary">{workingCount}</span>
@@ -2142,7 +2142,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                           className="size-11 shrink-0 rounded-[10px] bg-secondary object-cover"
                         />
                         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                          <span className="truncate text-[15px] font-semibold tracking-[-0.015em] text-foreground">
+                          <span className="truncate text-[15px] font-semibold text-foreground">
                             {candidate.info?.name}
                           </span>
                           <span className="truncate text-[13px] font-medium tabular-nums text-muted-foreground">
@@ -2206,7 +2206,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                 {(result.failed.length > 0 || result.noExpiry > 0) && (
                   <div className="shrink-0 overflow-hidden rounded-[14px] border border-border">
                     <div className="flex items-center gap-[7px] border-b border-border bg-muted/40 px-3.5 py-2.5">
-                      <span className="text-[13px] font-bold tracking-[-0.01em] text-foreground/80">
+                      <span className="text-[13px] font-bold text-foreground/80">
                         확인이 필요해요
                       </span>
                       <span className="rounded-[9px] bg-muted-foreground px-1.5 py-px text-xs font-bold tabular-nums text-background">
@@ -2276,7 +2276,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                                       alt=""
                                       className="size-8 shrink-0 rounded-lg bg-secondary object-cover"
                                     />
-                                    <span className="min-w-0 flex-1 truncate text-[13.5px] font-semibold tracking-[-0.015em] text-muted-foreground">
+                                    <span className="min-w-0 flex-1 truncate text-[13.5px] font-semibold text-muted-foreground">
                                       {candidate.info?.name || candidate.info?.brand || candidate.code || '상품명 없음'}
                                     </span>
                                   </div>
@@ -2331,7 +2331,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                                   alt=""
                                   className="size-8 shrink-0 rounded-lg bg-secondary object-cover"
                                 />
-                                <span className="min-w-0 flex-1 truncate text-[13.5px] font-semibold tracking-[-0.015em] text-muted-foreground">
+                                <span className="min-w-0 flex-1 truncate text-[13.5px] font-semibold text-muted-foreground">
                                   {candidate.info?.name}
                                 </span>
                               </div>
@@ -2396,7 +2396,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                           카드들이 무엇인지 말해주는 자리가 사라진다. 한 줄로 붙여둔다.
                           제목('기프티콘 N개를 찾았어요')과 숫자가 갈릴 수 있다 — 제목은
                           넣을 수 있는 것 전부를 세고, 이 줄은 금액권을 뺀 나머지다. */}
-                      <p className="m-0 pt-[7px] pb-px text-[14.5px] font-bold tracking-[-0.015em] break-keep text-foreground">
+                      <p className="m-0 pt-[7px] pb-px text-[14.5px] font-bold break-keep text-foreground">
                         <span className="tabular-nums">{plains.length}개</span>는 바로 등록할 수 있어요.
                       </p>
                       <ul className="m-0 flex list-none flex-col gap-2 p-0">
@@ -2412,7 +2412,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                       것처럼 보인다. 무리를 가르는 일은 제목 한 줄이 이미 한다. */}
                   {vouchers.length > 0 && (
                     <div className="flex flex-col gap-2">
-                      <p className="m-0 pt-[7px] pb-px text-[14.5px] font-bold tracking-[-0.015em] break-keep text-foreground">
+                      <p className="m-0 pt-[7px] pb-px text-[14.5px] font-bold break-keep text-foreground">
                         <span className="tabular-nums">{vouchers.length}개</span>는 금액권 같아요. 맞는지
                         확인해주세요.
                       </p>

@@ -155,7 +155,7 @@ export default function BarcodeModal({ gifticon, onClose, onUsed, onSpend }) {
               <SheetTitle
                 className={cn(
                   'truncate',
-                  view === 'photo' ? 'text-base font-bold tracking-[-0.02em]' : 'text-[19px] font-bold tracking-[-0.026em]'
+                  view === 'photo' ? 'text-base font-bold' : 'text-[19px] font-bold tracking-heading'
                 )}
               >
                 {view === 'photo' ? '원본 사진' : gifticon.brand || gifticon.name}
@@ -261,7 +261,7 @@ export default function BarcodeModal({ gifticon, onClose, onUsed, onSpend }) {
                   글자는 어두워야 한다. */}
               {gifticon.code && (
                 <div className="flex items-center gap-2">
-                  <p className="m-0 text-center font-mono text-[15px] font-semibold tracking-[0.02em] break-all tabular-nums text-[#17171c]">
+                  <p className="m-0 text-center font-mono text-[15px] font-semibold break-all tabular-nums text-[#17171c]">
                     {groupDigits(humanCode)}
                   </p>
                   <CopyButton

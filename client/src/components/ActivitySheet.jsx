@@ -46,7 +46,7 @@ function SectionTitle({ label, count, accent }) {
     <div className="flex items-center gap-[7px] pb-1.5">
       <span
         className={cn(
-          'text-[13.5px] font-bold tracking-[-0.01em]',
+          'text-[13.5px] font-bold',
           accent ? 'text-primary' : 'text-muted-foreground'
         )}
       >
@@ -85,7 +85,7 @@ function PinnedNotice({ notice }) {
           상자 여백(px-3.5)만큼 폭이 더 좁아서 유독 잦았다.
 
           본문은 반대로 break-keep을 남긴다. 문단으로 읽는 글이라 어절이 갈리면 눈에 걸린다. */}
-      <p className="m-0 text-[15px] leading-snug font-bold tracking-[-0.015em] text-foreground">
+      <p className="m-0 text-[15px] leading-snug font-bold text-foreground">
         <span className="mr-[7px] inline-block rounded-[5px] bg-primary px-[7px] py-0.5 align-[1px] text-[11px] font-bold text-primary-foreground">
           공지
         </span>
@@ -132,7 +132,7 @@ function NoticeRow({ notice }) {
             공지
           </span>
           {/* 여기도 제목이라 break-keep을 안 건다(위 고정 공지 주석 참고). */}
-          <p className="m-0 min-w-0 flex-1 text-[15px] leading-snug font-semibold tracking-[-0.015em] text-foreground/80">
+          <p className="m-0 min-w-0 flex-1 text-[15px] leading-snug font-semibold text-foreground/80">
             {notice.title}
           </p>
         </div>
@@ -163,7 +163,7 @@ function ActivityRow({ activity, isNew }) {
       <div className="min-w-0 flex-1">
         <p
           className={cn(
-            'm-0 truncate text-[15px] leading-snug font-semibold tracking-[-0.015em]',
+            'm-0 truncate text-[15px] leading-snug font-semibold',
             isNew ? 'text-foreground' : 'text-foreground/80'
           )}
         >
@@ -231,7 +231,7 @@ export default function ActivitySheet({
     <Sheet open onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="max-h-[calc(92dvh/var(--ui-scale))] gap-0 overflow-y-auto pb-[var(--safe-bottom)]">
         <SheetHeader className="px-[18px] pr-14 pb-3">
-          <SheetTitle className="text-[19px] font-bold tracking-[-0.026em]">알림</SheetTitle>
+          <SheetTitle className="text-[19px] font-bold tracking-heading">알림</SheetTitle>
         </SheetHeader>
 
         {/* 중요 공지는 스크롤해도 안 사라진다. 아래로 내려가다 보면 놓치는데, 놓쳐도
@@ -251,7 +251,7 @@ export default function ActivitySheet({
                 <BellOff className="size-[30px] text-muted-foreground/70" strokeWidth={1.8} />
               </span>
               <div className="flex flex-col items-center gap-[7px]">
-                <p className="m-0 text-[17px] font-bold tracking-[-0.02em] text-foreground">아직 알림이 없어요</p>
+                <p className="m-0 text-[17px] font-bold text-foreground">아직 알림이 없어요</p>
                 <p className="m-0 text-center text-sm leading-relaxed font-medium break-keep text-muted-foreground">
                   가족이 기프티콘을 올리거나 쓰면
                   <br />

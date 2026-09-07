@@ -70,7 +70,7 @@ export default function SpendSheet({ gifticon, onSpend, onClose }) {
         {/* 제목 아래 부제로 상품명. 예전에는 본문 첫 줄이 상품명이라, 무엇을 적는 창인지
             묻는 제목과 어느 기프티콘인지가 같은 무게로 나란히 있었다. */}
         <SheetHeader className="gap-0 px-[18px] pr-14 pb-3.5">
-          <SheetTitle className="text-[19px] font-bold tracking-[-0.026em]">얼마 쓰셨어요?</SheetTitle>
+          <SheetTitle className="text-[19px] font-bold tracking-heading">얼마 쓰셨어요?</SheetTitle>
           <p className="m-0 truncate text-[13.5px] font-medium text-muted-foreground">{gifticon.name}</p>
         </SheetHeader>
 
@@ -80,10 +80,10 @@ export default function SpendSheet({ gifticon, onSpend, onClose }) {
               한 줄이던 설명을 왼쪽(남은 금액)·오른쪽(권종·쓴 금액)으로 갈랐다. */}
           <div className="flex items-end justify-between gap-3 rounded-[14px] bg-secondary/60 px-[15px] py-[13px]">
             <div className="flex flex-col gap-0.5">
-              <span className="text-[12.5px] font-semibold tracking-[-0.01em] text-muted-foreground">
+              <span className="text-[12.5px] font-semibold text-muted-foreground">
                 지금 남은 금액
               </span>
-              <span className="text-[25px] leading-none font-bold tracking-[-0.025em] tabular-nums text-foreground">
+              <span className="text-[25px] leading-none font-bold tracking-heading tabular-nums text-foreground">
                 {won(left)}
               </span>
             </div>
@@ -99,7 +99,7 @@ export default function SpendSheet({ gifticon, onSpend, onClose }) {
           </div>
 
           <div className="flex flex-col gap-2">
-            <label htmlFor="spend-amount" className="text-sm font-semibold tracking-[-0.01em] text-foreground/80">
+            <label htmlFor="spend-amount" className="text-sm font-semibold text-foreground/80">
               이번에 쓴 금액
             </label>
             {/* 테두리를 보라로 둔다. 이 화면에서 채워야 하는 칸이 하나뿐이라는 말이다.

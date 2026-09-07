@@ -69,7 +69,7 @@ export default function AlertDialog({
           <span className={cn('flex size-[46px] items-center justify-center rounded-full', className)}>
             <Icon className="size-[23px]" />
           </span>
-          <p className="m-0 text-[17.5px] leading-snug font-bold tracking-[-0.02em] break-keep text-foreground">
+          <p className="m-0 text-[17.5px] leading-snug font-bold break-keep text-foreground">
             {title}
           </p>
           {subject && (
@@ -81,7 +81,7 @@ export default function AlertDialog({
             </p>
           )}
           {warning && (
-            <p className="m-0 text-[13.5px] font-bold tracking-[-0.01em] text-destructive">{warning}</p>
+            <p className="m-0 text-[13.5px] font-bold text-destructive">{warning}</p>
           )}
         </div>
 

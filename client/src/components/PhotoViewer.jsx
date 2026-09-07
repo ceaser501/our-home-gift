@@ -97,7 +97,7 @@ export function SwipeHint({ index, total }) {
 
   return (
     <div className="flex justify-center">
-      <p className="m-0 flex items-center gap-1 rounded-full bg-secondary px-3.5 py-1.5 text-[14.5px] font-bold tracking-[-0.015em] text-foreground/80">
+      <p className="m-0 flex items-center gap-1 rounded-full bg-secondary px-3.5 py-1.5 text-[14.5px] font-bold text-foreground/80">
         {last && <Arrow className={cn('size-[18px] text-primary', nudge)} strokeWidth={2.6} />}
         {last ? '옆으로 밀면 이전 사진' : '옆으로 밀면 다음 사진'}
         {!last && <Arrow className={cn('size-[18px] text-primary', nudge)} strokeWidth={2.6} />}

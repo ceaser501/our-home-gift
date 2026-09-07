@@ -31,7 +31,7 @@ export default function FamilyLoadError({ onRetry }) {
           <CloudOff className="size-6" />
         </span>
         {/* 무슨 일이 있었는지와 무엇을 하면 되는지, 두 마디. 왜 그런지는 위 주석에 있다. */}
-        <p className="m-0 text-[17px] font-bold tracking-[-0.02em] text-foreground">
+        <p className="m-0 text-[17px] font-bold text-foreground">
           연결이 고르지 않아요
         </p>
         <p className="m-0 text-sm leading-relaxed break-keep text-muted-foreground">

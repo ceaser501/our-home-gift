@@ -43,7 +43,7 @@ export default function FirstRunScreen({ notice, onOpenNotices, onUpload, onScan
         </div>
 
         <div className="flex flex-col items-center gap-2.5">
-          <h2 className="m-0 text-center text-[21px] font-bold tracking-[-0.028em] text-foreground">
+          <h2 className="m-0 text-center text-[21px] font-bold tracking-heading text-foreground">
             첫 기프티콘을
             <br />
             올려보세요

@@ -44,7 +44,7 @@ export default function RenameSheet({ title, label, hint, description, initialVa
     <Sheet open onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="gap-0 pb-[var(--safe-bottom)]">
         <SheetHeader className="px-[18px] pr-14 pb-3.5">
-          <SheetTitle className="text-[19px] font-bold tracking-[-0.026em]">{title}</SheetTitle>
+          <SheetTitle className="text-[19px] font-bold tracking-heading">{title}</SheetTitle>
         </SheetHeader>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-3.5 px-[18px]">
