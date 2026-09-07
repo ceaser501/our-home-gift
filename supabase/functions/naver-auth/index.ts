@@ -180,7 +180,19 @@ Deno.serve(async (req) => {
       email: profile.email,
       options: {
         redirectTo,
-        data: { full_name: profile.name || null, avatar_url: profile.profile_image || null, provider: 'naver' },
+        // 이메일만 쓴다.
+        //
+        // 예전에는 네이버가 주는 이름(profile.name)과 프로필 사진(profile.profile_image)도
+        // 함께 적어뒀는데, 앱 어디에서도 쓰지 않았다. 가족 안에서 부르는 이름은 들어올 때
+        // 직접 적는 값이고(family_members.display_name), 사진은 쓰는 자리가 아예 없다.
+        //
+        // 안 쓰는 값을 받아두면 두 가지가 걸린다. 하나는 남의 개인정보를 이유 없이 들고
+        // 있는 것이고, 다른 하나는 네이버 검수다 — "선택한 제공 정보가 실제로 쓰이는
+        // 화면"을 캡처해 내야 하는데 없는 화면을 낼 수가 없다. 실제로 그 이유로 한 번
+        // 반려됐다(2026-08-03).
+        //
+        // 개발자센터의 [API 설정]에서도 닉네임·회원이름 체크를 풀어 여기와 맞춰둔다.
+        data: { provider: 'naver' },
       },
     });
 
