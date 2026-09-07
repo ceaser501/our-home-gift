@@ -36,6 +36,8 @@ export default function AlertDialog({
   tone = 'info',
   confirmLabel = '확인',
   cancelLabel = '취소',
+  // 버튼을 세로로 쌓을지. 기본은 가로다 — 부르는 쪽이 그럴 까닭을 댈 때만 켠다.
+  stacked = false,
   onConfirm,
   onClose,
 }) {
@@ -46,13 +48,12 @@ export default function AlertDialog({
   const { Icon: ToneIcon, className } = TONE[tone] || TONE.info;
   const Icon = CustomIcon || ToneIcon;
   const asking = typeof onConfirm === 'function';
-  // 되돌릴 수 없는 물음만 버튼을 세로로 쌓는다. 가로로 나란하면 엄지가 스치는 자리에 둘 다
-  // 있어서 지우는 쪽이 오탭으로 눌린다. 세로로 쌓으면 위아래가 갈리고, 되돌릴 수 없는 쪽을
-  // 위에 둔다 — 아래가 엄지에 가까워 취소가 더 쉽게 눌린다.
+  // 세로 쌓기는 tone === 'danger' 이면 저절로 켜졌었다. 이제 부르는 쪽이 stacked 로
+  // 명시할 때만 켠다.
   //
-  // 되돌릴 수 있는 물음("이어서 올릴까요?")까지 세로로 만들지는 않는다. 오탭이 위험하지
-  // 않은 곳에서 두 줄을 쓰면 창만 길어진다.
-  const stacked = asking && tone === 'danger';
+  // 세로가 하는 일은 남아 있다 — 가로로 나란하면 엄지가 스치는 자리에 둘 다 있어서 위험한
+  // 쪽이 오탭으로 눌린다. 다만 그것이 필요한 자리는 삭제 전부가 아니라 정말 되돌릴 수 없는
+  // 몇 곳이고, 그 판단은 창을 여는 쪽이 안다.
 
   return createPortal(
     // 시트(Radix Dialog) 위에 뜰 수 있어서, 그 안에서도 눌리도록 pointer-events를 다시 켠다.
@@ -112,7 +113,7 @@ export default function AlertDialog({
             type="button"
             variant={tone === 'danger' ? 'destructive' : 'default'}
             onClick={asking ? onConfirm : onClose}
-            className={cn(ACTION_PRIMARY, stacked && 'w-full')}
+            className={ACTION_PRIMARY}
           >
             {confirmLabel}
           </Button>
@@ -121,7 +122,7 @@ export default function AlertDialog({
               type="button"
               variant="outline"
               onClick={onClose}
-              className={cn(ACTION_CANCEL, stacked && 'w-full')}
+              className={ACTION_CANCEL}
             >
               {cancelLabel}
             </Button>

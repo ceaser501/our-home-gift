@@ -16,6 +16,8 @@ export const SECONDARY_BUTTON = 'h-12 w-full rounded-xl text-[14.5px] font-semib
 //
 // 되돌릴 수 없는 선택(삭제)은 이 짝을 쓰지 않는다. 거기서는 AlertDialog 가 세로로 쌓아
 // 손가락이 한 번에 못 닿게 한다 — 일부러 한 박자 늦추는 자리다.
-export const ACTION_ROW = 'flex flex-row-reverse gap-2';
-export const ACTION_PRIMARY = 'h-[52px] flex-1 rounded-[13px] text-[15.5px] font-bold';
-export const ACTION_CANCEL = 'h-[52px] flex-1 rounded-[13px] text-[15.5px] font-semibold text-foreground/80';
+export const ACTION_ROW = 'flex flex-row-reverse gap-2 [&>*]:flex-1';
+// flex-1 은 ACTION_ROW 가 준다. 여기 박아 두면 세로로 쌓을 때 축이 바뀌어
+// 높이를 나눠 갖게 되고 52 가 무너진다(39 · 41 로 줄었다).
+export const ACTION_PRIMARY = 'h-[52px] w-full rounded-[13px] text-[15.5px] font-bold';
+export const ACTION_CANCEL = 'h-[52px] w-full rounded-[13px] text-[15.5px] font-semibold text-foreground/80';

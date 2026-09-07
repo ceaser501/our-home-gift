@@ -239,10 +239,10 @@ function App() {
           tone="danger"
           title="이 기프티콘을 지울까요?"
           description="지우면 되돌릴 수 없어요. 가족 모두의 목록에서 사라져요."
-          confirmText="지우기"
-          cancelText="그만두기"
+          confirmLabel="지우기"
+          cancelLabel="그만두기"
           onConfirm={reopen}
-          onCancel={reopen}
+          onClose={reopen}
         />
       )}
 
@@ -251,7 +251,7 @@ function App() {
           tone="warning"
           title="사진을 읽지 못했어요"
           description="바코드가 흐릿하게 찍혔어요. 다시 찍거나 직접 등록으로 올려주세요."
-          confirmText="확인"
+          confirmLabel="확인"
           onConfirm={reopen}
         />
       )}
@@ -261,7 +261,7 @@ function App() {
           tone="info"
           title="저장했어요"
           description="기프티콘 3개를 목록에 넣었어요."
-          confirmText="확인"
+          confirmLabel="확인"
           onConfirm={reopen}
         />
       )}
