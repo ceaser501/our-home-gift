@@ -32,7 +32,7 @@
   --ring: #5b4fe8;
   --radius: 1rem;
 
-  /* 화면 전체를 키우고 줄이는 값. 1이 기본이고 client/src/utils/textScale.js가 정한다.
+  /* 화면 전체를 키우고 줄이는 값. 1이 기본이고 client/src/utils/uiScale.js가 정한다.
      아래 html의 zoom이 이 값을 받아 글자·여백·버튼·아이콘을 한꺼번에 움직인다. */
   --ui-scale: 1;
 

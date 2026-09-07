@@ -46,23 +46,19 @@
 
       // 화면 크기도 그려지기 전에 정해둔다.
       //
-      // 고른 값이 있으면 여기서 바로 건다. 앱이 뜬 뒤에 걸면 100%로 한 번 그렸다가
-      // 줄어들면서 화면이 눈에 띄게 튄다. 폰 설정을 따라가는 경우는 그 값을 물어보는
-      // 데 시간이 걸려서(네이티브 왕복) 여기서 알 수 없고, textScale.js가 곧 정한다.
+      // 폰 설정을 폰에 물어보는 데 시간이 걸려서(네이티브 왕복) 여기서는 알 수 없다.
+      // 대신 지난번에 정해진 값을 적어둔 것을 그대로 쓴다 — 폰 설정은 자주 바뀌지
+      // 않으므로 거의 늘 맞고, 틀렸더라도 잠시 뒤 uiScale.js가 바로잡는다.
       //
-      // 여기 셈은 src/utils/textScale.js와 같아야 한다. 갤럭시는 같은 CSS px가 더 크게
-      // 그려져서 기준이 0.93이다.
+      // 이게 없으면 100%로 한 번 그렸다가 줄어들면서 화면이 눈에 띄게 튄다.
       (function () {
         try {
-          var chosen = Number(localStorage.getItem('moacon:text-scale'));
-          if (!chosen) return;
-          var base = window.Capacitor && window.Capacitor.getPlatform
-            ? { android: 0.93, ios: 1 }[window.Capacitor.getPlatform()] || 1
-            : 1;
-          var scale = Math.min(1.15, Math.max(0.85, base * chosen));
-          document.documentElement.style.setProperty('--ui-scale', String(scale));
+          var cached = Number(localStorage.getItem('moacon:ui-scale'));
+          if (cached >= 0.85 && cached <= 1.15) {
+            document.documentElement.style.setProperty('--ui-scale', String(cached));
+          }
         } catch (e) {
-          // 사생활 보호 모드 등. 기본 크기로 그리고, 곧 textScale.js가 다시 정한다.
+          // 사생활 보호 모드 등. 기본 크기로 그리고, 곧 uiScale.js가 정한다.
         }
       })();
 

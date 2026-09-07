@@ -9,7 +9,7 @@ import { registerServiceWorker } from './utils/serviceWorker.js'
 import { watchLoginRedirects } from './utils/deepLink.js'
 import { isNativeApp } from './utils/browser.js'
 import { catchInviteFromUrl } from './utils/inviteLink.js'
-import { applyTextScale, watchSystemTextSize } from './utils/textScale.js'
+import { applyUiScale, watchSystemUiScale } from './utils/uiScale.js'
 
 // 안드로이드 웹뷰는 내비게이션 바 높이를 env(safe-area-inset-bottom)으로 알려주지 않는다.
 // 그래서 화면 맨 아래 버튼이 제스처 바에 물려 눌리지 않았다. CSS가 그 사실을 알 수 있게
@@ -24,10 +24,10 @@ if (isNativeApp() && window.Capacitor?.getPlatform?.() === 'android') {
 // 로그인은 카카오·구글 화면을 다녀오는 길이라 그 사이에 주소가 통째로 갈린다.
 catchInviteFromUrl()
 
-// 글자 크기를 건다. 설정에서 고른 값이 있으면 그것을, 없으면 폰 설정을 따른다.
+// 화면 크기를 폰 설정에 맞춘다(index.css의 --ui-scale).
 // 실패해도(플러그인이 없는 옛 빌드 등) 기본 크기로 그대로 돌아간다.
-applyTextScale().catch(() => {})
-watchSystemTextSize()
+applyUiScale().catch(() => {})
+watchSystemUiScale()
 
 watchForUpdates()
 
