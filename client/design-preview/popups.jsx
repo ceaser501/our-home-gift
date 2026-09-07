@@ -59,31 +59,33 @@ const PHONE = `
   [data-slot="sheet-content"] { max-width: 375px !important; }`;
 
 function Bar({ cur }) {
+  // 옆으로 미는 띠였는데 스크롤이 안 먹었다. Radix 가 창을 열면 바깥 스크롤을 막기
+  // 때문이다(react-remove-scroll). 뒤쪽 선택지에 손이 닿지 않으니 고르는 칸으로 바꾼다 —
+  // 제 목록을 스스로 띄우는 것이라 스크롤이 필요 없고, 한 줄이라 화면도 안 가린다.
   return (
-    <nav
-      // 한 줄로 두고 옆으로 민다. 두 줄 넘게 쌓이면 130px 를 덮어서, 시트 위쪽(제목)과
-      // 화면 위에 붙는 것(거르개)이 그 아래로 숨는다.
+    <div
       style={{
-        position: 'fixed', insetInline: 0, top: 0, zIndex: 100, display: 'flex',
-        gap: 6, padding: '6px 10px', background: '#1b1b21', fontSize: 11, fontWeight: 700,
-        overflowX: 'auto', whiteSpace: 'nowrap', scrollbarWidth: 'none',
-        pointerEvents: 'auto',
+        position: 'fixed', insetInline: 0, top: 0, zIndex: 100, display: 'flex', alignItems: 'center',
+        gap: 8, padding: '6px 10px', background: '#1b1b21', pointerEvents: 'auto',
       }}
     >
-      {Object.entries(STAGES).map(([k, label]) => (
-        <a
-          key={k}
-          href={`?v=${k}`}
-          style={{
-            padding: '4px 9px', borderRadius: 999, textDecoration: 'none', flex: '0 0 auto',
-            background: cur === k ? '#5b4fe8' : 'transparent',
-            color: cur === k ? '#fff' : '#9b9ba6',
-          }}
-        >
-          {label}
-        </a>
-      ))}
-    </nav>
+      <select
+        value={cur}
+        onChange={(e) => {
+          location.search = '?v=' + e.target.value;
+        }}
+        style={{
+          flex: 1, minWidth: 0, height: 28, borderRadius: 8, border: 0, padding: '0 8px',
+          background: '#3f3f4a', color: '#fff', fontFamily: 'inherit', fontSize: 12, fontWeight: 700,
+        }}
+      >
+        {Object.entries(STAGES).map(([k, label]) => (
+          <option key={k} value={k}>
+            {label}
+          </option>
+        ))}
+      </select>
+    </div>
   );
 }
 
