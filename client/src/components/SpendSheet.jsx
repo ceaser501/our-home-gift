@@ -87,14 +87,14 @@ export default function SpendSheet({ gifticon, onSpend, onClose }) {
 
             <div className="flex items-end justify-between gap-3">
             <div className="flex flex-col gap-0.5">
-              <span className="text-[12.5px] font-semibold text-muted-foreground">
+              <span className="text-caption font-semibold text-muted-foreground">
                 지금 남은 금액
               </span>
               <span className="text-[25px] leading-none font-bold tracking-heading tabular-nums text-foreground">
                 {won(left)}
               </span>
             </div>
-            <div className="text-right text-[12.5px] leading-snug font-medium tabular-nums text-muted-foreground">
+            <div className="text-right text-caption leading-snug font-medium tabular-nums text-muted-foreground">
               {shortWon(face)}권
               {already > 0 && (
                 <>

@@ -239,8 +239,8 @@ export default function NearbyStoresSheet({ gifticon, onClose }) {
               {/* 회색을 채운 동그라미로 두었더니 이 한 줄만 무겁고 흐렸다. 선으로 그린
                   i는 바탕이 흰색이라 옆 글자와 같은 무게로 읽힌다. */}
               <Info aria-hidden="true" className="size-[15px] shrink-0 text-muted-foreground" strokeWidth={2.2} />
-              <p className="m-0 flex-1 text-[12.5px] font-medium text-muted-foreground">매장을 누르면 지도가 열려요</p>
-              <p className="m-0 shrink-0 text-[12.5px] font-medium text-muted-foreground">가까운 순</p>
+              <p className="m-0 flex-1 text-caption font-medium text-muted-foreground">매장을 누르면 지도가 열려요</p>
+              <p className="m-0 shrink-0 text-caption font-medium text-muted-foreground">가까운 순</p>
             </div>
 
             {/* 가장 가까운 한 곳만 카드로 세운다. 거리를 전부 포인트색으로 칠하면 다 같은

@@ -136,7 +136,7 @@ export default function FamilySwitcherSheet({ onClose, initialCode = '' }) {
                         <span className="truncate text-base font-semibold text-foreground">
                           {item.name}
                         </span>
-                        <span className="text-[12.5px] font-medium text-muted-foreground">
+                        <span className="text-caption font-medium text-muted-foreground">
                           {isCurrent ? '지금 보는 중' : '눌러서 바꾸기'}
                         </span>
                       </div>

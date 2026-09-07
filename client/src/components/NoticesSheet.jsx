@@ -65,7 +65,7 @@ export default function NoticesSheet({ onClose }) {
                   {notice.body}
                 </p>
               )}
-              <p className="m-0 mt-2 text-[12.5px] font-medium tabular-nums text-muted-foreground">
+              <p className="m-0 mt-2 text-caption font-medium tabular-nums text-muted-foreground">
                 {formatDate(notice.starts_at)}
               </p>
             </article>
@@ -90,7 +90,7 @@ export default function NoticesSheet({ onClose }) {
                   {notice.body}
                 </p>
               )}
-              <p className="m-0 mt-[7px] text-[12.5px] font-medium tabular-nums text-muted-foreground/80">
+              <p className="m-0 mt-[7px] text-caption font-medium tabular-nums text-muted-foreground/80">
                 {formatDate(notice.starts_at)}
               </p>
             </article>

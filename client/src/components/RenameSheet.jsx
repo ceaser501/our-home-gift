@@ -58,13 +58,13 @@ export default function RenameSheet({ title, label, hint, description, initialVa
                   {label}
                 </Label>
                 {hint && (
-                  <span className="shrink-0 text-[12.5px] font-medium text-muted-foreground">{hint}</span>
+                  <span className="shrink-0 text-caption font-medium text-muted-foreground">{hint}</span>
                 )}
               </div>
               {/* 글자 수는 한계에 가까울 때만 나타난다. 이름은 보통 두세 글자라 늘 띄우면
                   쓸모없는 숫자가 하나 더 있는 셈이고, 그 자리에 있으면 자꾸 세게 된다. */}
               {value.length > MAX_LENGTH - 5 && (
-                <span className="shrink-0 text-[12.5px] font-medium tabular-nums text-muted-foreground">
+                <span className="shrink-0 text-caption font-medium tabular-nums text-muted-foreground">
                   {value.length} / {MAX_LENGTH}
                 </span>
               )}

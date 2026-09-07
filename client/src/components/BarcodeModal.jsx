@@ -185,7 +185,7 @@ export default function BarcodeModal({ gifticon, onClose, onUsed, onSpend }) {
             <div className="rounded-[13px] bg-accent px-3.5 py-3">
               <p className="m-0 mb-1 flex items-center gap-1.5">
                 <StickyNote className="size-3.5 shrink-0 text-primary" />
-                <span className="min-w-0 truncate text-[12.5px] font-bold text-primary">
+                <span className="min-w-0 truncate text-caption font-bold text-primary">
                   {memoWriter ? `${memoWriter}님의 메모` : '메모'}
                 </span>
                 {/* 언제 쓴 말인지 밝힌다. 메모는 고쳐 쓸 수 있어서, 날짜가 없으면 반년 전

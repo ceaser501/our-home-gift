@@ -114,7 +114,7 @@ export default function ExtendSheet({ gifticon, onExtend, onClose }) {
               )}
               <span className={cn('h-1 w-[22px] rounded-full', step === 1 ? 'bg-primary' : 'bg-primary/35')} />
               <span className={cn('h-1 w-[22px] rounded-full', step === 2 ? 'bg-primary' : 'bg-input')} />
-              <span className="ml-1 text-[12.5px] font-bold tabular-nums text-muted-foreground">{step} / 2</span>
+              <span className="ml-1 text-caption font-bold tabular-nums text-muted-foreground">{step} / 2</span>
             </div>
           )}
 
@@ -271,7 +271,7 @@ export default function ExtendSheet({ gifticon, onExtend, onClose }) {
                   가운데는 화살표다 — 셰브론(›)은 "누르면 열린다"로 읽힌다. */}
               <div className="flex items-center gap-[13px] rounded-2xl bg-accent px-4 py-[17px]">
                 <div className="flex flex-col gap-[3px]">
-                  <span className="text-[12.5px] font-semibold text-muted-foreground">지금</span>
+                  <span className="text-caption font-semibold text-muted-foreground">지금</span>
                   <span className="text-[15px] font-semibold tabular-nums text-muted-foreground line-through">
                     {formatDate(gifticon.expires_at)}
                   </span>
@@ -280,7 +280,7 @@ export default function ExtendSheet({ gifticon, onExtend, onClose }) {
                   →
                 </span>
                 <div className="flex flex-col items-end gap-[3px]">
-                  <span className="text-[12.5px] font-bold text-primary">변경 후</span>
+                  <span className="text-caption font-bold text-primary">변경 후</span>
                   <span className="text-xl font-bold tracking-heading tabular-nums text-foreground">
                     {next ? formatDate(next) : '날짜를 골라주세요'}
                   </span>

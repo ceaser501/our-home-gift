@@ -334,7 +334,7 @@ export default function ProfileMenu({ onClose }) {
           {/* 버전은 화면 맨 끝이다. 누를 것도 없고 알아야 할 일도 없는 값이라, 무엇보다
               뒤에 있어야 한다. 남겨두는 이유는 하나뿐 — 문의를 받았을 때 "어떤 코드를
               쓰고 계신가"를 물어볼 수 있어야 해서다. */}
-          <p className="m-0 pb-1 text-center text-[12.5px] font-medium tabular-nums text-muted-foreground">
+          <p className="m-0 pb-1 text-center text-caption font-medium tabular-nums text-muted-foreground">
             {/* 화면 배율을 함께 적는다. 폰 설정에 따라 85~115% 사이에서 움직이는데,
                 그 값이 안 보이면 "크다/작다"를 말할 기준이 없다(utils/uiScale.js). */}
             버전 {__APP_VERSION__} ({__BUILD_DATE__}) · 화면 {Math.round(currentUiScale() * 100)}%

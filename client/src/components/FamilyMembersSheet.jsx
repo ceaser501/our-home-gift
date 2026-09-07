@@ -263,7 +263,7 @@ export default function FamilyMembersSheet({ onClose }) {
           {members.map((member, index) => (
             <li key={member.user_id} className="flex items-center gap-3 rounded-xl px-0.5 py-3">
               <span
-                className={`flex size-[38px] shrink-0 items-center justify-center rounded-full text-[12.5px] font-bold text-white ${
+                className={`flex size-[38px] shrink-0 items-center justify-center rounded-full text-caption font-bold text-white ${
                   memberTagColorClass(member) ?? OWNER_TAG_PALETTE[0]
                 }`}
               >

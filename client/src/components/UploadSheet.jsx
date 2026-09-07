@@ -1064,7 +1064,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
                       {form.owner || '골라주세요'}
                     </span>
                     {form.owner && form.owner === myName && (
-                      <span className="shrink-0 rounded-[5px] bg-accent px-1.5 py-0.5 text-[12.5px] font-semibold text-primary">
+                      <span className="shrink-0 rounded-[5px] bg-accent px-1.5 py-0.5 text-caption font-semibold text-primary">
                         나
                       </span>
                     )}
@@ -1091,7 +1091,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
                   없었다. 칸 안 예시 문구로는 안 된다 — 적기 시작하면 사라진다. */}
               <div className="flex items-baseline gap-1.5">
                 <Label htmlFor="f-memo" className="text-[14px] font-semibold text-foreground/80">메모</Label>
-                <span className="text-[12.5px] font-medium text-muted-foreground">선택 · 가족이 같이 봐요</span>
+                <span className="text-caption font-medium text-muted-foreground">선택 · 가족이 같이 봐요</span>
               </div>
               <Textarea
                 id="f-memo"

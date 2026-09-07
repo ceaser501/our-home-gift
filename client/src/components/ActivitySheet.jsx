@@ -102,7 +102,7 @@ function PinnedNotice({ notice }) {
             띄어쓰기 하나가 여기서 줄을 끊을 수 있는 자리를 만든다. */}
         {remaining && ' '}
         {remaining && (
-          <span className="ml-[3px] text-[12.5px] font-bold whitespace-nowrap text-primary">{remaining}</span>
+          <span className="ml-[3px] text-caption font-bold whitespace-nowrap text-primary">{remaining}</span>
         )}
       </p>
       {/* 줄바꿈을 그대로 살린다. 공지는 문단으로 쓰는 글이라 한 덩어리로 뭉치면 읽기 어렵다. */}
@@ -289,7 +289,7 @@ export default function ActivitySheet({
 
             {/* 왜 예전 것이 없는지 말해준다. 없어진 게 아니라 지운 것임을 알면 찾아 헤매지 않는다. */}
             {activities.length > 0 && (
-              <p className="m-0 py-4 text-center text-[12.5px] font-medium text-muted-foreground">
+              <p className="m-0 py-4 text-center text-caption font-medium text-muted-foreground">
                 30일이 지난 알림은 자동으로 지워져요
               </p>
             )}

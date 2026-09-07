@@ -1631,11 +1631,11 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                   아래 상품명이 한 덩어리로 읽힌다. 어디서 나왔는지를 함께 적는 건,
                   같은 기프티콘이 여러 사진첩에 있을 때 무엇을 집었는지 알기 위해서다. */}
               <div className="flex items-baseline gap-2">
-                <span className="truncate text-[12.5px] font-medium text-muted-foreground">
+                <span className="truncate text-caption font-medium text-muted-foreground">
                   {info?.brand || candidate.bucket}
                 </span>
                 {info?.brand && (
-                  <span className="shrink-0 text-[12.5px] text-muted-foreground/70">{candidate.bucket}</span>
+                  <span className="shrink-0 text-caption text-muted-foreground/70">{candidate.bucket}</span>
                 )}
               </div>
               <span className="mt-0.5 truncate text-[15.5px] leading-snug font-semibold text-foreground">
@@ -1732,7 +1732,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
               >
                 금액권
               </span>
-              <span className="min-w-0 flex-1 truncate text-[12.5px] font-medium text-muted-foreground">
+              <span className="min-w-0 flex-1 truncate text-caption font-medium text-muted-foreground">
                 쓴 만큼 깎여요
               </span>
             </button>
@@ -2237,7 +2237,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                                 기한이 지난 것에는 이 말을 안 한다 — + 로 올려도 똑같이
                                 막히는데 올려보라고 하면 시키는 대로 하고 나서 같은
                                 자리에서 또 막힌다. */}
-                            <span className="text-[12.5px] font-medium break-keep text-muted-foreground">
+                            <span className="text-caption font-medium break-keep text-muted-foreground">
                               {result.failed.some((item) => !item.expired)
                                 ? '기프티콘이면 + 로 직접 등록해주세요'
                                 : '기한이 지난 건 등록할 수 없어요'}
@@ -2265,7 +2265,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                               <div key={group.reason} className="flex flex-col">
                                 <p className="m-0 flex items-baseline gap-1.5 py-1 break-keep">
                                   <span className="text-body font-bold text-foreground/80">{group.reason}</span>
-                                  <span className="text-[12.5px] font-semibold tabular-nums text-muted-foreground">
+                                  <span className="text-caption font-semibold tabular-nums text-muted-foreground">
                                     {group.items.length}개
                                   </span>
                                 </p>
@@ -2307,7 +2307,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                             <span className="text-[14.5px] font-semibold break-keep text-foreground">
                               등록했지만 사용기한이 비었어요 {result.noExpiry}개
                             </span>
-                            <span className="text-[12.5px] font-medium break-keep text-muted-foreground">
+                            <span className="text-caption font-medium break-keep text-muted-foreground">
                               목록에서 수정으로 채워주세요
                             </span>
                           </span>
