@@ -11,6 +11,7 @@ import WelcomeSetupScreen from './WelcomeSetupScreen';
 import { needsWelcomeSetup, markWelcomeSetupDone } from '../utils/welcomeSetup';
 import LoadingScreen from './LoadingScreen';
 import DeleteAccountError from './DeleteAccountError';
+import LoginErrorAlert from './LoginErrorAlert';
 
 // 예전에는 여기서 로고와 한 줄 소개를 보여주는 인트로 화면을 최소 1.8초 띄웠다.
 // 그런데 설치형 PWA는 앱을 켤 때 브라우저가 먼저 제 스플래시(아이콘 + 앱 이름)를
@@ -217,6 +218,7 @@ export default function AuthGate({ children }) {
     <>
       {screen}
       <DeleteAccountError />
+      <LoginErrorAlert />
     </>
   );
 

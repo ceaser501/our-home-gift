@@ -10,6 +10,7 @@ import { watchLoginRedirects } from './utils/deepLink.js'
 import { isNativeApp } from './utils/browser.js'
 import { catchInviteFromUrl } from './utils/inviteLink.js'
 import { applyUiScale, watchSystemUiScale } from './utils/uiScale.js'
+import { setLoginError } from './utils/loginError.js'
 
 // 안드로이드 웹뷰는 내비게이션 바 높이를 env(safe-area-inset-bottom)으로 알려주지 않는다.
 // 그래서 화면 맨 아래 버튼이 제스처 바에 물려 눌리지 않았다. CSS가 그 사실을 알 수 있게
@@ -41,8 +42,9 @@ registerServiceWorker().catch(() => {})
 // 전에 돌아올 수 있고, 그때 받을 사람이 없으면 로그인 결과가 그대로 버려진다.
 watchLoginRedirects({
   onError(err) {
-    // 로그인 화면은 자기가 띄운 창이 아닌 곳에서 온 실패를 알 방법이 없어서 여기서 알린다.
-    window.alert(err.message)
+    // 로그인 화면은 자기가 띄운 창이 아닌 곳에서 온 실패를 알 방법이 없다. 적어두면
+    // 화면 쪽(AuthGate의 LoginErrorAlert)이 앱 모양의 창으로 그린다.
+    setLoginError(err.message)
   },
 }).catch(() => {})
 
