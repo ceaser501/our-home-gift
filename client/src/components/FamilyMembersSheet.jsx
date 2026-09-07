@@ -370,7 +370,7 @@ export default function FamilyMembersSheet({ onClose }) {
           <RenameSheet
             title="어떤 이름을 쓸까요?"
             label="이름"
-            description="기프티콘에 적힌 이름도 함께 바뀌어요."
+            helper="기프티콘에 적힌 이름도 함께 바뀌어요."
             initialValue={members.find((m) => m.user_id === user.id)?.display_name || ''}
             placeholder="예: 아빠"
             onSubmit={async (name) => {

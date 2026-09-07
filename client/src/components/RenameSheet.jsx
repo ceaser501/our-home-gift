@@ -11,7 +11,7 @@ const MAX_LENGTH = 20;
 // 이름 한 줄만 고치는 작은 창. 내 이름과 가족 이름이 같은 모양을 쓴다.
 // 다른 창(내 메뉴, 가족 목록) 위에 겹쳐서 열리는데, Radix 시트는 겹쳐 열어도
 // 글자 입력 포커스를 맨 위 창이 가져가므로 그대로 겹쳐 쓴다.
-export default function RenameSheet({ title, label, hint, description, helper, initialValue = '', placeholder, onSubmit, onClose }) {
+export default function RenameSheet({ title, label, hint, helper, initialValue = '', placeholder, onSubmit, onClose }) {
   // 뒤로가기로 이 창을 닫는다. 안 그러면 설치해서 쓸 때 앱이 통째로 꺼진다.
   useBackClose(onClose);
   const [value, setValue] = useState(initialValue);
@@ -88,12 +88,12 @@ export default function RenameSheet({ title, label, hint, description, helper, i
 
                 두 줄로 흐를 때 표가 가운데로 내려오지 않게 items-start 로 붙이고, 첫 줄의
                 가운데선에 맞춰 mt-0.5 만큼 내린다(줄 상자 19.2 에 표 16 이라 위아래 1.6). */}
-            {/* 칸 글자와 같은 자리에서 시작한다. 왼쪽 선은 창의 다른 것들과 20 으로
-                맞아 있었는데, 칸의 둥근 모서리가 눈을 안쪽으로 당겨서 헬퍼만 왼쪽으로
-                튀어나와 보였다. 헬퍼는 창이 아니라 그 칸에 딸린 말이라, 칸 안쪽 선에
-                맞추는 편이 맞다. */}
+            {/* 4px 만 들인다. 왼쪽 선은 창의 다른 것들과 20 으로 맞아 있는데도 헬퍼만
+                왼쪽으로 튀어나와 보인다 — 칸의 둥근 모서리(14)가 눈을 안쪽으로 당기기
+                때문이다. 칸 글자(36)까지 맞추면 이번에는 아래 버튼과 어긋나 계단이 진다.
+                눈이 속는 만큼만 되돌리는 값이라 옵티컬 보정이지 들여쓰기가 아니다. */}
             {helper && (
-              <div className="flex items-start gap-1.5 pl-4">
+              <div className="flex items-start gap-1.5 pl-1">
                 <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full bg-border text-[11px] font-bold text-muted-foreground">
                   i
                 </span>
@@ -102,18 +102,6 @@ export default function RenameSheet({ title, label, hint, description, helper, i
             )}
           </div>
 
-          {/* 이름을 바꾸면 다른 화면의 값까지 바뀐다는 것은 저장하기 전에 읽어야 하는 말이다.
-              입력칸 아래 작은 회색 줄로 두면 저장을 누른 뒤에야 알게 된다. */}
-          {description && (
-            <div className="flex gap-[9px] rounded-lg bg-secondary/60 px-3.5 py-3">
-              <span className="mt-px flex size-4 shrink-0 items-center justify-center rounded-full bg-border text-[11px] font-bold text-muted-foreground">
-                i
-              </span>
-              <p className="m-0 flex-1 text-[13.5px] leading-relaxed font-medium break-keep text-muted-foreground">
-                {description}
-              </p>
-            </div>
-          )}
 
           {error && <p className="m-0 text-sm text-destructive">{error}</p>}
 

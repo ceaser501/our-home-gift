@@ -345,7 +345,7 @@ export default function ProfileMenu({ onClose }) {
           <RenameSheet
             title="어떤 이름을 쓸까요?"
             label="이름"
-            description="기프티콘에 적힌 받은 사람·사용한 사람 이름도 함께 바뀌어요."
+            helper="기프티콘에 적힌 받은 사람·사용한 사람 이름도 함께 바뀌어요."
             initialValue={myName}
             placeholder="예: 태수"
             onSubmit={async (name) => {
