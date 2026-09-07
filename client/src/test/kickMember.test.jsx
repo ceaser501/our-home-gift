@@ -11,6 +11,7 @@ const kickMember = vi.fn();
 const refreshFamily = vi.fn();
 
 vi.mock('../family', () => ({
+  touchFamily: vi.fn(async () => {}),
   kickMember: (...a) => kickMember(...a),
   approveJoinRequest: vi.fn(),
   rejectJoinRequest: vi.fn(),

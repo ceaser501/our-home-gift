@@ -95,6 +95,14 @@ create table if not exists public.family_members (
   unique (family_id, user_id)
 );
 
+-- 이 사람이 이 가족을 마지막으로 연 때.
+--
+-- 여러 가족에 속한 사람은 앱을 열었을 때 마지막에 보던 가족이 나와야 한다. 그동안은
+-- 그 값을 폰 안에만 적어뒀는데(localStorage), 앱을 다시 깔면 지워지고 기기마다 따로
+-- 논다. 아이폰을 다시 깔 때마다 첫 번째 가족으로 돌아가던 것이 그래서였다.
+-- 서버에 적으면 다시 깔아도, 다른 기기에서도 그대로다.
+alter table public.family_members add column if not exists last_opened_at timestamptz;
+
 -- 기프티콘을 어느 가족 소유로 볼지 표시하는 컬럼
 alter table public.gifticons add column if not exists family_id uuid references public.families(id);
 
@@ -1514,6 +1522,24 @@ create table if not exists public.api_usage_total (
 );
 
 alter table public.api_usage_total enable row level security;
+
+-- 이 가족을 지금 열었다고 적어둔다. 다음에 앱을 열 때 이 값이 가장 최근인 가족을 연다.
+--
+-- 자기 줄만 건드린다. 남의 last_opened_at을 바꿔봐야 얻을 것은 없지만, 남의 줄을
+-- 만질 수 있는 함수를 열어둘 이유도 없다.
+create or replace function public.touch_family(fid uuid)
+returns void
+language sql
+security definer
+set search_path = public
+as $$
+  update public.family_members
+  set last_opened_at = now()
+  where family_id = fid and user_id = auth.uid();
+$$;
+
+revoke all on function public.touch_family(uuid) from public;
+grant execute on function public.touch_family(uuid) to authenticated;
 
 -- 세는 일과 판단을 한 문장에서 한다. 나눠서 하면 동시에 여러 번 부를 때 둘 다
 -- "아직 여유 있음"으로 읽고 지나가버린다.

@@ -105,6 +105,7 @@ export async function sendFcm(
 
   let sent = 0;
   const dead: string[] = [];
+  const failures: string[] = [];
 
   for (const target of tokens) {
     try {
@@ -123,7 +124,14 @@ export async function sendFcm(
             // 안 냈지만, 낼 때 서버를 다시 손대지 않도록 지금 같이 적어둔다.
             apns: {
               headers: { 'apns-priority': '10' },
-              payload: { aps: { sound: 'default' } },
+              // alert를 직접 적어준다. 위 notification 만으로도 대개 실려 가지만,
+              // 아이폰에서 소리·잠금화면 표시가 확실히 걸리려면 aps 안에 있어야 한다.
+              payload: {
+                aps: {
+                  alert: { title: message.title, body: message.body },
+                  sound: 'default',
+                },
+              },
             },
           },
         }),
@@ -139,10 +147,27 @@ export async function sendFcm(
       // UNREGISTERED = 앱을 지웠거나 토큰이 갈렸다. INVALID_ARGUMENT = 토큰이 아예 틀렸다.
       if (res.status === 404 || status === 'UNREGISTERED' || status === 'INVALID_ARGUMENT') {
         dead.push(target);
+        continue;
       }
-    } catch {
-      // 한 대가 실패해도 나머지는 보낸다.
+
+      // 그 밖의 거절은 남긴다.
+      //
+      // 예전에는 여기서 조용히 넘어갔다. 그러면 화면에서는 "알림이 안 온다"만 보이고
+      // 서버에는 아무 흔적이 없어서, 파이어베이스 설정 문제인지 폰 문제인지 가릴 수가
+      // 없다. 실제로 아이폰 알림이 안 와서 하루를 짐작으로 보냈다.
+      //
+      // 특히 THIRD_PARTY_AUTH_ERROR가 이 자리로 온다 — APNs 키가 안 붙었거나 번들 ID가
+      // 안 맞을 때 나는 말이다. 토큰 앞 열두 자만 적는다(전체는 개인 기기를 가리킨다).
+      failures.push(`${target.slice(0, 12)}… ${res.status} ${status || ''} ${err?.error?.message || ''}`.trim());
+    } catch (e) {
+      // 한 대가 실패해도 나머지는 보낸다. 다만 무슨 일이었는지는 남긴다.
+      failures.push(`${target.slice(0, 12)}… ${(e as Error)?.message || '알 수 없는 실패'}`);
     }
+  }
+
+  if (failures.length) {
+    console.warn(`[fcm] ${tokens.length}대 중 ${sent}대 보냄, ${dead.length}대 죽음, ${failures.length}대 실패`);
+    for (const line of failures) console.warn(`[fcm] ${line}`);
   }
 
   return { sent, dead };

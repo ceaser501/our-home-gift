@@ -12,6 +12,7 @@ import { render, screen } from '@testing-library/react';
 const getMyFamilies = vi.fn();
 
 vi.mock('../family', () => ({
+  touchFamily: vi.fn(async () => {}),
   getMyFamilies: (...a) => getMyFamilies(...a),
   getFamilyMembers: vi.fn(async () => [{ user_id: 'me', display_name: '나' }]),
   listPendingJoinRequests: vi.fn(async () => []),

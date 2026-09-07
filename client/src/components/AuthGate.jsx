@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getSession, onAuthStateChange, signOut } from '../auth';
-import { getFamilyMembers, getMyFamilies, listPendingJoinRequests } from '../family';
+import { getFamilyMembers, getMyFamilies, listPendingJoinRequests, touchFamily } from '../family';
 import { hasAgreedToCurrent } from '../consent';
 import { FamilyContext } from '../FamilyContext';
 import LoginScreen from './LoginScreen';
@@ -76,9 +76,13 @@ export default function AuthGate({ children }) {
       const families = await getMyFamilies(userId);
       if (families.length === 0) return null;
 
+      // 폰 안에 적어둔 것이 먼저다. 앱을 다시 깔아 그게 없으면 families[0]인데, 그 차례는
+      // 이제 서버가 '마지막으로 연 순서'로 세워 준다(family.js의 getMyFamilies).
       const wanted = wantedId ?? readLastFamilyId();
       const family = families.find((f) => f.id === wanted) ?? families[0];
       rememberFamilyId(family.id);
+      // 서버에도 적어둔다. 기다리지 않는다 — 이게 늦어도 화면이 늦을 이유가 없다.
+      touchFamily(family.id);
 
       const [members, joinRequests] = await Promise.all([
         getFamilyMembers(family.id),

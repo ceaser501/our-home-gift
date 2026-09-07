@@ -231,7 +231,7 @@ export default function FamilySwitcherSheet({ onClose, initialCode = '' }) {
                 id="switch-my-name"
                 value={memberName}
                 onChange={(e) => setMemberName(e.target.value)}
-                placeholder="아빠, 엄마, 아들, 딸"
+                placeholder=""
                 maxLength={20}
                 autoComplete="off"
                 required

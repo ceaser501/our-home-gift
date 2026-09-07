@@ -7,7 +7,13 @@ import { removeImages } from './api';
 // user_id로 걸러야 하는 이유: 내가 속한 가족의 구성원 명단은 나까지 포함해 전부 보이므로,
 // 거르지 않으면 남의 가입 기록까지 섞여 들어온다.
 export async function getMyFamilies(userId) {
-  const { data: memberships, error } = await supabase.from('family_members').select('family_id').eq('user_id', userId);
+  // last_opened_at은 있으면 좋은 값이지 없으면 못 여는 값이 아니다. 아직 SQL을 안 돌린
+  // 데이터베이스에서 없는 칸을 달라고 하면 목록 읽기가 통째로 실패하고, 앱은 "연결이
+  // 고르지 않아요"만 띄운다. 아래 구성원 목록에서 이미 한 번 겪은 일이라 같은 식으로 판다.
+  const read = (columns) => supabase.from('family_members').select(columns).eq('user_id', userId);
+
+  let { data: memberships, error } = await read('family_id, last_opened_at');
+  if (error) ({ data: memberships, error } = await read('family_id'));
   if (error) throw new Error(error.message);
   if (!memberships || memberships.length === 0) return [];
 
@@ -20,7 +26,30 @@ export async function getMyFamilies(userId) {
     )
     .order('created_at');
   if (familyError) throw new Error(familyError.message);
-  return families ?? [];
+  if (!families) return [];
+
+  // 마지막으로 연 순서로 세운다. 한 번도 안 연 가족은 뒤로 가고, 그 안에서는 만든 순서다.
+  //
+  // 이 차례가 그대로 "앱을 열었을 때 나오는 가족"이 된다(AuthGate가 첫 번째를 연다).
+  // 폰 안에 적어둔 값이 먼저지만 그건 앱을 다시 깔면 지워진다 — 그때 여기가 받는다.
+  const openedAt = new Map(memberships.map((m) => [m.family_id, m.last_opened_at || null]));
+  return [...families].sort((a, b) => {
+    const x = openedAt.get(a.id);
+    const y = openedAt.get(b.id);
+    if (x && y) return y.localeCompare(x);
+    if (x) return -1;
+    if (y) return 1;
+    return 0; // 둘 다 없으면 위에서 만든 순서 그대로
+  });
+}
+
+/** 이 가족을 지금 열었다고 서버에 적어둔다. 실패해도 앱은 그대로 돈다. */
+export async function touchFamily(familyId) {
+  try {
+    await supabase.rpc('touch_family', { fid: familyId });
+  } catch {
+    // 아직 SQL을 안 돌렸거나 잠깐 안 될 뿐이다. 폰 안의 기억으로 충분히 굴러간다.
+  }
 }
 
 // 구성원 목록을 못 읽으면 앱이 통째로 안 열린다(AuthGate가 '연결이 고르지 않아요'로

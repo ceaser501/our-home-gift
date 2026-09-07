@@ -16,6 +16,7 @@ const renameMember = vi.fn();
 vi.mock('../auth', () => ({ deleteAccount: (...a) => deleteAccount(...a) }));
 vi.mock('../api', () => ({ sendTestNotification: (...a) => sendTestNotification(...a) }));
 vi.mock('../family', () => ({
+  touchFamily: vi.fn(async () => {}),
   leaveFamily: (...a) => leaveFamily(...a),
   renameMember: (...a) => renameMember(...a),
 }));
