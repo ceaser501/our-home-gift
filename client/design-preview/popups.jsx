@@ -55,6 +55,7 @@ function Bar({ cur }) {
       style={{
         position: 'fixed', insetInline: 0, top: 0, zIndex: 100, display: 'flex', flexWrap: 'wrap',
         gap: 6, padding: '8px 12px', background: '#1b1b21', fontSize: 12, fontWeight: 700,
+        pointerEvents: 'auto',
       }}
     >
       {Object.entries(STAGES).map(([k, label]) => (
@@ -115,9 +116,9 @@ function App() {
         type="button"
         onClick={() => setBump((v) => !v)}
         style={{
-          position: 'fixed', right: 12, top: 92, zIndex: 150, border: 0, borderRadius: 999,
+          position: 'fixed', right: 12, top: 130, zIndex: 150, border: 0, borderRadius: 999,
           padding: '8px 14px', fontFamily: 'inherit', fontSize: 12, fontWeight: 700,
-          color: '#fff', background: bump ? '#5b4fe8' : '#3f3f4a',
+          color: '#fff', background: bump ? '#5b4fe8' : '#3f3f4a', pointerEvents: 'auto',
         }}
       >
         제목 {bump ? '19px' : '16px'}
