@@ -1,0 +1,163 @@
+<!doctype html>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>시트 입력칸</title>
+<script type="module" src="/src/index.css"></script>
+<style>
+  body { margin:0; background:#3a3a44; font-family:Pretendard, system-ui, sans-serif;
+         color:var(--foreground); -webkit-font-smoothing:antialiased; }
+  .page { display:flex; gap:18px; align-items:flex-start; justify-content:center; padding:16px 12px 60px; }
+  .panel { position:sticky; top:16px; width:230px; flex:0 0 auto; background:var(--background);
+           border:1px solid var(--border); border-radius:14px; padding:10px 12px; }
+  .panel > span { display:block; font-size:10px; font-weight:800; letter-spacing:.04em;
+                  color:var(--muted-foreground); margin:0 0 4px; }
+  .panel > span + span { margin-top:9px; }
+  .opts { display:flex; gap:4px; }
+  label.opt { flex:1; min-width:0; }
+  label.opt input { position:absolute; opacity:0; pointer-events:none; }
+  label.opt > span { display:block; text-align:center; font-size:11px; font-weight:700; padding:5px 3px;
+                     border-radius:7px; border:1px solid var(--border); color:var(--muted-foreground); cursor:pointer; }
+  label.opt input:checked + span { background:var(--primary); border-color:var(--primary); color:var(--primary-foreground); }
+  .note { font-size:11px; line-height:1.6; color:var(--muted-foreground); margin:10px 0 0; word-break:keep-all; }
+  .note b { color:var(--foreground); }
+
+  /* ── 시트 — ui/sheet.jsx 값 그대로 ── */
+  .sheet { width:375px; flex:0 0 auto; border-radius:20px 20px 0 0; background:var(--card);
+           box-shadow:0 -8px 30px -10px rgb(0 0 0/.5); overflow:hidden; }
+  .hdr { position:relative; padding:20px 56px 14px 18px; }
+  .hdr h2 { margin:0; font-size:20px; line-height:1.2; font-weight:700; letter-spacing:-.025em; }
+  .x { position:absolute; top:16px; right:16px; display:flex; width:34px; height:34px; align-items:center;
+       justify-content:center; border-radius:999px; background:var(--muted); opacity:.8; }
+  .x svg { width:16px; height:16px; }
+  .body { padding:0 18px 18px; }
+  .lbl { display:block; margin:0 0 8px; font-size:14px; font-weight:600;
+         color:color-mix(in oklab, var(--foreground) 80%, transparent); }
+  .lbl + .lbl { margin-top:16px; }
+
+  /* 입력칸 — 지금 세 종을 한자리에 */
+  .fld { display:flex; width:100%; height:52px; align-items:center; box-sizing:border-box;
+         border-radius:13px; background:var(--card); color:var(--foreground);
+         font-family:inherit; font-size:var(--fs, 15.5px); font-weight:var(--fw, 400);
+         padding:0 var(--px, 15px);
+         border:var(--bw, 1px) solid var(--bc, var(--input, var(--border)));
+         box-shadow:var(--sh, 0 1px 2px 0 rgb(0 0 0/.05)); }
+  .fld.ph { color:var(--muted-foreground); }
+
+  .row { margin-top:22px; display:flex; gap:8px; }
+  .btn { display:flex; height:52px; flex:1; align-items:center; justify-content:center;
+         border-radius:13px; background:var(--primary); color:var(--primary-foreground);
+         font-size:15.5px; font-weight:700; }
+  .btn.sec { height:48px; border-radius:16px; background:var(--card); color:color-mix(in oklab,var(--foreground) 80%,transparent);
+             border:1px solid var(--border); font-size:14.5px; font-weight:600; }
+
+  .cap { margin:22px 0 6px; font-size:10px; font-weight:800; letter-spacing:.05em;
+         color:var(--muted-foreground); }
+  .read { margin-top:14px; border:1px solid var(--border); border-radius:12px; overflow:hidden;
+          background:var(--background); }
+  .read table { width:100%; border-collapse:collapse; font-size:11.5px; }
+  .read th { text-align:left; font-size:10px; letter-spacing:.05em; font-weight:800;
+             color:var(--muted-foreground); background:var(--muted); padding:7px 9px; }
+  .read td { padding:6px 9px; border-top:1px solid var(--border); font-variant-numeric:tabular-nums; }
+  .read td:first-child { color:var(--muted-foreground); }
+  #selfcheck { display:none; position:fixed; inset:auto 0 0 0; z-index:99; background:var(--destructive);
+               color:#fff; font-size:12px; font-weight:700; padding:10px 14px; text-align:center; }
+</style>
+
+<div class="page">
+  <div class="panel">
+    <span>글자 크기 — 지금 세 종</span>
+    <div class="opts">
+      <label class="opt"><input type="radio" name="fs" value="15"><span>15</span></label>
+      <label class="opt"><input type="radio" name="fs" value="15.5" checked><span>15.5</span></label>
+      <label class="opt"><input type="radio" name="fs" value="16.5"><span>16.5</span></label>
+      <label class="opt"><input type="radio" name="fs" value="16"><span>16 토큰</span></label>
+    </div>
+    <span>굵기</span>
+    <div class="opts">
+      <label class="opt"><input type="radio" name="fw" value="400" checked><span>normal</span></label>
+      <label class="opt"><input type="radio" name="fw" value="600"><span>semibold</span></label>
+    </div>
+    <span>테두리 — 첫 칸만 강조할까</span>
+    <div class="opts">
+      <label class="opt"><input type="radio" name="bd" value="on" checked><span>강조</span></label>
+      <label class="opt"><input type="radio" name="bd" value="off"><span>보통</span></label>
+    </div>
+    <span>그림자</span>
+    <div class="opts">
+      <label class="opt"><input type="radio" name="sh" value="on" checked><span>지금</span></label>
+      <label class="opt"><input type="radio" name="sh" value="off"><span>없음</span></label>
+    </div>
+    <p class="note">지금 값은 <b>이름 바꾸기 16.5 semibold</b>,
+      <b>등록 15.5</b>, <b>로그인 15</b>. 셋이 갈릴 까닭이 있어 보이지 않는다.<br><br>
+      토큰은 <b>callout 16</b> 이 이 자리다 — 여러 줄로 흐르는 글이 아니라 한 줄 입력이지만,
+      subtitle 도 16 이라 크기는 같다.</p>
+  </div>
+
+  <div class="sheet">
+    <div class="hdr">
+      <h2>이름 바꾸기</h2>
+      <span class="x"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></span>
+    </div>
+    <div class="body">
+      <span class="lbl">이름</span>
+      <span class="fld" id="f1">태수</span>
+
+      <p class="cap">같은 칸을 다른 시트에서 — 값이 들어오기 전</p>
+      <span class="lbl">상품명</span>
+      <span class="fld ph">기프티콘 이름을 적어주세요</span>
+
+      <p class="cap">숫자 칸 — tabular-nums</p>
+      <span class="lbl">금액</span>
+      <span class="fld" style="font-variant-numeric:tabular-nums">32,000</span>
+
+      <div class="row">
+        <span class="btn sec">취소</span>
+        <span class="btn">저장</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="read">
+    <table>
+      <tr><th>지금 쓰는 곳</th><th>높이</th><th>반지름</th><th>글자</th></tr>
+      <tbody>
+        <tr><td>이름 바꾸기</td><td>52</td><td>13</td><td>16.5 semibold</td></tr>
+        <tr><td>등록 · 상품명/번호</td><td>52</td><td>13</td><td>15.5</td></tr>
+        <tr><td>로그인 · 이메일</td><td>52</td><td>13</td><td>15</td></tr>
+        <tr><td>ui/input 기본값</td><td>40</td><td>10</td><td>14</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div id="selfcheck"></div>
+
+<script>
+const apply = () => {
+  const V = (n) => document.querySelector(`input[name="${n}"]:checked`).value;
+  const r = document.querySelector('.page');
+  r.style.setProperty('--fs', V('fs') + 'px');
+  r.style.setProperty('--fw', V('fw'));
+  r.style.setProperty('--sh', V('sh') === 'on' ? '0 1px 2px 0 rgb(0 0 0/.05)' : 'none');
+  // 강조 테두리는 첫 칸에만 — 값을 고치러 연 창이라 거기부터 눈이 가야 한다
+  const f1 = document.getElementById('f1');
+  const on = V('bd') === 'on';
+  f1.style.setProperty('--bw', on ? '1.5px' : '1px');
+  f1.style.setProperty('--bc', on ? 'var(--primary)' : 'var(--input, var(--border))');
+};
+document.querySelectorAll('input').forEach((i) => i.addEventListener('change', apply));
+apply();
+
+addEventListener('load', () => setTimeout(() => {
+  const bad = [];
+  if (getComputedStyle(document.body).backgroundColor === 'rgba(0, 0, 0, 0)') bad.push('index.css 미로드');
+  const f = document.querySelector('.fld');
+  if (Math.round(f.getBoundingClientRect().height) !== 52) bad.push('입력칸 높이가 52가 아니다');
+  if (parseFloat(getComputedStyle(f).borderRadius) !== 13) bad.push('반지름이 13이 아니다');
+  if (bad.length) {
+    const el = document.getElementById('selfcheck');
+    el.textContent = '시안이 실제와 다르다: ' + bad.join(' · ');
+    el.style.display = 'block';
+  }
+}, 250));
+</script>
