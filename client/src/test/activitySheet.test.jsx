@@ -125,7 +125,7 @@ describe('알림이 하나도 없을 때', () => {
     render(<ActivitySheet activities={[]} lastReadAt={READ_AT} onClose={vi.fn()} />);
 
     expect(screen.getByText('아직 알림이 없어요')).toBeTruthy();
-    const toggle = screen.getByText('푸시 알림 받기').closest('button');
+    const toggle = screen.getByText('사용기한 알림').closest('button');
     expect(toggle.getAttribute('role')).toBe('switch');
     expect(toggle.getAttribute('aria-checked')).toBe('false');
   });

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { act, render, screen } from '@testing-library/react';
 
-// 푸시 알림 받기 줄 — 앱(웹뷰)에서.
+// 사용기한 알림 줄 — 앱(웹뷰)에서.
 //
 // 앱 웹뷰에는 웹푸시가 없다. 이 줄을 그걸로 감쌌다가 앱에서 통째로 사라진 적이 있고
 // (v0.0.80), 그다음엔 "크롬으로 여세요"만 안내했다. 이제 앱은 파이어베이스(FCM)로
@@ -31,7 +31,7 @@ vi.mock('../FamilyContext', () => ({
 const { default: NotificationToggle } = await import('../components/NotificationToggle');
 
 function row() {
-  return screen.getByText('푸시 알림 받기').closest('button');
+  return screen.getByText('사용기한 알림').closest('button');
 }
 
 // 켜짐/꺼짐이 글자에서 스위치가 됐다. 상태는 이제 aria-checked가 알린다 —
@@ -46,7 +46,7 @@ beforeEach(() => {
   disableNativePush.mockResolvedValue();
 });
 
-describe('앱에서의 푸시 알림 받기', () => {
+describe('앱에서의 사용기한 알림', () => {
   it('계정에 토큰이 있으면 스위치가 켜져 있다', async () => {
     isNativePushEnabled.mockResolvedValue(true);
 

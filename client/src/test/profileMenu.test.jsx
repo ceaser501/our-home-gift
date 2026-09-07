@@ -99,7 +99,7 @@ describe('내 메뉴', () => {
   it('켜고 끄는 줄은 모두 스위치다', () => {
     render(<ProfileMenu onClose={() => {}} />);
 
-    for (const label of ['다크 모드', '푸시 알림 받기', '기프티콘 자동 찾기']) {
+    for (const label of ['다크 모드', '사용기한 알림', '기프티콘 자동 찾기']) {
       expect(row(label).getAttribute('role')).toBe('switch');
       expect(row(label).getAttribute('aria-checked')).toBeTruthy();
     }

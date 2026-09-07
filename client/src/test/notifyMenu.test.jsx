@@ -16,7 +16,7 @@ vi.mock('../components/NoticesSheet', () => ({ default: () => null }));
 vi.mock('../components/RenameSheet', () => ({ default: () => null }));
 vi.mock('../components/ThemeToggle', () => ({ default: () => null }));
 vi.mock('../components/NotificationToggle', () => ({
-  default: () => <div>푸시 알림 받기</div>,
+  default: () => <div>사용기한 알림</div>,
 }));
 
 vi.mock('../FamilyContext', () => ({
@@ -36,7 +36,7 @@ describe('내 메뉴의 알림', () => {
   it('켜는 줄은 항상 그려진다', () => {
     render(<ProfileMenu onClose={() => {}} />);
 
-    expect(screen.getByText('푸시 알림 받기')).toBeTruthy();
+    expect(screen.getByText('사용기한 알림')).toBeTruthy();
   });
 
   it('알림 테스트 줄은 없다', () => {
