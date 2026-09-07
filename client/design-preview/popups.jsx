@@ -213,7 +213,15 @@ function App() {
       )}
 
       {cur === 'barcode' && (
-        <BarcodeModal gifticon={{ ...GIFTICON, code: '8801234567890123' }} onClose={reopen} onUsed={reopen} onSpend={reopen} />
+        // BarcodeModal 은 useFamily 를 부른다. 감싸지 않으면 흰 화면만 나온다.
+        <FamilyContext.Provider value={FAMILY}>
+          <BarcodeModal
+            gifticon={{ ...GIFTICON, code: '8801234567890123' }}
+            onClose={reopen}
+            onUsed={reopen}
+            onSpend={reopen}
+          />
+        </FamilyContext.Provider>
       )}
 
       {cur === 't16' && (
