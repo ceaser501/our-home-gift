@@ -37,6 +37,29 @@ const CACHE_KEY = "nearby-banner:result";
 const CACHE_TTL_MS = 10 * 60 * 1000;
 const CACHE_MOVE_M = 300;
 
+// 못 찾은 결과는 더 짧게 기억한다.
+//
+// 매장 앞에 도착했는데 '없어요'가 그대로 떠 있었다. 200m 앞에서 앱을 열어 못 찾은 답을
+// 받으면, 걸어 들어가 다시 열어도 10분 동안 그 답이 나온다. 300m는 걸어서 4분이라
+// 마지막 구간이 통째로 그 안에 들어간다 — 정작 필요한 순간이 거기다.
+//
+// 찾은 결과는 그대로 둔다. 10분 뒤에도 그 매장은 거기 있다. 바뀔 이유가 있는 쪽은
+// '없다'는 답뿐이라, 그쪽만 좁힌다.
+//
+// 검색 횟수는 거의 안 늘어난다. 하루에 몇 번 여는 사람은 어차피 3분이 지나 있어서
+// 지금과 같고, 계산대 앞에서 여닫는 경우만 아껴진다.
+const MISS_TTL_MS = 3 * 60 * 1000;
+const MISS_MOVE_M = 100;
+
+// 이 캐시가 아직 쓸 만한가. 못 찾은 결과에는 좁은 자를 댄다.
+function cacheFresh(saved, at) {
+  const ttl = saved.best ? CACHE_TTL_MS : MISS_TTL_MS;
+  if (Date.now() - saved.ts > ttl) return false;
+  if (!at) return true;
+  const moved = saved.best ? CACHE_MOVE_M : MISS_MOVE_M;
+  return distanceBetween(saved.at, at) <= moved;
+}
+
 // 만료가 가까운 것부터 최대 세 브랜드만 찾아본다. 브랜드마다 검색이 한 번씩이라
 // 다 뒤지면 요청 수가 기프티콘 수만큼 늘어난다.
 const MAX_BRANDS = 3;
@@ -123,8 +146,7 @@ function readDismissedToday() {
 function readCache(at) {
   try {
     const saved = JSON.parse(localStorage.getItem(CACHE_KEY) || "null");
-    if (!saved || Date.now() - saved.ts > CACHE_TTL_MS) return null;
-    if (distanceBetween(saved.at, at) > CACHE_MOVE_M) return null;
+    if (!saved || !cacheFresh(saved, at)) return null;
     return saved;
   } catch {
     return null;
@@ -146,9 +168,9 @@ function readCache(at) {
 function readCacheAhead() {
   try {
     const saved = JSON.parse(localStorage.getItem(CACHE_KEY) || "null");
-    if (!saved || Date.now() - saved.ts > CACHE_TTL_MS) return null;
+    if (!saved) return null;
     const last = readCachedPosition(CACHE_MAX_AGE_MS);
-    if (last && distanceBetween(saved.at, last) > CACHE_MOVE_M) return null;
+    if (!cacheFresh(saved, last)) return null;
     return saved;
   } catch {
     return null;
@@ -324,7 +346,8 @@ export default function NearbyBanner({ gifticons, onPick }) {
       const cached = readCache(at);
       if (cached) {
         // 캐시에 "근처에 없더라"는 결과(best: null)도 담아둔다. 없다는 걸 확인하는 데도
-        // 검색이 들기 때문에, 없음도 10분간 기억해야 상한이 안 샌다.
+        // 검색이 들기 때문에, 없음도 기억해야 상한이 안 샌다. 다만 그쪽은 3분·100m로
+        // 짧게 본다(MISS_TTL_MS) — 걸어가는 중일 수 있는 답이라서다.
         //
         // 닫아둔 '없어요' 띠는 여기서 되살리지 않는다. 캐시를 쓴다는 건 다시 찾지 않았다는
         // 뜻이고, 이 앱은 계산대 앞에서 열었다 닫았다 하는 앱이라 그때마다 방금 치운 것이
@@ -372,7 +395,7 @@ export default function NearbyBanner({ gifticons, onPick }) {
       }
       setBest(found);
       setSearched(true);
-      // 진짜로 다시 찾은 자리다. 10분이 지났거나 300m를 움직였다는 뜻이라, 닫아둔
+      // 진짜로 다시 찾은 자리다. 시간이 지났거나 그만큼 움직였다는 뜻이라, 닫아둔
       // '없어요' 띠를 여기서 되살린다. 같은 자리에서 여닫는 것과는 갈린다.
       setEmptyClosed(false);
     }
