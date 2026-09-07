@@ -89,7 +89,7 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
       <div className="mx-auto flex min-h-[calc(100dvh/var(--ui-scale))] w-full max-w-[480px] flex-col bg-background">
         <div className="flex flex-col items-center gap-4 bg-accent px-6 pt-[max(34px,var(--safe-top))] pb-7">
           <img src={`${import.meta.env.BASE_URL}icon.svg`} alt="모아콘" className="size-16" />
-          <h1 className="m-0 text-center text-[22px] leading-[1.4] font-extrabold tracking-[-0.02em] break-keep text-foreground">
+          <h1 className="m-0 text-center text-[22px] leading-[1.4] font-bold tracking-[-0.02em] break-keep text-foreground">
             {who}
             <br />
             초대받았어요

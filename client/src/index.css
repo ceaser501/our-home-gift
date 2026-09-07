@@ -1,6 +1,59 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* 글꼴을 앱이 들고 다닌다.
+ *
+ * 예전에는 font-family 목록에 'Pretendard'라고 이름만 적혀 있고 파일이 없었다. 폰에
+ * 깔려 있을 리 없으니 늘 지나갔고, 실제로는 아이폰이 Apple SD Gothic Neo를, 갤럭시가
+ * 삼성 기본 한글 글꼴을 그리고 있었다. 같은 크기·굵기를 서로 다른 붓이 그린 셈이라
+ * 나란히 놓고 보면 갤럭시 쪽이 굵고 뭉툭했다.
+ *
+ * Pretendard는 Apple SD Gothic Neo를 참고해 만든 한글 글꼴이라, 아이폰에서 보던 결을
+ * 안드로이드에도 그대로 가져온다. SIL OFL이라 상업적으로 써도 된다
+ * (public/licenses.html에 함께 밝힌다).
+ *
+ * 상용 2,780자만 담은 subset을 쓴다. 전체는 굵기마다 두 배 가까이 크고, 그만큼을
+ * 앱에 담을 값어치가 없다. 상용 밖 글자(희귀 한자 등)는 시스템 글꼴로 떨어지는데
+ * 기프티콘 상품명에서 마주칠 일이 드물다.
+ *
+ * 굵기는 앱이 실제로 쓰는 넷만 담는다(400·500·600·700). font-extrabold를 한 자리에서
+ * 쓰고 있었는데, 그 하나 때문에 270KB를 더 담느니 700으로 맞췄다.
+ *
+ * src/ 안에 두고 상대 경로로 부른다. public/에 두면 주소를 손으로 적어야 하는데, 이
+ * 앱은 웹(/our-home-gift/)과 앱(/)이 서로 다른 뿌리에서 열려서 한쪽이 반드시 깨진다.
+ * 여기 두면 빌드가 각각 맞는 주소로 바꿔준다.
+ *
+ * font-display: swap — 글꼴을 받는 동안 시스템 글꼴로 먼저 보여준다. 앱은 파일을 함께
+ * 담고 다녀서 기다림이 없고, 웹에서만 잠깐 갈아입는 것이 보인다. 빈 화면보다 낫다. */
+@font-face {
+  font-family: 'Pretendard';
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  src: url('./fonts/Pretendard-Regular.subset.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Pretendard';
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+  src: url('./fonts/Pretendard-Medium.subset.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Pretendard';
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+  src: url('./fonts/Pretendard-SemiBold.subset.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Pretendard';
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+  src: url('./fonts/Pretendard-Bold.subset.woff2') format('woff2');
+}
+
 :root {
   /* 안드로이드 크롬의 "웹사이트 자동 어둡게(Auto Dark Theme)" 기능이 우리 색을
      제멋대로 뒤집어 탁한 회색으로 만들지 않도록, 이 페이지는 라이트 전용임을 밝힌다.
@@ -200,7 +253,10 @@ html.is-native-android {
 
   body {
     @apply bg-background text-foreground;
-    font-family: -apple-system, BlinkMacSystemFont, 'Pretendard', 'Apple SD Gothic Neo', 'Segoe UI', Roboto, sans-serif;
+    /* Pretendard가 맨 앞이다. 뒤로 밀면 아이폰에서 -apple-system이 먼저 잡혀서, 두 폰을
+       같게 하려고 담은 글꼴이 정작 한쪽에서만 쓰인다. 뒤엣것들은 받아오기 전과 실패했을
+       때를 받는다. */
+    font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Segoe UI', Roboto, sans-serif;
     -webkit-tap-highlight-color: transparent;
   }
 

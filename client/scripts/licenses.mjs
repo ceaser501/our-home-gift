@@ -25,9 +25,24 @@ const packages = names
   })
   .filter(Boolean);
 
+// npm으로 안 받고 파일째 담아 쓰는 것들. 목록이 node_modules에서 나오다 보니 이런
+// 것은 자동으로는 잡히지 않는데, 고지에서 빠지면 안 하느니만 못하다.
+//
+// 글꼴은 client/src/fonts/ 에 들어 있다(index.css의 @font-face). 두 폰에서 같은 결로
+// 보이게 하려고 담았다 — 없으면 아이폰과 갤럭시가 서로 다른 기본 글꼴로 그린다.
+const BUNDLED = [
+  {
+    name: 'Pretendard (subset)',
+    version: '1.3.9',
+    license: 'OFL-1.1',
+    homepage: 'https://github.com/orioncactus/pretendard',
+  },
+];
+
 const escape = (text) => String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-const rows = packages
+const rows = [...packages, ...BUNDLED]
+  .sort((a, b) => a.name.localeCompare(b.name))
   .map(
     (p) => `      <tr>
         <td><a href="${escape(p.homepage)}" target="_blank" rel="noreferrer">${escape(p.name)}</a></td>
@@ -100,10 +115,10 @@ const html = `<!doctype html>
       <tr><th>이름</th><th>버전</th><th>라이선스</th></tr>
 ${rows}
     </table>
-    <p class="updated">총 ${packages.length}개</p>
+    <p class="updated">총 ${packages.length + BUNDLED.length}개</p>
   </body>
 </html>
 `;
 
 writeFileSync(join(root, 'public', 'licenses.html'), html);
-console.log(`licenses.html 생성 완료 — 패키지 ${packages.length}개`);
+console.log(`licenses.html 생성 완료 — 패키지 ${packages.length}개 + 직접 담은 것 ${BUNDLED.length}개`);
