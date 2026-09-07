@@ -3,7 +3,11 @@
 import { StrictMode, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import '../src/index.css';
+import { FamilyContext } from '../src/FamilyContext';
 import RenameSheet from '../src/components/RenameSheet';
+import FilterBar from '../src/components/FilterBar';
+import FamilySwitcherSheet from '../src/components/FamilySwitcherSheet';
+import GifticonCard from '../src/components/GifticonCard';
 import SpendSheet from '../src/components/SpendSheet';
 import ExtendSheet from '../src/components/ExtendSheet';
 import AlertDialog from '../src/components/AlertDialog';
@@ -15,9 +19,24 @@ const STAGES = {
   rename2: '① - 2 제목이 두 줄일 때',
   spend: '② 금액 입력 — 부제 없음',
   extend: '③ 기한 연장 — 긴 제목 + 부제',
+  t16: '⑤ 제목이 16px 인 넷 — 고르개 시트',
+  t16b: '⑤ - 2 가족 바꾸기',
+  t16c: '⑤ - 3 카드 ⋮ 메뉴',
   danger: '④ 삭제 다이얼로그',
   warn: '④ - 2 오류 다이얼로그',
   info: '④ - 3 알림 다이얼로그',
+};
+
+const FAMILY = {
+  family: { id: 1, name: '우리집' },
+  families: [{ id: 1, name: '우리집' }],
+  members: [
+    { user_id: 'u1', display_name: '태수', tag_color: 0 },
+    { user_id: 'u2', display_name: '클로이', tag_color: 1 },
+  ],
+  user: { id: 'u1' },
+  switchFamily: () => {},
+  refresh: () => {},
 };
 
 const GIFTICON = {
@@ -74,8 +93,16 @@ function useCloseGuard() {
   }, []);
 }
 
+// 16px 로 뜨는 제목만 골라 19 로 올려 본다. 그 넷은 크기를 안 적어서 껍데기 기본값
+// text-base 를 그대로 쓰고 있고, 19 로 적은 시트들은 text-[19px] 를 갖고 있다.
+const BUMP = `
+  [data-slot="sheet-title"][class*="text-base"] {
+    font-size: 19px; font-weight: 700; letter-spacing: -0.025em;
+  }`;
+
 function App() {
   useCloseGuard();
+  const [bump, setBump] = useState(false);
   const cur = new URLSearchParams(location.search).get('v') || 'rename1';
   const [, force] = useState(0);
   const reopen = () => force((n) => n + 1);
@@ -83,6 +110,18 @@ function App() {
   return (
     <>
       <Bar cur={cur} />
+      {bump && <style>{BUMP}</style>}
+      <button
+        type="button"
+        onClick={() => setBump((v) => !v)}
+        style={{
+          position: 'fixed', right: 12, top: 92, zIndex: 150, border: 0, borderRadius: 999,
+          padding: '8px 14px', fontFamily: 'inherit', fontSize: 12, fontWeight: 700,
+          color: '#fff', background: bump ? '#5b4fe8' : '#3f3f4a',
+        }}
+      >
+        제목 {bump ? '19px' : '16px'}
+      </button>
       <div
         id="guard"
         style={{
@@ -120,6 +159,52 @@ function App() {
       {cur === 'spend' && <SpendSheet gifticon={GIFTICON} onSpend={async () => {}} onClose={reopen} />}
 
       {cur === 'extend' && <ExtendSheet gifticon={GIFTICON} onExtend={async () => {}} onClose={reopen} />}
+
+      {cur === 't16' && (
+        <FamilyContext.Provider value={FAMILY}>
+          <FilterBar
+            search=""
+            onSearchChange={() => {}}
+            category=""
+            onCategoryChange={() => {}}
+            categoryCounts={{ cafe: 5 }}
+            totalCount={12}
+            statusTab="usable"
+            onStatusTabChange={() => {}}
+          />
+          <p style={{ padding: 16, fontSize: 13, color: '#71717f' }}>
+            ↑ 왼쪽 위 <b>쓸 수 있는 것</b> 을 눌러 고르개 시트를 연다.
+          </p>
+        </FamilyContext.Provider>
+      )}
+
+      {cur === 't16b' && (
+        <FamilyContext.Provider value={FAMILY}>
+          <FamilySwitcherSheet onClose={reopen} />
+        </FamilyContext.Provider>
+      )}
+
+      {cur === 't16c' && (
+        <FamilyContext.Provider value={FAMILY}>
+          <ul style={{ listStyle: 'none', margin: 0, padding: 16 }}>
+            <GifticonCard
+              gifticon={{ ...GIFTICON, owner: '태수', status: 'active' }}
+              onViewCode={() => {}}
+              onViewImage={() => {}}
+              onToggleUsed={() => {}}
+              onEdit={() => {}}
+              onDelete={() => {}}
+              onFindStores={() => {}}
+              onToggleClaim={() => {}}
+              onExtend={() => {}}
+              onSpend={() => {}}
+            />
+          </ul>
+          <p style={{ padding: 16, fontSize: 13, color: '#71717f' }}>
+            ↑ 카드 오른쪽 위 <b>⋮</b> 를 눌러 메뉴 시트를 연다.
+          </p>
+        </FamilyContext.Provider>
+      )}
 
       {cur === 'danger' && (
         <AlertDialog
