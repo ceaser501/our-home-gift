@@ -350,13 +350,25 @@ export default function NearbyBanner({ gifticons, onPick }) {
         return;
       }
 
+      // 못 물어본 것이 있었는지 따로 센다.
+      //
+      // 예전에는 실패를 빈 목록으로 바꿔 삼켰다. 그러면 "찾아봤는데 없다"와 "물어보지도
+      // 못했다"가 화면에서 같은 말이 된다 — 둘 다 '없어요'다.
+      //
+      // 실제로 그렇게 틀렸다. 아이폰에서 로그아웃한 것이 갤럭시 세션까지 지웠고(auth.js의
+      // signOut), 갤럭시의 매장 검색이 통째로 401을 받았다. 스타벅스가 코앞에 있는데
+      // '없어요'가 떴고, 그 답이 캐시에까지 들어가 100m를 걷기 전에는 다시 찾지도 않았다.
+      let failed = false;
       const results = await Promise.all(
         brands.map((b) =>
           searchNearbyStores({
             query: b.brand,
             lat: at.lat,
             lng: at.lng,
-          }).catch(() => []),
+          }).catch(() => {
+            failed = true;
+            return [];
+          }),
         ),
       );
       if (cancelled) return;
@@ -376,13 +388,21 @@ export default function NearbyBanner({ gifticons, onPick }) {
         }
       });
 
-      try {
-        localStorage.setItem(
-          CACHE_KEY,
-          JSON.stringify({ ts: Date.now(), at, best: found }),
-        );
-      } catch {
-        // 캐시를 못 남겨도 동작에는 지장 없다.
+      // 하나도 못 물어봤고 찾은 것도 없으면 아무 말도 하지 않는다. '없어요'는 찾아본
+      // 사람만 할 수 있는 말이다. 다음에 앱을 열 때 다시 물어본다.
+      if (failed && !found) return;
+
+      // 물어보다 만 답은 적어두지 않는다. 못 물어본 브랜드에 더 가까운 매장이 있었을 수
+      // 있고, 그대로 굳으면 100m를 걷기 전에는 고칠 기회가 없다.
+      if (!failed) {
+        try {
+          localStorage.setItem(
+            CACHE_KEY,
+            JSON.stringify({ ts: Date.now(), at, best: found }),
+          );
+        } catch {
+          // 캐시를 못 남겨도 동작에는 지장 없다.
+        }
       }
       setBest(found);
       setSearched(true);
