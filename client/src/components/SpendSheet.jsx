@@ -69,7 +69,7 @@ export default function SpendSheet({ gifticon, onSpend, onClose }) {
       <SheetContent className="gap-0 pb-[var(--safe-bottom)]">
         {/* 제목 아래 부제로 상품명. 예전에는 본문 첫 줄이 상품명이라, 무엇을 적는 창인지
             묻는 제목과 어느 기프티콘인지가 같은 무게로 나란히 있었다. */}
-        <SheetHeader className="gap-0 px-[18px] pr-14 pb-3.5">
+        <SheetHeader className="gap-0 pl-[18px] pb-3.5">
           <SheetTitle className="text-[19px] font-bold tracking-heading">얼마 쓰셨어요?</SheetTitle>
           <p className="m-0 truncate text-[13.5px] font-medium text-muted-foreground">{gifticon.name}</p>
         </SheetHeader>

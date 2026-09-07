@@ -130,7 +130,7 @@ export default function FilterBar({
       {statusOpen && (
         <Sheet open onOpenChange={(open) => !open && setStatusOpen(false)}>
           <SheetContent className="gap-0 pb-[var(--safe-bottom)]">
-            <SheetHeader className="pr-14 pb-1">
+            <SheetHeader className="pb-1">
               <SheetTitle>어떤 기프티콘을 볼까요?</SheetTitle>
             </SheetHeader>
             <div className="flex flex-col px-5 pt-2">

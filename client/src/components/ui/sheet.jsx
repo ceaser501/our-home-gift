@@ -90,7 +90,10 @@ function SheetContent({ className, children, side = 'bottom', showClose = true, 
 }
 
 function SheetHeader({ className, ...props }) {
-  return <div data-slot="sheet-header" className={cn('flex flex-col gap-1 px-5 pt-5', className)} {...props} />;
+  // pr-14 는 오른쪽 위 닫기 버튼(top-4 right-4, 44px 과녁)을 피하는 자리다. 그 버튼을
+  // 껍데기가 그리므로 피하는 여백도 껍데기가 갖는다. 열일곱 시트가 전부 이 값을 손으로
+  // 적어 왔는데, 하나라도 빠뜨리면 제목이 X 아래로 들어간다.
+  return <div data-slot="sheet-header" className={cn('flex flex-col gap-1 px-5 pt-5 pr-14', className)} {...props} />;
 }
 
 function SheetTitle({ className, ...props }) {

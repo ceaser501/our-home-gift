@@ -1932,7 +1932,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
           stage === 'registered' ? 'overflow-hidden' : 'overflow-y-auto'
         )}
       >
-        <SheetHeader className="shrink-0 pr-14 pb-1">
+        <SheetHeader className="shrink-0 pb-1">
           {/* 이 화면은 이미 끝난 뒤라 제목이 진행형일 이유가 없다. 소식이 가장 커야
               하는 자리인데, 한때 '사진첩에서 찾기'가 닫기 버튼 옆 라벨처럼 앉아
               있었다. */}

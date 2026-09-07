@@ -230,7 +230,7 @@ export default function ActivitySheet({
   return (
     <Sheet open onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="max-h-[calc(92dvh/var(--ui-scale))] gap-0 overflow-y-auto pb-[var(--safe-bottom)]">
-        <SheetHeader className="px-[18px] pr-14 pb-3">
+        <SheetHeader className="pl-[18px] pb-3">
           <SheetTitle className="text-[19px] font-bold tracking-heading">알림</SheetTitle>
         </SheetHeader>
 

@@ -43,7 +43,7 @@ export default function RenameSheet({ title, label, hint, description, initialVa
   return (
     <Sheet open onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="gap-0 pb-[var(--safe-bottom)]">
-        <SheetHeader className="px-[18px] pr-14 pb-3.5">
+        <SheetHeader className="pl-[18px] pb-3.5">
           <SheetTitle className="text-[19px] font-bold tracking-heading">{title}</SheetTitle>
         </SheetHeader>
 

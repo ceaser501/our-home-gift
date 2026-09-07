@@ -254,7 +254,7 @@ export default function StoreDetailSheet({ store, origin, onClose }) {
   return (
     <Sheet open onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="max-h-[calc(92dvh/var(--ui-scale))] gap-0 overflow-y-auto pb-[var(--safe-bottom)]">
-        <SheetHeader className="pr-14 pb-1">
+        <SheetHeader className="pb-1">
           <SheetTitle className="flex min-w-0 items-center gap-2 text-[19px] font-bold tracking-heading">
             <span className="min-w-0 truncate">{store.name}</span>
             {store.category && (

@@ -1,6 +1,6 @@
 // 팝업 검증용 하니스. 시트·다이얼로그를 진짜 컴포넌트로 띄운다.
 // Supabase 를 안 부르는 것만 고른다 — 나머지는 껍데기(ui/sheet)가 같아서 이걸로 갈음된다.
-import { StrictMode, useState } from 'react';
+import { StrictMode, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import '../src/index.css';
 import RenameSheet from '../src/components/RenameSheet';
@@ -55,7 +55,27 @@ function Bar({ cur }) {
   );
 }
 
+// 제목이 닫기 버튼 밑으로 들어가는 것은 눈으로 잘 안 잡힌다 — 제목이 짧으면 안 겹치고
+// 길어야 겹치기 때문이다. 열릴 때마다 재서 걸리면 화면에 띄운다.
+function useCloseGuard() {
+  useEffect(() => {
+    const id = setInterval(() => {
+      const t = document.querySelector('[data-slot="sheet-title"]');
+      const c = document.querySelector('[data-slot="sheet-content"]');
+      if (!t || !c) return;
+      const close = [...c.querySelectorAll('button')].find((b) => b.querySelector('.sr-only'));
+      const el = document.getElementById('guard');
+      if (!close || !el) return;
+      const hit = t.getBoundingClientRect().right > close.getBoundingClientRect().left;
+      el.textContent = hit ? '제목이 닫기 버튼과 겹친다' : '';
+      el.style.display = hit ? 'block' : 'none';
+    }, 400);
+    return () => clearInterval(id);
+  }, []);
+}
+
 function App() {
+  useCloseGuard();
   const cur = new URLSearchParams(location.search).get('v') || 'rename1';
   const [, force] = useState(0);
   const reopen = () => force((n) => n + 1);
@@ -63,6 +83,14 @@ function App() {
   return (
     <>
       <Bar cur={cur} />
+      <div
+        id="guard"
+        style={{
+          display: 'none', position: 'fixed', insetInline: 0, bottom: 0, zIndex: 200,
+          background: '#e03e49', color: '#fff', fontSize: 12, fontWeight: 700,
+          padding: '10px 14px', textAlign: 'center',
+        }}
+      />
       <div style={{ height: '100dvh' }} />
 
       {cur === 'rename1' && (

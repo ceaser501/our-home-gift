@@ -26,7 +26,7 @@ export default function ImageViewerModal({ gifticon, onClose }) {
             하는 것은 무엇을 보고 있는지이고, 어느 기프티콘인지는 방금 목록에서 눌러서 왔다.
             몇 장 중 몇 번째인지는 사진 위 오버레이에서 여기로 올렸다 — 사진을 안 가리고,
             넘길 때 눈이 움직이지 않는다. */}
-        <SheetHeader className="gap-0 px-[18px] pr-14 pb-3">
+        <SheetHeader className="gap-0 pl-[18px] pb-3">
           <div className="flex items-center gap-2.5">
             <div className="flex min-w-0 flex-1 flex-col gap-0.5">
               <SheetTitle className="truncate text-base font-bold">원본 사진</SheetTitle>
