@@ -96,6 +96,20 @@ function useCloseGuard() {
 
 // 16px 로 뜨는 제목만 골라 19 로 올려 본다. 그 넷은 크기를 안 적어서 껍데기 기본값
 // text-base 를 그대로 쓰고 있고, 19 로 적은 시트들은 text-[19px] 를 갖고 있다.
+// 시트 아래 버튼을 가로로 눕혀 본다. 주 버튼이 오른쪽 — 되돌릴 수 있는 선택이라
+// 눈이 한 번에 훑고 고르는 편이 낫고, 세로로 두면 화면 아래를 한 줄 더 먹는다.
+const ROW = `
+  [data-slot="sheet-content"] form > div:last-child,
+  [data-slot="sheet-content"] > div:last-child > div:last-child {
+    flex-direction: row-reverse !important;
+  }
+  [data-slot="sheet-content"] form > div:last-child > button,
+  [data-slot="sheet-content"] > div:last-child > div:last-child > button {
+    flex: 1 1 0; width: auto; min-width: 0;
+  }
+  /* 높이 위계(52:48)는 눕히면 두 버튼이 아래로 어긋나 보인다. 같은 줄에서는 같은 높이로. */
+  [data-slot="sheet-content"] form > div:last-child > button { height: 52px !important; }`;
+
 const BUMP = `
   [data-slot="sheet-title"][class*="text-base"] {
     font-size: 19px; font-weight: 700; letter-spacing: -0.025em;
@@ -104,6 +118,7 @@ const BUMP = `
 function App() {
   useCloseGuard();
   const [bump, setBump] = useState(false);
+  const [row, setRow] = useState(false);
   const cur = new URLSearchParams(location.search).get('v') || 'rename1';
   const [, force] = useState(0);
   const reopen = () => force((n) => n + 1);
@@ -112,6 +127,18 @@ function App() {
     <>
       <Bar cur={cur} />
       {bump && <style>{BUMP}</style>}
+      {row && <style>{ROW}</style>}
+      <button
+        type="button"
+        onClick={() => setRow((v) => !v)}
+        style={{
+          position: 'fixed', right: 12, top: 174, zIndex: 150, border: 0, borderRadius: 999,
+          padding: '8px 14px', fontFamily: 'inherit', fontSize: 12, fontWeight: 700,
+          color: '#fff', background: row ? '#5b4fe8' : '#3f3f4a', pointerEvents: 'auto',
+        }}
+      >
+        버튼 {row ? '가로' : '세로'}
+      </button>
       <button
         type="button"
         onClick={() => setBump((v) => !v)}
