@@ -580,7 +580,7 @@ export default function NearbyBanner({ gifticons, onPick }) {
           type="button"
           onClick={() => setEmptyClosed(true)}
           aria-label="주변 안내 닫기"
-          className="flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground"
+          className="-my-1.5 -mr-1.5 flex size-11 shrink-0 items-center justify-center rounded-full text-muted-foreground"
         >
           <X className="size-4" />
         </button>
@@ -691,7 +691,7 @@ export default function NearbyBanner({ gifticons, onPick }) {
         type="button"
         onClick={dismiss}
         aria-label="주변 매장 안내 닫기"
-        className="flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground"
+        className="-my-1.5 -mr-1.5 flex size-11 shrink-0 items-center justify-center rounded-full text-muted-foreground"
       >
         <X className="size-4" />
       </button>

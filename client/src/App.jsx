@@ -493,14 +493,19 @@ export default function App() {
 
       {/* 갤러리 훑기는 + 위에 한 단 작게 놓는다. 거들기 위한 기능이라 등록 버튼과
           같은 크기로 나란히 두면 어느 쪽이 본길인지 헷갈린다. 앱으로 설치했을 때만
-          보이고, 없어도 아래 + 로 하던 대로 등록할 수 있다. */}
+          보이고, 없어도 아래 + 로 하던 대로 등록할 수 있다.
+
+          바탕을 카드색에서 연보라(accent)로 바꿨다. 갤럭시에서 목록 위에 겹쳐 있으면
+          거의 안 보였다 — 카드색은 목록의 카드와 같은 색이라, 하필 그 위를 지날 때
+          버튼이 배경에 묻힌다. 목록 위 띠가 쓰는 색과 같은 색으로 두면 흰 바탕에서도
+          카드 위에서도 뜬다. + 와는 진하기가 갈려서 어느 쪽이 본길인지도 그대로 남는다. */}
       {scanSupported && !isFirstRun && (
         <button
           type="button"
           onClick={() => guardUpload(() => setScanOpen(true))}
           aria-label="갤러리에서 기프티콘 찾기"
           style={{ right: 'max(24px, calc((100vw - 480px) / 2 + 24px))' }}
-          className="fixed bottom-[calc(var(--safe-bottom)+64px)] z-20 flex size-11 items-center justify-center rounded-full border border-border bg-card text-foreground shadow-md"
+          className="fixed bottom-[calc(var(--safe-bottom)+64px)] z-20 flex size-11 items-center justify-center rounded-full bg-accent text-accent-foreground shadow-md"
         >
           <ScanSearch className="size-5" />
         </button>

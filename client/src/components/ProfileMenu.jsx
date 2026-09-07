@@ -164,29 +164,18 @@ export default function ProfileMenu({ onClose }) {
             컸다. 줄 사이는 2px로 붙이고 구역 사이만 20px로 벌린다 — 눈이 쉬는 곳은 줄
             사이가 아니라 구역과 구역 사이다. */}
         <div className="flex flex-col gap-5 px-[18px]">
+          {/* 줄 차례는 첫 설정 화면(WelcomeSetupScreen)과 같다. 거기서 세 스위치를 보고
+              들어온 사람이 나중에 여기서 다시 찾을 때, 두 화면의 차례가 다르면 같은
+              스위치인 줄 알아보지 못한다.
+
+              다크모드가 맨 위였는데 아래로 내렸다. 이 앱을 쓰는 일과 상관없는 취향이라
+              한 번 정하면 다시 올 자리가 아니다. 위 세 줄은 "무엇을 해주는 앱인가"이고
+              그게 먼저 보여야 한다. */}
           <SettingSection label="설정">
-            <ThemeToggle asRow />
-            <NotificationToggle asRow />
-
-            {/* 목록 위에 뜨는 '이 근처에 쓸 수 있는 게 있어요' 띠. 띠의 X는 그날 하루만
-                안 띄우는 것이라, 매일 닫는 사람에게는 매일 닫는 일이 남았다.
-
-                기본은 켜짐이다. 이미 준 위치만 쓰고, 앱을 여는 이유 자체가 '지금 쓸 게
-                있나'라서 아래 자동 찾기(사진첩을 훑는 일)와는 무게가 다르다. */}
-            <SettingSwitchRow
-              icon={MapPin}
-              label="내 주변 안내"
-              hint="근처에서 쓸 수 있으면 알려드려요"
-              on={nearby}
-              onToggle={() => {
-                setNearby(!nearby);
-                setNearbyBannerOn(!nearby);
-              }}
-            />
-
             {/* 켜두면 앱을 열 때 바로 찾아준다. 받아둔 기프티콘을 넣는 게 이 앱에 들어오는
                 이유라, 그걸 매번 눌러서 시작하게 할 이유가 없다. 다만 사진을 보는 일이라
-                기본은 꺼두고 사용자가 켜게 한다. */}
+                기본은 꺼두고 사용자가 켜게 한다.
+                (아이폰에는 이 줄이 없다. 사진첩을 훑는 길이 안드로이드에만 있다.) */}
             {scanSupported && (
               <SettingSwitchRow
                 icon={ScanSearch}
@@ -199,6 +188,26 @@ export default function ProfileMenu({ onClose }) {
                 }}
               />
             )}
+
+            <NotificationToggle asRow />
+
+            {/* 목록 위에 뜨는 '이 근처에 쓸 수 있는 게 있어요' 띠. 띠의 X는 그날 하루만
+                안 띄우는 것이라, 매일 닫는 사람에게는 매일 닫는 일이 남았다.
+
+                기본은 켜짐이다. 이미 준 위치만 쓰고, 앱을 여는 이유 자체가 '지금 쓸 게
+                있나'라서 위 자동 찾기(사진첩을 훑는 일)와는 무게가 다르다. */}
+            <SettingSwitchRow
+              icon={MapPin}
+              label="내 주변 안내"
+              hint="근처에서 쓸 수 있으면 알려드려요"
+              on={nearby}
+              onToggle={() => {
+                setNearby(!nearby);
+                setNearbyBannerOn(!nearby);
+              }}
+            />
+
+            <ThemeToggle asRow />
 
             {/* 찾기 결과 화면 아래에 있던 '전부 다시 찾기'를 여기로 옮겼다.
                 거기서는 등록 버튼 바로 밑이라, 넣으려고 연 사람 손에 128장을 다시 읽는

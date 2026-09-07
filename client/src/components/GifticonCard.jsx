@@ -354,8 +354,12 @@ export default function GifticonCard({
 
         {/* 수정·삭제는 자주 쓰지 않아서 평소엔 접어둔다.
             absolute를 걷고 형제로 뒀다. 본문에 pr-7을 주지 않아도 되고, 누를 자리가
-            24 → 32px이 된다. 만료·사용완료 카드에도 그대로 둔다 — 수정·삭제는 모든
+            24 → 32 → 44px이 된다. 만료·사용완료 카드에도 그대로 둔다 — 수정·삭제는 모든
             카드에서 되는 일이다.
+
+            32px도 "잘 안 눌린다"는 말을 들었다. 카드 오른쪽 위 모서리라 엄지가 조금만
+            밖으로 나가도 빗나간다. 음수 마진으로 44px까지 넓혔다 — 보이는 자리는 그대로고
+            카드 높이도 안 늘어난다. 애플이 권하는 최소 과녁이 44pt다.
 
             relative가 꼭 있어야 한다. 위에 카드 전체를 덮는 바코드 판(absolute inset-0)이
             깔려 있는데, 브라우저는 자리를 잡은 요소를 그렇지 않은 요소보다 항상 위에
@@ -364,7 +368,7 @@ export default function GifticonCard({
           type="button"
           onClick={() => setMenuOpen(true)}
           aria-label="더 보기"
-          className="relative -mt-[3px] -mr-[3px] flex size-8 shrink-0 items-center justify-center rounded-[10px] text-muted-foreground/60"
+          className="relative -mt-[9px] -mr-[9px] -mb-3 flex size-11 shrink-0 items-center justify-center rounded-[10px] text-muted-foreground/60"
         >
           <MoreVertical className="size-[17px]" />
         </button>

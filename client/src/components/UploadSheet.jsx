@@ -527,6 +527,13 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
     setNewPreviews((prev) => prev.filter((_, i) => i !== index));
   }
 
+  // 초기화를 누르면 한 번 되묻는다.
+  //
+  // 닫기 ✕ 바로 옆이라, 손이 미끄러지면 적던 것이 통째로 날아간다. 예전에 이 자리에
+  // 있다가 그 이유로 폼 맨 아래까지 내려갔던 버튼이다. 자리는 다시 위로 왔으니
+  // 위험한 쪽만 여기서 막는다.
+  const [resetAsking, setResetAsking] = useState(false);
+
   function handleReset() {
     newPreviews.forEach((url) => URL.revokeObjectURL(url));
     setForm(buildForm(initial, myName));
@@ -705,14 +712,33 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
   return (
     <Sheet open onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="max-h-[calc(92dvh/var(--ui-scale))] gap-0 overflow-y-auto pb-[var(--safe-bottom)]">
-        {/* 초기화를 뺐다. 닫기 ✕ 바로 옆이라 손이 미끄러지면 적던 것이 다 날아갔고,
-            글자만 있는 버튼이기도 했다. 폼 맨 아래로 옮겼다 — 다 적은 뒤에야 필요한
-            동작이라 적기 시작하는 자리에 있을 이유가 없다. */}
-        <SheetHeader className="pr-14 pb-3">
+        {/* 초기화는 닫기 ✕ 옆, 창 오른쪽 위다.
+            한 번 폼 맨 아래로 내렸다가 되돌렸다. "다 적은 뒤에야 필요한 동작"이라는
+            것이었는데 그게 틀렸다 — 이 버튼을 누르는 때는 다 적었을 때가 아니라 처음부터
+            다시 하고 싶을 때고, 그 마음은 화면 위쪽을 보다가 든다. 저장하기 밑에 두면
+            끝까지 내려가야 만나고, 저장 버튼 바로 옆이라 잘못 누르면 더 위험하다.
+
+            '적은 내용 지우기'에서 '초기화'로 줄였다. 위쪽 좁은 자리라 짧아야 하고,
+            무엇이 되는지는 눌렀을 때 뜨는 확인 창이 말한다.
+
+            수정 창에는 안 그린다. 거기서 지울 것은 이미 저장해둔 내용이라, 지우는
+            것으로 보이지만 실제로는 되돌릴 것이 없다. 고칠 것만 고치고 나가면 된다. */}
+        <SheetHeader className={cn('pb-3', mode === 'create' && hasAnything ? 'pr-28' : 'pr-14')}>
           <SheetTitle className="text-[19px] font-bold tracking-[-0.026em]">
             {mode === 'create' ? '기프티콘 추가' : '기프티콘 수정'}
           </SheetTitle>
         </SheetHeader>
+
+        {mode === 'create' && hasAnything && (
+          <button
+            type="button"
+            onClick={() => setResetAsking(true)}
+            className="absolute top-4 right-[62px] flex h-11 items-center rounded-full px-2.5 text-[13.5px] font-semibold text-muted-foreground"
+          >
+            <RotateCcw className="mr-1 size-[15px]" />
+            초기화
+          </button>
+        )}
 
         <form className="flex flex-col gap-4 px-5" onSubmit={handleSubmit}>
           {/* 안내는 사진 상자 안으로 들어갔다. 상자 위에 따로 한 문단으로 두면 화면을
@@ -1081,21 +1107,22 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
             >
               {submitting ? '저장 중…' : '저장하기'}
             </Button>
-            {/* 헤더에서 옮겨온 자리. 다 적은 뒤에야 필요한 동작이라 여기가 맞고, 적은
-                것이 하나도 없으면 지울 것도 없으니 아예 안 그린다. */}
-            {hasAnything && (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleReset}
-                className="h-11 w-full rounded-[11px] text-sm font-semibold text-muted-foreground"
-              >
-                <RotateCcw className="size-4" />
-                적은 내용 지우기
-              </Button>
-            )}
           </div>
         </form>
+
+        {resetAsking && (
+          <AlertDialog
+            tone="warning"
+            title="적은 내용을 지울까요?"
+            description="고른 사진과 적은 내용이 모두 없어져요."
+            confirmLabel="지우기"
+            onConfirm={() => {
+              setResetAsking(false);
+              handleReset();
+            }}
+            onClose={() => setResetAsking(false)}
+          />
+        )}
 
         {/* 다른 기프티콘 사진을 더했을 때. 그냥 더하면 사진과 정보가 뒤섞이고, 그냥
             막으면 "잘못 골랐으니 이걸로 새로 하겠다"는 뜻이었을 때 길이 없다. 물어본다. */}

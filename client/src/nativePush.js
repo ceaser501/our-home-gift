@@ -66,12 +66,33 @@ async function iosToken({ ask }) {
     throw new Error('알림 권한을 허용해주셔야 켤 수 있어요.');
   }
 
-  const { token } = await FirebaseMessaging.getToken();
-  if (!token && ask) {
-    // GoogleService-Info.plist 가 빌드에 안 들어갔거나 APNs 키가 안 붙은 경우다.
-    throw new Error('알림 서버와 연결하지 못했어요. 잠시 뒤 다시 시도해주세요.');
+  // 권한을 막 받은 직후에는 토큰이 아직 없다.
+  //
+  // 허락을 누른 그 순간 iOS가 애플(APNs)에 등록을 시작하고, 파이어베이스는 그 등록이
+  // 끝나야 FCM 토큰을 내준다. 그사이에 물으면 빈손이거나 "No APNS token specified"로
+  // 튕긴다. 대개 1초 안쪽이라 몇 번 다시 물어보면 온다.
+  //
+  // 첫 설정 화면에서 알림을 켜고 시작했는데 내 메뉴에서는 꺼져 있던 것이 이것이었다.
+  // 거기서는 실패를 조용히 넘기게 되어 있어서(권한 거부와 구분할 길이 없다), 켠 적이
+  // 없는 것과 똑같은 모습이 됐다. 안드로이드는 등록이 끝나면 알려주는 길이 있어서
+  // 이 문제가 없었고, 그래서 아이폰에서만 났다.
+  // 다시 묻는 것은 방금 켠 때(ask)뿐이다. 화면을 그리며 확인하는 때(ask=false)는 이미
+  // 오래전에 받아둔 토큰을 읽는 자리라, 없으면 없는 것이다 — 거기서 2초를 기다리면
+  // 내 메뉴가 그만큼 늦게 뜬다.
+  const tries = ask ? 6 : 1;
+  for (let i = 0; i < tries; i += 1) {
+    try {
+      const { token } = await FirebaseMessaging.getToken();
+      if (token) return token;
+    } catch {
+      // 아직 준비가 안 된 것이다. 마지막 판이면 아래에서 알린다.
+    }
+    if (i < tries - 1) await new Promise((resolve) => setTimeout(resolve, 400));
   }
-  return token || null;
+
+  // GoogleService-Info.plist 가 빌드에 안 들어갔거나 APNs 키가 안 붙은 경우다.
+  if (ask) throw new Error('알림 서버와 연결하지 못했어요. 잠시 뒤 다시 시도해주세요.');
+  return null;
 }
 
 // 안드로이드는 지금까지 잘 돌던 길이라 그대로 둔다.
