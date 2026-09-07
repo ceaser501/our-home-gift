@@ -37,15 +37,21 @@ public class MainActivity extends BridgeActivity {
      * 그 설정을 따르는 게 맞다.
      *
      * 다만 그대로 따르지는 않는다. 안드로이드는 200%까지 허용하는데 그만큼 키우면 버튼
-     * 글자가 넘쳐 눌러야 할 것이 화면 밖으로 나간다. 줄이는 쪽도 따르지 않는다 —
-     * 읽기 어려워지는 방향이라 굳이 맞출 이유가 없다.
+     * 글자가 넘쳐 눌러야 할 것이 화면 밖으로 나간다.
      *
      * 처음에는 130%까지 따라갔는데, 폰 설정을 크게 해두고 열어보니 목록 카드의 칸이
      * 어긋났다. 이 앱의 화면은 상품명·기한·버튼이 한 줄에 나란히 놓이는 곳이 많아서,
      * 글자만 커지면 그 줄이 먼저 무너진다. 읽기 편하자고 키운 것이 도리어 못 읽는
      * 화면을 만든다.
      *
-     * 115%까지만 따라간다. 한 눈금 정도는 커지면서 칸은 유지되는 선이다.
+     * 90~115% 안에서만 따라간다. 위는 칸이 유지되는 선이고, 아래는 폰 글자를 작게 해둔
+     * 사람을 위해 열어둔 쪽이다 — 예전에는 100 아래로 안 내려가서, 폰 전체를 작게 해둔
+     * 사람에게는 이 앱만 혼자 커 보였다.
+     *
+     * 화면이 뜬 뒤에는 client/src/utils/textScale.js가 같은 자리를 다시 정한다
+     * (@capacitor/text-zoom). 설정에서 직접 고른 값이 있으면 그 값이 이긴다. 여기서
+     * 먼저 한 번 걸어두는 이유는 그 전에도 첫 화면이 그려지기 때문이다 — 안 걸어두면
+     * 100%로 한 번 그렸다가 바뀌면서 글자가 튄다.
      */
     private void applySystemFontScale() {
         if (getBridge() == null) return;
@@ -54,7 +60,7 @@ public class MainActivity extends BridgeActivity {
 
         float scale = getResources().getConfiguration().fontScale;
         int zoom = Math.round(scale * 100);
-        webView.getSettings().setTextZoom(Math.max(100, Math.min(115, zoom)));
+        webView.getSettings().setTextZoom(Math.max(90, Math.min(115, zoom)));
     }
 
     /**

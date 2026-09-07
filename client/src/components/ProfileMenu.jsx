@@ -16,6 +16,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { Button } from '@/components/ui/button';
 import { SettingLinkRow, SettingSection, SettingSwitchRow } from './SettingRow';
 import ThemeToggle from './ThemeToggle';
+import TextSizeRow from './TextSizeRow';
 import NotificationToggle from './NotificationToggle';
 import UsageReportSheet from './UsageReportSheet';
 import NoticesSheet from './NoticesSheet';
@@ -165,6 +166,11 @@ export default function ProfileMenu({ onClose }) {
         <div className="flex flex-col gap-5 px-[18px]">
           <SettingSection label="설정">
             <ThemeToggle asRow />
+
+            {/* 다크 모드 바로 아래다. 둘 다 '어떻게 보이는가'를 정하는 값이라 한
+                덩어리로 읽힌다. 알림·주변 안내는 '무엇을 해주는가' 쪽이라 그 아래다. */}
+            <TextSizeRow />
+
             <NotificationToggle asRow />
 
             {/* 목록 위에 뜨는 '이 근처에 쓸 수 있는 게 있어요' 띠. 띠의 X는 그날 하루만
