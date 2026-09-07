@@ -23,41 +23,30 @@ import { canOpenAppSettings, openAppSettings } from "../utils/gallery";
 // 거리(500m) 안에 있는 것만 알려준다.
 const RADIUS_M = 500;
 
-// 같은 자리에서 앱을 여닫을 때마다 카카오를 다시 부르지 않는다. 검색에는 하루 상한이
-// 걸려 있어서, 배너가 그걸 조용히 갉아먹으면 정작 "매장" 버튼이 막힌다.
+// 연달아 여닫는 것만 막는다.
 //
-// localStorage에 둔다. 한때 sessionStorage였는데 그건 앱을 끄면 사라진다 — 웹에서는
-// 탭 하나가 세션이지만, 설치한 앱에서는 웹뷰가 죽을 때마다 새 세션이다. 그래서 "여닫을
-// 때마다 다시 부르지 않는다"는 말이 정작 앱에서만 안 지켜지고 있었다. 켤 때마다 브랜드
-// 셋을 새로 뒤졌으니 한 번 열 때마다 세 번씩 나간 셈이다.
+// 한때 10분·300m였다. 검색에 하루 상한이 걸려 있어 아껴 쓰려던 것인데, 그 값이 정작
+// 필요한 순간을 막고 있었다 — 매장 앞에 도착했는데 '없어요'가 그대로 떠 있었다.
+// 300m는 걸어서 4분이라, 매장으로 걸어 들어가는 마지막 구간이 통째로 그 안에 들어간다.
 //
-// 하루 종일 테스트하며 앱을 여닫다가 사람 몫을 다 써서 "오늘은 여기까지예요"를 본 적이
-// 있다. 실제로 새던 자리가 여기였다.
+// 상한을 다시 봤더니 아낄 이유가 없었다. 매장 검색은 사람당 하루 2,000회이고
+// (search-places의 PLACES_DAILY_LIMIT) 한 번 찾는 데 브랜드 셋이니 3회다. 하루 660번을
+// 열어야 걸린다. 예전에 "오늘은 여기까지예요"를 본 것은 길찾기 쪽(하루 100회)이었다.
+//
+// 앱을 여는 순간이 곧 "지금 쓸 게 있나"를 묻는 순간이다. 거기서 아까 답을 보여줄 이유가
+// 없다. 남겨둔 1분은 계산대 앞에서 열었다 닫았다 하는 것만 걸러낸다.
+//
+// localStorage에 둔다. sessionStorage는 웹뷰가 죽을 때마다 비므로, 앱에서는 여닫는
+// 것을 하나도 못 걸러낸다.
 const CACHE_KEY = "nearby-banner:result";
-const CACHE_TTL_MS = 10 * 60 * 1000;
-const CACHE_MOVE_M = 300;
+const CACHE_TTL_MS = 60 * 1000;
+const CACHE_MOVE_M = 100;
 
-// 못 찾은 결과는 더 짧게 기억한다.
-//
-// 매장 앞에 도착했는데 '없어요'가 그대로 떠 있었다. 200m 앞에서 앱을 열어 못 찾은 답을
-// 받으면, 걸어 들어가 다시 열어도 10분 동안 그 답이 나온다. 300m는 걸어서 4분이라
-// 마지막 구간이 통째로 그 안에 들어간다 — 정작 필요한 순간이 거기다.
-//
-// 찾은 결과는 그대로 둔다. 10분 뒤에도 그 매장은 거기 있다. 바뀔 이유가 있는 쪽은
-// '없다'는 답뿐이라, 그쪽만 좁힌다.
-//
-// 검색 횟수는 거의 안 늘어난다. 하루에 몇 번 여는 사람은 어차피 3분이 지나 있어서
-// 지금과 같고, 계산대 앞에서 여닫는 경우만 아껴진다.
-const MISS_TTL_MS = 3 * 60 * 1000;
-const MISS_MOVE_M = 100;
-
-// 이 캐시가 아직 쓸 만한가. 못 찾은 결과에는 좁은 자를 댄다.
+// 이 캐시가 아직 쓸 만한가. 위치를 아직 모르면 나이만 본다.
 function cacheFresh(saved, at) {
-  const ttl = saved.best ? CACHE_TTL_MS : MISS_TTL_MS;
-  if (Date.now() - saved.ts > ttl) return false;
+  if (Date.now() - saved.ts > CACHE_TTL_MS) return false;
   if (!at) return true;
-  const moved = saved.best ? CACHE_MOVE_M : MISS_MOVE_M;
-  return distanceBetween(saved.at, at) <= moved;
+  return distanceBetween(saved.at, at) <= CACHE_MOVE_M;
 }
 
 // 만료가 가까운 것부터 최대 세 브랜드만 찾아본다. 브랜드마다 검색이 한 번씩이라
@@ -250,7 +239,7 @@ export default function NearbyBanner({ gifticons, onPick }) {
   // 반대로 목록을 검색어로 걸러도 그때마다 다시 찾을 일은 아니라, 목록 자체가 아니라
   // '무엇을 물어볼 것인가'가 바뀌었을 때만 돈다.
   //
-  // 검색 횟수는 안 는다. 10분·300m 캐시가 그대로라, 다시 돌아도 같은 자리면 카카오로
+  // 검색 횟수는 안 는다. 1분 캐시가 있어서, 다시 돌아도 방금 찾은 자리면 카카오로
   // 나가는 것이 없다.
   const brandKey = useMemo(
     () => topBrands(gifticons).map((b) => b.brand).join("|"),
@@ -273,7 +262,7 @@ export default function NearbyBanner({ gifticons, onPick }) {
   // 정작 그 순간에 아무 일도 안 일어나고 있었던 셈이다.
   //
   // 켜둔 채로 주기적으로 돌지는 않는다. 배터리와 검색 한도를 쓰는데, 앱을 켜둔 채 걷는
-  // 일은 드물다. 아래 캐시(10분·300m)가 헛도는 검색을 막아준다.
+  // 일은 드물다. 아래 캐시(1분)가 연달아 돌아오는 것만 막아준다.
   useEffect(() => {
     if (!isNativeApp()) return undefined;
 
@@ -346,8 +335,7 @@ export default function NearbyBanner({ gifticons, onPick }) {
       const cached = readCache(at);
       if (cached) {
         // 캐시에 "근처에 없더라"는 결과(best: null)도 담아둔다. 없다는 걸 확인하는 데도
-        // 검색이 들기 때문에, 없음도 기억해야 상한이 안 샌다. 다만 그쪽은 3분·100m로
-        // 짧게 본다(MISS_TTL_MS) — 걸어가는 중일 수 있는 답이라서다.
+        // 검색이 들기 때문이다. 1분만 기억하므로 걸어가는 중에 발이 묶이지는 않는다.
         //
         // 닫아둔 '없어요' 띠는 여기서 되살리지 않는다. 캐시를 쓴다는 건 다시 찾지 않았다는
         // 뜻이고, 이 앱은 계산대 앞에서 열었다 닫았다 하는 앱이라 그때마다 방금 치운 것이
