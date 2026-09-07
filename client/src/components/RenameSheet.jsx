@@ -97,9 +97,13 @@ export default function RenameSheet({ title, label, hint, helper, initialValue =
                 <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full bg-border text-caption font-bold text-muted-foreground">
                   i
                 </span>
-                {/* footnote(12/1.6)에서 body(14)로 한 단 올렸다. 12 는 이 창에서 제일 작은
-                    글자였는데, 저장을 누르기 전에 읽어야 하는 말이 제일 작으면 앞뒤가 안 맞는다. */}
-                <p className="m-0 flex-1 text-body text-muted-foreground">{helper}</p>
+                {/* footnote(12/1.6)다. 한때 body(14)로 올렸는데 되돌렸다 — 올린 까닭이
+                    '저장 전에 읽어야 하는 말'이라는 옛 주석이었는데, 다시 보니 그 판단이
+                    과했다. 경고도 아니고 끄고 켤 수 있는 것도 아닌, 그냥 참고다.
+
+                    사다리는 제목 20 · 입력 16 · 부제 14 · 헬퍼 12 로 한 칸씩 내려간다.
+                    헬퍼는 창이 아니라 칸 하나에 딸린 말이라 부제보다 한 단 아래다. */}
+                <p className="m-0 flex-1 text-footnote text-muted-foreground">{helper}</p>
               </div>
             )}
           </div>
