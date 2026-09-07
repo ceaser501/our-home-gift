@@ -51,7 +51,7 @@ export default function NoticesSheet({ onClose }) {
               key={notice.id}
               className="rounded-[14px] border-[1.5px] border-primary bg-primary/4 p-3.5"
             >
-              <div className="flex items-center gap-[7px]">
+              <div className="flex items-center gap-2">
                 <span className="shrink-0 rounded-[5px] bg-primary px-[7px] py-0.5 text-[11px] font-bold text-primary-foreground">
                   진행 중
                 </span>
@@ -74,7 +74,7 @@ export default function NoticesSheet({ onClose }) {
           {/* 끝난 공지도 지우지 않고 남긴다. 다만 뱃지를 항목마다 반복하지는 않는다 —
               '지난 공지'가 세 번 나오던 것을 구역 제목 한 번으로 줄였다. */}
           {past.length > 0 && (
-            <div className="flex items-center gap-[7px] pt-[3px]">
+            <div className="flex items-center gap-2 pt-[3px]">
               <span className="text-[13.5px] font-bold text-muted-foreground">지난 공지</span>
               <span className="h-px flex-1 bg-border/60" />
             </div>

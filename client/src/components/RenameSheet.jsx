@@ -49,7 +49,7 @@ export default function RenameSheet({ title, label, hint, description, initialVa
         </SheetHeader>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-3.5 px-5">
-          <div className="flex flex-col gap-[7px]">
+          <div className="flex flex-col gap-2">
             <div className="flex items-baseline justify-between gap-2">
               {/* hint는 라벨 옆 한마디다. 바뀌는 곳이 한 군데뿐이라 아래 안내 상자까지
                   쓸 것은 없고, 누가 보는지만 적으면 되는 경우에 쓴다(가족 이름). */}

@@ -276,7 +276,7 @@ export default function BarcodeModal({ gifticon, onClose, onUsed, onSpend }) {
                 </p>
               )
             : !gifticon.barcode_image_url && (
-                <p className="m-0 text-center text-[13px] break-keep text-muted-foreground">
+                <p className="m-0 text-center text-body break-keep text-muted-foreground">
                   등록된 바코드/QR 정보가 없어요. 수정에서 직접 입력할 수 있어요.
                 </p>
               )}

@@ -182,9 +182,9 @@ export default function UsageReportSheet({ onClose }) {
               </div>
 
               <div className="flex items-center justify-between gap-2 pt-1">
-                <div className="flex items-baseline gap-[7px]">
+                <div className="flex items-baseline gap-2">
                   <p className="m-0 text-[14.5px] font-bold">사용한 기프티콘</p>
-                  <p className="m-0 text-[13px] font-semibold tabular-nums text-muted-foreground">{filtered.length}개</p>
+                  <p className="m-0 text-body font-semibold tabular-nums text-muted-foreground">{filtered.length}개</p>
                 </div>
                 {/* 사람으로 거른다. 가족이 넷이면 내가 쓴 것을 찾는 데만도 스무 줄을
                     지나야 한다. 테두리를 준 이유는 누를 수 있다는 표시가 ▾ 하나뿐이면
@@ -243,7 +243,7 @@ export default function UsageReportSheet({ onClose }) {
                         </span>
                         <span className="flex items-center gap-1.5">
                           <span aria-hidden="true" className={`size-1.5 shrink-0 rounded-full ${colorOf(usedBy)}`} />
-                          <span className="truncate text-[13px] font-medium tabular-nums text-muted-foreground">
+                          <span className="truncate text-body font-medium tabular-nums text-muted-foreground">
                             {usedBy} · {formatMonthDay(row.used_at || row.updated_at)}
                           </span>
                         </span>

@@ -166,7 +166,7 @@ export default function FamilyMembersSheet({ onClose }) {
                         서버가 가려서 내려준다(supabase/join-request-email.sql). 아직 안
                         돌렸으면 이 값이 없고, 그때는 괄호를 아예 안 그린다. */}
                     {request.email_masked && (
-                      <span className="min-w-0 truncate text-[13px] font-medium text-muted-foreground">
+                      <span className="min-w-0 truncate text-body font-medium text-muted-foreground">
                         ({request.email_masked})
                       </span>
                     )}
@@ -194,7 +194,7 @@ export default function FamilyMembersSheet({ onClose }) {
                 </div>
               </div>
             ))}
-            {error && <p className="m-0 text-[13px] font-medium text-destructive">{error}</p>}
+            {error && <p className="m-0 text-body font-medium text-destructive">{error}</p>}
           </div>
         )}
 
@@ -204,7 +204,7 @@ export default function FamilyMembersSheet({ onClose }) {
             급한지 알 수 없다. 테두리도 걷었다. 이 앱에서 테두리는 누르거나 입력하는
             것의 표시다. */}
         <div className="mx-5 mb-3 flex flex-col gap-2.5 rounded-2xl bg-secondary/60 p-4">
-          <p className="m-0 text-[13px] font-bold text-muted-foreground">초대 코드</p>
+          <p className="m-0 text-body font-bold text-muted-foreground">초대 코드</p>
           {/* 복사 버튼을 코드 옆에 붙인다. 머리말 오른쪽에 떠 있던 때는 무엇을 복사하는
               버튼인지 눈으로 이어야 했다 — 복사할 것 바로 옆이 그 자리다. */}
           <div className="flex items-center gap-3">
@@ -218,7 +218,7 @@ export default function FamilyMembersSheet({ onClose }) {
               className="h-11 shrink-0 rounded-[12px] bg-primary px-4 text-[15px] font-bold text-primary-foreground"
             />
           </div>
-          <p className="m-0 text-[13px] leading-snug font-medium break-keep text-muted-foreground">
+          <p className="m-0 text-body leading-snug font-medium break-keep text-muted-foreground">
             코드를 받은 사람이 참여를 신청하면, 여기서 승인해야 들어와요.
           </p>
 
@@ -245,7 +245,7 @@ export default function FamilyMembersSheet({ onClose }) {
           </div>
 
           {shareNote && (
-            <p className="m-0 text-[13px] leading-snug font-medium break-keep text-primary">{shareNote}</p>
+            <p className="m-0 text-body leading-snug font-medium break-keep text-primary">{shareNote}</p>
           )}
         </div>
 
@@ -291,7 +291,7 @@ export default function FamilyMembersSheet({ onClose }) {
                 {/* 이메일은 여기 안 적는다. 한 줄에 같이 뒀더니 390px에서 날짜가
                     '2026.01.0…'으로 잘렸다 — 잘린 날짜는 안 적은 것만 못하다.
                     이 줄이 필요한 자리는 내보내기 하나뿐이라, 그 물음창에서만 보여준다. */}
-                <span className="text-[13px] font-medium tabular-nums text-muted-foreground">
+                <span className="text-body font-medium tabular-nums text-muted-foreground">
                   {formatDate(member.created_at)}부터 함께
                 </span>
               </div>
@@ -328,7 +328,7 @@ export default function FamilyMembersSheet({ onClose }) {
           ))}
         </ul>
 
-        {error && <p className="m-0 px-5 pt-2 text-[13px] font-medium text-destructive">{error}</p>}
+        {error && <p className="m-0 px-5 pt-2 text-body font-medium text-destructive">{error}</p>}
 
         {/* 되돌릴 수 없다. 무엇이 사라지는지 미리 다 적어둔다 — 누르고 나서 알게 되면
             그때는 이미 늦다. */}

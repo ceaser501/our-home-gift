@@ -157,7 +157,7 @@ export default function FamilySwitcherSheet({ onClose, initialCode = '' }) {
                 '이름 바꾸기'도 뺐다. 목록의 세 번째 항목처럼 보여서, 누르면 가족이 바뀔 것처럼
                 읽혔다. 이름 바꾸기는 가족 관리 안에 있다. */}
             <div className="mt-4 flex flex-col gap-2 px-5">
-              <p className="m-0 px-0.5 text-[13px] font-bold text-muted-foreground">가족 추가하기</p>
+              <p className="m-0 px-0.5 text-body font-bold text-muted-foreground">가족 추가하기</p>
               <div className="flex gap-2">
                 <Button
                   variant="outline"

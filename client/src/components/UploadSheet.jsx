@@ -770,7 +770,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
                     뒤는 여러 장을 골라도 된다는 것.
                     뒷줄을 고쳤다. 예전에는 '기프티콘별로 나눠 담아요'였는데, 지금은
                     정보성 화면은 버리고 기프티콘만 골라 담는다. */}
-                <span className="text-center text-[13px] leading-relaxed font-medium break-keep text-muted-foreground">
+                <span className="text-center text-body leading-relaxed font-medium break-keep text-muted-foreground">
                   사진을 올리면 <b className="font-bold text-foreground">정보를 자동으로 채워요</b>
                   <br />
                   여러 장을 올리면 기프티콘만 골라서 등록해요

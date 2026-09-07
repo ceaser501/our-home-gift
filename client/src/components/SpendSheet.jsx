@@ -129,7 +129,7 @@ export default function SpendSheet({ gifticon, onSpend, onClose }) {
 
             {/* 계산대에서 키패드를 여섯 번 누르는 대신 두 번으로 끝낸다. 아래 '전부 썼어요'와
                 같은 성격의 단축이다. */}
-            <div className="flex gap-[7px]">
+            <div className="flex gap-2">
               {QUICK.map(([step, label]) => (
                 <button
                   key={step}
@@ -150,7 +150,7 @@ export default function SpendSheet({ gifticon, onSpend, onClose }) {
             </div>
 
             {tooMuch && (
-              <p className="m-0 text-[13px] text-destructive">남은 금액({won(left)})보다 많이 쓸 수는 없어요.</p>
+              <p className="m-0 text-body text-destructive">남은 금액({won(left)})보다 많이 쓸 수는 없어요.</p>
             )}
           </div>
 

@@ -54,7 +54,7 @@ export default function FilterBar({
     // 띠와 필터가 한 덩어리로 읽힌다. 띠가 없는 날에도 같은 값이라 헤더와의 간격이
     // 들쭉날쭉해지지 않는다.
     <div className="sticky top-0 z-10 flex flex-col gap-2.5 border-b border-border bg-background pt-[11px] pb-2.5">
-      <div className="flex gap-[7px] px-4">
+      <div className="flex gap-2 px-4">
         {/* 검색 앞에 두어 "무엇 안에서 찾을지"를 먼저 정하는 순서로 읽히게 한다.
             알약이 아니라 각진 모서리를 쓴다 — 아래 카드와 각을 맞추기 위해서다.
             알약과 카드가 섞이면 필터 줄만 붕 떠 보인다. 분류 칩만 알약으로 남겨

@@ -1549,7 +1549,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
             <span className="text-base font-bold tabular-nums text-foreground">{scanned}</span>
           </div>
         ) : (
-          <div className="flex gap-[7px]">
+          <div className="flex gap-2">
             {summary.watched.map((folder) => (
               <div
                 key={folder.label}
@@ -1646,16 +1646,16 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                   한다. 금액은 한때 오른쪽 칸에 따로 있었는데, 그 자리를 아래 금액권
                   칩에 내줬다 — 두 값이 한 줄에 있어도 선이 갈라준다. */}
               {broken ? (
-                <span className="mt-1 truncate text-[13px] text-muted-foreground">{reasonOf(candidate)}</span>
+                <span className="mt-1 truncate text-body text-muted-foreground">{reasonOf(candidate)}</span>
               ) : (
-                <div className="mt-1 flex items-center gap-[7px]">
-                  <span className="shrink-0 text-[13px] font-semibold tabular-nums text-foreground/80">
+                <div className="mt-1 flex items-center gap-2">
+                  <span className="shrink-0 text-body font-semibold tabular-nums text-foreground/80">
                     {formatDate(info?.expiresAt) ? `${formatDate(info.expiresAt)}까지` : '사용기한 없음'}
                   </span>
                   {formatWon(info?.amount) && (
                     <>
                       <span className="h-2.5 w-px shrink-0 bg-border" />
-                      <span className="text-[13px] font-bold tabular-nums text-foreground">
+                      <span className="text-body font-bold tabular-nums text-foreground">
                         {formatWon(info.amount)}
                       </span>
                     </>
@@ -1855,7 +1855,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                   ? expiredLabel(candidate.info?.expiresAt)
                   : reasonOf(candidate)}
             </span>
-            <span className="truncate text-[13px] font-semibold text-foreground">
+            <span className="truncate text-body font-semibold text-foreground">
               {candidate.info?.name || candidate.info?.brand || candidate.code || '상품명 없음'}
             </span>
           </div>
@@ -2145,7 +2145,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                           <span className="truncate text-[15px] font-semibold text-foreground">
                             {candidate.info?.name}
                           </span>
-                          <span className="truncate text-[13px] font-medium tabular-nums text-muted-foreground">
+                          <span className="truncate text-body font-medium tabular-nums text-muted-foreground">
                             {[
                               candidate.info?.brand,
                               formatDate(candidate.info?.expiresAt) &&
@@ -2205,8 +2205,8 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                     기프티콘인지 이름을 보여준다 — 목록에서 그것만 찾아 고치면 된다. */}
                 {(result.failed.length > 0 || result.noExpiry > 0) && (
                   <div className="shrink-0 overflow-hidden rounded-[14px] border border-border">
-                    <div className="flex items-center gap-[7px] border-b border-border bg-muted/40 px-3.5 py-2.5">
-                      <span className="text-[13px] font-bold text-foreground/80">
+                    <div className="flex items-center gap-2 border-b border-border bg-muted/40 px-3.5 py-2.5">
+                      <span className="text-body font-bold text-foreground/80">
                         확인이 필요해요
                       </span>
                       <span className="rounded-[9px] bg-muted-foreground px-1.5 py-px text-xs font-bold tabular-nums text-background">
@@ -2264,7 +2264,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                             {failGroups.map((group) => (
                               <div key={group.reason} className="flex flex-col">
                                 <p className="m-0 flex items-baseline gap-1.5 py-1 break-keep">
-                                  <span className="text-[13px] font-bold text-foreground/80">{group.reason}</span>
+                                  <span className="text-body font-bold text-foreground/80">{group.reason}</span>
                                   <span className="text-[12.5px] font-semibold tabular-nums text-muted-foreground">
                                     {group.items.length}개
                                   </span>

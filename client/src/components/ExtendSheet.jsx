@@ -88,7 +88,7 @@ export default function ExtendSheet({ gifticon, onExtend, onClose }) {
             줄 끝에 있어서, 긴 날짜를 다 읽고 나서야 며칠 남았는지를 안다. */}
         <span className={cn('flex items-baseline gap-[5px]', urgent ? 'text-destructive' : 'text-muted-foreground')}>
           <span className="text-[13.5px] font-bold tabular-nums">{ddayLabel}</span>
-          <span className="text-[13px] font-semibold tabular-nums">{formatDate(gifticon.expires_at)}까지</span>
+          <span className="text-body font-semibold tabular-nums">{formatDate(gifticon.expires_at)}까지</span>
         </span>
       </span>
     </div>
@@ -101,7 +101,7 @@ export default function ExtendSheet({ gifticon, onExtend, onClose }) {
           {/* 두 화면짜리라는 것을 먼저 보여준다. 안 보이면 1/2에서 '연장했어요'를 누른
               사람이 "끝난 건가" 하고 창을 닫는다. 만료된 것은 한 화면이라 안 띄운다. */}
           {!expired && (
-            <div className="mb-2 flex items-center gap-[7px]">
+            <div className="mb-2 flex items-center gap-2">
               {step === 2 && (
                 <button
                   type="button"
@@ -175,7 +175,7 @@ export default function ExtendSheet({ gifticon, onExtend, onClose }) {
                 <ExternalLink className="size-[18px] shrink-0 text-foreground/70" />
                 <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                   <span className="text-[15.5px] font-bold">선물함 열기</span>
-                  <span className="text-[13px] font-medium break-keep text-muted-foreground">
+                  <span className="text-body font-medium break-keep text-muted-foreground">
                     카카오톡 기프티콘이라면
                   </span>
                 </span>
@@ -210,7 +210,7 @@ export default function ExtendSheet({ gifticon, onExtend, onClose }) {
                   <span className="text-[14.5px] font-bold break-keep">
                     카카오톡 선물하기 상품인가요?
                   </span>
-                  <span className="text-[13px] font-medium break-keep text-muted-foreground">
+                  <span className="text-body font-medium break-keep text-muted-foreground">
                     선물함에서 바로 연장할 수 있어요
                   </span>
                 </span>

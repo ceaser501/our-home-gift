@@ -43,7 +43,7 @@ function timeAgo(iso) {
 // 지난 것이 몇 개인지는 알 필요가 없다 — 세어봐야 할 일이 생기지 않는다.
 function SectionTitle({ label, count, accent }) {
   return (
-    <div className="flex items-center gap-[7px] pb-1.5">
+    <div className="flex items-center gap-2 pb-1.5">
       <span
         className={cn(
           'text-[13.5px] font-bold',
@@ -107,7 +107,7 @@ function PinnedNotice({ notice }) {
       </p>
       {/* 줄바꿈을 그대로 살린다. 공지는 문단으로 쓰는 글이라 한 덩어리로 뭉치면 읽기 어렵다. */}
       {notice.body && (
-        <p className="m-0 text-[13px] leading-relaxed font-medium break-keep whitespace-pre-line text-muted-foreground">
+        <p className="m-0 text-body leading-relaxed font-medium break-keep whitespace-pre-line text-muted-foreground">
           {notice.body}
         </p>
       )}
@@ -137,7 +137,7 @@ function NoticeRow({ notice }) {
           </p>
         </div>
         {notice.body && (
-          <p className="m-0 mt-[3px] text-[13px] leading-snug font-medium break-keep whitespace-pre-line text-muted-foreground">
+          <p className="m-0 mt-[3px] text-body leading-snug font-medium break-keep whitespace-pre-line text-muted-foreground">
             {notice.body}
           </p>
         )}
@@ -169,7 +169,7 @@ function ActivityRow({ activity, isNew }) {
         >
           {activity.gifticon_name}
         </p>
-        <p className="m-0 mt-0.5 text-[13px] font-medium text-muted-foreground">
+        <p className="m-0 mt-0.5 text-body font-medium text-muted-foreground">
           {activity.actor_name || '누군가'}님이{' '}
           {/* 금액은 굵게. 이 줄에서 실제로 확인하는 값이라, 문장에 섞여 있으면 다시 읽게 된다. */}
           {activity.amount ? (
@@ -250,7 +250,7 @@ export default function ActivitySheet({
               <span className="flex size-16 items-center justify-center rounded-full bg-secondary">
                 <BellOff className="size-[30px] text-muted-foreground/70" strokeWidth={1.8} />
               </span>
-              <div className="flex flex-col items-center gap-[7px]">
+              <div className="flex flex-col items-center gap-2">
                 <p className="m-0 text-[17px] font-bold text-foreground">아직 알림이 없어요</p>
                 <p className="m-0 text-center text-sm leading-relaxed font-medium break-keep text-muted-foreground">
                   가족이 기프티콘을 올리거나 쓰면

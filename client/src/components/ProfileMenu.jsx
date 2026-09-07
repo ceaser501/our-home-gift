@@ -147,7 +147,7 @@ export default function ProfileMenu({ onClose }) {
           </span>
           <span className="flex min-w-0 flex-1 flex-col gap-0.5">
             <span className="truncate text-[17px] font-bold text-foreground">{myName}</span>
-            <span className="truncate text-[13px] font-medium text-muted-foreground">{user.email}</span>
+            <span className="truncate text-body font-medium text-muted-foreground">{user.email}</span>
           </span>
           <Button
             type="button"
@@ -285,14 +285,14 @@ export default function ProfileMenu({ onClose }) {
               화면이 한 줄로 읽힌다. 붉은색은 아래 두 버튼이 이미 지고 있어서, 제목까지
               붉으면 무엇이 실제로 눌리는 것인지가 흐려진다. */}
           <div className="mt-0.5 mb-1 flex flex-col gap-0.5">
-            <p className="m-0 pb-1 text-[13px] font-bold text-muted-foreground">
+            <p className="m-0 pb-1 text-body font-bold text-muted-foreground">
               조심해서 눌러주세요
             </p>
             <div className="flex flex-col gap-3 rounded-[14px] border border-destructive/20 bg-destructive/5 p-4">
               <div className="flex items-center gap-3">
                 <div className="min-w-0 flex-1">
                   <p className="m-0 text-[15px] font-semibold text-foreground">가족 나가기</p>
-                  <p className="mt-px mb-0 text-[13px] font-medium break-keep text-muted-foreground">
+                  <p className="mt-px mb-0 text-body font-medium break-keep text-muted-foreground">
                     {family.name}에서만 빠져요
                   </p>
                 </div>
@@ -313,7 +313,7 @@ export default function ProfileMenu({ onClose }) {
               <div className="flex items-center gap-3">
                 <div className="min-w-0 flex-1">
                   <p className="m-0 text-[15px] font-semibold text-foreground">계정 삭제</p>
-                  <p className="mt-px mb-0 text-[13px] font-medium break-keep text-muted-foreground">
+                  <p className="mt-px mb-0 text-body font-medium break-keep text-muted-foreground">
                     모든 가족과 기프티콘이 지워져요
                   </p>
                 </div>

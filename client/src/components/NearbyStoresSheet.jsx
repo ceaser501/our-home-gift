@@ -192,7 +192,7 @@ export default function NearbyStoresSheet({ gifticon, onClose }) {
                 (브라우저에는 설정 화면이 없어서 버튼이 안 뜬다 — 글만 남는다.) */}
             {error.denied && (
               <div className="flex w-full flex-col gap-1.5 rounded-[13px] bg-secondary px-[15px] py-[13px]">
-                <p className="m-0 text-[13px] font-bold text-foreground/80">켜는 방법</p>
+                <p className="m-0 text-body font-bold text-foreground/80">켜는 방법</p>
                 <p className="m-0 text-[13.5px] leading-relaxed font-medium break-keep text-foreground/70">
                   위치 → <b className="font-bold text-foreground">앱 사용 중에만 허용</b>
                 </p>
@@ -269,7 +269,7 @@ export default function NearbyStoresSheet({ gifticon, onClose }) {
                       {first.name}
                     </span>
                     {first.address && (
-                      <span className="truncate text-[13px] font-medium text-foreground/70">{first.address}</span>
+                      <span className="truncate text-body font-medium text-foreground/70">{first.address}</span>
                     )}
                   </span>
                 </button>
@@ -280,7 +280,7 @@ export default function NearbyStoresSheet({ gifticon, onClose }) {
                   <button
                     type="button"
                     onClick={() => setDetail(first)}
-                    className="flex h-11 flex-1 items-center justify-center gap-[7px] rounded-[11px] bg-primary text-[15px] font-bold text-primary-foreground"
+                    className="flex h-11 flex-1 items-center justify-center gap-2 rounded-[11px] bg-primary text-[15px] font-bold text-primary-foreground"
                   >
                     <MapPin className="size-[17px]" strokeWidth={2.2} />
                     지도 보기
@@ -289,7 +289,7 @@ export default function NearbyStoresSheet({ gifticon, onClose }) {
                     <button
                       type="button"
                       onClick={() => openNavigation(first)}
-                      className="flex h-11 flex-1 items-center justify-center gap-[7px] rounded-[11px] border border-input bg-card text-[15px] font-semibold text-foreground/80"
+                      className="flex h-11 flex-1 items-center justify-center gap-2 rounded-[11px] border border-input bg-card text-[15px] font-semibold text-foreground/80"
                     >
                       <Navigation className="size-[17px] text-primary" strokeWidth={2} />
                       길찾기
@@ -331,7 +331,7 @@ export default function NearbyStoresSheet({ gifticon, onClose }) {
                           {store.name}
                         </span>
                         {store.address && (
-                          <span className="truncate text-[13px] font-medium text-muted-foreground">{store.address}</span>
+                          <span className="truncate text-body font-medium text-muted-foreground">{store.address}</span>
                         )}
                       </span>
                     </button>
