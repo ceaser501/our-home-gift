@@ -1,0 +1,130 @@
+<!doctype html>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>금액 입력 — 막대 색</title>
+<script type="module" src="/src/index.css"></script>
+<style>
+  body { margin:0; background:#3a3a44; font-family:Pretendard, system-ui, sans-serif;
+         -webkit-font-smoothing:antialiased; }
+  .page { display:flex; gap:20px; align-items:flex-start; justify-content:center;
+          padding:16px 14px 80px; flex-wrap:wrap; }
+  .col { width:375px; flex:0 0 auto; }
+  .cap { color:#fff; font-size:13px; font-weight:800; margin:0 0 3px; }
+  .sub { color:#b8b8c4; font-size:11px; line-height:1.5; margin:0 0 8px; min-height:48px; }
+  .lv  { color:#9d9daa; font-size:10px; font-weight:700; margin:11px 0 4px;
+         font-variant-numeric:tabular-nums; }
+
+  .sheet { background:var(--background); border-radius:16px 16px 0 0; overflow:hidden;
+           box-shadow:0 -2px 24px rgba(0,0,0,.28); color:var(--foreground); }
+  .hd  { display:flex; flex-direction:column; gap:4px; padding:20px 60px 20px 20px; position:relative; }
+  .ttl { font-size:20px; line-height:1.2; font-weight:700; letter-spacing:-.025em; margin:0; }
+  .x   { position:absolute; top:10px; right:10px; width:44px; height:44px; display:flex;
+         align-items:center; justify-content:center; color:var(--muted-foreground); }
+  .x svg { width:24px; height:24px; }
+  .bd  { padding:0 20px 20px; display:flex; flex-direction:column; gap:16px; }
+  .desc { margin:0; font-size:14px; line-height:1.5; font-weight:500; color:var(--muted-foreground);
+          overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+  /* 그라데이션은 트랙 전체에 깔고 쓴 만큼을 회색으로 덮는다.
+     채워진 쪽에 걸면 값이 바뀔 때마다 그라데이션이 늘었다 줄었다 해서 끝 색이 늘 같아진다. */
+  .track { position:relative; height:6px; border-radius:99px; overflow:hidden; }
+  .rest  { position:absolute; top:0; bottom:0; right:0; background:var(--secondary); }
+
+  .box  { display:flex; height:56px; align-items:center; gap:10px; border-radius:8px;
+          border:1.5px solid var(--primary); background:var(--card); padding:0 15px; }
+  .box .v { flex:1; font-size:20px; font-weight:700; font-variant-numeric:tabular-nums; }
+  .box .w { font-size:16px; font-weight:600; color:var(--muted-foreground); }
+  .clr { width:22px; height:22px; flex:0 0 auto; border:0; padding:0; border-radius:99px;
+         background:var(--border); color:var(--muted-foreground); display:flex;
+         align-items:center; justify-content:center; }
+  .clr svg { width:12px; height:12px; }
+  .chip { height:40px; flex:1; border-radius:12px; border:0; background:var(--secondary);
+          font-size:14px; font-weight:600; color:var(--foreground); font-family:inherit;
+          font-variant-numeric:tabular-nums; }
+  .btnP { height:52px; border-radius:8px; border:0; background:var(--primary);
+          color:var(--primary-foreground); font-size:15.5px; font-weight:700;
+          display:flex; align-items:center; justify-content:center; gap:7px; font-family:inherit; }
+  .btnP svg { width:20px; height:20px; }
+  .tab { font-variant-numeric:tabular-nums; }
+  .mut { color:var(--muted-foreground); }
+</style>
+
+<script>
+  const XSVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+    stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>`;
+
+  // primary 를 배경 쪽으로 끌어당겨 죽인다. 흰색이 아니라 var(--background) 로 섞는 이유는
+  // 다크에서도 같은 뜻이 되게 하려는 것이다 — 라이트는 흰쪽, 다크는 검은쪽으로 옅어진다.
+  const mix = (n) => `color-mix(in srgb, var(--primary) ${n}%, var(--background))`;
+  const grad = (a, b) => `linear-gradient(90deg, ${mix(a)}, ${mix(b)})`;
+
+  const V = {
+    '가': ['옅어짐 · 한 단 죽임', 72, 38, 'left',
+          '오른쪽으로 갈수록 옅어진다. 회색과 맞닿는 경계가 제일 옅어서 어디까지인지 흐려진다.'],
+    '나': ['짙어짐 · 한 단 죽임', 38, 72, 'right',
+          '뒤집었다. 왼쪽(이미 쓴 쪽)이 옅고 오른쪽 경계가 짙다. 색이 제일 센 데가 지금 돈이 서 있는 자리다.'],
+    '다': ['짙어짐 · 끝만 원색', 42, 100, 'right',
+          '왼쪽은 많이 죽이고 경계만 원색으로 남긴다. 띠 전체는 조용한데 경계는 또렷하다.'],
+    '라': ['짙어짐 · 두 단 죽임', 26, 55, 'right',
+          '제일 조용하다. 경계 대비가 2.12 라 3:1 에 못 미친다 — 옅은 화면에서 안 보일 수 있다.'],
+  };
+
+  // 회색 트랙(#f1f1f5)과 맞닿는 쪽의 대비. 막대가 말하는 건 '어디까지'이고,
+  // 그 '어디까지'를 보이게 하는 것은 경계 하나뿐이다.
+  const lum = (c) => { const [r, g, b] = c.map((v) => { v /= 255;
+    return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); });
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+  const mixRGB = (n) => [91, 79, 232].map((v) => Math.round(v * n / 100 + 255 * (1 - n / 100)));
+  const cr = (n) => { const a = lum(mixRGB(n)) + 0.05, b = lum([241, 241, 245]) + 0.05;
+    return (Math.max(a, b) / Math.min(a, b)).toFixed(2); };
+
+  const bar = (a, b, pct) => `
+    <div class="track" style="background:${grad(a, b)}">
+      <div class="rest" style="left:${pct}%"></div>
+    </div>`;
+
+  const sheet = (k, a, b) => `
+    <div class="sheet">
+      <div class="hd">
+        <p class="ttl">얼마 쓰셨어요?</p>
+        <p class="desc">카페 아메리카노 T 2잔 + 딸기 생크림 케이크</p>
+        <span class="x">${XSVG}</span>
+      </div>
+      <div class="bd">
+        <div style="display:flex;flex-direction:column;gap:7px">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px">
+            <span class="tab" style="font-size:20px;line-height:1.2;font-weight:700;letter-spacing:-.025em">
+              380,000원 <span style="font-size:14px;font-weight:600">남음</span></span>
+            <span class="mut tab" style="font-size:12px;font-weight:500">50만원권</span>
+          </div>
+          <div id="probe${k}">${bar(a, b, 76)}</div>
+        </div>
+        <div class="box"><span class="v">120,000</span>
+          <button class="clr">${XSVG}</button><span class="w">원</span></div>
+        <div style="display:flex;gap:8px;margin-top:-8px">
+          <button class="chip" style="flex:1.25">전액</button>
+          <button class="chip">+1만</button><button class="chip">+5천</button><button class="chip">+1천</button>
+        </div>
+        <button class="btnP"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/></svg>120,000원 쓰고 260,000원 남기기</button>
+      </div>
+    </div>`;
+
+  addEventListener('DOMContentLoaded', () => {
+    const page = document.querySelector('.page');
+    Object.entries(V).forEach(([k, [name, a, b, edge, note]]) => {
+      const col = document.createElement('div');
+      col.className = 'col';
+      const ec = cr(b);
+      col.innerHTML = `<p class="cap">${k} · ${name}</p><p class="sub">${note}</p>`
+        + `<p class="lv" style="margin:0 0 6px">회색과 맞닿는 경계 대비 ${ec}:1${ec >= 3 ? ' ✓' : ' — 3:1 미만'}</p>`
+        + sheet(k, a, b)
+        // 값이 바뀔 때 끝 색이 옮겨가는지 — 그라데이션을 트랙에 깐 까닭이 이것이다
+        + [92, 45, 14].map((p) =>
+            `<p class="lv">${p}% 남았을 때</p><div style="padding:0 20px">${bar(a, b, p)}</div>`).join('');
+      page.appendChild(col);
+    });
+  });
+</script>
+
+<div class="page"></div>

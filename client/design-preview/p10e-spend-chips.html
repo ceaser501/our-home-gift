@@ -1,0 +1,129 @@
+<!doctype html>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>금액 입력 — 칩 모양</title>
+<script type="module" src="/src/index.css"></script>
+<style>
+  body { margin:0; background:#3a3a44; font-family:Pretendard, system-ui, sans-serif;
+         -webkit-font-smoothing:antialiased; }
+  .page { display:flex; gap:20px; align-items:flex-start; justify-content:center;
+          padding:16px 14px 80px; flex-wrap:wrap; }
+  .col { width:375px; flex:0 0 auto; }
+  .cap { color:#fff; font-size:13px; font-weight:800; margin:0 0 3px; }
+  .sub { color:#b8b8c4; font-size:11px; line-height:1.5; margin:0 0 8px; min-height:74px; }
+  .num { color:#9d9daa; font-size:10px; font-weight:700; margin:6px 0 0; font-variant-numeric:tabular-nums; }
+
+  .sheet { background:var(--background); border-radius:16px 16px 0 0; overflow:hidden;
+           box-shadow:0 -2px 24px rgba(0,0,0,.28); color:var(--foreground); }
+  .hd  { display:flex; flex-direction:column; gap:4px; padding:20px 60px 20px 20px; position:relative; }
+  .ttl { font-size:20px; line-height:1.2; font-weight:700; letter-spacing:-.025em; margin:0; }
+  .x   { position:absolute; top:10px; right:10px; width:44px; height:44px; display:flex;
+         align-items:center; justify-content:center; color:var(--muted-foreground); }
+  .x svg { width:24px; height:24px; }
+  .bd  { padding:0 20px 20px; display:flex; flex-direction:column; gap:16px; }
+  .desc { margin:0; font-size:14px; line-height:1.5; font-weight:500; color:var(--muted-foreground);
+          overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  /* primary 를 배경 쪽으로 한 단 끌어당긴다. 75% 인 까닭은 여기가 회색 트랙과의 경계
+     대비 3:1 을 막 넘기는 자리라서다(72% 는 2.91). 흰색이 아니라 var(--background) 와
+     섞는 것은 다크에서도 '한 단 옅게'가 같은 뜻이 되게 하려는 것이다. */
+  .track { position:relative; height:6px; border-radius:99px; overflow:hidden;
+           background:color-mix(in srgb, var(--primary) 75%, var(--background)); }
+  .rest  { position:absolute; top:0; bottom:0; right:0; left:76%; background:var(--secondary); }
+  .box  { display:flex; height:56px; align-items:center; gap:10px; border-radius:8px;
+          border:1.5px solid var(--primary); background:var(--card); padding:0 15px; }
+  .box .v { flex:1; font-size:20px; font-weight:700; font-variant-numeric:tabular-nums; }
+  .box .w { font-size:16px; font-weight:600; color:var(--muted-foreground); }
+  .clr { width:22px; height:22px; flex:0 0 auto; border:0; padding:0; border-radius:99px;
+         background:var(--border); color:var(--muted-foreground); display:flex;
+         align-items:center; justify-content:center; }
+  .clr svg { width:12px; height:12px; }
+  .btnP { height:52px; border-radius:8px; border:0; background:var(--primary);
+          color:var(--primary-foreground); font-size:15.5px; font-weight:700;
+          display:flex; align-items:center; justify-content:center; font-family:inherit; }
+  .tab { font-variant-numeric:tabular-nums; }
+  .mut { color:var(--muted-foreground); }
+
+  /* ── 칩 갈래 ── */
+  .row { display:flex; margin-top:-8px; }
+  .row button { font-family:inherit; font-variant-numeric:tabular-nums; }
+
+  /* 가 · 지금 — 테두리 있는 사각, 폭을 꽉 채운다 */
+  .r가 { gap:8px; }
+  .r가 button { height:36px; flex:1; border-radius:6px; border:1px solid var(--input);
+                background:var(--card); font-size:14px; font-weight:600; color:var(--foreground); }
+  .r가 button:first-child { flex:1.25; }
+
+  /* 나 · 알약, 채움 — 테두리를 빼고 회색으로 채운다. 폭은 그대로 꽉 */
+  .r나 { gap:8px; }
+  .r나 button { height:36px; flex:1; border-radius:99px; border:0;
+                background:var(--secondary); font-size:14px; font-weight:600; color:var(--foreground); }
+  .r나 button:first-child { flex:1.25; }
+
+  /* 다 · 알약, 글자 너비 — 늘리지 않고 왼쪽에 모은다 */
+  .r다 { gap:7px; }
+  .r다 button { height:36px; padding:0 15px; border-radius:99px; border:0;
+                background:var(--secondary); font-size:14px; font-weight:600; color:var(--foreground); }
+
+  /* 라 · 부드러운 사각, 채움 — 모서리만 크게 굴린다 */
+  .r라 { gap:8px; }
+  .r라 button { height:36px; flex:1; border-radius:12px; border:0;
+                background:var(--secondary); font-size:14px; font-weight:600; color:var(--foreground); }
+  .r라 button:first-child { flex:1.25; }
+</style>
+
+<script>
+  const XSVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+    stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>`;
+  const V = {
+    가: ['지금', '테두리 있는 사각을 폭 가득. 넷이 나란히 서면 계산기 자판처럼 보인다 — 투박하다고 느끼신 게 여기일 것이다.'],
+    나: ['알약 · 채움', '테두리를 빼고 회색으로 채운다. 선이 넷 사라져서 화면이 조용해진다. 폭과 높이는 그대로라 누르는 자리는 안 준다.'],
+    다: ['알약 · 글자 너비', '늘리지 않고 왼쪽에 모은다. 제일 가볍지만 오른쪽이 비고, 누르는 자리가 좁아진다 — 60대에게는 이게 걸린다.'],
+    라: ['부드러운 사각 · 채움', '모서리만 12 로 굴리고 테두리를 뺀다. 알약보다 덜 튀어서 입력 상자(8)와 결이 맞는다.'],
+  };
+  const sheet = (k) => `
+    <div class="sheet" id="s${k}">
+      <div class="hd">
+        <p class="ttl">얼마 쓰셨어요?</p>
+        <p class="desc">카페 아메리카노 T 2잔 + 딸기 생크림 케이크</p>
+        <span class="x">${XSVG}</span>
+      </div>
+      <div class="bd">
+        <div style="display:flex;flex-direction:column;gap:7px">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px">
+            <span class="tab" style="font-size:20px;line-height:1.2;font-weight:700;letter-spacing:-.025em">
+              380,000원 <span style="font-size:14px;font-weight:600">남음</span></span>
+            <span class="mut tab" style="font-size:12px;font-weight:500">50만원권</span>
+          </div>
+          <div class="track"><div class="rest"></div></div>
+        </div>
+        <div class="box"><span class="v">120,000</span>
+          <button class="clr">${XSVG}</button><span class="w">원</span></div>
+        <div class="row r${k}">
+          <button>전액</button><button>+1만</button><button>+5천</button><button>+1천</button>
+        </div>
+        <button class="btnP">120,000원 쓰고 260,000원 남기기</button>
+      </div>
+    </div>`;
+
+  addEventListener('DOMContentLoaded', () => {
+    const page = document.querySelector('.page');
+    Object.entries(V).forEach(([k, [name, note]]) => {
+      const col = document.createElement('div');
+      col.className = 'col';
+      col.innerHTML = `<p class="cap">${k} · ${name}</p><p class="sub">${note}</p>`
+        + sheet(k) + `<p class="num" id="n${k}"></p>`;
+      page.appendChild(col);
+    });
+    const measure = () => Object.keys(V).forEach((k) => {
+      const b = document.querySelector(`.r${k} button`);
+      const r = b.getBoundingClientRect();
+      document.getElementById('n' + k).textContent =
+        `첫 칩 ${Math.round(r.width)}×${Math.round(r.height)}px`;
+    });
+    new ResizeObserver(measure).observe(document.body);
+    document.fonts.ready.then(() => requestAnimationFrame(measure));
+    setTimeout(measure, 500); setTimeout(measure, 1400);
+  });
+</script>
+
+<div class="page"></div>

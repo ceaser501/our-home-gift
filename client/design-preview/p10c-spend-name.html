@@ -1,0 +1,127 @@
+<!doctype html>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>금액 입력 — 상품명 자리 · 필드 안 지우기</title>
+<script type="module" src="/src/index.css"></script>
+<style>
+  body { margin:0; background:#3a3a44; font-family:Pretendard, system-ui, sans-serif;
+         -webkit-font-smoothing:antialiased; }
+  .page { display:flex; gap:20px; align-items:flex-start; justify-content:center;
+          padding:16px 14px 80px; flex-wrap:wrap; }
+  .col { width:375px; flex:0 0 auto; }
+  .cap { color:#fff; font-size:13px; font-weight:800; margin:0 0 3px; }
+  .sub { color:#b8b8c4; font-size:11px; line-height:1.5; margin:0 0 8px; min-height:62px; }
+  .num { color:#9d9daa; font-size:10px; font-weight:700; margin:6px 0 0; font-variant-numeric:tabular-nums; }
+
+  .sheet { background:var(--background); border-radius:16px 16px 0 0; overflow:hidden;
+           box-shadow:0 -2px 24px rgba(0,0,0,.28); color:var(--foreground); }
+  .hd  { display:flex; flex-direction:column; gap:4px; padding:20px 60px 20px 20px; position:relative; }
+  .ttl { font-size:20px; line-height:1.2; font-weight:700; letter-spacing:-.025em; margin:0; }
+  .x   { position:absolute; top:10px; right:10px; width:44px; height:44px; display:flex;
+         align-items:center; justify-content:center; color:var(--muted-foreground); }
+  .x svg { width:24px; height:24px; }
+  .bd  { padding:0 20px 20px; display:flex; flex-direction:column; gap:16px; }
+
+  .desc { margin:0; font-size:14px; line-height:1.5; font-weight:500; color:var(--muted-foreground);
+          overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+  /* 입력 상자 — 값이 있는 꼴로 그린다. 지우기가 언제 나오는지 봐야 해서. */
+  .box  { display:flex; height:56px; align-items:center; gap:10px; border-radius:8px;
+          border:1.5px solid var(--primary); background:var(--card); padding:0 15px; }
+  .box .v { flex:1; font-size:20px; font-weight:700; font-variant-numeric:tabular-nums; }
+  .box .w { font-size:16px; font-weight:600; color:var(--muted-foreground); }
+  /* 시트 닫기(선 X)와 헷갈리지 않게 채운 동그라미로 그린다 */
+  .clr { width:22px; height:22px; flex:0 0 auto; border:0; padding:0; border-radius:99px;
+         background:var(--border); color:var(--muted-foreground); display:flex;
+         align-items:center; justify-content:center; }
+  .clr svg { width:12px; height:12px; }
+
+  .chip { height:40px; border-radius:6px; border:1px solid var(--input); background:var(--card);
+          font-size:14px; font-weight:600; font-variant-numeric:tabular-nums;
+          color:var(--foreground); font-family:inherit; }
+  .btnP { height:52px; border-radius:8px; border:0; background:var(--primary);
+          color:var(--primary-foreground); font-size:15.5px; font-weight:700;
+          display:flex; align-items:center; justify-content:center; gap:7px; font-family:inherit; }
+  .btnP svg { width:20px; height:20px; }
+  .tab { font-variant-numeric:tabular-nums; }
+  .mut { color:var(--muted-foreground); }
+</style>
+
+<script>
+  const NAME_FULL = '카페 아메리카노 T 2잔 + 딸기 생크림 케이크';
+  const XSVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+    stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>`;
+  const CLR = `<button class="clr" aria-label="지우기">${XSVG}</button>`;
+
+  const BAR = (right) => `
+    <div style="display:flex;flex-direction:column;gap:7px">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px">
+        <span class="tab" style="font-size:20px;line-height:1.2;font-weight:700;letter-spacing:-.025em;
+              flex:0 0 auto">380,000원 <span style="font-size:14px;font-weight:600">남음</span></span>
+        ${right}
+      </div>
+      <div style="height:6px;border-radius:99px;background:var(--secondary);overflow:hidden">
+        <div style="height:100%;width:76%;border-radius:99px;background:var(--primary)"></div>
+      </div>
+    </div>`;
+  const DENOM = `<span class="mut tab" style="font-size:12px;font-weight:500;flex:0 0 auto">50만원권</span>`;
+
+  const TAIL = `
+    <div class="box"><span class="v">120,000</span>${CLR}<span class="w">원</span></div>
+    <div style="display:flex;gap:8px;margin-top:-8px">
+      <button class="chip" style="flex:1.25">전액</button>
+      <button class="chip" style="flex:1">+1만</button>
+      <button class="chip" style="flex:1">+5천</button>
+      <button class="chip" style="flex:1">+1천</button>
+    </div>
+    <button class="btnP"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+      stroke-linecap="round" stroke-linejoin="round"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/></svg>120,000원 쓰고 260,000원 남기기</button>`;
+
+  const HEAD = (desc) => `
+    <div class="hd">
+      <p class="ttl">얼마 쓰셨어요?</p>
+      ${desc || ''}
+      <span class="x">${XSVG}</span>
+    </div>`;
+
+  const V = {
+    가: {
+      name: '지금 자리',
+      note: '제목과 잔액 사이에 제 줄로 선다. 헤더 아래 gap 16 을 통째로 쓴다.',
+      html: HEAD() + `<div class="bd"><p class="desc" style="margin-top:-4px">${NAME_FULL}</p>${BAR(DENOM)}${TAIL}</div>`,
+    },
+    나: {
+      name: '부제 자리로',
+      note: '헤더 안으로 넣어 제목에 4px 로 붙인다. 이름 바꾸기 시트의 부제와 같은 자리·같은 값이라, 팝업끼리 짜임이 맞는다.',
+      html: HEAD(`<p class="desc">${NAME_FULL}</p>`) + `<div class="bd">${BAR(DENOM)}${TAIL}</div>`,
+    },
+    다: {
+      name: '잔액 줄에 녹임',
+      note: '막대의 오른쪽 자리를 이름에게 준다. 분모(50만원권)는 막대의 전체 길이가 이미 말하고 있다. 한 줄이 통째로 준다.',
+      html: HEAD() + `<div class="bd">${BAR(
+        `<span class="mut" style="font-size:12px;font-weight:500;min-width:0;overflow:hidden;
+         text-overflow:ellipsis;white-space:nowrap">${NAME_FULL}</span>`)}${TAIL}</div>`,
+    },
+  };
+
+  addEventListener('DOMContentLoaded', () => {
+    const page = document.querySelector('.page');
+    Object.entries(V).forEach(([k, v]) => {
+      const col = document.createElement('div');
+      col.className = 'col';
+      col.innerHTML = `<p class="cap">${k} · ${v.name}</p><p class="sub">${v.note}</p>`
+        + `<div class="sheet" id="s${k}">${v.html}</div><p class="num" id="n${k}"></p>`;
+      page.appendChild(col);
+    });
+    const measure = () => Object.keys(V).forEach((k) => {
+      const el = document.getElementById('s' + k);
+      document.getElementById('n' + k).textContent =
+        `시트 ${Math.round(el.getBoundingClientRect().height)}px`;
+    });
+    new ResizeObserver(measure).observe(document.body);
+    document.fonts.ready.then(() => requestAnimationFrame(measure));
+    setTimeout(measure, 500); setTimeout(measure, 1400);
+  });
+</script>
+
+<div class="page"></div>

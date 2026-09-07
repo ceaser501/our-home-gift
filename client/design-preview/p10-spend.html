@@ -1,0 +1,193 @@
+<!doctype html>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>금액 입력 시트 — 셋 견주기</title>
+<script type="module" src="/src/index.css"></script>
+<style>
+  body { margin:0; background:#3a3a44; font-family:Pretendard, system-ui, sans-serif;
+         -webkit-font-smoothing:antialiased; }
+  .page { display:flex; gap:20px; align-items:flex-start; justify-content:center;
+          padding:16px 14px 80px; flex-wrap:wrap; }
+  .col { width:375px; flex:0 0 auto; }
+  .cap { color:#fff; font-size:12px; font-weight:800; margin:0 0 3px; }
+  .cap b { font-size:13px; }
+  .sub { color:#b8b8c4; font-size:11px; line-height:1.5; margin:0 0 8px; min-height:32px; }
+  .num { color:#9d9daa; font-size:10px; font-weight:700; margin:6px 0 0; font-variant-numeric:tabular-nums; }
+
+  /* 시트 껍데기 — ui/sheet.jsx 와 같은 값 */
+  .sheet { background:var(--background); border-radius:16px 16px 0 0; overflow:hidden;
+           box-shadow:0 -2px 24px rgba(0,0,0,.28); color:var(--foreground); }
+  .hd { display:flex; flex-direction:column; gap:4px; padding:20px 60px 20px 20px; position:relative; }
+  .ttl { font-size:20px; line-height:1.2; font-weight:700; letter-spacing:-.025em; margin:0; }
+  .x { position:absolute; top:10px; right:10px; width:44px; height:44px; display:flex;
+       align-items:center; justify-content:center; color:var(--muted-foreground); }
+  .x svg { width:24px; height:24px; }
+  .bd { padding:0 20px 20px; display:flex; flex-direction:column; }
+
+  /* 되풀이되는 조각 */
+  .name  { margin:0; font-size:14px; line-height:1.5; font-weight:600; overflow:hidden;
+           text-overflow:ellipsis; white-space:nowrap; }
+  .chip  { height:40px; border-radius:6px; border:1px solid var(--input); background:var(--card);
+           font-size:14px; font-weight:600; font-variant-numeric:tabular-nums;
+           color:var(--foreground); font-family:inherit; }
+  .btnP  { height:52px; border-radius:8px; border:0; background:var(--primary);
+           color:var(--primary-foreground); font-size:15.5px; font-weight:700;
+           display:flex; align-items:center; justify-content:center; gap:7px; font-family:inherit; }
+  .btnS  { height:48px; border-radius:12px; border:1px solid var(--input); background:var(--card);
+           font-size:14.5px; font-weight:600; color:color-mix(in srgb, var(--foreground) 80%, transparent);
+           font-family:inherit; }
+  .btnP svg { width:20px; height:20px; }
+  .tab   { font-variant-numeric:tabular-nums; }
+  .mut   { color:var(--muted-foreground); }
+</style>
+
+<div class="page">
+
+  <!-- ───────────────── A. 지금 ───────────────── -->
+  <div class="col">
+    <p class="cap"><b>A · 지금</b></p>
+    <p class="sub">제목·라벨·입력칸이 같은 말을 세 번 한다. 회색 상자 98px 안에 네 덩어리.</p>
+    <div class="sheet" id="A">
+      <div class="hd">
+        <p class="ttl">얼마 쓰셨어요?</p>
+        <span class="x"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></span>
+      </div>
+      <div class="bd" style="gap:14px">
+        <div style="display:flex;flex-direction:column;gap:10px;border-radius:8px;
+                    background:color-mix(in srgb, var(--secondary) 60%, transparent);padding:13px 15px">
+          <p class="name">카페 아메리카노 T 2잔 + 딸기 생크림 케이크</p>
+          <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px">
+            <div style="display:flex;flex-direction:column;gap:2px">
+              <span style="font-size:12px;line-height:1.2;font-weight:600" class="mut">지금 남은 금액</span>
+              <span class="tab" style="font-size:25px;line-height:1;font-weight:700;letter-spacing:-.025em">380,000원</span>
+            </div>
+            <div class="mut tab" style="text-align:right;font-size:12px;line-height:1.375;font-weight:500">
+              50만원권<br>120,000원 씀
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <label style="font-size:14px;line-height:1.5;font-weight:600;
+                        color:color-mix(in srgb, var(--foreground) 80%, transparent)">이번에 쓴 금액</label>
+          <div style="display:flex;height:56px;align-items:center;gap:10px;border-radius:8px;
+                      border:1.5px solid var(--primary);background:var(--card);padding:0 15px">
+            <span class="tab mut" style="flex:1;font-size:20px;font-weight:400">380,000</span>
+            <span class="mut" style="font-size:16px;font-weight:600">원</span>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="chip" style="flex:1">+1만</button>
+            <button class="chip" style="flex:1">+5천</button>
+            <button class="chip" style="flex:1">+1천</button>
+            <button class="chip mut" style="width:56px;flex:0 0 auto">지우기</button>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <button class="btnP"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/></svg>이만큼 썼어요</button>
+          <button class="btnS">남은 380,000원 전부 썼어요</button>
+        </div>
+      </div>
+    </div>
+    <p class="num" id="nA"></p>
+  </div>
+
+  <!-- ───────────────── B. 덜어낸 것 ───────────────── -->
+  <div class="col">
+    <p class="cap"><b>B · 덜어낸 것</b></p>
+    <p class="sub">라벨과 우측 두 줄을 뺀다. 상자와 버튼 둘은 그대로 — 지금 짜임을 지키면서 겹치는 말만 걷어낸 것.</p>
+    <div class="sheet" id="B">
+      <div class="hd">
+        <p class="ttl">얼마 쓰셨어요?</p>
+        <span class="x"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></span>
+      </div>
+      <div class="bd" style="gap:14px">
+        <div style="display:flex;flex-direction:column;gap:10px;border-radius:8px;
+                    background:color-mix(in srgb, var(--secondary) 60%, transparent);padding:13px 15px">
+          <p class="name">카페 아메리카노 T 2잔 + 딸기 생크림 케이크</p>
+          <div style="display:flex;flex-direction:column;gap:2px">
+            <span style="font-size:12px;line-height:1.2;font-weight:600" class="mut">지금 남은 금액</span>
+            <span class="tab" style="font-size:25px;line-height:1;font-weight:700;letter-spacing:-.025em">380,000원</span>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;height:56px;align-items:center;gap:10px;border-radius:8px;
+                      border:1.5px solid var(--primary);background:var(--card);padding:0 15px">
+            <span class="tab mut" style="flex:1;font-size:20px;font-weight:400">380,000</span>
+            <span class="mut" style="font-size:16px;font-weight:600">원</span>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="chip" style="flex:1">+1만</button>
+            <button class="chip" style="flex:1">+5천</button>
+            <button class="chip" style="flex:1">+1천</button>
+            <button class="chip mut" style="width:56px;flex:0 0 auto">지우기</button>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <button class="btnP"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/></svg>이만큼 썼어요</button>
+          <button class="btnS">남은 380,000원 전부 썼어요</button>
+        </div>
+      </div>
+    </div>
+    <p class="num" id="nB"></p>
+  </div>
+
+  <!-- ───────────────── C. 토스식 ───────────────── -->
+  <div class="col">
+    <p class="cap"><b>C · 토스식</b></p>
+    <p class="sub">상자를 걷고 밑줄만. '전액'이 값만 넣으므로 되돌릴 수 없는 버튼이 하나로 준다.</p>
+    <div class="sheet" id="C">
+      <div class="hd">
+        <p class="ttl">얼마 쓰셨어요?</p>
+        <span class="x"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></span>
+      </div>
+      <div class="bd" style="gap:16px">
+        <p class="name mut" style="font-weight:500;margin-top:-4px">카페 아메리카노 T 2잔 + 딸기 생크림 케이크</p>
+
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div style="display:flex;align-items:baseline;gap:8px;padding-bottom:9px;
+                      border-bottom:2px solid var(--primary)">
+            <span class="tab mut" style="flex:1;font-size:28px;line-height:1.2;font-weight:400;
+                  letter-spacing:-.025em">380,000</span>
+            <span class="mut" style="font-size:17px;font-weight:600">원</span>
+          </div>
+          <span class="mut tab" style="font-size:12px;line-height:1.6;font-weight:500">
+            남은 380,000원 · 50만원권에서 120,000원 썼어요
+          </span>
+        </div>
+
+        <div style="display:flex;gap:8px">
+          <button class="chip" style="flex:1.25">전액</button>
+          <button class="chip" style="flex:1">+1만</button>
+          <button class="chip" style="flex:1">+5천</button>
+          <button class="chip" style="flex:1">+1천</button>
+        </div>
+
+        <button class="btnP"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/></svg>이만큼 썼어요</button>
+      </div>
+    </div>
+    <p class="num" id="nC"></p>
+  </div>
+</div>
+
+<script>
+  function measure() {
+    ['A','B','C'].forEach((k) => {
+      const el = document.getElementById(k);
+      const h = Math.round(el.getBoundingClientRect().height);
+      const n = el.querySelectorAll('button').length + 1; // 닫기
+      document.getElementById('n' + k).textContent = `시트 ${h}px · 누를 것 ${n}개`;
+    });
+  }
+  new ResizeObserver(measure).observe(document.body);
+  document.fonts.ready.then(() => requestAnimationFrame(measure));
+  setTimeout(measure, 500); setTimeout(measure, 1400);
+</script>
