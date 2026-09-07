@@ -80,14 +80,16 @@ function SheetContent({ className, children, side = 'bottom', showClose = true, 
           // X 만 남기고 뒤의 회색 동그라미를 걷었다. 시트에서 유일하게 채워진 덩어리라
           // 제목보다 먼저 눈에 들어왔는데, 닫기는 먼저 볼 것이 아니다.
           //
-          // 크기는 제목과 같은 20. 자리는 제목의 가운데선에 맞춘다 — 헤더 위 여백 20 에
-          // 제목 줄 상자 24 의 절반을 더하면 32 이고, 누를 자리 44 의 절반이 22 이므로
-          // 위에서 10 이다. 앞서는 16 에 앉아 있어서 제목보다 4px 아래로 처져 있었다.
+          // 크기는 제목 줄 상자와 같은 24 다. 글자 크기(20)가 아니라 줄 상자에 맞춘다 —
+          // 옆에 나란히 서는 것은 글자가 아니라 그 줄이라서, 20 으로 두면 여전히 작아 보인다.
           //
-          // 오른쪽 8 은 X 의 오른쪽 끝을 본문 여백 20 에 맞추기 위한 값이다(8 + (44-20)/2).
-          // 보이는 것은 20px 글자 하나지만 누를 자리는 44 를 지킨다.
-          <SheetPrimitive.Close className="absolute top-2.5 right-2 flex size-11 items-center justify-center text-muted-foreground focus:outline-hidden">
-            <XIcon className="size-5" />
+          // 자리는 제목의 가운데선에 맞춘다. 헤더 위 여백 20 에 줄 상자 24 의 절반을 더하면
+          // 32 이고, 누를 자리 44 의 절반이 22 이므로 위에서 10 이다.
+          //
+          // 오른쪽 10 은 X 의 오른쪽 끝을 본문 여백 20 에 맞추기 위한 값이다(10 + (44-24)/2).
+          // 보이는 것은 24 짜리 하나지만 누를 자리는 44 를 지킨다.
+          <SheetPrimitive.Close className="absolute top-2.5 right-2.5 flex size-11 items-center justify-center text-muted-foreground focus:outline-hidden">
+            <XIcon className="size-6" />
             <span className="sr-only">닫기</span>
           </SheetPrimitive.Close>
         )}
