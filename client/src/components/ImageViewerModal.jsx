@@ -36,7 +36,7 @@ export default function ImageViewerModal({ gifticon, onClose }) {
           </div>
         </SheetHeader>
 
-        <div className="flex flex-col gap-[11px] px-5">
+        <div className="flex flex-col gap-3 px-5">
           {images.length === 0 ? (
             <p className="m-0 text-[13px] text-muted-foreground">등록된 이미지가 없어요.</p>
           ) : (

@@ -454,7 +454,7 @@ export default function NearbyBanner({ gifticons, onPick }) {
   if (blocked && hasUsable) {
     const canOpen = canOpenAppSettings();
     return (
-      <div className="flex w-full items-center gap-[11px] bg-accent py-[13px] pr-3 pl-3.5">
+      <div className="flex w-full items-center gap-3 bg-accent py-[13px] pr-3 pl-3.5">
         <span className="flex size-8 shrink-0 items-center justify-center rounded-[10px] bg-primary/12">
           <MapPin className="size-[17px] text-primary" strokeWidth={2.1} />
         </span>
@@ -498,7 +498,7 @@ export default function NearbyBanner({ gifticons, onPick }) {
       // 한 번 거절되면 되돌리기 어려워서 무엇을 허락하는지가 흐려지면 안 된다.
       // 아이콘 원도 그대로 둔다 — 두 줄이라 원이 높이를 정하지 않는다.
       // 대신 위아래 여백을 10 → 13px로 넓혔다. 두 줄 문장이 꽉 차서 아래 필터와 붙어 보였다.
-      <div className="flex w-full items-center gap-[11px] bg-accent py-[13px] pr-3 pl-3.5">
+      <div className="flex w-full items-center gap-3 bg-accent py-[13px] pr-3 pl-3.5">
         <span className="flex size-8 shrink-0 items-center justify-center rounded-[10px] bg-primary/12">
           <MapPin className="size-[17px] text-primary" strokeWidth={2.1} />
         </span>

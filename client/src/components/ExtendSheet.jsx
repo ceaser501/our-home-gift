@@ -170,7 +170,7 @@ export default function ExtendSheet({ gifticon, onExtend, onClose }) {
                 href={GIFT_BOX_URL}
                 target="_blank"
                 rel="noreferrer"
-                className="flex items-center gap-[11px] rounded-[13px] border border-input bg-card px-3.5 py-[11px] text-foreground no-underline"
+                className="flex items-center gap-3 rounded-[13px] border border-input bg-card px-3.5 py-[11px] text-foreground no-underline"
               >
                 <ExternalLink className="size-[18px] shrink-0 text-foreground/70" />
                 <span className="flex min-w-0 flex-1 flex-col gap-0.5">
@@ -204,7 +204,7 @@ export default function ExtendSheet({ gifticon, onExtend, onClose }) {
                 href={GIFT_BOX_URL}
                 target="_blank"
                 rel="noreferrer"
-                className="flex items-center gap-[11px] rounded-[14px] border border-border px-3.5 py-3 text-foreground no-underline"
+                className="flex items-center gap-3 rounded-[14px] border border-border px-3.5 py-3 text-foreground no-underline"
               >
                 <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                   <span className="text-[14.5px] font-bold break-keep">
@@ -253,7 +253,7 @@ export default function ExtendSheet({ gifticon, onExtend, onClose }) {
               {/* 어느 기프티콘인지가 이 화면에 없었다. 목록에 카드가 많으면 저장을 누르기
                   직전에 무엇을 바꾸는지 확인할 데가 없다. 기한은 아래 카드가 말하므로
                   여기서는 썸네일과 이름만 적는다. */}
-              <div className="flex items-center gap-[11px] rounded-[13px] bg-secondary/60 px-3 py-2.5">
+              <div className="flex items-center gap-3 rounded-[13px] bg-secondary/60 px-3 py-2.5">
                 <span className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-accent">
                   {thumbUrl ? (
                     <img src={thumbUrl} alt="" className="h-full w-full object-cover" />

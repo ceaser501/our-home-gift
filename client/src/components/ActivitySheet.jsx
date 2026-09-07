@@ -122,7 +122,7 @@ function PinnedNotice({ notice }) {
 // 이 줄만 items-start다 — 본문이 두 줄이 될 수 있다.
 function NoticeRow({ notice }) {
   return (
-    <div className="flex items-start gap-[11px] border-b border-border/50 py-3 last:border-b-0">
+    <div className="flex items-start gap-3 border-b border-border/50 py-3 last:border-b-0">
       <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent">
         <Megaphone className="size-[18px] text-primary" strokeWidth={2.2} />
       </span>
@@ -152,7 +152,7 @@ function ActivityRow({ activity, isNew }) {
   const Icon = kind.icon;
 
   return (
-    <div className="flex items-center gap-[11px] border-b border-border/50 py-3 last:border-b-0">
+    <div className="flex items-center gap-3 border-b border-border/50 py-3 last:border-b-0">
       <span className={cn('flex size-9 shrink-0 items-center justify-center rounded-full', kind.bg)}>
         <Icon className={cn('size-[18px]', kind.fg)} strokeWidth={2.2} />
       </span>

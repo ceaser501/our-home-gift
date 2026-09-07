@@ -288,7 +288,7 @@ export default function ProfileMenu({ onClose }) {
             <p className="m-0 pb-1 text-[13px] font-bold text-muted-foreground">
               조심해서 눌러주세요
             </p>
-            <div className="flex flex-col gap-[11px] rounded-[14px] border border-destructive/20 bg-destructive/5 p-4">
+            <div className="flex flex-col gap-3 rounded-[14px] border border-destructive/20 bg-destructive/5 p-4">
               <div className="flex items-center gap-3">
                 <div className="min-w-0 flex-1">
                   <p className="m-0 text-[15px] font-semibold text-foreground">가족 나가기</p>

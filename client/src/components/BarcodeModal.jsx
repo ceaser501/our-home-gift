@@ -171,7 +171,7 @@ export default function BarcodeModal({ gifticon, onClose, onUsed, onSpend }) {
         </SheetHeader>
 
         {view === 'code' && (
-        <div className="flex flex-col gap-[11px] px-5">
+        <div className="flex flex-col gap-3 px-5">
           {/* 등록할 때 적어둔 메모. "엄마, 아래 바코드를 매장에서 보여주세요" 같은 안내를
               바코드 바로 위에서 읽을 수 있게 한다. 그냥 글만 있으면 이게 안내문인지
               앱이 하는 말인지 헷갈려서, 누가 남긴 메모인지 이름표를 함께 보여준다.
@@ -327,7 +327,7 @@ export default function BarcodeModal({ gifticon, onClose, onUsed, onSpend }) {
         )}
 
         {view === 'photo' && (
-          <div className="flex flex-col gap-[11px] px-5">
+          <div className="flex flex-col gap-3 px-5">
             <PhotoDeck
               photos={photos}
               index={photoIndex}

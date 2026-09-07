@@ -759,7 +759,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="flex w-full flex-col items-center gap-[11px] rounded-[15px] border-[1.5px] border-dashed border-primary/60 bg-primary/4 px-3.5 py-4"
+              className="flex w-full flex-col items-center gap-3 rounded-[15px] border-[1.5px] border-dashed border-primary/60 bg-primary/4 px-3.5 py-4"
             >
               <span className="flex size-[52px] items-center justify-center rounded-[15px] bg-primary">
                 <Plus className="size-[26px] text-primary-foreground" strokeWidth={2.1} />

@@ -232,7 +232,7 @@ export default function UsageReportSheet({ onClose }) {
                   return (
                     <li
                       key={row.id}
-                      className="flex items-center gap-[11px] border-b border-border/40 px-0.5 py-[11px] last:border-b-0"
+                      className="flex items-center gap-3 border-b border-border/40 px-0.5 py-[11px] last:border-b-0"
                     >
                       <span className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-accent">
                         {row.thumb_url && <img src={row.thumb_url} alt="" className="size-full object-cover" />}

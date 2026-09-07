@@ -1832,7 +1832,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
          들어 있어 이미 위 카드들과 갈라지므로 흐릴 이유가 없고, 못 쓰는 것이라는 표시는
          썸네일에만 얹는다. 카드 테두리도 걷고 구분선으로 — 상자가 이미 테두리다. */
       <li key={candidate.id} className="list-none border-t border-border/40 first:border-t-0">
-        <div className="flex items-center gap-[11px] py-2.5">
+        <div className="flex items-center gap-3 py-2.5">
           <span className="relative size-9 shrink-0 overflow-hidden rounded-[9px] bg-secondary">
             <img
               src={`data:image/jpeg;base64,${candidate.images[0]}`}
@@ -1937,7 +1937,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
               하는 자리인데, 한때 '사진첩에서 찾기'가 닫기 버튼 옆 라벨처럼 앉아
               있었다. */}
           {stage === 'registered' && result ? (
-            <div className="flex items-center gap-[11px]">
+            <div className="flex items-center gap-3">
               {/* 아무것도 못 넣었을 때는 초록 동그라미가 거짓말이 된다. */}
               {registered.length > 0 ? (
                 <span className="flex size-[38px] shrink-0 items-center justify-center rounded-full bg-success/12">
@@ -2134,7 +2134,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                     {(showAllDone ? registered : registered.slice(0, DONE_PREVIEW)).map((candidate) => (
                       <div
                         key={candidate.id}
-                        className="flex items-center gap-[11px] border-b border-border/50 py-2.5 last:border-b-0"
+                        className="flex items-center gap-3 border-b border-border/50 py-2.5 last:border-b-0"
                       >
                         <img
                           src={`data:image/jpeg;base64,${candidate.images[0]}`}
@@ -2221,7 +2221,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                           onClick={() => setFailOpen((open) => !open)}
                           aria-expanded={failOpen}
                           className={cn(
-                            'flex w-full items-center gap-[11px] px-3.5 py-3',
+                            'flex w-full items-center gap-3 px-3.5 py-3',
                             result.noExpiry > 0 && 'border-b border-border/60'
                           )}
                         >
@@ -2298,7 +2298,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                           type="button"
                           onClick={() => setNoExpiryOpen((open) => !open)}
                           aria-expanded={noExpiryOpen}
-                          className="flex w-full items-center gap-[11px] px-3.5 py-3"
+                          className="flex w-full items-center gap-3 px-3.5 py-3"
                         >
                           <span className="flex size-[30px] shrink-0 items-center justify-center rounded-full bg-[#f4f0e6]">
                             <CalendarClock className="size-4 text-[#a8842c]" strokeWidth={2.2} />

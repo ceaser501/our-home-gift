@@ -338,7 +338,7 @@ export default function StoreDetailSheet({ store, origin, onClose }) {
               글자가 지도·버튼과 같은 축에 선다. */}
           <div className="flex flex-col">
             {store.distance != null && (
-              <div className="flex items-center gap-[11px] border-b border-border/40 px-0.5 py-3 text-sm">
+              <div className="flex items-center gap-3 border-b border-border/40 px-0.5 py-3 text-sm">
                 <Navigation className="size-4 shrink-0 text-primary" />
                 <span className="min-w-0 flex-1 text-foreground">
                   {/* 숫자와 단위가 갈리면 안 된다. 옆의 차·도보 칩이 자리를 먹으면
@@ -372,13 +372,13 @@ export default function StoreDetailSheet({ store, origin, onClose }) {
               </div>
             )}
             {store.address && (
-              <p className="m-0 flex items-center gap-[11px] border-b border-border/40 px-0.5 py-3 text-sm">
+              <p className="m-0 flex items-center gap-3 border-b border-border/40 px-0.5 py-3 text-sm">
                 <MapPin className="size-[17px] shrink-0 text-muted-foreground/70" strokeWidth={2} />
                 <span className="min-w-0 font-medium break-keep text-foreground">{store.address}</span>
               </p>
             )}
             {store.phone && (
-              <a href={phoneHref} className="m-0 flex items-center gap-[11px] border-b border-border/40 px-0.5 py-3 text-sm no-underline">
+              <a href={phoneHref} className="m-0 flex items-center gap-3 border-b border-border/40 px-0.5 py-3 text-sm no-underline">
                 <Phone className="size-[17px] shrink-0 text-muted-foreground/70" strokeWidth={2} />
                 <span className="font-medium text-foreground">{store.phone}</span>
               </a>
@@ -386,7 +386,7 @@ export default function StoreDetailSheet({ store, origin, onClose }) {
             {/* 사용가능여부를 영업시간보다 위에 둔다. 헛걸음을 막는 말이 먼저 읽혀야 한다 —
                 같은 브랜드라도 가맹점마다 받는 기프티콘이 다르다.
                 굵게 하지 않는다. 주소·전화와 같은 무게로 두어야 안내가 경고처럼 안 읽힌다. */}
-            <div className="flex gap-[11px] border-b border-border/40 px-0.5 py-3">
+            <div className="flex gap-3 border-b border-border/40 px-0.5 py-3">
               {/* 회색을 채운 동그라미였다. 위아래 줄(주소·전화·영업시간)은 다 선으로 그린
                   아이콘이라 이 줄만 무겁고, 채운 회색이 도리어 흐리게 읽혔다. */}
               <Info className="mt-px size-[17px] shrink-0 text-muted-foreground/70" strokeWidth={2} />
@@ -395,7 +395,7 @@ export default function StoreDetailSheet({ store, origin, onClose }) {
               </p>
             </div>
             {/* 영업시간은 카카오가 API로 주지 않아서 앱 안에서는 보여줄 수 없다. 어디서 볼 수 있는지만 안내한다. */}
-            <div className="flex items-center gap-[11px] px-0.5 py-3">
+            <div className="flex items-center gap-3 px-0.5 py-3">
               <Clock className="size-[17px] shrink-0 text-muted-foreground/70" strokeWidth={2} />
               <p className="m-0 flex-1 text-[13.5px] font-medium break-keep text-muted-foreground">
                 영업시간·리뷰는 카카오맵에서 볼 수 있어요

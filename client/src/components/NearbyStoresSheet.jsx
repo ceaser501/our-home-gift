@@ -246,7 +246,7 @@ export default function NearbyStoresSheet({ gifticon, onClose }) {
             {/* 가장 가까운 한 곳만 카드로 세운다. 거리를 전부 포인트색으로 칠하면 다 같은
                 무게라 "제일 가까운 데가 어디냐"를 눈이 아니라 순서로 세어야 한다. */}
             <div className="px-5 pb-3">
-              <div className="flex flex-col gap-[11px] rounded-[15px] border-[1.5px] border-primary bg-primary/4 px-3.5 py-[13px]">
+              <div className="flex flex-col gap-3 rounded-[15px] border-[1.5px] border-primary bg-primary/4 px-3.5 py-[13px]">
                 <button
                   type="button"
                   onClick={() => setDetail(first)}

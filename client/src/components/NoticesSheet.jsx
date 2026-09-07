@@ -35,7 +35,7 @@ export default function NoticesSheet({ onClose }) {
           <SheetTitle>공지사항</SheetTitle>
         </SheetHeader>
 
-        <div className="flex flex-col gap-[11px] px-5">
+        <div className="flex flex-col gap-3 px-5">
           {notices === null && <p className="py-8 text-center text-sm text-muted-foreground">불러오는 중…</p>}
 
           {notices?.length === 0 && <p className="py-8 text-center text-sm text-muted-foreground">아직 공지가 없어요.</p>}
