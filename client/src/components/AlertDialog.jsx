@@ -109,7 +109,7 @@ export default function AlertDialog({
             세로로 쌓는 경우(되돌릴 수 없는 선택)는 폭이 꽉 차므로 ACTION_ROW 를 쓰지 않고
             같은 버튼 치수만 가져온다. */}
         <div className={cn('mt-[18px] gap-2', stacked ? 'flex flex-col' : ACTION_ROW)}>
-          <Button
+          <Button size="xl"
             type="button"
             variant={tone === 'danger' ? 'destructive' : 'default'}
             onClick={asking ? onConfirm : onClose}
@@ -118,7 +118,7 @@ export default function AlertDialog({
             {confirmLabel}
           </Button>
           {asking && (
-            <Button
+            <Button size="xl"
               type="button"
               variant="outline"
               onClick={onClose}

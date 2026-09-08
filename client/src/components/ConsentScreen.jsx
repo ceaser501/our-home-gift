@@ -171,7 +171,7 @@ export default function ConsentScreen({ userId, onDone }) {
           단추 사이만 유독 벌어져서, 두 번째가 딴 무리로 보인다. */}
       <div className="flex flex-col gap-2">
         <Button
-          size="lg"
+          size="xl"
           className={PRIMARY_BUTTON}
           disabled={!allAgreed || saving}
           onClick={handleSubmit}

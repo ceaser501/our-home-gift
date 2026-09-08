@@ -183,7 +183,7 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
               기다리라는 건지 다시 신청하라는 건지 알 수 없었다.
               '확인했어요'는 실제로 로그아웃인데 그렇게 읽히지 않아서 이름을 고쳤다. */}
           <Button
-            size="lg"
+            size="xl"
             className={PRIMARY_BUTTON}
             onClick={() => signOut()}
           >
@@ -237,7 +237,7 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
         </div>
         <Button
           variant="outline"
-          size="lg"
+          size="xl"
           className={PRIMARY_BUTTON}
           onClick={onDone}
         >
@@ -358,7 +358,7 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
           {error && <p className="text-sm text-destructive">{error}</p>}
           <Button
             type="submit"
-            size="lg"
+            size="xl"
             className={PRIMARY_BUTTON}
             disabled={submitting}
           >
@@ -405,7 +405,7 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
           {error && <p className="text-sm text-destructive">{error}</p>}
           <Button
             type="submit"
-            size="lg"
+            size="xl"
             className={PRIMARY_BUTTON}
             disabled={submitting}
           >

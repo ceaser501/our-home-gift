@@ -261,7 +261,7 @@ export default function SpendSheet({ gifticon, onSpend, onClose }) {
               지갑 아이콘은 뺐다 — 글자가 이미 무슨 버튼인지 다 말하고 있다. */}
           <Button
             type="button"
-            size="lg"
+            size="xl"
             onClick={() => submit(spent)}
             disabled={saving || !spent || tooMuch}
             className={cn(PRIMARY_BUTTON, "mt-2")}

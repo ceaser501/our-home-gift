@@ -115,10 +115,10 @@ export default function RenameSheet({ title, label, hint, helper, initialValue =
               취소에도 테두리를 둔다 — 이 앱에는 글자만 있는 버튼이 없고, 둘은 채움 여부로
               갈린다(저장은 보라 채움, 취소는 테두리). */}
           <div className={cn(ACTION_ROW, 'pt-0.5')}>
-            <Button type="submit" disabled={!trimmed || saving} className={ACTION_PRIMARY}>
+            <Button size="xl" type="submit" disabled={!trimmed || saving} className={ACTION_PRIMARY}>
               {saving ? '바꾸는 중…' : '저장'}
             </Button>
-            <Button type="button" variant="outline" onClick={onClose} className={ACTION_CANCEL}>
+            <Button size="xl" type="button" variant="outline" onClick={onClose} className={ACTION_CANCEL}>
               취소
             </Button>
           </div>

@@ -177,7 +177,7 @@ export default function ExtendSheet({ gifticon, onExtend, onClose }) {
               </div>
               <Button
                 type="button"
-                size="lg"
+                size="xl"
                 className={cn(PRIMARY_BUTTON, "mt-6")}
                 onClick={onClose}
               >
@@ -214,7 +214,7 @@ export default function ExtendSheet({ gifticon, onExtend, onClose }) {
                   일을 한다. 같은 문이 셋 있을 일은 아니다. */}
               <Button
                 type="button"
-                size="lg"
+                size="xl"
                 className={cn(PRIMARY_BUTTON, "mt-6")}
                 onClick={() => setStep(2)}
               >
@@ -279,7 +279,7 @@ export default function ExtendSheet({ gifticon, onExtend, onClose }) {
                   읽힌다. 금액 입력 시트와 같은 값이다. */}
               <Button
                 type="button"
-                size="lg"
+                size="xl"
                 className={cn(PRIMARY_BUTTON, "mt-6")}
                 onClick={apply}
                 disabled={saving || !next}

@@ -290,13 +290,13 @@ export default function BarcodeModal({ gifticon, onClose, onUsed, onSpend }) {
               썼는지 묻는 창을 연다. 카드 아래 버튼과 같은 동작·같은 이름이다. */}
           <div className="flex flex-col gap-2">
             {isVoucher && onSpend ? (
-              <Button type="button" size="lg" onClick={onSpend} className={PRIMARY_BUTTON}>
+              <Button type="button" size="xl" onClick={onSpend} className={PRIMARY_BUTTON}>
                 <Wallet className="size-5" />
                 잔액입력
               </Button>
             ) : (
               onUsed && (
-                <Button type="button" size="lg" onClick={onUsed} className={PRIMARY_BUTTON}>
+                <Button type="button" size="xl" onClick={onUsed} className={PRIMARY_BUTTON}>
                   <CheckCircle2 className="size-5" />
                   사용완료
                 </Button>

@@ -1103,7 +1103,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
           </div>
 
           <div className="flex flex-col gap-2 pt-1">
-            <Button
+            <Button size="xl"
               type="submit"
               className={PRIMARY_BUTTON}
               disabled={submitting || analyzing}

@@ -61,7 +61,7 @@ export default function FirstRunScreen({ notice, onOpenNotices, onUpload, onScan
         </div>
 
         <div className="flex w-full flex-col gap-2.5">
-          <Button size="lg" className={PRIMARY_BUTTON} onClick={onUpload}>
+          <Button size="xl" className={PRIMARY_BUTTON} onClick={onUpload}>
             <Plus className="size-5" />
             기프티콘 올리기
           </Button>
