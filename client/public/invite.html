@@ -31,8 +31,16 @@
       아직 스토어에 올라가 있지 않다. 지금 스토어로 보내면 '찾을 수 없는 페이지'가 뜬다.
       그래서 지금은 웹 화면으로 보낸다 — 웹에서도 참여는 그대로 된다.
 
-      출시하면 아래 STORE_URL 한 줄만 채우면 된다. 그때부터 앱이 없는 사람은 스토어로
-      가고, 웹으로 가는 길은 아래 '웹으로 계속하기'로 남는다.
+      출시하면 아래 STORE_URL 한 줄만 채우면 된다.
+
+      ── 아이폰은 지금 사실상 전부 웹이다 ─────────────────────────────────────
+      아이폰 앱은 스토어에 없어서 만든 사람 테스트 기기 말고는 깔 수가 없다. 그런데
+      '앱으로 열기'를 주 버튼으로 세우면, 대부분에게 눌러도 아무 일 안 일어나는 버튼이
+      제일 크게 서 있게 된다. 앱이 없는 아이폰에서는 스킴을 열어도 조용히 끝난다 —
+      오류도 안 뜨고 아무 데도 안 간다. 그게 화면에서 제일 나쁜 자리다.
+
+      그래서 아이폰은 웹을 주 버튼으로 둔다. 앱으로 여는 길은 아래 조용한 줄로 남긴다 —
+      테스트 기기에서는 그게 필요하고, 스토어에 올라가면 둘을 맞바꾸면 된다.
     -->
     <style>
       :root { color-scheme: only light; }
@@ -119,6 +127,7 @@
         var codeBox = document.getElementById('code');
         var open = document.getElementById('open');
         var web = document.getElementById('web');
+        var buttons = open.parentNode;
 
         // 코드가 없으면 갈 곳이 없다. 웹 첫 화면으로 보낸다.
         if (!code) {
@@ -164,12 +173,18 @@
           open.addEventListener('click', toApp);
           toApp();
         } else {
-          // 아이폰은 눌러야 연다. 앱이 없으면 아무 일도 안 일어나므로, 그때 쓸 길을
-          // 아래 '웹으로 계속하기'로 함께 세워둔다.
+          // 아이폰. 웹이 주 버튼이고 앱은 조용한 줄이다(위 주석 참고).
           title.textContent = family ? family + ' 가족의 초대' : '가족 초대를 받았어요';
           note.textContent = '이름만 적으면 참여 신청이 끝나요.';
+
+          web.textContent = '모아콘 시작하기';
+          web.className = '';
+          open.textContent = '앱으로 열기';
+          open.className = 'quiet';
           open.hidden = false;
           open.addEventListener('click', toApp);
+          // 웹이 위, 앱이 아래로 오게 자리를 바꾼다.
+          buttons.insertBefore(web, open);
         }
       })();
     </script>
