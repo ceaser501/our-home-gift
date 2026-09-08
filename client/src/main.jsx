@@ -11,6 +11,7 @@ import { isNativeApp } from './utils/browser.js'
 import { catchInviteFromUrl } from './utils/inviteLink.js'
 import { applyUiScale, watchSystemUiScale } from './utils/uiScale.js'
 import { setLoginError } from './utils/loginError.js'
+import { dropStaleCaches } from './utils/staleCache.js'
 import { watchForegroundPush } from './utils/foregroundPush.js'
 
 // 안드로이드 웹뷰는 내비게이션 바 높이를 env(safe-area-inset-bottom)으로 알려주지 않는다.
@@ -19,6 +20,12 @@ import { watchForegroundPush } from './utils/foregroundPush.js'
 if (isNativeApp() && window.Capacitor?.getPlatform?.() === 'android') {
   document.documentElement.classList.add('is-native-android')
 }
+
+// 새 판으로 올라왔으면 계산해둔 값을 버린다.
+//
+// 맨 앞이어야 한다. 아래에서 그 값들을 읽기 시작하므로, 여기서 안 버리면 이번 실행은
+// 옛 값으로 한 바퀴 돈다. "업데이트하면 이상한데 지우고 깔면 된다"가 그 자리였다.
+dropStaleCaches(`${__APP_VERSION__} ${__BUILD_DATE__}`)
 
 // 초대 링크(?join=CODE)로 들어왔으면 그 코드를 붙들어둔다.
 //
