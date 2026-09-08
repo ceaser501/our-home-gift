@@ -1,0 +1,77 @@
+<!doctype html>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>바코드 안내 — 두 문장의 무게</title>
+<script type="module" src="/src/index.css"></script>
+<style>
+  body { margin:0; background:#3a3a44; font-family:Pretendard, system-ui, sans-serif;
+         -webkit-font-smoothing:antialiased; color:#fff; }
+  .page { display:flex; gap:20px; align-items:flex-start; justify-content:center;
+          padding:16px 14px 80px; flex-wrap:wrap; }
+  .col { width:375px; flex:0 0 auto; }
+  .cap { font-size:13px; font-weight:800; margin:0 0 3px; }
+  .sub { color:#b8b8c4; font-size:11px; line-height:1.5; margin:0 0 8px; min-height:88px; }
+
+  .sheet { background:var(--background); color:var(--foreground);
+           border-radius:16px 16px 0 0; overflow:hidden; box-shadow:0 -2px 24px rgba(0,0,0,.28); }
+  .hd  { padding:20px 60px 20px 20px; position:relative; }
+  .ttl { font-size:20px; line-height:1.2; font-weight:700; letter-spacing:-.025em; margin:0; }
+  .dsc { margin:2px 0 0; font-size:14px; line-height:1.5; font-weight:500;
+         color:var(--muted-foreground); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .x   { position:absolute; top:10px; right:10px; width:44px; height:44px; display:flex;
+         align-items:center; justify-content:center; color:var(--muted-foreground); }
+  .x svg { width:24px; height:24px; }
+  .bd  { padding:0 20px 20px; display:flex; flex-direction:column; gap:12px; }
+  .msg { margin:0; font-size:14px; line-height:1.7; font-weight:500; word-break:keep-all; }
+  .code { display:flex; flex-direction:column; align-items:center; gap:10px;
+          border-radius:14px; border:1px solid var(--border); background:#fff;
+          padding:14px 10px 12px; }
+  .bar  { width:100%; height:84px;
+          background:repeating-linear-gradient(90deg,#17171c 0 2px,transparent 2px 5px); }
+  .digits p { margin:0; font-family:ui-monospace,monospace; font-size:15px; font-weight:600;
+              font-variant-numeric:tabular-nums; color:#17171c; }
+  .btnP { height:52px; border-radius:14px; border:0; background:var(--primary);
+          color:var(--primary-foreground); font-size:16px; font-weight:700; letter-spacing:.02em;
+          display:flex; align-items:center; justify-content:center; font-family:inherit; }
+  .mut { color:var(--muted-foreground); }
+</style>
+
+<script>
+  const X = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+    stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>`;
+  const CODE = `<div class="code"><div class="bar"></div>
+      <div class="digits"><p>8801 2345 6789 0123</p></div></div>`;
+
+  const V = {
+    '가': ['지금 — 뒤엣말만 굵게 검정',
+      '앞은 회색, 뒤는 검정 굵게. 할 일이 먼저 잡히지만 한 덩어리가 두 층으로 갈려서, 앞엣말이 곁들인 말처럼 물러난다. 「왜 바코드가 없지」의 답이 그 앞엣말인데.',
+      `<p class="msg mut">이미지로 표시할 수 없어요.<br>
+        <b style="font-weight:700;color:var(--foreground)">매장에서 이 번호를 직접 입력해주세요.</b></p>`],
+
+    '나': ['둘 다 회색 — 같은 무게',
+      '두 문장이 한 덩어리로 읽힌다. 무슨 일이 있었는지와 무엇을 하면 되는지, 둘 다 읽어야 하는 말이라 무게를 가를 까닭이 없다. 다만 회색이라 목소리가 작다.',
+      `<p class="msg mut">이미지로 표시할 수 없어요.<br>매장에서 이 번호를 직접 입력해주세요.</p>`],
+
+    '다': ['둘 다 검정 — 같은 무게, 진하게',
+      '같은 무게이되 색을 올린다. 계산대 앞에서 읽어야 하는 말이라 회색보다 낫고, 굵게까지 가지 않아 시트가 안 시끄럽다.',
+      `<p class="msg" style="color:var(--foreground)">이미지로 표시할 수 없어요.<br>매장에서 이 번호를 직접 입력해주세요.</p>`],
+  };
+
+  addEventListener('DOMContentLoaded', () => {
+    const page = document.querySelector('.page');
+    Object.entries(V).forEach(([k, [name, note, msg]]) => {
+      const col = document.createElement('div');
+      col.className = 'col';
+      col.innerHTML = `<p class="cap">${k} · ${name}</p><p class="sub">${note}</p>`
+        + `<div class="sheet">
+             <div class="hd"><p class="ttl">스타벅스</p>
+               <p class="dsc">카페 아메리카노 T 2잔 + 딸기 생크림 케이크</p>
+               <span class="x">${X}</span></div>
+             <div class="bd">${msg}${CODE}
+               <button class="btnP">잔액입력</button></div></div>`;
+      page.appendChild(col);
+    });
+  });
+</script>
+
+<div class="page"></div>

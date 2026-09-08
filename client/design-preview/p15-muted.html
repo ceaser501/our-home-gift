@@ -1,0 +1,85 @@
+<!doctype html>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>회색 글자를 한 단 진하게</title>
+<script type="module" src="/src/index.css"></script>
+<style>
+  body { margin:0; background:#3a3a44; font-family:Pretendard, system-ui, sans-serif;
+         -webkit-font-smoothing:antialiased; color:#fff; }
+  .page { display:flex; gap:20px; align-items:flex-start; justify-content:center;
+          padding:16px 14px 80px; flex-wrap:wrap; }
+  .col { width:375px; flex:0 0 auto; }
+  .cap { font-size:13px; font-weight:800; margin:0 0 3px; }
+  .sub { color:#b8b8c4; font-size:11px; line-height:1.5; margin:0 0 8px; min-height:56px; }
+  .st  { color:#9d9daa; font-size:10px; font-weight:700; margin:8px 0 0;
+         font-variant-numeric:tabular-nums; }
+
+  .sheet { background:#fff; color:#1c1e27; border-radius:16px 16px 0 0; overflow:hidden;
+           box-shadow:0 -2px 24px rgba(0,0,0,.28); }
+  .hd  { padding:20px 60px 20px 20px; position:relative; }
+  .ttl { font-size:20px; line-height:1.2; font-weight:700; letter-spacing:-.025em; margin:0; }
+  .x   { position:absolute; top:10px; right:10px; width:44px; height:44px; display:flex;
+         align-items:center; justify-content:center; color:var(--m); }
+  .x svg { width:24px; height:24px; }
+  .bd  { padding:0 20px 20px; display:flex; flex-direction:column; }
+
+  /* 회색이 붙는 자리를 다 모아 놓는다 — 부제 · 안내문 · 라벨 · 헬퍼 */
+  .dsc  { margin:2px 0 0; font-size:14px; line-height:1.5; font-weight:500; color:var(--m); }
+  .body { margin:16px 0 0; font-size:14px; line-height:1.7; font-weight:500; color:var(--m);
+          word-break:keep-all; }
+  .nm   { margin:16px 0 0; font-size:14px; font-weight:600; color:#1c1e27; }
+  .old  { margin:4px 0 0; font-size:14px; font-weight:600; color:var(--m);
+          text-decoration:line-through; font-variant-numeric:tabular-nums; }
+  .fld  { margin-top:16px; height:52px; display:flex; align-items:center; gap:8px;
+          border:1px solid #e7e7ec; border-radius:14px; background:#fbfbfd; padding:0 15px; }
+  .fld .v { flex:1; font-size:20px; font-weight:700; letter-spacing:-.025em;
+            font-variant-numeric:tabular-nums; }
+  .fld .v i { font-size:14px; font-weight:600; font-style:normal; color:var(--m); }
+  .help { margin-top:8px; display:flex; align-items:flex-start; gap:6px; padding-left:4px; }
+  .help b { margin-top:2px; width:16px; height:16px; flex:0 0 auto; border-radius:99px;
+            background:#e7e7ec; color:var(--m); font-size:12px; font-weight:700;
+            display:flex; align-items:center; justify-content:center; }
+  .help p { margin:0; flex:1; font-size:12px; line-height:1.6; color:var(--m); word-break:keep-all; }
+  .btnP { margin-top:24px; height:52px; border-radius:14px; border:0; background:#5b4fe8;
+          color:#fff; font-size:16px; font-weight:700; letter-spacing:.02em;
+          display:flex; align-items:center; justify-content:center; font-family:inherit; }
+</style>
+
+<script>
+  const X = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+    stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>`;
+
+  const V = {
+    '가': ['#71717f — 지금', 4.8, 'AA 겨우 넘김. 60대가 읽는 화면에서 최저선이다.'],
+    '나': ['#65656f', 5.76, '한 단 진하게. 아직 AAA 에는 못 미친다.'],
+    '다': ['#565663', 7.22, 'AAA(7:1)를 넘긴다. 값(검정)과의 거리는 그대로 뚜렷하다.'],
+    '라': ['#4e4e5c', 8.18, '더 진하게. 넉넉하지만 검정(#1c1e27)에 가까워져 값과 설명의 거리가 좁아진다.'],
+  };
+
+  addEventListener('DOMContentLoaded', () => {
+    const page = document.querySelector('.page');
+    Object.entries(V).forEach(([k, [name, cr, note]]) => {
+      const hex = name.split(' ')[0];
+      const col = document.createElement('div');
+      col.className = 'col';
+      col.innerHTML = `<p class="cap">${k} · ${name}</p><p class="sub">${note}</p>
+        <div class="sheet" style="--m:${hex}">
+          <div class="hd"><p class="ttl">늘어난 기한을 앱에도 반영할게요</p>
+            <span class="x">${X}</span></div>
+          <div class="bd">
+            <p class="body" style="margin-top:0">받으신 문자나 발행처 앱에서 할 수 있어요.<br>
+              보통 90일씩, 최대 5년까지 늘어나요.</p>
+            <p class="nm">카페 아메리카노 T 2잔 + 딸기 생크림 케이크</p>
+            <p class="old">2026.09.11 까지</p>
+            <div class="fld"><span class="v">2026.12.10<i> 까지</i></span></div>
+            <div class="help"><b>i</b><p>앱 안의 날짜만 바뀌어요. 실제 기한은 발행처 기준이에요.</p></div>
+            <button class="btnP">2026.12.10까지로 바꾸기</button>
+          </div>
+        </div>
+        <p class="st">흰 배경 대비 ${cr}:1 · ${cr >= 7 ? 'AAA' : 'AA'}</p>`;
+      page.appendChild(col);
+    });
+  });
+</script>
+
+<div class="page"></div>

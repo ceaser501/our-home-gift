@@ -216,7 +216,9 @@ export default function BarcodeModal({ gifticon, onClose, onUsed, onSpend }) {
               내려갔다 다시 올라와야 한다. 무슨 일이 있었는지를 먼저 말하고 번호를 보인다.
 
               계산대 앞에서 읽어야 하는 말이라 12 회색 한 줄로 둘 것이 아니다. 본문(14)으로
-              올리고 두 문장을 줄로 갈랐다. 뒤엣말만 검게 해서 할 일이 먼저 잡힌다.
+              올리고 두 문장을 줄로 갈랐다. 무게는 가르지 않는다 — 앞은 "왜 바코드가 없지"의
+              답이고 뒤는 "그럼 뭘 하지"의 답이라, 하나만 읽으면 반쪽이다. 회색이 옅어서
+              한쪽만 검게 했던 것인데, 회색 자체를 AAA 로 올리면서 그럴 까닭이 없어졌다.
 
               가운데 정렬도 걷었다. 시트의 다른 글은 다 왼쪽에서 시작하는데 이 줄만
               가운데면, 안내가 아니라 표어처럼 보인다. */}
@@ -226,9 +228,7 @@ export default function BarcodeModal({ gifticon, onClose, onUsed, onSpend }) {
                   <p className="m-0 text-body leading-relaxed font-medium break-keep text-muted-foreground">
                     이미지로 표시할 수 없어요.
                     <br />
-                    <b className="font-bold text-foreground">
-                      매장에서 이 번호를 직접 입력해주세요.
-                    </b>
+                    매장에서 이 번호를 직접 입력해주세요.
                   </p>
                 )
               : !gifticon.barcode_image_url && (

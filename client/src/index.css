@@ -78,7 +78,16 @@
   --secondary: #f1f1f5;
   --secondary-foreground: #1c1e27;
   --muted: #f7f7f9;
-  --muted-foreground: #71717f;
+  /* 4.8:1 이었다. AA(4.5)는 넘겼지만 AAA(7)에는 못 미쳤다 — AA 는 "못 읽지는 않는다"는
+     선이지 편하게 읽히는 값이 아니고, 이 앱은 60대가 쓴다.
+
+     이 회색이 붙는 자리가 대부분 읽어야 하는 글이다 — 부제, 안내문, 날짜, 라벨.
+     한 단 진하게 해도 값(foreground #1c1e27)과의 거리는 그대로 뚜렷하다. 더 진하게
+     하면(#4e4e5c · 8.18) 상품명과 취소선 날짜가 같은 무게로 보이기 시작한다.
+
+     기준을 흰색이 아니라 시트 배경(card #fbfbfd)으로 잡았다. 시트의 글은 흰 위가 아니라
+     그 위에 앉는다 — #565663 은 흰 배경에서 7.22 였는데 카드 위에서는 6.99 로 모자랐다. */
+  --muted-foreground: #545461; /* 흰 배경 7.45 · 시트(card #fbfbfd) 7.21 */
   --accent: #f0efff;
   --accent-foreground: #5b4fe8;
   --destructive: #e0453f;
@@ -157,7 +166,16 @@ html.is-native-android {
   --secondary: #f1f1f5;
   --secondary-foreground: #1c1e27;
   --muted: #f7f7f9;
-  --muted-foreground: #71717f;
+  /* 4.8:1 이었다. AA(4.5)는 넘겼지만 AAA(7)에는 못 미쳤다 — AA 는 "못 읽지는 않는다"는
+     선이지 편하게 읽히는 값이 아니고, 이 앱은 60대가 쓴다.
+
+     이 회색이 붙는 자리가 대부분 읽어야 하는 글이다 — 부제, 안내문, 날짜, 라벨.
+     한 단 진하게 해도 값(foreground #1c1e27)과의 거리는 그대로 뚜렷하다. 더 진하게
+     하면(#4e4e5c · 8.18) 상품명과 취소선 날짜가 같은 무게로 보이기 시작한다.
+
+     기준을 흰색이 아니라 시트 배경(card #fbfbfd)으로 잡았다. 시트의 글은 흰 위가 아니라
+     그 위에 앉는다 — #565663 은 흰 배경에서 7.22 였는데 카드 위에서는 6.99 로 모자랐다. */
+  --muted-foreground: #545461; /* 흰 배경 7.45 · 시트(card #fbfbfd) 7.21 */
   --accent: #f0efff;
   --accent-foreground: #5b4fe8;
   --destructive: #e0453f;
@@ -185,7 +203,8 @@ html.is-native-android {
   --secondary: #232329;
   --secondary-foreground: #f2f2f5;
   --muted: #1b1b21;
-  --muted-foreground: #9b9ba6;
+  /* 다크도 6.79 라 AAA 에 못 미쳤다. 라이트와 같은 셈으로 올린다. */
+  --muted-foreground: #a6a6b2; /* 배경 7.76 · 시트(card #1b1b21) 7.12 */
   --accent: #24223a;
   --accent-foreground: #b6afff;
   --destructive: #ef5c56;
