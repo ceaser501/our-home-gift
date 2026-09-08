@@ -17,8 +17,7 @@ const MAX_CACHE_AGE_MS = 24 * 60 * 60 * 1000;
 // 옛 기억이 계속 이긴다. 앱을 껐다 켜도 마찬가지였다.
 //
 // 1분으로 둔다. 한 번 열었을 때 배너와 매장 찾기가 각각 물어도 같은 좌표를 나눠 쓰는
-// 정도이고, 그보다 오래된 것은 새로 잡는다. enableHighAccuracy를 끄고 있어 도심에서는
-// 와이파이·기지국으로 1~2초면 잡힌다 — 500m 판단에는 넘친다.
+// 정도이고, 그보다 오래된 것은 새로 잡는다.
 const RECENT_FIX_MS = 60 * 1000;
 // 저장해둔 위치와 이만큼 넘게 떨어져 있으면 매장 목록을 다시 불러온다.
 export const SIGNIFICANT_MOVE_M = 300;
@@ -70,13 +69,34 @@ export function locate(options) {
 }
 
 // 최근에 잡아둔 위치가 있으면 그걸 그대로 받고(즉시), 없으면 시간을 넉넉히 주고 새로 잡는다.
+//
+// ── 왜 정밀 위치를 쓰는가 ───────────────────────────────────────────────────
+//
+// 한동안 enableHighAccuracy를 꺼두고 "500m 판단에는 넘친다"고 적어뒀다. 틀린 말이었다.
+// 끄면 와이파이·기지국으로 잡는데, 그 오차가 수십에서 수백 미터다 — 우리가 재려는
+// 거리(500m)와 비슷한 크기다. 자보다 눈금이 굵은 셈이다.
+//
+// 그래서 이런 일이 났다. 목록에서 '매장'을 누르면 489m·463m가 나오는데, 같은 순간
+// 목록 위 띠는 "500m 안에 없다"고 했다. 서버는 두 화면이 똑같은 코드를 쓰므로 좌표만
+// 같으면 답이 갈릴 수가 없다 — 갈린 것은 두 화면이 각각 잡은 좌표가 달라서였고,
+// 489m짜리 매장 앞에서는 그 차이 몇십 미터가 답을 뒤집는다.
+//
+// 정밀 위치는 느리다(도심에서 2~5초). 그래서 순서를 둔다 — 먼저 정밀로 물어보고,
+// 그 안에 못 잡으면 예전처럼 대충이라도 받는다. 위치를 아예 못 받는 것보다는 낫고,
+// 그때는 띠가 조금 틀릴 수 있지만 화면이 멈추지는 않는다.
+//
+// 자주 도는 일이 아니라 배터리 걱정도 크지 않다. 앱을 열 때와 매장을 누를 때뿐이고,
+// 켜둔 채로 따라다니지 않는다.
 export function getFreshPosition() {
-  return locate({ enableHighAccuracy: false, timeout: 8000, maximumAge: RECENT_FIX_MS }).catch((err) => {
-    // 권한을 거부했거나 아예 답이 없으면 다시 물어봐야 소용이 없다. 두 번째 판까지 기다리면
-    // 사용자는 30초를 빈 화면 앞에서 보낸다.
-    if (err?.code === 1 || err?.code === 'no_answer' || err?.code === 'unsupported') throw err;
-    return locate({ enableHighAccuracy: false, timeout: 20000, maximumAge: 0 });
-  });
+  // 1분 안에 잡아둔 것이 있으면 그대로 쓴다. 배너와 매장 찾기가 같은 좌표를 나눠 쓰는
+  // 자리이기도 하다 — 둘이 다른 좌표를 쓰면 화면끼리 다른 말을 한다.
+  return locate({ enableHighAccuracy: true, timeout: 8000, maximumAge: RECENT_FIX_MS })
+    .catch((err) => {
+      // 권한을 거부했거나 아예 답이 없으면 다시 물어봐야 소용이 없다.
+      if (err?.code === 1 || err?.code === 'no_answer' || err?.code === 'unsupported') throw err;
+      // 정밀로 못 잡았다. 실내·지하가 대개 여기다. 대충이라도 받는다.
+      return locate({ enableHighAccuracy: false, timeout: 12000, maximumAge: 0 });
+    });
 }
 
 // 위치 권한이 지금 어떤 상태인지 묻는다. 'granted' | 'denied' | 'prompt' | 'unknown'.
@@ -95,7 +115,8 @@ export async function checkLocationPermission() {
     try {
       const { Geolocation } = await import('@capacitor/geolocation');
       const status = await Geolocation.checkPermissions();
-      // coarse만 있어도 500m 판단에는 넘친다. 둘 중 하나라도 있으면 있는 것으로 본다.
+      // 둘 중 하나라도 있으면 있는 것으로 본다. coarse만 있으면 거리가 수백 미터씩
+      // 틀릴 수 있지만, 그렇다고 '위치를 안 줬다'고 할 수는 없다 — 준 것은 준 것이다.
       const state = status.location === 'granted' || status.coarseLocation === 'granted'
         ? 'granted'
         : status.location;
