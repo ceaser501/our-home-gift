@@ -6,7 +6,6 @@ import {
   MapPin,
   Megaphone,
   Receipt,
-  Send,
   RotateCcw,
   Scale,
   ScanSearch,
@@ -56,12 +55,21 @@ export default function ProfileMenu({ onClose }) {
   const [forgetAsking, setForgetAsking] = useState(false);
   // 목록 위 '내 주변' 띠. 여기는 앱·브라우저 둘 다 있어서 줄을 감추지 않는다.
   const [nearby, setNearby] = useState(() => isNearbyBannerOn());
-  // ⚠ 임시 — 시험용 줄이다. 아이폰·갤럭시에서 알림이 실제로 도착하는지 보려고 잠깐
-  // 되살렸다. 확인이 끝나면 이 줄과 아래 JSX를 함께 걷는다.
-  //
-  // 실제 발송(send-expiry-notifications)과 같은 길을 지나간다. 다른 점은 셋이다 —
-  // 누른 사람에게만 가고, '보냄' 표시를 안 남겨 몇 번이든 다시 눌러볼 수 있고,
-  // 앱을 배경으로 돌릴 틈을 주려고 5초 뒤에 나간다.
+  /* 알림 테스트 줄. 확인이 끝나서 접어둔다 — 걷어내지 않고 남겨두는 것은 이걸 세 번
+     되살렸기 때문이다. 알림은 폰에서만 확인되는 것이라 손볼 때마다 이 줄이 필요했다.
+
+     되살리려면 이 블록의 주석을 풀고, 아래 '사용기한 알림' 줄 밑에 이것을 놓는다:
+
+       <SettingLinkRow
+         icon={Send}
+         label={testing ? '보내는 중…' : '사용기한 알림 테스트'}
+         hint="5초 뒤에 나가요. 그동안 앱을 내려두세요"
+         onClick={testing ? () => {} : handleTestNotification}
+       />
+
+     실제 발송(send-expiry-notifications)과 같은 길을 지나간다. 다른 점은 셋이다 —
+     누른 사람에게만 가고, '보냄' 표시를 안 남겨 몇 번이든 다시 눌러볼 수 있고,
+     앱을 배경으로 돌릴 틈을 주려고 5초 뒤에 나간다.
   const [testing, setTesting] = useState(false);
 
   async function handleTestNotification() {
@@ -96,6 +104,7 @@ export default function ProfileMenu({ onClose }) {
       setTesting(false);
     }
   }
+  */
 
   async function handleLeave() {
     setLeaveAsking(false);
@@ -197,14 +206,6 @@ export default function ProfileMenu({ onClose }) {
             )}
 
             <NotificationToggle asRow />
-
-            {/* ⚠ 임시 — 확인이 끝나면 걷는다. 위 스위치가 켜져 있어야 도착한다. */}
-            <SettingLinkRow
-              icon={Send}
-              label={testing ? '보내는 중…' : '사용기한 알림 테스트'}
-              hint="5초 뒤에 나가요. 그동안 앱을 내려두세요"
-              onClick={testing ? () => {} : handleTestNotification}
-            />
 
             {/* 목록 위에 뜨는 '이 근처에 쓸 수 있는 게 있어요' 띠. 띠의 X는 그날 하루만
                 안 띄우는 것이라, 매일 닫는 사람에게는 매일 닫는 일이 남았다.
