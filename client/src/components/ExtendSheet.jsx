@@ -124,18 +124,32 @@ export default function ExtendSheet({ gifticon, onExtend, onClose }) {
                   <ChevronLeft className="size-5" />
                 </button>
               )}
-              <span
-                className={cn(
-                  "h-1 w-[22px] rounded-full",
-                  step === 1 ? "bg-primary" : "bg-primary/35",
-                )}
-              />
-              <span
-                className={cn(
-                  "h-1 w-[22px] rounded-full",
-                  step === 2 ? "bg-primary" : "bg-input",
-                )}
-              />
+              {/* 색을 갈아끼우지 않고 채운다. 회색 트랙 안에서 보라 막대가 왼쪽부터
+                  자라고, 뒤로 가면 왼쪽으로 도로 걷힌다 — 어디로 움직였는지가 보인다.
+                  한때 지나온 칸을 primary/35 로 옅게 두었는데, 그러면 색이 세 가지가
+                  되면서 어느 것이 지금인지 한 번 더 세어야 했다. 지금은 둘이다 —
+                  찼거나 비었거나.
+
+                  300ms 는 시트가 올라올 때와 같은 값이다(data-[state=open]:duration-300).
+                  움직임을 줄여달라고 해둔 사람에게는 그냥 바뀐다.
+
+                  높이도 이어 그려 봤는데 걷었다. 1/2 와 2/2 가 333 과 342 로 9px 밖에
+                  차이가 안 나서 보이지 않았다. 그걸 위해 interpolate-size 를 :root 에
+                  켜두는 것은 — 앱 전체에 걸리는 설정이다 — 값이 안 맞았다. */}
+              {[1, 2].map((n) => (
+                <span
+                  key={n}
+                  className="h-1 w-[22px] overflow-hidden rounded-full bg-input"
+                >
+                  <span
+                    className={cn(
+                      "block h-full origin-left rounded-full bg-primary",
+                      "transition-transform duration-300 ease-out motion-reduce:transition-none",
+                      step >= n ? "scale-x-100" : "scale-x-0",
+                    )}
+                  />
+                </span>
+              ))}
               <span className="ml-1 text-caption font-bold tabular-nums text-muted-foreground">
                 {step} / 2
               </span>
