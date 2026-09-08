@@ -1,6 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { useEffect, useRef, useState } from "react";
+import { cn } from "@/lib/utils";
 
 // 원본 사진을 보는 자리. 바코드 창 안(BarcodeModal의 photo 화면)과 카드에서 바로 여는
 // 창(ImageViewerModal)이 같은 모양을 쓴다. 두 곳에서 각각 손보다가 한쪽만 고쳐진 적이 있다.
@@ -16,7 +15,11 @@ import { cn } from '@/lib/utils';
 export function PhotoFrame({ src, alt }) {
   return (
     <div className="flex h-[calc(62dvh/var(--ui-scale))] items-center justify-center overflow-hidden rounded-[15px] border border-border bg-secondary/60">
-      <img src={src} alt={alt} className="max-h-full max-w-full object-contain" />
+      <img
+        src={src}
+        alt={alt}
+        className="max-h-full max-w-full object-contain"
+      />
     </div>
   );
 }
@@ -46,7 +49,8 @@ export function PhotoDeck({ photos, index, onPick, alt }) {
     const slide = el?.firstElementChild;
     if (!el || !slide) return;
     const target = index * (slide.offsetWidth + GAP);
-    if (Math.abs(el.scrollLeft - target) > 4) el.scrollTo({ left: target, behavior: 'smooth' });
+    if (Math.abs(el.scrollLeft - target) > 4)
+      el.scrollTo({ left: target, behavior: "smooth" });
   }, [index]);
 
   function handleScroll(e) {
@@ -66,13 +70,15 @@ export function PhotoDeck({ photos, index, onPick, alt }) {
       tabIndex={0}
       // overscroll-x-contain이 없으면 끝에서 한 번 더 민 것이 뒤로가기로 새어나간다.
       className="flex snap-x snap-mandatory gap-[10px] overflow-x-auto overscroll-x-contain outline-none [&::-webkit-scrollbar]:hidden"
-      style={{ scrollbarWidth: 'none' }}
+      style={{ scrollbarWidth: "none" }}
     >
       {photos.map((url, i) => (
         <div
           key={url}
           className="shrink-0 snap-start"
-          style={{ width: photos.length > 1 ? `calc(100% - ${PEEK}px)` : '100%' }}
+          style={{
+            width: photos.length > 1 ? `calc(100% - ${PEEK}px)` : "100%",
+          }}
         >
           <PhotoFrame src={url} alt={`${alt} ${i + 1}`} />
         </div>
@@ -81,40 +87,41 @@ export function PhotoDeck({ photos, index, onPick, alt }) {
   );
 }
 
-// 미는 줄 안내.
+// 몇 장 중 몇 번째. 사진 바로 아래에 점으로 찍는다.
 //
-// 12px 회색 한 줄 → 14.5px → 지금. 두 번 키웠는데도 안 보인다고 하셨다. 크기가 문제가
-// 아니었다 — 흰 시트 위 회색 글씨라 배경과 같은 무게였다.
+// 여기 있던 둘을 하나로 합쳤다 — 머리글의 「1 / 2」 뱃지와, 사진 아래의 「옆으로 밀면
+// 다음 사진」 알약이다. 둘은 사진이 두 장 이상일 때만 나오는 같은 조건이었고 옷도
+// 같았는데(회색 알약) 화면 양 끝에 떨어져 있었다. 그래서 뱃지가 갈 데 없이 제목과
+// 부제 사이 44.5 에 떠 있었다.
 //
-// 그래서 셋을 바꿨다. 바탕을 깔아 글자에서 덩어리로 만들고, 글자색을 본문색으로 올리고,
-// 화살표를 미는 방향으로 한 번씩 밀리게 했다. 움직이는 것은 안 읽어도 눈에 걸린다.
+// 글 안내를 걷은 까닭은 PhotoDeck 이 이미 그 일을 하고 있어서다. 다음 장을 오른쪽에
+// 28px 내놓는 것이 「여기서도 밀린다」를 말하고, 마지막 장에서 그것이 사라지는 것이
+// 「끝이다」를 말한다. 글로 한 번 더 할 일이 아니었다.
 //
-// 마지막 장에서는 방향을 뒤집는다 — 없는 다음 장을 가리키면 그 줄을 다시는 안 믿는다.
-export function SwipeHint({ index, total }) {
-  const last = index >= total - 1;
-  const Arrow = last ? ChevronLeft : ChevronRight;
-  const nudge = last ? 'animate-swipe-nudge-back' : 'animate-swipe-nudge';
-
+// 점으로 되돌린 까닭. 한때 점이었다가 숫자로 옮겼는데, 그 이유가 「점은 6px 이라 두
+// 개인지 세 개인지 안 세어진다」였다. 그런데 이 앱은 한 기프티콘에 최대 3장이다
+// (IMAGES_PER_CODE · SOLO_MAX_SHOTS). 셋까지는 세지 않아도 개수가 잡히고, 그러면
+// 「읽어야 한다」는 숫자의 값도 같이 사라진다. 안 읽어도 보이는 쪽이 낫다.
+//
+// 점은 장식이라 읽어주는 기계에게는 숨기고, 대신 몇 번째인지를 글로 따로 남긴다.
+export function PhotoDots({ index, total }) {
   return (
-    <div className="flex justify-center">
-      <p className="m-0 flex items-center gap-1 rounded-full bg-secondary px-3.5 py-1.5 text-[14.5px] font-bold text-foreground/80">
-        {last && <Arrow className={cn('size-[18px] text-primary', nudge)} strokeWidth={2.6} />}
-        {last ? '옆으로 밀면 이전 사진' : '옆으로 밀면 다음 사진'}
-        {!last && <Arrow className={cn('size-[18px] text-primary', nudge)} strokeWidth={2.6} />}
-      </p>
+    <div className="flex justify-center pt-3">
+      <span className="sr-only">
+        {total}장 중 {index + 1}번째
+      </span>
+      <span className="flex gap-1.5" aria-hidden="true">
+        {Array.from({ length: total }, (_, i) => (
+          <span
+            key={i}
+            className={cn(
+              "size-2 rounded-full",
+              i === index ? "bg-primary" : "bg-border",
+            )}
+          />
+        ))}
+      </span>
     </div>
-  );
-}
-
-// 몇 장 중 몇 번째. 머리글 오른쪽에 앉는다.
-//
-// 점으로 찍던 자리다. 점은 6px이라 두 개인지 세 개인지가 안 세어진다. 숫자는 세지 않아도
-// 읽힌다. 13.5px 회색이던 것을 15px 진하게 — 이 창에서 사진 다음으로 중요한 값이다.
-export function PhotoCount({ index, total }) {
-  return (
-    <span className="shrink-0 rounded-full bg-secondary px-[11px] py-[3px] text-[15px] font-bold tabular-nums text-foreground">
-      {index + 1} / {total}
-    </span>
   );
 }
 
@@ -141,7 +148,11 @@ export function PhotoStrip({ files }) {
           key={url}
           className="flex h-[104px] w-[78px] items-center justify-center overflow-hidden rounded-[11px] border border-border bg-secondary/60"
         >
-          <img src={url} alt="" className="max-h-full max-w-full object-contain" />
+          <img
+            src={url}
+            alt=""
+            className="max-h-full max-w-full object-contain"
+          />
         </span>
       ))}
     </div>
