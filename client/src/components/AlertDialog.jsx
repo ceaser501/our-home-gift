@@ -66,24 +66,27 @@ export default function AlertDialog({
 
       {/* 테두리를 걷고 그림자를 키웠다. 어두운 판 위에 뜬 카드라 테두리가 할 일이 없고,
           그림자가 카드를 판에서 들어올린다. */}
-      <div className="animate-splash-in relative w-full max-w-[322px] rounded-xl bg-card px-5 pt-[22px] pb-[18px] shadow-xl">
-        <div className="flex flex-col items-center gap-[9px] text-center">
+      {/* 여백이 22/20/18 이었다. 위아래를 다르게 둘 까닭이 여기엔 없다 —
+          시트가 사방 20 이므로 이 창도 20 으로 맞춘다. */}
+      <div className="animate-splash-in relative w-full max-w-[322px] rounded-xl bg-card p-5 shadow-xl">
+        <div className="flex flex-col items-center gap-2.5 text-center">
           <span className={cn('flex size-12 items-center justify-center rounded-full', className)}>
             <Icon className="size-5" />
           </span>
-          <p className="m-0 text-[17.5px] leading-snug font-bold break-keep text-foreground">
-            {title}
-          </p>
+          {/* 17.5 는 스케일에 없는 값이었다. title(20)로 올린다 — 시트 제목과 같은
+              자리다. 322 폭에서 '이 기프티콘을 삭제할까요?'가 한 줄에 들어간다.
+              16 으로 내리면 바로 아래 이름(14)과 2 차이라 제목으로 서지 못한다. */}
+          <p className="m-0 text-title font-bold break-keep text-foreground">{title}</p>
           {subject && (
-            <p className="m-0 text-sm leading-snug font-medium break-keep text-muted-foreground">{subject}</p>
+            <p className="m-0 text-body leading-snug font-medium break-keep text-muted-foreground">{subject}</p>
           )}
           {description && (
-            <p className="m-0 text-sm leading-relaxed break-keep whitespace-pre-line text-muted-foreground">
+            <p className="m-0 text-body leading-relaxed break-keep whitespace-pre-line text-muted-foreground">
               {description}
             </p>
           )}
           {warning && (
-            <p className="m-0 text-[13.5px] font-bold text-destructive">{warning}</p>
+            <p className="m-0 text-body font-bold text-destructive">{warning}</p>
           )}
         </div>
 
@@ -91,10 +94,13 @@ export default function AlertDialog({
 
         {/* 여러 항목을 알려줘야 할 때. 가운데 정렬 안에 목록을 넣으면 줄마다 시작점이 달라져
             읽기 어려워서, 목록만 왼쪽으로 맞추고 상자로 묶어 본문과 구분한다. */}
+        {/* 카드가 rounded-xl(16)인데 이 상자도 같은 16 이었다. 굴림이 같으면 안쪽
+            상자가 카드에 담긴 게 아니라 카드를 밀어내는 것처럼 보인다. 한 단
+            내린다 — 눈금에 12 가 없어서 rounded-md(10)를 쓴다. */}
         {details?.length > 0 && (
-          <ul className="m-0 mt-3 flex list-none flex-col gap-1.5 rounded-xl bg-secondary p-3 text-left">
+          <ul className="m-0 mt-3.5 flex list-none flex-col gap-1.5 rounded-md bg-secondary p-3 text-left">
             {details.map((item) => (
-              <li key={item} className="flex gap-1.5 text-xs leading-relaxed break-keep text-muted-foreground">
+              <li key={item} className="flex gap-1.5 text-caption leading-relaxed break-keep text-muted-foreground">
                 <span aria-hidden="true">·</span>
                 <span className="flex-1">{item}</span>
               </li>
@@ -108,7 +114,9 @@ export default function AlertDialog({
 
             세로로 쌓는 경우(되돌릴 수 없는 선택)는 폭이 꽉 차므로 ACTION_ROW 를 쓰지 않고
             같은 버튼 치수만 가져온다. */}
-        <div className={cn('mt-[18px] gap-2', stacked ? 'flex flex-col' : ACTION_ROW)}>
+        {/* 18 이었다. 시트가 칸에서 버튼으로 넘어갈 때 쓰는 28 로 맞춘다.
+            되돌릴 수 없는 것을 묻는 창이라, 읽기 전에 손이 가지 않도록 벌린다. */}
+        <div className={cn('mt-7 gap-2', stacked ? 'flex flex-col' : ACTION_ROW)}>
           <Button size="xl"
             type="button"
             variant={tone === 'danger' ? 'destructive' : 'default'}

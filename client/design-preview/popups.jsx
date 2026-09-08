@@ -379,7 +379,7 @@ function App() {
           tone="danger"
           icon={UserRoundX}
           title="계정을 삭제할까요?"
-          description={"'가족 나가기'와 달라요.\n계정이 없어져서 다시 로그인할 수 없어요."}
+          description="계정이 없어져서 다시 로그인할 수 없어요."
           details={[
             '속한 가족에서 모두 빠져요',
             '내가 올린 기프티콘은 사진까지 지워져요',

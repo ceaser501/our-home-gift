@@ -1,0 +1,114 @@
+<!doctype html>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>다이얼로그</title>
+<style>
+  :root {
+    --foreground: #1c1e27; --muted-foreground: #545461; --card: #fbfbfd;
+    --border: #e7e7ec; --secondary: #f1f1f5; --primary: #5b4fe8; --destructive: #e0453f;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { height: 100%; }
+  body { background: #8a8a90;
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", sans-serif;
+    display: flex; align-items: center; justify-content: center; padding: 0 32px; }
+  .tag { position: fixed; top: 12px; left: 0; right: 0; text-align: center;
+         color: #fff; font-size: 13px; font-weight: 800; }
+  .note { position: fixed; bottom: 14px; left: 0; right: 0; text-align: center;
+          color: #e4e4ea; font-size: 12px; line-height: 1.5; padding: 0 24px; }
+  .card { width: 100%; max-width: 322px; background: var(--card);
+          box-shadow: 0 20px 25px -5px rgba(0,0,0,.1), 0 8px 10px -6px rgba(0,0,0,.1); }
+  .top { display: flex; flex-direction: column; align-items: center; text-align: center; }
+  .ico { display: flex; width: 48px; height: 48px; align-items: center; justify-content: center;
+         border-radius: 999px; background: rgba(224,69,63,.1); color: var(--destructive); }
+  .ico svg { width: 20px; height: 20px; }
+  h2 { font-weight: 700; color: var(--foreground); line-height: 1.375; word-break: keep-all; }
+  .sub { font-weight: 500; color: var(--muted-foreground); line-height: 1.375; word-break: keep-all; }
+  .desc { color: var(--muted-foreground); line-height: 1.625; word-break: keep-all; white-space: pre-line; }
+  .warn { font-weight: 700; color: var(--destructive); }
+  ul { list-style: none; display: flex; flex-direction: column; background: var(--secondary);
+       text-align: left; }
+  li { display: flex; gap: 6px; color: var(--muted-foreground); line-height: 1.625; word-break: keep-all; }
+  .row { display: flex; flex-direction: row-reverse; gap: 8px; }
+  .row > button { flex: 1; height: 52px; font-size: 16px; letter-spacing: .02em; border: 0;
+                  border-radius: 14px; }
+  .go { background: var(--destructive); color: #fff; font-weight: 700; }
+  .no { background: var(--card); border: 1px solid var(--border) !important;
+        color: rgba(28,30,39,.8); font-weight: 600; }
+</style>
+
+<p class="tag" id="tag"></p>
+<div class="card" id="card">
+  <div class="top" id="head">
+    <span class="ico" id="ico"></span>
+    <h2 id="h2"></h2>
+    <p class="sub" id="sub"></p>
+    <p class="desc" id="desc"></p>
+    <p class="warn" id="warn"></p>
+  </div>
+  <ul id="ul"></ul>
+  <div class="row" id="row"><button class="go" id="go"></button><button class="no">취소</button></div>
+</div>
+<p class="note" id="note"></p>
+
+<script>
+  var q = new URLSearchParams(location.search);
+  var v = q.get('v') || 'now';        // now | t20 | t16
+  var d = q.get('d') || 'del';        // del | quit
+
+  var TRASH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M10 11v6M14 11v6"/></svg>';
+  var USERX = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="m17 8 5 5M22 8l-5 5"/></svg>';
+
+  var D = {
+    del:  { ico: TRASH, h2: '이 기프티콘을 삭제할까요?',
+            sub: '카페 아메리카노 T 2잔 + 딸기 생크림 케이크',
+            desc: '', warn: '되돌릴 수 없어요', list: [], go: '삭제' },
+    quit: { ico: USERX, h2: '계정을 삭제할까요?', sub: '',
+            desc: "'가족 나가기'와 달라요.\n계정이 없어져서 다시 로그인할 수 없어요.",
+            warn: '', go: '계속',
+            list: ['속한 가족에서 모두 빠져요', '내가 올린 기프티콘은 사진까지 지워져요',
+                   '나 혼자였던 가족은 없어져요'] }
+  }[d];
+
+  var V = {
+    now: { title: '가 · 지금', h2: 17.5, desc: 14, warn: 13.5, li: 12,
+           pad: '22px 20px 18px', gap: 9, toBtn: 18, cardR: 16, ulR: 16,
+           ulPad: 12, ulGap: 6, toUl: 12,
+           note: '제목 17.5 · 경고 13.5 는 스케일에 없는 값. 여백 22/20/18, 요소 사이 9, 본문→버튼 18.' },
+    t20: { title: '나 · 제목 20 (시트와 같게) + 정리', h2: 20, desc: 14, warn: 14, li: 12,
+           pad: '20px', gap: 10, toBtn: 28, cardR: 16, ulR: 12,
+           ulPad: 12, ulGap: 6, toUl: 14,
+           note: '제목 title(20) · 본문 body(14) · 경고 body(14) · 목록 caption(12). 여백 20 사방, 본문→버튼 28, 목록 상자 반지름 12.' },
+    t16: { title: '다 · 제목 16 + 정리', h2: 16, desc: 14, warn: 14, li: 12,
+           pad: '20px', gap: 10, toBtn: 28, cardR: 16, ulR: 12,
+           ulPad: 12, ulGap: 6, toUl: 14,
+           note: '제목 subtitle(16). 본문(14)과 2 차이라 제목이 제목으로 서는지 보는 것이 관건.' }
+  }[v];
+
+  ico.innerHTML = D.ico;
+  h2.textContent = D.h2; h2.style.fontSize = V.h2 + 'px';
+  sub.textContent = D.sub; sub.style.fontSize = V.desc + 'px';
+  sub.style.display = D.sub ? '' : 'none';
+  desc.textContent = D.desc; desc.style.fontSize = V.desc + 'px';
+  desc.style.display = D.desc ? '' : 'none';
+  warn.textContent = D.warn; warn.style.fontSize = V.warn + 'px';
+  warn.style.display = D.warn ? '' : 'none';
+  go.textContent = D.go;
+
+  document.getElementById('card').style.borderRadius = V.cardR + 'px';
+  card.style.padding = V.pad;
+  document.getElementById('head').style.gap = V.gap + 'px';
+  row.style.marginTop = V.toBtn + 'px';
+
+  if (D.list.length) {
+    ul.innerHTML = D.list.map(function (t) {
+      return '<li><span>·</span><span style="flex:1">' + t + '</span></li>';
+    }).join('');
+    ul.style.cssText += 'border-radius:' + V.ulR + 'px;padding:' + V.ulPad + 'px;gap:' +
+      V.ulGap + 'px;font-size:' + V.li + 'px;margin-top:' + V.toUl + 'px';
+    row.style.marginTop = V.toBtn + 'px';
+  } else { ul.style.display = 'none'; }
+
+  tag.textContent = V.title + ' · ' + (d === 'del' ? '삭제' : '탈퇴');
+  note.textContent = V.note;
+</script>
