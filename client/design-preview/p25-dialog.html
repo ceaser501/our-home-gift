@@ -53,7 +53,7 @@
 
 <script>
   var q = new URLSearchParams(location.search);
-  var v = q.get('v') || 'now';        // now | t20 | t16
+  var v = q.get('v') || 'flat';       // flat | ico | tier
   var d = q.get('d') || 'del';        // del | quit
 
   var TRASH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M10 11v6M14 11v6"/></svg>';
@@ -70,20 +70,16 @@
                    '나 혼자였던 가족은 없어져요'] }
   }[d];
 
-  var V = {
-    now: { title: '가 · 지금', h2: 17.5, desc: 14, warn: 13.5, li: 12,
-           pad: '22px 20px 18px', gap: 9, toBtn: 18, cardR: 16, ulR: 16,
-           ulPad: 12, ulGap: 6, toUl: 12,
-           note: '제목 17.5 · 경고 13.5 는 스케일에 없는 값. 여백 22/20/18, 요소 사이 9, 본문→버튼 18.' },
-    t20: { title: '나 · 제목 20 (시트와 같게) + 정리', h2: 20, desc: 14, warn: 14, li: 12,
-           pad: '20px', gap: 10, toBtn: 28, cardR: 16, ulR: 12,
-           ulPad: 12, ulGap: 6, toUl: 14,
-           note: '제목 title(20) · 본문 body(14) · 경고 body(14) · 목록 caption(12). 여백 20 사방, 본문→버튼 28, 목록 상자 반지름 12.' },
-    t16: { title: '다 · 제목 16 + 정리', h2: 16, desc: 14, warn: 14, li: 12,
-           pad: '20px', gap: 10, toBtn: 28, cardR: 16, ulR: 12,
-           ulPad: 12, ulGap: 6, toUl: 14,
-           note: '제목 subtitle(16). 본문(14)과 2 차이라 제목이 제목으로 서는지 보는 것이 관건.' }
-  }[v];
+  var BASE = { h2: 20, desc: 14, warn: 14, li: 12, pad: '20px', toBtn: 28,
+               cardR: 16, ulR: 10, ulPad: 12, ulGap: 6, toUl: 14 };
+  var V = Object.assign({}, BASE, {
+    flat: { title: '가 · 지금 — 셋 다 10', gap: 10, icoGap: 0, tightSub: 0,
+            note: '아이콘도 글도 같은 10 으로 쌓인다. 아이콘이 글의 한 줄처럼 읽힌다.' },
+    ico:  { title: '나 · 아이콘만 벌린다 — 16 / 10 / 10', gap: 10, icoGap: 6, tightSub: 0,
+            note: '아이콘은 글이 아니라 위에 찍는 표식이다. 그만큼만 떼고 글끼리는 그대로 둔다.' },
+    tier: { title: '다 · 위계대로 — 16 / 6 / 14', gap: 14, icoGap: 2, tightSub: -8,
+            note: '이름은 제목이 묻는 「어느 것」의 답이라 바짝 붙이고, 붉은 한마디는 따로 앉힌다.' }
+  }[v] || {});
 
   ico.innerHTML = D.ico;
   h2.textContent = D.h2; h2.style.fontSize = V.h2 + 'px';
@@ -98,6 +94,9 @@
   document.getElementById('card').style.borderRadius = V.cardR + 'px';
   card.style.padding = V.pad;
   document.getElementById('head').style.gap = V.gap + 'px';
+  ico.style.marginBottom = V.icoGap + 'px';
+  sub.style.marginTop = V.tightSub + 'px';
+  desc.style.marginTop = V.tightSub + 'px';
   row.style.marginTop = V.toBtn + 'px';
 
   if (D.list.length) {

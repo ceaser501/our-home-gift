@@ -619,7 +619,22 @@ export default function App() {
           // 사라져요"가 세 줄로 접혀서, 정작 무엇을 지우는지가 문장에 묻혔다.
           // "목록에서 사라져요"는 '삭제'라는 말이 이미 하고 있어서 뺐다.
           subject={deleteTarget.name}
-          warning="되돌릴 수 없어요"
+          // '되돌릴 수 없어요'를 늘 붙이고 있었다. 틀린 말은 아니지만 흔한 경우에는
+          // 아무것도 알려주지 않는다 — 바코드는 발행처에 그대로 있고, 폰 사진첩에
+          // 원본이 남아 있으면 다시 올리면 된다.
+          //
+          // 같은 문구를 탈퇴창에서도 쓴다. 거기는 정말 되돌릴 수 없는 자리다.
+          // 흔한 경우에 겁을 주면 정작 필요한 자리에서 안 읽힌다.
+          //
+          // 정말 잃는 것은 쓴 내역이다. used 나 spent 일 때 gifticon_uses 에 줄이
+          // 생기고(supabase/schema.sql:1372), 지우면 cascade 로 함께 간다. 다시
+          // 올려도 얼마 남았는지를 다시 세울 수 없고 사용 리포트의 숫자도 바뀐다.
+          // 그때만 말한다.
+          warning={
+            deleteTarget.status === 'used' || Number(deleteTarget.spent_amount || 0) > 0
+              ? '지금까지 쓴 내역도 함께 지워져요'
+              : undefined
+          }
           confirmLabel="삭제"
           onConfirm={handleConfirmDelete}
           onClose={() => setDeleteTarget(null)}

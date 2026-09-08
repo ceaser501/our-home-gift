@@ -43,10 +43,11 @@ const STAGES = {
   t16b: '[완료] ⑤ - 2 가족 바꾸기',
   t16b2: '[완료] ⑤ - 2b 가족 만들기 · 참여 (안쪽 화면)',
   t16c: '[완료] ⑤ - 3 카드 ⋮ 메뉴',
-  danger: '④ 삭제 다이얼로그 — 이름·경고 한 줄',
-  warn: '④ - 2 안내 다이얼로그 — 확인만',
-  info: '④ - 3 되묻는 다이얼로그 — 확인·취소',
-  details: '④ - 4 목록이 붙는 다이얼로그',
+  danger: '[완료] ④ 삭제 다이얼로그 — 안 쓴 것',
+  danger2: '[완료] ④ - 1b 삭제 — 쓴 내역이 있는 것',
+  warn: '[완료] ④ - 2 안내 다이얼로그 — 확인만',
+  info: '[완료] ④ - 3 되묻는 다이얼로그 — 확인·취소',
+  details: '[완료] ④ - 4 목록이 붙는 다이얼로그',
   // 아래는 나중에 붙인 것들. 앱의 시트를 하나도 빠뜨리지 않고 보려는 것이다.
   // 몇은 서버에서 받아온 것을 그린다 — 여기서는 못 받으니 기다리는 모습으로 선다.
   // 그래도 머리(제목·부제)와 껍데기는 실제와 같아서, 그 자리를 재는 데는 쓴다.
@@ -345,16 +346,29 @@ function App() {
         </FamilyContext.Provider>
       )}
 
-      {/* App.jsx 의 삭제창을 그대로 옮겨 온다. 이름(subject)과 붉은 한마디(warning)가
-          붙는 자리라, 그 둘 없이 보면 이 창의 제 모습이 아니다. 이름은 긴 것으로 —
-          짧은 이름만 보면 몇 줄로 접히는지가 안 나온다. */}
+      {/* App.jsx 의 삭제창을 그대로 옮겨 온다. 이름은 긴 것으로 — 짧은 이름만 보면
+          몇 줄로 접히는지가 안 나온다.
+
+          붉은 한마디는 쓴 내역이 있을 때만 붙는다. 두 갈래를 다 세워 둔다. */}
       {cur === 'danger' && (
         <AlertDialog
           tone="danger"
           icon={Trash2}
           title="이 기프티콘을 삭제할까요?"
           subject={GIFTICON.name}
-          warning="되돌릴 수 없어요"
+          confirmLabel="삭제"
+          onConfirm={reopen}
+          onClose={reopen}
+        />
+      )}
+
+      {cur === 'danger2' && (
+        <AlertDialog
+          tone="danger"
+          icon={Trash2}
+          title="이 기프티콘을 삭제할까요?"
+          subject={GIFTICON.name}
+          warning="지금까지 쓴 내역도 함께 지워져요"
           confirmLabel="삭제"
           onConfirm={reopen}
           onClose={reopen}
