@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ACTION_ROW, ACTION_PRIMARY, ACTION_CANCEL } from "../utils/sheetUi";
 import { useFamily } from "../FamilyContext";
 import { createFamily, requestJoinFamily } from "../family";
 import { forgetInviteCode } from "../utils/inviteLink";
@@ -224,11 +225,12 @@ export default function FamilySwitcherSheet({ onClose, initialCode = "" }) {
         ) : (
           <form onSubmit={submit} className="flex flex-col gap-3 px-5 pt-2">
             {mode === "create" ? (
-              <div className="flex flex-col gap-1.5">
+              <div className="flex flex-col gap-2.5">
                 <Label htmlFor="switch-fam-name">가족 이름</Label>
                 {/* autoComplete="off": 예전에 적었던 값이 아래로 뜨지 않게 한다. */}
                 <Input
                   id="switch-fam-name"
+                  className="h-13 rounded-lg px-4 text-callout"
                   value={familyName}
                   onChange={(e) => setFamilyName(e.target.value)}
                   placeholder="우리집"
@@ -239,7 +241,7 @@ export default function FamilySwitcherSheet({ onClose, initialCode = "" }) {
                 />
               </div>
             ) : (
-              <div className="flex flex-col gap-1.5">
+              <div className="flex flex-col gap-2.5">
                 <Label htmlFor="switch-fam-code">초대 코드</Label>
                 <Input
                   id="switch-fam-code"
@@ -248,7 +250,11 @@ export default function FamilySwitcherSheet({ onClose, initialCode = "" }) {
                   placeholder="6자리 코드"
                   /* 고정폭 글꼴과 넓은 자간은 값이 들어온 뒤에만 쓴다. 빈 칸에 미리 걸면
                      예시 문구가 이미 적힌 코드처럼 보인다. */
-                  className={cn("uppercase", code && "font-mono tracking-code")}
+                  className={cn(
+                    "h-13 rounded-lg px-4 text-callout",
+                    "uppercase",
+                    code && "font-mono tracking-code",
+                  )}
                   maxLength={6}
                   autoComplete="off"
                   autoFocus
@@ -257,10 +263,11 @@ export default function FamilySwitcherSheet({ onClose, initialCode = "" }) {
               </div>
             )}
 
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-2.5">
               <Label htmlFor="switch-my-name">이 가족에서 쓸 내 이름</Label>
               <Input
                 id="switch-my-name"
+                className="h-13 rounded-lg px-4 text-callout"
                 value={memberName}
                 onChange={(e) => setMemberName(e.target.value)}
                 placeholder=""
@@ -272,18 +279,14 @@ export default function FamilySwitcherSheet({ onClose, initialCode = "" }) {
 
             {error && <p className="m-0 text-body text-destructive">{error}</p>}
 
-            <div className="flex gap-2 pt-1">
-              <Button
-                type="button"
-                variant="outline"
-                className="flex-1 rounded-xl"
-                onClick={() => setMode("list")}
-              >
-                뒤로
-              </Button>
+            {/* 이 화면만 기본값(40)을 쓰고 있었다 — 칸도 버튼도. 다른 시트는 52 다.
+                취소·확정 짝은 ACTION_ROW 가 맡는다. 주 버튼이 오른쪽에 오도록
+                row-reverse 를 쓰므로 DOM 에서는 확정이 먼저다. */}
+            <div className={cn(ACTION_ROW, "pt-1")}>
               <Button
                 type="submit"
-                className="flex-1 rounded-xl"
+                size="xl"
+                className={ACTION_PRIMARY}
                 disabled={submitting}
               >
                 {submitting
@@ -291,6 +294,15 @@ export default function FamilySwitcherSheet({ onClose, initialCode = "" }) {
                   : mode === "create"
                     ? "만들기"
                     : "참여하기"}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="xl"
+                className={ACTION_CANCEL}
+                onClick={() => setMode("list")}
+              >
+                뒤로
               </Button>
             </div>
           </form>

@@ -863,7 +863,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
           <div className="my-1 h-px bg-border/60" />
 
           <div className="flex flex-col gap-4">
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-2.5">
               <Label htmlFor="f-name" className="text-[14px] font-semibold text-foreground/80">상품명</Label>
               <Input
                 id="f-name"
@@ -875,7 +875,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <div className="flex flex-col gap-1.5">
+              <div className="flex flex-col gap-2.5">
                 <Label htmlFor="f-brand" className="text-[14px] font-semibold text-foreground/80">상호</Label>
                 <Input
                   id="f-brand"
@@ -885,7 +885,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
                 />
               </div>
 
-              <div className="flex flex-col gap-1.5">
+              <div className="flex flex-col gap-2.5">
                 <Label className="text-[14px] font-semibold text-foreground/80">카테고리</Label>
                 {/* 고르는 칸은 배경을 채운다. 적는 칸(흰 배경)과 갈라 보이게 하려는 것이다 —
                     테두리는 둘 다 갖는다. 둘 다 조작하는 자리라서.
@@ -938,7 +938,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
                 기한은 이 앱이 하는 일의 거의 전부다. 반대로 번호는 열몇 자리, 금액은
                 길어야 여섯 자리라 절반씩으로 충분하다. */}
             <div className="grid grid-cols-2 gap-3">
-              <div className="flex flex-col gap-1.5">
+              <div className="flex flex-col gap-2.5">
                 <Label htmlFor="f-code" className="text-[14px] font-semibold text-foreground/80">바코드 번호</Label>
                 <Input
                   id="f-code"
@@ -949,7 +949,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
                 />
               </div>
 
-              <div className="flex flex-col gap-1.5">
+              <div className="flex flex-col gap-2.5">
                 <Label htmlFor="f-amount" className="text-[14px] font-semibold text-foreground/80">
                   금액 <Optional />
                 </Label>
@@ -1008,7 +1008,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
               <p className="m-0 text-sm break-keep text-muted-foreground">금액권 같아 보여요. 맞으면 체크해주세요.</p>
             )}
 
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-2.5">
               <Label htmlFor="f-expires" className="text-[14px] font-semibold text-foreground/80">
                 사용기한 <Optional />
               </Label>
@@ -1043,7 +1043,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
                 가리는 앱이라 등록할 때부터 그 색이 보여야 한다.
                 동그란 아바타는 안 쓴다 — 옆에 이름이 그대로 있어서 '아들아들'처럼 두 번
                 읽힌다. 아바타는 이름이 안 보이는 자리에서 쓰는 것이다. */}
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-2.5">
               <Label className="text-[14px] font-semibold text-foreground/80">받는 사람</Label>
               <Select value={form.owner} onValueChange={(v) => updateField('owner', v)}>
                 <SelectTrigger

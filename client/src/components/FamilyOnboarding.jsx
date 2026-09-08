@@ -323,7 +323,7 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
               된다 — 이 앱에서 테두리는 '누르거나 적는 것' 하나만 가리켜야 한다.
               칸끼리는 한 단 좁게(12px) 붙여서 둘이 한 묶음으로 읽히게 한다. */}
           <div className="flex flex-col gap-3">
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-2.5">
               {/* '이름'만 적으면 무엇의 이름인지 묻게 된다. 바로 아래가 '내 이름'이라 더 그렇다. */}
               <Label htmlFor="fam-name" className="text-[14px] font-semibold">가족 이름</Label>
               {/* autoComplete="off": 예전에 적었던 값이 아래로 뜨지 않게 한다. */}
@@ -368,7 +368,7 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
       ) : (
         <form onSubmit={handleJoin} className="flex flex-col gap-4">
           <div className="flex flex-col gap-3">
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-2.5">
               <Label htmlFor="fam-code" className="text-[14px] font-semibold">초대 코드</Label>
               <Input
                 id="fam-code"
@@ -386,7 +386,7 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
                 required
               />
             </div>
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-2.5">
               <div className="flex items-baseline gap-1.5">
                 <Label htmlFor="fam-join-name" className="text-[14px] font-semibold">내 이름</Label>
                 <span className="text-[12.5px] font-medium text-muted-foreground">가족에게 이렇게 보여요</span>
