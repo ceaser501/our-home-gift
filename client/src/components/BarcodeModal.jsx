@@ -335,7 +335,12 @@ export default function BarcodeModal({ gifticon, onClose, onUsed, onSpend }) {
                 )
               )}
 
-              {/* 테두리 버튼이었다가 글자로 내렸다. 위 버튼과 쓰는 빈도가 다르다 —
+              {/* 장수를 뺐다. 누를지 말지를 정하는 순간이라 몇 장인지는 상관이 없고,
+                  들어가면 점이 바로 말해준다. 짝인 「바코드 보기」와 말투도 맞는다 —
+                  한때 '원본 사진 보기 2장'에서 '보기'를 뺐던 것은 테두리 버튼이라
+                  누르면 열린다는 것을 모양이 말하던 시절의 이야기다.
+
+                  테두리 버튼이었다가 글자로 내렸다. 위 버튼과 쓰는 빈도가 다르다 —
                   잔액입력·사용완료는 기프티콘을 쓸 때마다이고, 원본 사진은 약관을
                   확인하거나 바코드가 안 뜰 때 어쩌다 본다. 둘 다 52 짜리 네모면 계산대
                   앞에서 어느 쪽을 눌러야 하는지 한 번 더 보게 된다.
@@ -355,7 +360,7 @@ export default function BarcodeModal({ gifticon, onClose, onUsed, onSpend }) {
                   }}
                   className="mt-3 flex h-11 items-center justify-center gap-1 self-center px-3 text-body font-semibold tracking-button text-primary"
                 >
-                  원본 사진 {photos.length}장
+                  원본 사진 보기
                   <ChevronRight className="size-4" strokeWidth={2.4} />
                 </button>
               )}
