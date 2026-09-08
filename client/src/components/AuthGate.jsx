@@ -81,8 +81,11 @@ export default function AuthGate({ children }) {
 
   // 내가 속한 가족을 모두 읽고, 그중 하나를 골라 그 구성원까지 함께 가져온다.
   // wantedId를 주면 그 가족을, 없으면 마지막으로 보던 가족을, 그것도 없으면 첫 번째를 연다.
+  //
+  // touch는 '이 가족을 지금 열었다'를 서버에 적을지다. 여는 순간에만 참이고, 뒤에서
+  // 조용히 다시 읽는 때(refreshFamily)는 거짓이다. 아래 touchFamily 주석 참고.
   const loadFamilies = useCallback(
-    async (wantedId) => {
+    async (wantedId, { touch = false } = {}) => {
       const families = await getMyFamilies(userId);
       if (families.length === 0) return null;
 
@@ -92,7 +95,21 @@ export default function AuthGate({ children }) {
       const family = families.find((f) => f.id === wanted) ?? families[0];
       rememberFamilyId(userId, family.id);
       // 서버에도 적어둔다. 기다리지 않는다 — 이게 늦어도 화면이 늦을 이유가 없다.
-      touchFamily(family.id);
+      //
+      // ⚠ 여기가 무한 반복의 자리였다. 다시 읽을 때마다 적으면 이렇게 돈다:
+      //
+      //   적기(family_members UPDATE)
+      //     → 실시간 신호(realtime.js의 subscribeToFamily가 그 표를 듣는다)
+      //     → 목록 다시 읽기(App.jsx의 reload)
+      //     → refreshFamily → 여기로 다시 → 적기 → …
+      //
+      // 0.3초마다 스스로를 부르며 끝없이 돈다. 아무도 아무것도 안 했는데 목록이
+      // 계속 깜빡이고, 그동안 데이터베이스에는 쉼 없이 쓰기가 나갔다. 당겨서
+      // 새로고침하면 그 고리에 불이 붙는다.
+      //
+      // 여는 순간에만 적는다. 이 값이 뜻하는 것도 원래 그것이다 — 마지막으로 연
+      // 때이지, 마지막으로 목록을 읽은 때가 아니다.
+      if (touch) touchFamily(family.id);
 
       const [members, joinRequests] = await Promise.all([
         getFamilyMembers(family.id),
@@ -140,7 +157,7 @@ export default function AuthGate({ children }) {
       for (let attempt = 0; attempt < 3; attempt += 1) {
         if (attempt > 0) await new Promise((done) => setTimeout(done, attempt * 700));
         try {
-          return await loadFamilies(wantedId);
+          return await loadFamilies(wantedId, { touch: true });
         } catch (err) {
           lastError = err;
         }
@@ -197,7 +214,7 @@ export default function AuthGate({ children }) {
   // 보는 가족을 바꾼다. 새로 만들거나 초대 코드로 들어온 직후에도 이걸로 그 가족을 연다.
   // 화면을 로딩으로 갈아끼우지 않아서, 가족을 고른 창이 그대로 있는 채로 내용만 바뀐다.
   async function switchFamily(familyId) {
-    const next = await loadFamilies(familyId);
+    const next = await loadFamilies(familyId, { touch: true });
     if (next) setFamilyState(next);
   }
 

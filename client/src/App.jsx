@@ -162,10 +162,19 @@ export default function App() {
   // 처음 온 사람에게 한 줄로 남길 공지.
   const firstNotice = importantNotices(noticeRows)[0] || null;
 
+  // dataVersion만 바뀐 것은 뒤에서 온 신호다 — 누가 이름을 바꿨거나, 가족에 들어오거나
+  // 나갔다(AuthGate의 refreshFamily). 목록은 이미 떠 있으니 "불러오는 중…"으로
+  // 갈아끼우지 않고 조용히 바꿔 넣는다.
+  //
+  // 이게 없으면 가족에 누가 들어오는 순간 목록이 통째로 사라졌다 다시 그려진다. 사람이
+  // 한 일이 아니라 앱이 알아서 맞추는 일인데, 화면이 사라지면 고장으로 보인다.
+  const seenDataVersion = useRef(dataVersion);
   useEffect(() => {
-    const timer = setTimeout(() => fetchList(), search ? 300 : 0);
+    const background = seenDataVersion.current !== dataVersion;
+    seenDataVersion.current = dataVersion;
+    const timer = setTimeout(() => fetchList({ silent: background }), search ? 300 : 0);
     return () => clearTimeout(timer);
-  }, [fetchList, search]);
+  }, [fetchList, search, dataVersion]);
 
   // 자동 훑기는 이번 실행에서 한 번 물어봤다고 적어둔다. 훑기 창을 열었든 안 열었든
   // 적는다 — 물어본 것 자체가 한 번이고, 껐던 사람이 다시 켜면 그건 버튼으로 연다.
