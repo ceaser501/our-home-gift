@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="only light" />
+    <title>모아콘 · 가족 초대</title>
+
+    <!--
+      카톡으로 받은 초대를 눌렀을 때 처음 닿는 자리.
+
+      ── 왜 필요한가 ──────────────────────────────────────────────────────────
+      카톡에서 링크를 누르면 카톡 안의 브라우저가 열린다. 초대 주소가 곧장 웹 화면이면
+      앱을 이미 깐 사람도 카톡 안의 웹으로 들어간다 — 앱은 그대로 놔둔 채 웹에 또
+      로그인해야 하고, 앱을 안 깐 사람은 앱이 있다는 것조차 모르고 지나간다.
+
+      그래서 웹 화면을 바로 열지 않고 여기서 한 번 갈라준다.
+
+        앱이 깔려 있으면  → 앱이 열리고 초대 코드가 그대로 실려 간다
+        앱이 없으면       → 아래 '앱이 없을 때' 참고
+
+      ── 어떻게 가르나 ────────────────────────────────────────────────────────
+      "앱이 깔렸는지"를 물어볼 방법은 없다. 대신 안드로이드에는 intent: 주소가 있다 —
+      앱이 있으면 열고, 없으면 S.browser_fallback_url 로 보낸다. 판단을 안드로이드가
+      대신 해주므로 우리가 초를 세거나 짐작할 일이 없다.
+
+      아이폰에는 그런 길이 없다. 스킴으로 열어보고 안 열리면 그대로 있는 것을 재야 하는데,
+      그 재기가 늘 틀린다. 그래서 아이폰은 버튼으로 고르게 한다.
+
+      ── 앱이 없을 때 ─────────────────────────────────────────────────────────
+      아직 스토어에 올라가 있지 않다. 지금 스토어로 보내면 '찾을 수 없는 페이지'가 뜬다.
+      그래서 지금은 웹 화면으로 보낸다 — 웹에서도 참여는 그대로 된다.
+
+      출시하면 아래 STORE_URL 한 줄만 채우면 된다. 그때부터 앱이 없는 사람은 스토어로
+      가고, 웹으로 가는 길은 아래 '웹으로 계속하기'로 남는다.
+    -->
+    <style>
+      :root { color-scheme: only light; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100dvh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #fbfbfd;
+        color: #1c1e27;
+        font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Segoe UI', Roboto, sans-serif;
+      }
+      main {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        padding: 32px 24px;
+        text-align: center;
+        width: 100%;
+        max-width: 360px;
+      }
+      img { width: 64px; height: 64px; }
+      h1 { margin: 6px 0 0; font-size: 20px; font-weight: 700; letter-spacing: -0.028em; word-break: keep-all; }
+      p { margin: 0; font-size: 14.5px; line-height: 1.6; color: #71717f; word-break: keep-all; }
+      .code {
+        margin-top: 4px;
+        padding: 8px 16px;
+        border-radius: 11px;
+        background: #f0efff;
+        color: #5b4fe8;
+        font-size: 17px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+      }
+      .buttons { margin-top: 14px; display: flex; flex-direction: column; gap: 9px; width: 100%; }
+      button {
+        height: 52px;
+        width: 100%;
+        border: 0;
+        border-radius: 13px;
+        background: #5b4fe8;
+        color: #fff;
+        font-size: 16px;
+        font-weight: 700;
+        font-family: inherit;
+      }
+      button.quiet { background: transparent; color: #71717f; height: 44px; font-size: 14.5px; font-weight: 600; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <img src="icon.svg" alt="모아콘" />
+      <h1 id="title">모아콘으로 가는 중…</h1>
+      <p id="note">잠시만 기다려주세요.</p>
+      <p class="code" id="code" hidden></p>
+      <div class="buttons">
+        <button id="open" hidden>모아콘 앱으로 열기</button>
+        <button id="web" class="quiet" hidden>웹으로 계속하기</button>
+      </div>
+    </main>
+
+    <script>
+      (function () {
+        // 앱을 여는 주소. 안드로이드는 strings.xml, 아이폰은 Info.plist에 같은 값이 있다.
+        var SCHEME = 'io.github.ceaser501.moacon';
+        // 안드로이드가 "이 앱이 깔렸나"를 판단할 때 쓴다. app/android/app/build.gradle.
+        var PACKAGE = 'io.github.ceaser501.ourhomegift';
+        // 스토어에 올라가면 여기를 채운다. 비어 있으면 웹으로 보낸다(위 주석 참고).
+        var STORE_URL = '';
+
+        var params = new URLSearchParams(location.search);
+        var code = (params.get('join') || params.get('code') || '').trim().toUpperCase().slice(0, 12);
+        var family = (params.get('family') || '').trim();
+
+        var webUrl = location.origin + location.pathname.replace(/invite\.html$/, '') + (code ? '?join=' + encodeURIComponent(code) : '');
+        var appUrl = SCHEME + '://invite?join=' + encodeURIComponent(code);
+        var fallback = STORE_URL || webUrl;
+
+        var title = document.getElementById('title');
+        var note = document.getElementById('note');
+        var codeBox = document.getElementById('code');
+        var open = document.getElementById('open');
+        var web = document.getElementById('web');
+
+        // 코드가 없으면 갈 곳이 없다. 웹 첫 화면으로 보낸다.
+        if (!code) {
+          location.replace(location.origin + location.pathname.replace(/invite\.html$/, ''));
+          return;
+        }
+
+        codeBox.textContent = code;
+        codeBox.hidden = false;
+        web.hidden = false;
+        web.addEventListener('click', function () {
+          location.href = webUrl;
+        });
+
+        var isAndroid = /android/i.test(navigator.userAgent);
+        var isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+
+        // 폰이 아니면(피시 카톡·메일 등) 앱이 있을 리 없다. 웹으로 바로 보낸다.
+        if (!isAndroid && !isIos) {
+          location.replace(webUrl);
+          return;
+        }
+
+        function toApp() {
+          if (isAndroid) {
+            // 앱이 있으면 열고, 없으면 fallback 으로 간다. 그 판단은 안드로이드가 한다.
+            location.href =
+              'intent://invite?join=' + encodeURIComponent(code) +
+              '#Intent;scheme=' + SCHEME +
+              ';package=' + PACKAGE +
+              ';S.browser_fallback_url=' + encodeURIComponent(fallback) +
+              ';end';
+          } else {
+            location.href = appUrl;
+          }
+        }
+
+        if (isAndroid) {
+          // 안드로이드는 바로 넘긴다. 앱이 없어도 갈 곳이 정해져 있어서 막다른 길이 없다.
+          title.textContent = family ? family + ' 가족의 초대' : '가족 초대를 받았어요';
+          note.textContent = '모아콘을 여는 중이에요.';
+          open.hidden = false;
+          open.addEventListener('click', toApp);
+          toApp();
+        } else {
+          // 아이폰은 눌러야 연다. 앱이 없으면 아무 일도 안 일어나므로, 그때 쓸 길을
+          // 아래 '웹으로 계속하기'로 함께 세워둔다.
+          title.textContent = family ? family + ' 가족의 초대' : '가족 초대를 받았어요';
+          note.textContent = '이름만 적으면 참여 신청이 끝나요.';
+          open.hidden = false;
+          open.addEventListener('click', toApp);
+        }
+      })();
+    </script>
+  </body>
+</html>

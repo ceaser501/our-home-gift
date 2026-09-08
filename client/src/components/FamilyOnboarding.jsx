@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import CopyButton from './CopyButton';
 import { signOut } from '../auth';
 import { forgetInviteCode, pendingInviteCode } from '../utils/inviteLink';
+import Logo from './Logo';
 
 export default function FamilyOnboarding({ userEmail, onDone }) {
   // 초대 링크를 눌러 온 사람은 참여하러 온 것이다. 코드를 이미 들고 있는데 '가족
@@ -243,6 +244,88 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
           시작하기
         </Button>
         </div>
+      </div>
+    );
+  }
+
+  // 초대 링크를 눌러 온 사람에게는 이 화면만 보여준다.
+  //
+  // 예전에는 평소 화면에 코드만 미리 채워줬다. 그러면 '새로 만들기 / 초대 코드로 참여'
+  // 탭이 그대로 있고, 코드 칸도 적는 칸으로 남는다 — 링크를 눌러 온 사람에게는 둘 다
+  // 잘못 누를 여지일 뿐이다. 갈 곳이 이미 정해져 있는데 갈림길을 보여준 셈이다.
+  //
+  // 그래서 화면을 가른다. 여기서 물어보는 것은 이름 하나이고, 코드는 확인만 시킨다.
+  if (invited) {
+    return (
+      <div className="mx-auto flex min-h-[calc(100dvh/var(--ui-scale))] w-full max-w-[480px] flex-col overflow-y-auto bg-background">
+        {/* 초대받았다는 사실이 먼저다. 연보라 바탕으로 한 덩어리를 만들어, 아래 적는
+            자리와 갈라 보이게 한다. */}
+        <div className="flex flex-col items-center gap-3.5 bg-accent px-6 pt-[max(40px,var(--safe-top))] pb-8">
+          <Logo className="size-[68px] rounded-[18px]" />
+          <h1 className="m-0 text-center text-[23px] leading-[1.35] font-bold tracking-[-0.03em] break-keep text-foreground">
+            {invitedFamily ? `'${invitedFamily}' 가족에` : '가족에'}
+            <br />
+            초대받았어요
+          </h1>
+          {/* 코드는 확인만 시킨다. 링크에 실려 온 값이라 다시 적을 이유가 없고, 잘못된
+              링크였다면 아래 오류가 그 자리에서 말한다. */}
+          <p className="m-0 flex items-center gap-2.5 rounded-full bg-card px-4 py-2">
+            <span className="text-[13px] font-bold text-primary">초대 코드</span>
+            <span className="font-mono text-[16px] font-bold tracking-[0.1em] text-foreground">{invited}</span>
+            <Check className="size-[17px] text-success" strokeWidth={3} />
+          </p>
+        </div>
+
+        <form onSubmit={handleJoin} className="flex flex-1 flex-col gap-4 px-6 pt-7 pb-[max(24px,var(--safe-bottom))]">
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="fam-invite-name" className="text-[15.5px] font-bold">
+              가족에게 어떻게 보일 이름인가요?
+            </Label>
+            <Input
+              id="fam-invite-name"
+              value={memberName}
+              onChange={(e) => setMemberName(e.target.value)}
+              placeholder="예) 아빠, 엄마, 아들, 딸"
+              className="h-[54px] rounded-[14px] text-[16px]"
+              autoComplete="off"
+              required
+            />
+            {/* 어느 계정으로 신청하는지. 여기 말고는 알 길이 없다 — 이 화면에는 계정
+                줄이 따로 없다. 링크를 눌러 온 사람에게 계정 이야기부터 꺼내면 무엇을
+                하러 왔는지가 흐려져서, 한 줄로 줄여 이름 칸 밑에 붙인다. */}
+            <p className="m-0 text-[13.5px] leading-relaxed break-keep text-muted-foreground">
+              <span className="font-semibold text-foreground/70">{userEmail}</span>으로 로그인했어요. 이름은 나중에 바꿀 수 있어요.
+            </p>
+          </div>
+
+          {error && <p className="m-0 text-sm text-destructive">{error}</p>}
+
+          <div className="mt-auto flex flex-col gap-2.5 pt-4">
+            <Button
+              type="submit"
+              size="lg"
+              className="h-[56px] w-full rounded-[14px] text-[16.5px] font-bold"
+              disabled={submitting}
+            >
+              {submitting ? '신청하는 중…' : '참여 신청하기'}
+            </Button>
+            <p className="m-0 text-center text-[13px] font-medium break-keep text-muted-foreground">
+              {invitedFamily ? `'${invitedFamily}' 가족이` : '가족이'} 승인하면 함께 볼 수 있어요.
+            </p>
+            {/* 잘못 온 사람이 빠져나갈 길. 눈에 띄지 않게 맨 아래에 둔다. */}
+            <Button
+              type="button"
+              variant="ghost"
+              className="h-11 w-full text-[14px] font-semibold text-muted-foreground"
+              onClick={() => {
+                forgetInviteCode();
+                signOut();
+              }}
+            >
+              다른 계정으로 로그인
+            </Button>
+          </div>
+        </form>
       </div>
     );
   }

@@ -24,6 +24,12 @@ import { WEB_ORIGIN } from './webOrigin';
 const PENDING_KEY = 'moacon:invite-code';
 export const INVITE_PARAM = 'join';
 
+// 초대 코드를 받았다고 화면에 알리는 신호.
+//
+// 이 이름이 여기 있는 이유는 App.jsx가 이것만 가져다 쓰기 때문이다. 딥링크 쪽에 두면
+// 그걸 가져오는 것만으로 서버 연결(supabaseClient)까지 딸려 온다.
+export const INVITE_EVENT = 'moacon:invite';
+
 // 앱은 화면을 안에 담아 열기 때문에(안드로이드 https://localhost, 아이폰
 // capacitor://localhost) 그 주소로 초대 링크를 만들면 받는 사람 폰에서는 아무 데도
 // 닿지 않는다. 링크에 쓸 주소는 늘 웹이다 — utils/webOrigin.js 에 한곳으로 모아뒀다.
@@ -55,6 +61,28 @@ export function catchInviteFromUrl() {
     url.searchParams.delete(INVITE_PARAM);
     window.history.replaceState({}, '', url.toString());
     return clean || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 앱이 초대 스킴으로 열렸을 때(io.github.ceaser501.moacon://invite?join=CODE) 코드를 꺼낸다.
+ *
+ * 카톡에서 초대를 누르면 다리 페이지(client/public/invite.html)가 이 주소로 앱을 연다.
+ * 앱 안 화면은 주소가 늘 https://localhost 라서 위의 catchInviteFromUrl 로는 잡히지
+ * 않는다. 그래서 받는 자리가 따로 있다.
+ *
+ * 적어두는 곳은 같다. 코드를 손으로 적어 들어오든, 웹 링크로 들어오든, 여기로 들어오든
+ * 그다음 걸음은 하나다 — 코드가 박힌 참여 화면.
+ */
+export function catchInviteFromUrl_native(url) {
+  try {
+    const code = new URL(url).searchParams.get(INVITE_PARAM);
+    const clean = String(code || '').trim().toUpperCase().slice(0, 12);
+    if (!clean) return null;
+    sessionStorage.setItem(PENDING_KEY, clean);
+    return clean;
   } catch {
     return null;
   }

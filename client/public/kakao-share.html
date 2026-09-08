@@ -81,7 +81,12 @@
         var code = (params.get('code') || '').trim();
         var family = (params.get('family') || '가족').trim();
         var origin = location.origin + location.pathname.replace(/kakao-share\.html$/, '');
-        var link = origin + '?join=' + encodeURIComponent(code);
+        // 웹 화면이 아니라 다리 페이지로 보낸다.
+        //
+        // 카톡에서 링크를 누르면 카톡 안의 브라우저가 열린다. 곧장 웹 화면이면 앱을
+        // 이미 깐 사람도 거기서 웹에 또 로그인해야 하고, 앱을 안 깐 사람은 앱이 있다는
+        // 것조차 모르고 지나간다. 다리 페이지가 그 갈림길을 맡는다(invite.html).
+        var link = origin + 'invite.html?join=' + encodeURIComponent(code) + '&family=' + encodeURIComponent(family);
 
         var title = document.getElementById('title');
         var note = document.getElementById('note');

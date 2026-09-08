@@ -12,6 +12,10 @@ import { isNativeApp } from './browser';
 //   3) 네이버용 Edge Function 비밀값 NAVER_ALLOWED_REDIRECTS
 export const NATIVE_REDIRECT_URL = 'io.github.ceaser501.moacon://login';
 
+// 카톡 초대를 눌러 앱이 열릴 때 오는 주소(client/public/invite.html이 연다).
+export const NATIVE_INVITE_URL = 'io.github.ceaser501.moacon://invite';
+
+
 // 서버가 돌려주는 말을 우리 말로 바꾼다.
 //
 // 그대로 띄우면 화면에 「Email link is invalid or has expired」가 영어로 뜬다. 이 앱은
@@ -76,7 +80,21 @@ export async function watchLoginRedirects({ onError } = {}) {
   const [{ App }, { Browser }] = await Promise.all([import('@capacitor/app'), import('@capacitor/browser')]);
 
   const handle = await App.addListener('appUrlOpen', async ({ url }) => {
-    if (!url || !url.startsWith(NATIVE_REDIRECT_URL)) return;
+    if (!url) return;
+
+    // 카톡 초대로 앱이 열렸다. 코드를 붙들어두고 화면에 알린다.
+    //
+    // 앱이 이미 떠 있는 채로 열릴 수도 있어서(대개 그렇다) 적어두는 것만으로는 부족하다.
+    // 그 순간 화면은 이미 그려져 있고, 코드를 읽는 자리는 처음 그릴 때 한 번 읽고 만다.
+    // 그래서 신호를 함께 보낸다(App.jsx가 이걸 듣는다).
+    if (url.startsWith(NATIVE_INVITE_URL)) {
+      const { catchInviteFromUrl_native, INVITE_EVENT } = await import('./inviteLink');
+      const code = catchInviteFromUrl_native(url);
+      if (code) window.dispatchEvent(new CustomEvent(INVITE_EVENT, { detail: code }));
+      return;
+    }
+
+    if (!url.startsWith(NATIVE_REDIRECT_URL)) return;
     try {
       await applySession(url);
     } catch (err) {

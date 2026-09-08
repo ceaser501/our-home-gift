@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { forgetInviteCode, pendingInviteCode } from './utils/inviteLink';
+import { forgetInviteCode, pendingInviteCode, INVITE_EVENT } from './utils/inviteLink';
 import FamilySwitcherSheet from './components/FamilySwitcherSheet';
 import { Plus, ScanSearch, Trash2 } from 'lucide-react';
 import Header from './components/Header';
@@ -310,6 +310,20 @@ export default function App() {
     return () => {
       cancelled = true;
     };
+  }, []);
+
+  // 카톡 초대를 눌러 앱이 열렸다.
+  //
+  // 앱이 이미 떠 있는 채로 열리는 것이 보통이다. 그때는 화면이 벌써 그려져 있어서,
+  // 처음 한 번 읽고 마는 초대 코드(위 useState)로는 이 순간을 못 잡는다.
+  // 그래서 딥링크를 받는 자리가 신호를 보내고(utils/deepLink.js) 여기서 듣는다.
+  useEffect(() => {
+    function onInvite(e) {
+      const code = e.detail;
+      if (code) setInvitedCode(code);
+    }
+    window.addEventListener(INVITE_EVENT, onInvite);
+    return () => window.removeEventListener(INVITE_EVENT, onInvite);
   }, []);
 
   // 폰이 잠들거나 다른 앱에 다녀오는 동안에는 연결이 끊겨서 그사이 바뀐 것을 놓친다.
