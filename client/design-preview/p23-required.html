@@ -1,0 +1,61 @@
+<!doctype html>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>필수 표식</title>
+<style>
+  :root {
+    --foreground: #1c1e27; --muted-foreground: #545461; --card: #fbfbfd;
+    --border: #e7e7ec; --input: #e7e7ec; --primary: #5b4fe8; --destructive: #e03e49;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body { background: #8a8a90;
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", sans-serif;
+    padding: 16px 0 40px; }
+  .tag { color: #fff; font-size: 13px; font-weight: 800; padding: 0 20px 4px; }
+  .why { color: #e4e4ea; font-size: 12px; line-height: 1.5; padding: 0 20px 12px; }
+  .sheet { background: var(--card); border-radius: 22px; margin: 0 8px;
+           padding: 20px 0 22px; }
+  .head { padding: 0 20px 18px; }
+  .head h2 { font-size: 20px; font-weight: 800; color: var(--foreground); letter-spacing: -.01em; }
+  form { display: flex; flex-direction: column; padding: 0 20px; gap: 20px; }
+  .grp { display: flex; flex-direction: column; gap: 10px; }
+  label { font-size: 14px; font-weight: 600; line-height: 1; color: rgba(28,30,39,.7); }
+  .star { color: var(--destructive); font-weight: 700; }
+  .word { font-weight: 400; color: var(--muted-foreground); }
+  .field { height: 52px; border: 1px solid var(--input); border-radius: 8px;
+           background: var(--card); padding: 0 16px; display: flex; align-items: center;
+           font-size: 16px; color: var(--foreground); }
+  .field.ph { color: #a3a3ad; }
+</style>
+<div id="out"></div>
+<script>
+  var ROWS = [
+    ['상품명',      '스타벅스 5만원권', true],
+    ['상호',        '스타벅스',        false],
+    ['카테고리',     '카페',           false],
+    ['바코드 번호',  '8801 2345 6789', false],
+    ['금액',        '50,000',         false],
+    ['사용기한',     '2026. 12. 09.',  false],
+    ['받는 사람',    '태수',           false],
+    ['메모',        '엄마가 준 것',     false]
+  ];
+  var V = [
+    ['가 · 지금', '선택 칸 여덟 중 셋에만 「선택」이 붙어 있다. 상호·카테고리·바코드 번호·받는 사람은 표식이 없다.', 'now'],
+    ['나 · 별을 필수 칸에', '꼭 적어야 하는 칸은 상품명 하나뿐이다. 별 하나로 끝난다.', 'star'],
+    ['다 · 「선택」을 여덟 칸 모두에', '빠진 넷까지 채운 모습. 표식이 여덟 번 찍힌다.', 'word']
+  ];
+  document.getElementById('out').innerHTML = V.map(function (v) {
+    return '<p class="tag">' + v[0] + '</p><p class="why">' + v[1] + '</p>' +
+      '<div class="sheet"><div class="head"><h2>기프티콘 추가</h2></div><form>' +
+      ROWS.map(function (r) {
+        var mark = '';
+        if (v[2] === 'star' && r[2]) mark = ' <span class="star">*</span>';
+        if (v[2] === 'word' && !r[2]) mark = ' <span class="word">선택</span>';
+        if (v[2] === 'now' && !r[2] && ['금액','사용기한','메모'].indexOf(r[0]) >= 0)
+          mark = ' <span class="word">선택</span>';
+        return '<div class="grp"><label>' + r[0] + mark + '</label>' +
+               '<div class="field">' + r[1] + '</div></div>';
+      }).join('') +
+      '</form></div><div style="height:22px"></div>';
+  }).join('');
+</script>

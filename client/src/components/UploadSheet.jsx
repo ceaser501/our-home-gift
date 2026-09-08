@@ -104,8 +104,30 @@ function formatAmount(value) {
 
 // 안 적어도 되는 칸에만 붙는다. 반대로 별표를 붙이면 일곱 칸 중 넷에 별이 생겨서,
 // 별이 규칙이 아니라 무늬가 된다.
-function Optional() {
-  return <span className="font-normal text-muted-foreground">선택</span>;
+// 폼에서 * 는 '꼭 적어야 하는 칸'이다. 은행 서식도 관공서 서식도 오래 그렇게 써
+// 왔고, 60대일수록 그 관례를 더 오래 겪었다.
+//
+// 반대로 붙이던 것을 뒤집는다. 전에는 안 적어도 되는 칸에 '선택'을 달았는데, 여덟
+// 칸 중 셋에만 달려 있어서 표식 없는 나머지 넷이 필수처럼 읽혔다. 이 폼에서 정말
+// 꼭 적어야 하는 것은 상품명 하나뿐이다 — 별 하나로 끝난다.
+//
+// 붉은색은 이 앱에서 '지우기'에 쓰지만 여기서는 겹치지 않는다. 지우기는 다이얼로그의
+// 버튼이고 이것은 라벨 옆 글자 하나다. 폼의 별은 붉은색이 관례라 그쪽을 따른다.
+//
+// 눈으로는 별이 관례를 실어 나르는데 소리로는 '별표'이거나 아무것도 아니다.
+// 낭독기용 글자를 나란히 둬서 눈과 귀가 같은 것을 받게 한다.
+function Required() {
+  return (
+    <>
+      {/* Label 이 flex gap-2 라 별이 8 떨어진다. '선택'이라는 낱말일 때는 맞는
+          값이었는데 별에는 넓어서, 낱말이 아니라 딴 물건처럼 떨어져 보인다.
+          4 로 당긴다 — 별은 앞 글자에 붙는 표식이다. */}
+      <span aria-hidden="true" className="-ml-1 font-bold text-destructive">
+        *
+      </span>
+      <span className="sr-only">꼭 적어야 해요</span>
+    </>
+  );
 }
 
 // 받는 사람 칸에 찍는 색 점.
@@ -864,7 +886,9 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
 
           <div className="flex flex-col gap-5">
             <div className="flex flex-col gap-2.5">
-              <Label htmlFor="f-name">상품명</Label>
+              <Label htmlFor="f-name">
+                상품명 <Required />
+              </Label>
               <Input
                 id="f-name"
                 value={form.name}
@@ -950,9 +974,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
               </div>
 
               <div className="flex flex-col gap-2.5">
-                <Label htmlFor="f-amount">
-                  금액 <Optional />
-                </Label>
+                <Label htmlFor="f-amount">금액</Label>
                 {/* '원'을 예시 문구로 두면 한 글자만 적어도 사라져서, 무엇을 적는 칸인지가
                     적는 순간 없어진다. 오른쪽에 붙박이로 둔다. */}
                 <div className="relative">
@@ -1009,9 +1031,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
             )}
 
             <div className="flex flex-col gap-2.5">
-              <Label htmlFor="f-expires">
-                사용기한 <Optional />
-              </Label>
+              <Label htmlFor="f-expires">사용기한</Label>
               {/* 폰이 들고 있는 날짜 고르개를 그대로 쓴다. 직접 만든 달력으로 바꾸면
                   폰마다 익숙한 조작을 버리게 되고, 60대에게는 그 손해가 크다.
 
@@ -1091,9 +1111,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
                   없었다. 칸 안 예시 문구로는 안 된다 — 적기 시작하면 사라진다. */}
               {/* 곁말이 라벨보다 진해서 걷었다. '선택'은 남긴다 — 금액·사용기한과
                   같은 표식이라, 메모만 빠지면 안 적어도 되는 칸인지 알 수 없다. */}
-              <Label htmlFor="f-memo">
-                메모 <Optional />
-              </Label>
+              <Label htmlFor="f-memo">메모</Label>
               <Textarea
                 id="f-memo"
                 value={form.memo}

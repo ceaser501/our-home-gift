@@ -1,0 +1,58 @@
+<!doctype html>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>별 색</title>
+<style>
+  :root {
+    --foreground: #1c1e27; --muted-foreground: #545461; --card: #fbfbfd;
+    --border: #e7e7ec; --input: #e7e7ec; --primary: #5b4fe8; --destructive: #e03e49;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body { background: #8a8a90;
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", sans-serif;
+    display: flex; flex-direction: column; justify-content: flex-end; min-height: 100%; }
+  html, body { height: 100%; }
+  .tag { position: fixed; top: 12px; left: 0; right: 0; text-align: center;
+         color: #fff; font-size: 13px; font-weight: 800; }
+  .sheet { background: var(--card); border-radius: 22px 22px 0 0; padding: 20px 0 22px; }
+  .head { display: flex; align-items: center; justify-content: space-between;
+          padding: 0 20px; margin-bottom: 18px; }
+  .head h2 { font-size: 20px; font-weight: 800; color: var(--foreground); letter-spacing: -.01em; }
+  .x { width: 24px; height: 24px; color: var(--muted-foreground); }
+  .rule { height: 1px; background: rgba(231,231,236,.6); margin: 0 20px 16px; }
+  .intro { padding: 0 20px 16px; font-size: 13px; line-height: 1.5; color: var(--muted-foreground); }
+  form { display: flex; flex-direction: column; padding: 0 20px; gap: 20px; }
+  .grp { display: flex; flex-direction: column; gap: 10px; }
+  label { font-size: 14px; font-weight: 600; line-height: 1; color: rgba(28,30,39,.7); }
+  .star { font-weight: 700; }
+  .field { height: 52px; border: 1px solid var(--input); border-radius: 8px;
+           background: var(--card); padding: 0 16px; display: flex; align-items: center;
+           font-size: 16px; color: var(--foreground); }
+</style>
+
+<p class="tag" id="tag"></p>
+<div class="sheet">
+  <div class="head">
+    <h2>기프티콘 추가</h2>
+    <svg class="x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+  </div>
+  <div class="rule"></div>
+  <p class="intro"><span class="star" id="s0">*</span> 는 꼭 적어야 하는 칸이에요.</p>
+  <form>
+    <div class="grp"><label>상품명 <span class="star" id="s1">*</span></label><div class="field">스타벅스 5만원권</div></div>
+    <div class="grp"><label>상호</label><div class="field">스타벅스</div></div>
+    <div class="grp"><label>카테고리</label><div class="field">카페</div></div>
+    <div class="grp"><label>금액</label><div class="field">50,000</div></div>
+  </form>
+</div>
+
+<script>
+  var c = new URLSearchParams(location.search).get('c') || 'muted';
+  var M = {
+    muted: ['var(--muted-foreground)', '가 · 회색 muted-foreground'],
+    primary: ['var(--primary)', '나 · 보라 primary'],
+    red: ['var(--destructive)', '다 · 붉은색 destructive']
+  }[c];
+  s0.style.color = M[0]; s1.style.color = M[0];
+  document.getElementById('tag').textContent = M[1];
+</script>
