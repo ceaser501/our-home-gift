@@ -1,0 +1,102 @@
+<!doctype html>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>원본 사진 — 세는 것과 미는 안내를 묶기</title>
+<script type="module" src="/src/index.css"></script>
+<style>
+  body { margin:0; background:#3a3a44; font-family:Pretendard, system-ui, sans-serif;
+         -webkit-font-smoothing:antialiased; color:#fff; }
+  .page { display:flex; gap:20px; align-items:flex-start; justify-content:center;
+          padding:16px 14px 80px; flex-wrap:wrap; }
+  .col { width:375px; flex:0 0 auto; }
+  .cap { font-size:13px; font-weight:800; margin:0 0 3px; }
+  .sub { color:#b8b8c4; font-size:11px; line-height:1.5; margin:0 0 8px; min-height:88px; }
+  .st  { color:#9d9daa; font-size:10px; font-weight:700; margin:8px 0 0; }
+
+  .sheet { background:var(--background); color:var(--foreground);
+           border-radius:16px 16px 0 0; overflow:hidden; box-shadow:0 -2px 24px rgba(0,0,0,.28); }
+  .hd  { padding:20px 60px 20px 20px; position:relative; }
+  .ttl { font-size:20px; line-height:1.2; font-weight:700; letter-spacing:-.025em; margin:0; }
+  .dsc { margin:2px 0 0; font-size:14px; line-height:1.5; font-weight:500;
+         color:var(--muted-foreground); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .x   { position:absolute; top:10px; right:10px; width:44px; height:44px; display:flex;
+         align-items:center; justify-content:center; color:var(--muted-foreground); }
+  .x svg { width:24px; height:24px; }
+  .bd  { padding:0 20px 20px; display:flex; flex-direction:column; gap:12px; }
+  .card { border-radius:14px; background:var(--secondary); height:240px; display:flex;
+          align-items:center; justify-content:center; color:var(--muted-foreground);
+          font-size:12px; font-weight:600; }
+
+  .row { display:flex; justify-content:center; gap:8px; }
+  .chip { display:flex; align-items:center; gap:6px; border-radius:99px; background:var(--secondary);
+          padding:6px 14px; font-size:14.5px; font-weight:700;
+          color:color-mix(in srgb, var(--foreground) 80%, transparent); }
+  .chip svg { width:18px; height:18px; color:var(--primary); }
+  .chip .num { font-variant-numeric:tabular-nums; color:var(--foreground); }
+  .chip .dot { color:var(--muted-foreground); font-weight:600; }
+  .cntTop { flex:0 0 auto; border-radius:99px; background:var(--secondary); padding:2px 8px;
+            font-size:12px; font-weight:700; font-variant-numeric:tabular-nums; }
+</style>
+
+<script>
+  const NAME = '카페 아메리카노 T 2잔 + 딸기 생크림 케이크';
+  const X = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+    stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>`;
+  const CH = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"
+    stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>`;
+  const CARD = `<div class="card">사진</div>`;
+
+  const head = (badge) => `
+    <div class="hd">
+      ${badge
+        ? `<div style="display:flex;align-items:center;gap:10px">
+             <p class="ttl" style="flex:1;min-width:0">원본 사진</p>
+             <span class="cntTop">1 / 2</span></div>`
+        : `<p class="ttl">원본 사진</p>`}
+      <p class="dsc">${NAME}</p>
+      <span class="x">${X}</span>
+    </div>`;
+
+  const V = {
+    '가': ['제목 줄에 뱃지 · 아래에 안내',
+      '앞서 권한 것. 뱃지가 제목·닫기와 한 줄에 서고, 미는 안내는 사진 아래에 따로 있다. 회색 알약이 화면에 둘이다.',
+      head(true) + `<div class="bd">${CARD}
+        <div class="row"><span class="chip">옆으로 밀면 다음 사진 ${CH}</span></div></div>`],
+
+    '나': ['하나로 묶어서',
+      '「어디쯤인가」와 「어떻게 넘기나」를 한 알약에 담는다. 둘은 사진이 두 장 이상일 때만 나오는 같은 조건이고, 옷도 이미 같았다. 헤더가 제목·이름·닫기만 남아 조용해지고, 이름은 제 폭을 다 쓴다.',
+      head(false) + `<div class="bd">${CARD}
+        <div class="row"><span class="chip"><span class="num">1 / 2</span
+          ><span class="dot">·</span>옆으로 밀면 다음 사진 ${CH}</span></div></div>`],
+
+    '다': ['나란히 두 알약으로',
+      '묶되 붙이지는 않는다. 세는 것과 미는 안내가 각자 덩어리를 가져서 뜻이 안 섞인다. 대신 알약이 둘이라 아래가 조금 시끄럽다.',
+      head(false) + `<div class="bd">${CARD}
+        <div class="row"><span class="chip"><span class="num">1 / 2</span></span
+          ><span class="chip">옆으로 밀면 다음 사진 ${CH}</span></div></div>`],
+  };
+
+  addEventListener('DOMContentLoaded', () => {
+    const page = document.querySelector('.page');
+    Object.entries(V).forEach(([k, [name, note, html]]) => {
+      const col = document.createElement('div');
+      col.className = 'col';
+      col.innerHTML = `<p class="cap">${k} · ${name}</p><p class="sub">${note}</p>`
+        + `<div class="sheet" id="s${k}">${html}</div><p class="st" id="n${k}"></p>`;
+      page.appendChild(col);
+    });
+    const measure = () => Object.keys(V).forEach((k) => {
+      const el = document.getElementById('s' + k);
+      const nm = el.querySelector('.dsc').getBoundingClientRect();
+      const chips = el.querySelectorAll('.chip, .cntTop');
+      document.getElementById('n' + k).textContent =
+        `시트 ${Math.round(el.getBoundingClientRect().height)}px · 회색 알약 ${chips.length}개`
+        + ` · 이름이 쓰는 폭 ${Math.round(nm.width)}`;
+    });
+    new ResizeObserver(measure).observe(document.body);
+    document.fonts.ready.then(() => requestAnimationFrame(measure));
+    setTimeout(measure, 500); setTimeout(measure, 1400);
+  });
+</script>
+
+<div class="page"></div>

@@ -1,0 +1,99 @@
+<!doctype html>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>원본 사진 — 점 · 숫자 · 없음</title>
+<script type="module" src="/src/index.css"></script>
+<style>
+  body { margin:0; background:#3a3a44; font-family:Pretendard, system-ui, sans-serif;
+         -webkit-font-smoothing:antialiased; color:#fff; }
+  .page { display:flex; gap:20px; align-items:flex-start; justify-content:center;
+          padding:16px 14px 80px; flex-wrap:wrap; }
+  .col { width:375px; flex:0 0 auto; }
+  .cap { font-size:13px; font-weight:800; margin:0 0 3px; }
+  .sub { color:#b8b8c4; font-size:11px; line-height:1.5; margin:0 0 8px; min-height:88px; }
+  .st  { color:#9d9daa; font-size:10px; font-weight:700; margin:8px 0 0; }
+  .two { color:#9d9daa; font-size:10px; font-weight:700; margin:14px 0 4px; }
+
+  .sheet { background:var(--background); color:var(--foreground);
+           border-radius:16px 16px 0 0; overflow:hidden; box-shadow:0 -2px 24px rgba(0,0,0,.28); }
+  .hd  { padding:20px 60px 20px 20px; position:relative; }
+  .ttl { font-size:20px; line-height:1.2; font-weight:700; letter-spacing:-.025em; margin:0; }
+  .dsc { margin:2px 0 0; font-size:14px; line-height:1.5; font-weight:500;
+         color:var(--muted-foreground); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .x   { position:absolute; top:10px; right:10px; width:44px; height:44px; display:flex;
+         align-items:center; justify-content:center; color:var(--muted-foreground); }
+  .x svg { width:24px; height:24px; }
+  .bd  { padding:0 20px 20px; display:flex; flex-direction:column; }
+  .deck { display:flex; gap:10px; overflow:hidden; }
+  .slide { flex:0 0 calc(100% - 28px); }
+  .last .slide { flex:0 0 100%; }
+  .frame { height:220px; border-radius:15px; border:1px solid var(--border);
+           background:color-mix(in srgb, var(--secondary) 60%, transparent);
+           display:flex; align-items:center; justify-content:center;
+           color:var(--muted-foreground); font-size:12px; font-weight:600; }
+  .dots { align-self:center; margin-top:12px; display:flex; align-items:center; gap:7px; }
+  .dots i { display:block; width:7px; height:7px; border-radius:99px; background:var(--border); }
+  .dots i.on { background:var(--primary); }
+  .num { align-self:center; margin-top:10px; font-size:13px; font-weight:600;
+         color:var(--muted-foreground); font-variant-numeric:tabular-nums; }
+  .num b { font-weight:700; color:var(--foreground); }
+</style>
+
+<script>
+  const NAME = '카페 아메리카노 T 2잔 + 딸기 생크림 케이크';
+  const X = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+    stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>`;
+  const deck = (last) => `<div class="deck${last ? ' last' : ''}">
+      <div class="slide"><div class="frame">사진 ${last ? 3 : 1}</div></div>
+      ${last ? '' : '<div class="slide"><div class="frame">사진 2</div></div>'}</div>`;
+
+  const IND = {
+    '가': [
+      (at) => `<div class="dots">${[0, 1, 2].map((i) =>
+        `<i class="${i === at ? 'on' : ''}"></i>`).join('')}</div>`],
+    '나': [
+      (at) => `<span class="num"><b>${at + 1}</b> / 3</span>`],
+    '다': [() => ''],
+  };
+
+  const V = {
+    '가': ['점 — 같은 크기, 지금 장만 참',
+      '안 읽어도 보인다. 최대 3장이라 세 개까지가 전부이고, 셋은 세지 않아도 개수가 잡힌다. 점을 물렸던 까닭(6px 이라 안 세어진다)은 크기 문제였다.'],
+    '나': ['숫자 — 지금 장만 진하게',
+      '읽으면 확실하다. 다만 총 장수(3)가 하는 일이 크지 않다 — 한두 번 밀면 끝이고, 끝에 닿으면 비어져 나온 다음 장이 사라져서 그걸로도 안다.'],
+    '다': ['아무 것도 없이',
+      '비어져 나온 다음 장(28px)이 「더 있다」를, 그것이 사라지는 것이 「끝이다」를 말한다. 세로를 하나도 안 쓴다. 대신 몇 장인지는 밀어봐야 안다.'],
+  };
+
+  addEventListener('DOMContentLoaded', () => {
+    const page = document.querySelector('.page');
+    Object.entries(V).forEach(([k, [name, note]]) => {
+      const ind = IND[k][0];
+      const col = document.createElement('div');
+      col.className = 'col';
+      const sheet = (last, at) => `<div class="sheet">
+          <div class="hd"><p class="ttl">원본 사진</p><p class="dsc">${NAME}</p>
+            <span class="x">${X}</span></div>
+          <div class="bd">${deck(last)}${ind(at)}</div></div>`;
+      col.innerHTML = `<p class="cap">${k} · ${name}</p><p class="sub">${note}</p>`
+        + `<p class="two">첫 장 — 오른쪽에 다음 장이 비어져 나온다</p>` + sheet(false, 0)
+        + `<p class="two">마지막 장 — 비어져 나온 것이 사라진다</p>` + sheet(true, 2)
+        + `<p class="st" id="n${k}"></p>`;
+      page.appendChild(col);
+    });
+    const measure = () => Object.keys(V).forEach((k) => {
+      const el = [...document.querySelectorAll('.col')].find((c) => c.querySelector('#n' + k));
+      const sh = el.querySelector('.sheet');
+      const deckR = sh.querySelector('.deck').getBoundingClientRect();
+      const bd = sh.querySelector('.bd').getBoundingClientRect();
+      document.getElementById('n' + k).textContent =
+        `시트 ${Math.round(sh.getBoundingClientRect().height)}px · 사진 아래가 쓰는 세로 `
+        + `${Math.round(bd.bottom - deckR.bottom - 20)}px`;
+    });
+    new ResizeObserver(measure).observe(document.body);
+    document.fonts.ready.then(() => requestAnimationFrame(measure));
+    setTimeout(measure, 500); setTimeout(measure, 1400);
+  });
+</script>
+
+<div class="page"></div>

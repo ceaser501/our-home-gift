@@ -1,0 +1,91 @@
+<!doctype html>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>원본 사진 — 숫자 깎기</title>
+<script type="module" src="/src/index.css"></script>
+<style>
+  body { margin:0; background:#3a3a44; font-family:Pretendard, system-ui, sans-serif;
+         -webkit-font-smoothing:antialiased; color:#fff; }
+  .page { display:flex; gap:20px; align-items:flex-start; justify-content:center;
+          padding:16px 14px 80px; flex-wrap:wrap; }
+  .col { width:375px; flex:0 0 auto; }
+  .cap { font-size:13px; font-weight:800; margin:0 0 3px; }
+  .sub { color:#b8b8c4; font-size:11px; line-height:1.5; margin:0 0 8px; min-height:76px; }
+  .st  { color:#9d9daa; font-size:10px; font-weight:700; margin:8px 0 0; }
+
+  .sheet { background:var(--background); color:var(--foreground);
+           border-radius:16px 16px 0 0; overflow:hidden; box-shadow:0 -2px 24px rgba(0,0,0,.28); }
+  .hd  { padding:20px 60px 20px 20px; position:relative; }
+  .ttl { font-size:20px; line-height:1.2; font-weight:700; letter-spacing:-.025em; margin:0; }
+  .dsc { margin:2px 0 0; font-size:14px; line-height:1.5; font-weight:500;
+         color:var(--muted-foreground); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .x   { position:absolute; top:10px; right:10px; width:44px; height:44px; display:flex;
+         align-items:center; justify-content:center; color:var(--muted-foreground); }
+  .x svg { width:24px; height:24px; }
+  .bd  { padding:0 20px 20px; display:flex; flex-direction:column; }
+  .deck { display:flex; gap:10px; overflow:hidden; }
+  .slide { flex:0 0 calc(100% - 28px); }
+  .frame { height:230px; border-radius:15px; border:1px solid var(--border);
+           background:color-mix(in srgb, var(--secondary) 60%, transparent);
+           display:flex; align-items:center; justify-content:center;
+           color:var(--muted-foreground); font-size:12px; font-weight:600; }
+  .ind { align-self:center; margin-top:10px; font-variant-numeric:tabular-nums; }
+</style>
+
+<script>
+  const NAME = '카페 아메리카노 T 2잔 + 딸기 생크림 케이크';
+  const X = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+    stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>`;
+  const DECK = `<div class="deck">
+      <div class="slide"><div class="frame">사진 1</div></div>
+      <div class="slide"><div class="frame">사진 2</div></div></div>`;
+
+  const V = {
+    '가': ['지금 시안 — 회색 알약',
+      '바로 위 사진틀이 같은 회색(secondary/60)이라, 틀에서 떨어져 나온 조각처럼 보인다. 14 굵게라 목소리도 크다.',
+      `<span class="ind" style="border-radius:99px;background:var(--secondary);padding:4px 12px;
+        font-size:14px;font-weight:700">1 / 3</span>`],
+
+    '나': ['글자만 — 바탕을 걷고',
+      '알약을 걷고 13 준굵게 회색 글자만 남긴다. 사진에 딸린 값이라 이 정도면 된다. 세로도 덜 쓴다.',
+      `<span class="ind" style="font-size:13px;font-weight:600;color:var(--muted-foreground)">1 / 3</span>`],
+
+    '다': ['글자만 — 지금 장만 진하게',
+      '「1」은 검게, 「/ 3」은 회색으로. 지금 어디인가가 앞에 서고 몇 장인가가 뒤를 받친다 — 한 줄 안에서 위계가 생긴다.',
+      `<span class="ind" style="font-size:13px;font-weight:600;color:var(--muted-foreground)"><b
+        style="font-weight:700;color:var(--foreground)">1</b> / 3</span>`],
+
+    '라': ['글자만 — 사이를 좁혀서',
+      '「1/3」으로 붙인다. 슬래시 둘레 공백을 없애면 한 덩어리로 읽힌다. 다만 숫자가 두 자리가 되면(10/12) 빽빽해진다.',
+      `<span class="ind" style="font-size:13px;font-weight:600;color:var(--muted-foreground)"><b
+        style="font-weight:700;color:var(--foreground)">1</b>/3</span>`],
+  };
+
+  addEventListener('DOMContentLoaded', () => {
+    const page = document.querySelector('.page');
+    Object.entries(V).forEach(([k, [name, note, ind]]) => {
+      const col = document.createElement('div');
+      col.className = 'col';
+      col.innerHTML = `<p class="cap">${k} · ${name}</p><p class="sub">${note}</p>`
+        + `<div class="sheet" id="s${k}">
+             <div class="hd"><p class="ttl">원본 사진</p><p class="dsc">${NAME}</p>
+               <span class="x">${X}</span></div>
+             <div class="bd">${DECK}${ind}</div>
+           </div><p class="st" id="n${k}"></p>`;
+      page.appendChild(col);
+    });
+    const measure = () => Object.keys(V).forEach((k) => {
+      const el = document.getElementById('s' + k);
+      const deck = el.querySelector('.deck').getBoundingClientRect();
+      const bd = el.querySelector('.bd').getBoundingClientRect();
+      document.getElementById('n' + k).textContent =
+        `시트 ${Math.round(el.getBoundingClientRect().height)}px · 사진 아래가 쓰는 세로 `
+        + `${Math.round(bd.bottom - deck.bottom - 20)}px`;
+    });
+    new ResizeObserver(measure).observe(document.body);
+    document.fonts.ready.then(() => requestAnimationFrame(measure));
+    setTimeout(measure, 500); setTimeout(measure, 1400);
+  });
+</script>
+
+<div class="page"></div>

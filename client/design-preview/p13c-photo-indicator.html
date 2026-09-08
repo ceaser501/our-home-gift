@@ -1,0 +1,119 @@
+<!doctype html>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>원본 사진 — 어디쯤인지 알리는 법</title>
+<script type="module" src="/src/index.css"></script>
+<style>
+  body { margin:0; background:#3a3a44; font-family:Pretendard, system-ui, sans-serif;
+         -webkit-font-smoothing:antialiased; color:#fff; }
+  .page { display:flex; gap:20px; align-items:flex-start; justify-content:center;
+          padding:16px 14px 80px; flex-wrap:wrap; }
+  .col { width:375px; flex:0 0 auto; }
+  .cap { font-size:13px; font-weight:800; margin:0 0 3px; }
+  .sub { color:#b8b8c4; font-size:11px; line-height:1.5; margin:0 0 8px; min-height:92px; }
+  .st  { color:#9d9daa; font-size:10px; font-weight:700; margin:8px 0 0; }
+
+  .sheet { background:var(--background); color:var(--foreground);
+           border-radius:16px 16px 0 0; overflow:hidden; box-shadow:0 -2px 24px rgba(0,0,0,.28); }
+  .hd  { padding:20px 60px 20px 20px; position:relative; }
+  .ttl { font-size:20px; line-height:1.2; font-weight:700; letter-spacing:-.025em; margin:0; }
+  .dsc { margin:2px 0 0; font-size:14px; line-height:1.5; font-weight:500;
+         color:var(--muted-foreground); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .x   { position:absolute; top:10px; right:10px; width:44px; height:44px; display:flex;
+         align-items:center; justify-content:center; color:var(--muted-foreground); }
+  .x svg { width:24px; height:24px; }
+  .bd  { padding:0 20px 20px; display:flex; flex-direction:column; }
+
+  /* 다음 장이 오른쪽에 28px 비어져 나온다 — 이것이 「여기서도 밀린다」는 그림이다 */
+  .deck { display:flex; gap:10px; overflow:hidden; }
+  .slide { flex:0 0 calc(100% - 28px); }
+  .frame { height:230px; border-radius:15px; border:1px solid var(--border);
+           background:color-mix(in srgb, var(--secondary) 60%, transparent);
+           display:flex; align-items:center; justify-content:center;
+           color:var(--muted-foreground); font-size:12px; font-weight:600; }
+
+  .cntTop { flex:0 0 auto; border-radius:99px; background:var(--secondary); padding:2px 8px;
+            font-size:12px; font-weight:700; font-variant-numeric:tabular-nums; }
+  .hint { align-self:center; display:flex; align-items:center; gap:6px; border-radius:99px;
+          background:var(--secondary); padding:6px 14px; font-size:14.5px; font-weight:700;
+          color:color-mix(in srgb, var(--foreground) 80%, transparent); }
+  .hint svg { width:18px; height:18px; color:var(--primary); }
+  .num  { align-self:center; border-radius:99px; background:var(--secondary); padding:4px 12px;
+          font-size:14px; font-weight:700; font-variant-numeric:tabular-nums; }
+  /* 점 — 한때 6px 이라 안 세어졌다. 8 로 키우고 지금 장은 알약으로 늘인다. */
+  .dots { align-self:center; display:flex; align-items:center; gap:6px; }
+  .dots i { display:block; width:8px; height:8px; border-radius:99px; background:var(--border); }
+  .dots i.on { background:var(--primary); }
+  .dots.pill i.on { width:22px; }
+</style>
+
+<script>
+  const NAME = '카페 아메리카노 T 2잔 + 딸기 생크림 케이크';
+  const X = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+    stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>`;
+  const CH = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"
+    stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>`;
+  const DECK = `<div class="deck">
+      <div class="slide"><div class="frame">사진 1</div></div>
+      <div class="slide"><div class="frame">사진 2</div></div></div>`;
+
+  const head = (badge) => `
+    <div class="hd">
+      ${badge
+        ? `<div style="display:flex;align-items:center;gap:10px">
+             <p class="ttl" style="flex:1;min-width:0">원본 사진</p>
+             <span class="cntTop">1 / 2</span></div>`
+        : `<p class="ttl">원본 사진</p>`}
+      <p class="dsc">${NAME}</p><span class="x">${X}</span>
+    </div>`;
+
+  const V = {
+    '가': ['지금 — 헤더에 숫자, 아래에 글 안내',
+      '다음 장이 28px 비어져 나와 이미 「밀린다」를 말하고 있는데, 그 아래에서 글이 같은 말을 또 한다. PhotoDeck 주석이 「글이 아니라 그림이라 읽지 않아도 보이고 세로를 안 쓴다」고 적어둔 그 자리다.',
+      head(true) + `<div class="bd">${DECK}
+        <div style="margin-top:12px"></div>
+        <div class="hint">옆으로 밀면 다음 사진 ${CH}</div></div>`],
+
+    '나': ['사진 아래 숫자만',
+      '글 안내를 걷고 숫자를 사진 밑으로 내린다. 헤더가 조용해지고 숫자는 사진에 붙는다. 미는 것은 비어져 나온 다음 장이 맡는다.',
+      head(false) + `<div class="bd">${DECK}
+        <div style="margin-top:12px"></div>
+        <span class="num">1 / 2</span></div>`],
+
+    '다': ['사진 아래 점 — 같은 크기, 색으로만',
+      '표준 페이지 점이다. 지금 장만 색이 차고 나머지는 비어 있다. 늘이지 않으니 「왜 하나만 길지」를 묻지 않아도 된다. 세로를 제일 적게 쓴다.',
+      head(false) + `<div class="bd">${DECK}
+        <div style="margin-top:12px"></div>
+        <div class="dots"><i class="on"></i><i></i></div></div>`],
+
+    '라': ['사진 아래 점 — 지금 장만 늘여서',
+      '앞서 세운 것. 늘어난 점이 「여기 있다」는 뜻인데 자명하지 않다 — 진행 막대의 한 토막처럼도 읽힌다.',
+      head(false) + `<div class="bd">${DECK}
+        <div style="margin-top:12px"></div>
+        <div class="dots pill"><i class="on"></i><i></i></div></div>`],
+  };
+
+  addEventListener('DOMContentLoaded', () => {
+    const page = document.querySelector('.page');
+    Object.entries(V).forEach(([k, [name, note, html]]) => {
+      const col = document.createElement('div');
+      col.className = 'col';
+      col.innerHTML = `<p class="cap">${k} · ${name}</p><p class="sub">${note}</p>`
+        + `<div class="sheet" id="s${k}">${html}</div><p class="st" id="n${k}"></p>`;
+      page.appendChild(col);
+    });
+    const measure = () => Object.keys(V).forEach((k) => {
+      const el = document.getElementById('s' + k);
+      const deck = el.querySelector('.deck').getBoundingClientRect();
+      const bd = el.querySelector('.bd').getBoundingClientRect();
+      document.getElementById('n' + k).textContent =
+        `시트 ${Math.round(el.getBoundingClientRect().height)}px · 사진 아래가 쓰는 세로 `
+        + `${Math.round(bd.bottom - deck.bottom - 20)}px`;
+    });
+    new ResizeObserver(measure).observe(document.body);
+    document.fonts.ready.then(() => requestAnimationFrame(measure));
+    setTimeout(measure, 500); setTimeout(measure, 1400);
+  });
+</script>
+
+<div class="page"></div>

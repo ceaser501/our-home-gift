@@ -1,0 +1,123 @@
+<!doctype html>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>원본 사진 — 몇 장 중 몇 번째</title>
+<script type="module" src="/src/index.css"></script>
+<style>
+  body { margin:0; background:#3a3a44; font-family:Pretendard, system-ui, sans-serif;
+         -webkit-font-smoothing:antialiased; color:#fff; }
+  .page { display:flex; gap:20px; align-items:flex-start; justify-content:center;
+          padding:16px 14px 80px; flex-wrap:wrap; }
+  .col { width:375px; flex:0 0 auto; }
+  .cap { font-size:13px; font-weight:800; margin:0 0 3px; }
+  .sub { color:#b8b8c4; font-size:11px; line-height:1.5; margin:0 0 8px; min-height:74px; }
+  .st  { color:#9d9daa; font-size:10px; font-weight:700; margin:8px 0 0; }
+
+  .sheet { background:var(--background); color:var(--foreground);
+           border-radius:16px 16px 0 0; overflow:hidden; box-shadow:0 -2px 24px rgba(0,0,0,.28); }
+  .hd  { padding:20px 60px 20px 20px; position:relative; }
+  .ttl { font-size:20px; line-height:1.2; font-weight:700; letter-spacing:-.025em; margin:0; }
+  .dsc { margin:2px 0 0; font-size:14px; line-height:1.5; font-weight:500;
+         color:var(--muted-foreground); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .x   { position:absolute; top:10px; right:10px; width:44px; height:44px; display:flex;
+         align-items:center; justify-content:center; color:var(--muted-foreground); }
+  .x svg { width:24px; height:24px; }
+  .bd  { padding:0 20px 20px; display:flex; flex-direction:column; gap:12px; }
+
+  .cnt { flex:0 0 auto; border-radius:99px; background:var(--secondary); padding:3px 11px;
+         font-size:15px; font-weight:700; font-variant-numeric:tabular-nums; color:var(--foreground); }
+  .cnt.sm { font-size:12px; font-weight:700; padding:2px 8px; }
+
+  .deck { position:relative; }
+  .card { border-radius:14px; background:var(--secondary); height:250px; display:flex;
+          align-items:center; justify-content:center; color:var(--muted-foreground);
+          font-size:12px; font-weight:600; }
+  .over { position:absolute; top:10px; right:10px; border-radius:99px;
+          background:rgb(0 0 0 / .55); color:#fff; padding:3px 10px; font-size:13px;
+          font-weight:700; font-variant-numeric:tabular-nums; }
+  .hint { align-self:center; display:flex; align-items:center; gap:6px; border-radius:99px;
+          background:var(--secondary); padding:7px 14px; font-size:13px; font-weight:700;
+          color:var(--foreground); }
+  .hint svg { width:15px; height:15px; color:var(--primary); }
+</style>
+
+<script>
+  const NAME = '카페 아메리카노 T 2잔 + 딸기 생크림 케이크';
+  const X = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+    stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>`;
+  const CH = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+    stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>`;
+  const DECK = `<div class="deck"><div class="card">사진</div></div>`;
+  const HINT = `<div class="hint">옆으로 밀면 다음 사진 ${CH}</div>`;
+
+  const V = {
+    '가': ['지금 — 두 줄 덩어리에 세로 가운데',
+      '제목(33)과 부제(57.5) 사이인 44.5 에 뜬다. 제목에도 부제에도 닫기에도 안 걸리고, 가로로도 닫기에서 50px 떨어진 아무 자리다.',
+      `<div class="hd">
+         <div style="display:flex;align-items:center;gap:10px">
+           <div style="min-width:0;flex:1">
+             <p class="ttl">원본 사진</p><p class="dsc">${NAME}</p></div>
+           <span class="cnt">1 / 2</span>
+         </div>
+         <span class="x">${X}</span>
+       </div><div class="bd">${DECK}${HINT}</div>`],
+
+    '나': ['제목 줄에 맞춰서',
+      '뱃지를 제목과 같은 줄(33)에 세운다. 닫기와도 한 줄이 되어 위쪽이 정돈된다. 부제는 그 아래 제 폭을 다 쓴다 — 이름이 덜 잘린다.',
+      `<div class="hd">
+         <div style="display:flex;align-items:center;gap:10px">
+           <p class="ttl" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">원본 사진</p>
+           <span class="cnt sm">1 / 2</span>
+         </div>
+         <p class="dsc">${NAME}</p>
+         <span class="x">${X}</span>
+       </div><div class="bd">${DECK}${HINT}</div>`],
+
+    '다': ['부제 줄 오른쪽 끝으로',
+      '「무엇을 보고 있나」(이름)와 「몇 번째인가」를 한 줄에 묶는다. 제목 줄은 닫기와 둘만 남아 깨끗해진다. 대신 이름이 뱃지만큼 더 잘린다.',
+      `<div class="hd">
+         <p class="ttl">원본 사진</p>
+         <div style="display:flex;align-items:center;gap:10px;margin-top:2px">
+           <p class="dsc" style="flex:1;min-width:0;margin:0">${NAME}</p>
+           <span class="cnt sm">1 / 2</span>
+         </div>
+         <span class="x">${X}</span>
+       </div><div class="bd">${DECK}${HINT}</div>`],
+
+    '라': ['사진 위로 되돌린다',
+      '원래 있던 자리다. 헤더가 제목·부제·닫기만 남아 제일 조용하고, 몇 번째인지는 넘기는 사진 바로 위에 붙어 따라다닌다. 대신 사진 모서리를 가린다.',
+      `<div class="hd">
+         <p class="ttl">원본 사진</p><p class="dsc">${NAME}</p>
+         <span class="x">${X}</span>
+       </div>
+       <div class="bd">
+         <div class="deck"><div class="card">사진</div><span class="over">1 / 2</span></div>
+         ${HINT}</div>`],
+  };
+
+  addEventListener('DOMContentLoaded', () => {
+    const page = document.querySelector('.page');
+    Object.entries(V).forEach(([k, [name, note, html]]) => {
+      const col = document.createElement('div');
+      col.className = 'col';
+      col.innerHTML = `<p class="cap">${k} · ${name}</p><p class="sub">${note}</p>`
+        + `<div class="sheet" id="s${k}">${html}</div><p class="st" id="n${k}"></p>`;
+      page.appendChild(col);
+    });
+    const measure = () => Object.keys(V).forEach((k) => {
+      const el = document.getElementById('s' + k);
+      const b = el.getBoundingClientRect();
+      const mid = (q) => { const n = el.querySelector(q); if (!n) return '-';
+        const r = n.getBoundingClientRect(); return Math.round(r.top - b.top + r.height / 2); };
+      const nm = el.querySelector('.dsc').getBoundingClientRect();
+      document.getElementById('n' + k).textContent =
+        `가운데 y — 제목 ${mid('.ttl')} · 뱃지 ${mid('.cnt') === '-' ? mid('.over') : mid('.cnt')} · 닫기 ${mid('.x')}`
+        + ` | 이름이 쓰는 폭 ${Math.round(nm.width)}`;
+    });
+    new ResizeObserver(measure).observe(document.body);
+    document.fonts.ready.then(() => requestAnimationFrame(measure));
+    setTimeout(measure, 500); setTimeout(measure, 1400);
+  });
+</script>
+
+<div class="page"></div>
