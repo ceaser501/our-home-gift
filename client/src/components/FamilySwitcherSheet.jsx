@@ -5,6 +5,7 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
+  SheetDescription,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -102,6 +103,15 @@ export default function FamilySwitcherSheet({ onClose, initialCode = "" }) {
       <SheetContent className="max-h-[calc(92dvh/var(--ui-scale))] gap-0 overflow-y-auto pb-[var(--safe-bottom)]">
         <SheetHeader>
           <SheetTitle>{title}</SheetTitle>
+          {/* 제목을 보태는 설명이라 부제 자리다. 본문 <p> 로 놓여 있었는데, 그러면
+              제목과 헤더 여백(20)만큼 벌어져 딴 이야기처럼 읽힌다.
+              「보고 싶은 가족을 고르세요」는 걷었다 — 제목이 이미 묻고 있다.
+              고르는 화면에서만 쓴다. 만들기·참여·승인 대기 화면은 제 할 말이 따로 있다. */}
+          {!pendingFor && mode === "list" && (
+            <SheetDescription className="break-keep">
+              기프티콘은 가족마다 따로 모여요.
+            </SheetDescription>
+          )}
         </SheetHeader>
 
         {pendingFor ? (
@@ -120,11 +130,6 @@ export default function FamilySwitcherSheet({ onClose, initialCode = "" }) {
           </div>
         ) : mode === "list" ? (
           <>
-            {/* 「보고 싶은 가족을 고르세요」는 걷었다 — 제목이 이미 묻고 있다. */}
-            <p className="m-0 px-5 pb-2 text-body break-keep text-muted-foreground">
-              기프티콘은 가족마다 따로 모여요.
-            </p>
-
             {/* 가족마다 눌리는 면을 준다. 예전에는 글자 색만 다른 두 줄이라 목록으로 안
                 보였다 — 이 창의 목적이 고르는 것인데, 무엇을 누르는지가 안 보였다.
 
