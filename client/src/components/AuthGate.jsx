@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getSession, onAuthStateChange, signOut } from '../auth';
-import { getFamilyMembers, getMyFamilies, listPendingJoinRequests, touchFamily } from '../family';
+import { getFamilyMembers, getMyFamilies, listMyJoinRequests, listPendingJoinRequests, touchFamily } from '../family';
 import { hasAgreedToCurrent } from '../consent';
 import { FamilyContext } from '../FamilyContext';
+import { subscribeToMyJoinRequests } from '../realtime';
 import LoginScreen from './LoginScreen';
 import FamilyOnboarding from './FamilyOnboarding';
 import FamilyLoadError from './FamilyLoadError';
@@ -53,6 +54,9 @@ function familySignature(state) {
     ...state.families.map((f) => `${f.id}:${f.name}`),
     ...state.members.map((m) => `${m.user_id}:${m.display_name}`),
     ...state.joinRequests.map((r) => r.id),
+    // 내가 넣은 신청도 센다. 승인되면 이 줄이 사라지고 families에 하나가 느는데,
+    // 둘 다 화면이 따라가야 하는 변화다.
+    ...(state.myJoinRequests ?? []).map((r) => r.id),
   ].join('|');
 }
 
@@ -111,11 +115,14 @@ export default function AuthGate({ children }) {
       // 때이지, 마지막으로 목록을 읽은 때가 아니다.
       if (touch) touchFamily(family.id);
 
-      const [members, joinRequests] = await Promise.all([
+      // myJoinRequests: 내가 넣어둔 참여 신청(승인 대기중). 가족 바꾸기 창이 이걸
+      // 목록에 함께 그린다 — 신청하고 나면 승인 날 때까지 아무 데도 안 보이던 자리다.
+      const [members, joinRequests, myJoinRequests] = await Promise.all([
         getFamilyMembers(family.id),
         listPendingJoinRequests(family.id).catch(() => []),
+        listMyJoinRequests(),
       ]);
-      return { families, family, members, joinRequests };
+      return { families, family, members, joinRequests, myJoinRequests };
     },
     [userId]
   );
@@ -218,6 +225,31 @@ export default function AuthGate({ children }) {
     if (next) setFamilyState(next);
   }
 
+  // 내가 넣은 참여 신청이 처리되면 가족 목록을 다시 읽는다.
+  //
+  // 승인은 남이 다른 폰에서 누르는 일이다. 그 신호를 안 들으면 화면은 아무것도 모른 채
+  // 그대로 있고, 로그아웃했다 들어와야 새 가족이 보인다 — 실제로 그랬다.
+  //
+  // 목록 쪽 구독(App.jsx)은 '지금 보는 가족'만 듣는다. 승인을 기다리는 가족은 아직 내
+  // 가족이 아니라 거기 안 걸린다. 그래서 여기서 따로 듣는다.
+  //
+  // 보는 가족을 바꾸지는 않는다. 승인이 났다고 화면이 저절로 옮겨 가면, 쓰던 사람은
+  // 자기가 뭘 눌러서 그렇게 된 줄 안다. 새로 생긴 가족은 가족 바꾸기 창에서 고른다.
+  useEffect(() => {
+    if (!userId) return undefined;
+    let timer = null;
+    const unsubscribe = subscribeToMyJoinRequests(userId, () => {
+      // 잇달아 올 수 있어서 잠깐 모았다 한 번만 읽는다.
+      clearTimeout(timer);
+      timer = setTimeout(() => refreshFamily().catch(() => {}), 300);
+    });
+    return () => {
+      clearTimeout(timer);
+      unsubscribe();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
+
   // 첫 설정 화면을 띄울지.
   //
   // useState의 초기값으로 정할 수가 없다 — 처음 그릴 때는 로그인 정보를 아직 못 읽어서
@@ -283,6 +315,7 @@ export default function AuthGate({ children }) {
         families: familyState.families,
         members: familyState.members,
         joinRequests: familyState.joinRequests,
+        myJoinRequests: familyState.myJoinRequests ?? [],
         dataVersion,
         switchFamily,
         refetchFamily,

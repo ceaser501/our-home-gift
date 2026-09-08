@@ -18,7 +18,15 @@ import useBackClose from '../utils/useBackClose';
 export default function FamilySwitcherSheet({ onClose, initialCode = '' }) {
   // 뒤로가기로 이 창을 닫는다. 안 그러면 설치해서 쓸 때 앱이 통째로 꺼진다.
   useBackClose(onClose);
-  const { families, family, members, user, switchFamily } = useFamily();
+  const { families, family, members, user, switchFamily, myJoinRequests } = useFamily();
+
+  // 지금 보는 가족을 맨 위로 올린다.
+  //
+  // 차례는 서버가 '마지막으로 연 순서'로 세워 준다(family.js의 getMyFamilies). 그런데
+  // 그 값은 가족을 열 때 적히는 것이라, 방금 다른 가족을 보다 온 경우에는 지금 보는
+  // 가족이 두 번째 아래로 내려가 있었다. 골라야 할 목록에서 '내가 지금 어디 있는지'가
+  // 한눈에 안 들어오면 창을 연 뜻이 없다.
+  const ordered = [family, ...families.filter((f) => f.id !== family.id)];
   const myName = members.find((m) => m.user_id === user.id)?.display_name || '';
 
   // 초대 링크를 눌러 온 사람에게는 참여 칸을 이미 열어 코드까지 채워서 보여준다.
@@ -109,7 +117,7 @@ export default function FamilySwitcherSheet({ onClose, initialCode = '' }) {
                 적는 값은 이름과 상태뿐이다. families에는 id·name·invite_code밖에 없어서
                 구성원 수나 기프티콘 개수는 쓸 수가 없다(없는 데이터를 지어내지 않는다). */}
             <ul className="m-0 flex list-none flex-col gap-2 p-0 px-5">
-              {families.map((item) => {
+              {ordered.map((item) => {
                 const isCurrent = item.id === family.id;
                 return (
                   <li key={item.id}>
@@ -149,6 +157,30 @@ export default function FamilySwitcherSheet({ onClose, initialCode = '' }) {
                   </li>
                 );
               })}
+
+              {/* 승인을 기다리는 가족.
+                  신청하고 나면 승인이 날 때까지 아무 데도 안 보였다. 그래서 신청을 했는지,
+                  했는데 아직인지, 거절당한 것인지 알 방법이 없었다.
+                  누를 수 없는 줄로 둔다 — 아직 들어간 것이 아니라 고를 수가 없다.
+                  승인이 나면 이 줄이 사라지고 위 목록에 하나가 는다. 로그아웃하지 않아도
+                  그 자리에서 바뀐다(AuthGate가 신청 줄을 듣고 있다). */}
+              {(myJoinRequests ?? []).map((req) => (
+                <li key={req.id}>
+                  <div className="flex w-full items-center gap-3 rounded-2xl border border-dashed border-border bg-card/60 p-3.5">
+                    <span className="flex size-11 shrink-0 items-center justify-center rounded-[13px] bg-warning/12">
+                      <Clock className="size-5 text-warning" strokeWidth={2.1} />
+                    </span>
+                    <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                      <span className="truncate text-base font-semibold tracking-[-0.015em] text-muted-foreground">
+                        {req.family_name}
+                      </span>
+                      <span className="text-[12.5px] font-medium tracking-[-0.01em] text-warning">
+                        승인 대기중
+                      </span>
+                    </div>
+                  </div>
+                </li>
+              ))}
             </ul>
 
             {/* 위 목록은 고르는 자리이고 여기는 만드는 자리다. 성격이 달라서 제목으로 가른다.

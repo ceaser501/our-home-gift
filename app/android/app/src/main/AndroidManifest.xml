@@ -48,6 +48,13 @@
             </intent-filter>
         </activity>
 
+        <!-- 알림 줄에 뜨는 작은 아이콘. 없으면 파이어베이스가 런처 아이콘을 쓰는데,
+             그건 색이 꽉 찬 네모라 흰 사각형으로 뜬다. 앱을 켜둔 채로 온 알림도
+             같은 그림을 쓴다(client/src/utils/foregroundPush.js). -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_stat_moacon" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

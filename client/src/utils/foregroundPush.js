@@ -62,8 +62,14 @@ async function draw(notification) {
         id: (nextId += 1) % 2147483647,
         title,
         body,
-        // 아이콘은 안 정한다. 안 주면 앱 아이콘을 쓰는데, 이름을 잘못 적으면 없는
-        // 그림을 찾다가 알림이 통째로 안 뜬다.
+        // 알림 줄에 뜨는 작은 아이콘.
+        //
+        // 안 주면 플러그인이 시스템의 ⓘ 를 쓴다(LocalNotificationManager.kt의
+        // getDefaultSmallIcon). 앱이 내려가 있을 때 오던 알림은 파이어베이스가 그리고
+        // 거기는 이 그림을 쓰므로, 안 맞추면 같은 알림인데 앞에 있을 때와 내려가
+        // 있을 때 아이콘이 달라진다.
+        // (app/android/app/src/main/res/drawable/ic_stat_moacon.xml)
+        smallIcon: 'ic_stat_moacon',
         // 시각을 안 주면 곧바로 나간다.
       },
     ],

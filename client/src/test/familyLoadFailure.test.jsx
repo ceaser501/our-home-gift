@@ -16,7 +16,10 @@ vi.mock('../family', () => ({
   getMyFamilies: (...a) => getMyFamilies(...a),
   getFamilyMembers: vi.fn(async () => [{ user_id: 'me', display_name: '나' }]),
   listPendingJoinRequests: vi.fn(async () => []),
+  listMyJoinRequests: vi.fn(async () => []),
 }));
+
+vi.mock('../realtime', () => ({ subscribeToMyJoinRequests: () => () => {} }));
 
 vi.mock('../consent', () => ({ hasAgreedToCurrent: vi.fn(async () => true) }));
 

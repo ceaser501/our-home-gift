@@ -518,17 +518,23 @@ export default function App() {
           같은 크기로 나란히 두면 어느 쪽이 본길인지 헷갈린다. 앱으로 설치했을 때만
           보이고, 없어도 아래 + 로 하던 대로 등록할 수 있다.
 
-          바탕을 카드색에서 연보라(accent)로 바꿨다. 갤럭시에서 목록 위에 겹쳐 있으면
-          거의 안 보였다 — 카드색은 목록의 카드와 같은 색이라, 하필 그 위를 지날 때
-          버튼이 배경에 묻힌다. 목록 위 띠가 쓰는 색과 같은 색으로 두면 흰 바탕에서도
-          카드 위에서도 뜬다. + 와는 진하기가 갈려서 어느 쪽이 본길인지도 그대로 남는다. */}
+          바탕을 카드색에서 연보라(accent)로 바꿨다가, 테두리와 그림자를 더 얹었다.
+          연보라만으로는 여전히 눈에 안 띄었다 — 밝은 바탕에서는 색이 옅어 배경에
+          섞이고, 다크모드에서는 그 연보라 자체가 어두워져서 아예 안 보였다.
+
+          그래서 색 하나에 기대지 않는다. 보라 테두리로 윤곽을 세우고 그림자로 목록에서
+          띄운다. 테두리는 어느 모드에서도 배경과 밝기가 갈리는 값이라(primary), 바탕이
+          희든 검든 동그라미의 자리가 먼저 보인다.
+
+          + 와는 여전히 갈린다. 저쪽은 속이 꽉 찬 보라이고 이쪽은 테두리만 있는 연보라라,
+          어느 쪽이 본길인지는 모양으로 남는다. */}
       {scanSupported && !isFirstRun && (
         <button
           type="button"
           onClick={() => guardUpload(() => setScanOpen(true))}
           aria-label="갤러리에서 기프티콘 찾기"
           style={{ right: 'max(24px, calc((100vw - 480px) / 2 + 24px))' }}
-          className="fixed bottom-[calc(var(--safe-bottom)+64px)] z-20 flex size-11 items-center justify-center rounded-full bg-accent text-accent-foreground shadow-md"
+          className="fixed bottom-[calc(var(--safe-bottom)+64px)] z-20 flex size-11 items-center justify-center rounded-full border-[1.5px] border-primary/45 bg-accent text-primary shadow-md shadow-primary/20"
         >
           <ScanSearch className="size-5" />
         </button>

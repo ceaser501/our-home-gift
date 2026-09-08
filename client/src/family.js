@@ -145,6 +145,24 @@ export async function requestJoinFamily(code, memberName) {
   return data;
 }
 
+// 내가 넣어둔 참여 신청. 승인을 기다리는 것만 온다.
+//
+// 가족 바꾸기 창이 이걸 '승인 대기중' 줄로 그린다. 신청하고 나면 승인이 날 때까지
+// 아무 데도 안 보여서, 신청을 했는지조차 알 수 없던 자리다.
+//
+// 못 읽어도 넘어간다(빈 배열). 아직 SQL을 안 돌렸으면 함수가 없는데, 그 한 줄 때문에
+// 가족 바꾸기가 통째로 안 열리면 안 된다.
+// (supabase/my-join-requests.sql)
+export async function listMyJoinRequests() {
+  try {
+    const { data, error } = await supabase.rpc('list_my_join_requests');
+    if (error) return [];
+    return data ?? [];
+  } catch {
+    return [];
+  }
+}
+
 // 이 가족에 들어오려고 기다리는 사람들.
 export async function listPendingJoinRequests(familyId) {
   const { data, error } = await supabase

@@ -42,6 +42,28 @@ export function subscribeToActivities(familyId, onChange) {
   };
 }
 
+// 내가 넣은 참여 신청이 처리되면 곧바로 받는다.
+//
+// 위의 subscribeToFamily는 '지금 보는 가족'만 듣는다. 그런데 승인을 기다리는 가족은
+// 아직 내 가족이 아니라서 거기 안 걸린다 — 승인이 나도 화면은 아무것도 모른 채
+// 그대로였고, 로그아웃했다 들어와야 그제서야 새 가족이 보였다.
+//
+// 그래서 '내 신청 줄'을 따로 듣는다. 사람으로 걸러서, 남의 신청은 오지 않는다.
+export function subscribeToMyJoinRequests(userId, onChange) {
+  const channel = supabase
+    .channel(`my-join-requests-${userId}`)
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'family_join_requests', filter: `user_id=eq.${userId}` },
+      onChange
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}
+
 // 점검 공지가 올라오거나 내려가면 곧바로 받아야 한다.
 //
 // 다른 구독과 성격이 다르다. 저것들은 늦게 알아도 화면이 잠깐 낡을 뿐인데, 이건 등록을

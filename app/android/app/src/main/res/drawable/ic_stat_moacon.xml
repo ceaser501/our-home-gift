@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    알림 줄(상태바)에 뜨는 작은 아이콘.
+
+    ── 왜 따로 필요한가 ────────────────────────────────────────────────────────
+    안드로이드는 이 자리에 색을 안 쓴다. 그림을 실루엣으로만 보고, 투명하지 않은
+    곳을 전부 흰색으로 칠한다. 그래서 런처 아이콘(색이 꽉 찬 네모)을 그대로 쓰면
+    흰 사각형 하나가 뜬다.
+
+    이 파일은 그 규칙에 맞춘 것이다 — 배경 네모를 걷고 MOA 글자만 남겼다.
+    색은 안 정한다. 어차피 안드로이드가 제 색으로 덮어쓴다.
+
+    ── 왜 만들었나 ────────────────────────────────────────────────────────────
+    앱을 켜둔 채로 온 알림을 우리가 직접 그리게 되면서(client/src/utils/foregroundPush.js)
+    아이콘이 ⓘ 로 떴다. 캐패시터 알림 플러그인은 아이콘을 안 주면 시스템의
+    ic_dialog_info 를 쓴다(LocalNotificationManager.kt의 getDefaultSmallIcon).
+
+    앱이 내려가 있을 때 오던 알림은 파이어베이스가 그렸고, 그쪽은 런처 아이콘을 썼다.
+    그래서 같은 알림인데 앞에 있을 때와 내려가 있을 때 아이콘이 달랐다.
+
+    이제 둘이 같은 그림을 쓴다 — AndroidManifest.xml 의
+    com.google.firebase.messaging.default_notification_icon 도 이 파일을 가리킨다.
+
+    ── 좌표 ───────────────────────────────────────────────────────────────────
+    24dp 판에 그린다(알림 아이콘 표준 크기). 원본은 512 판이라 24/512로 줄였고,
+    글자가 판을 꽉 채우지 않게 가장자리에 여백을 뒀다 — 상태바에서 잘려 보인다.
+    그림 자체는 client/src/components/Logo.jsx 와 같은 패스다.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="512"
+    android:viewportHeight="512">
+
+    <group android:translateX="256" android:translateY="256">
+        <group android:rotation="-9">
+
+            <!-- M -->
+            <group android:translateX="-221.72" android:translateY="66" android:scaleX="0.18462" android:scaleY="0.18462">
+                <path
+                    android:fillColor="#FFFFFFFF"
+                    android:pathData="M156 10Q109 10 84-15.500Q59-41 59-88L59-617Q59-664 86-689.500Q113-715 162-715Q203-715 227-699Q251-683 271-647L467-301L431-301L627-647Q647-683 671.500-699Q696-715 736-715Q783-715 808.500-689.500Q834-664 834-617L834-88Q834-41 809-15.500Q784 10 737 10Q690 10 665-15.500Q640-41 640-88L640-365L660-365L526-143Q511-118 492.500-105.500Q474-93 445-93Q416-93 397.500-105.500Q379-118 364-143L230-365L253-365L253-88Q253-41 228-15.500Q203 10 156 10" />
+            </group>
+
+            <!-- O. 가운데가 뚫린 고리라 획으로 그린다. 채우면 점이 된다. -->
+            <path
+                android:strokeColor="#FFFFFFFF"
+                android:strokeWidth="40.08"
+                android:pathData="M 42.89 0 A 40.68 40.68 0 1 1 -38.47 0 A 40.68 40.68 0 1 1 42.89 0" />
+
+            <!-- A -->
+            <group android:translateX="70.01" android:translateY="66" android:scaleX="0.18462" android:scaleY="0.18462">
+                <path
+                    android:fillColor="#FFFFFFFF"
+                    android:pathData="M105 10Q69 10 44.500-7Q20-24 13.500-53.500Q7-83 24-120L265-628Q286-673 316.500-694Q347-715 387-715Q427-715 457-694Q487-673 508-628L749-120Q767-82 761.500-52.500Q756-23 732.500-6.500Q709 10 674 10Q628 10 603-11Q578-32 558-79L510-191L590-131L183-131L263-191L215-79Q195-32 173-11Q151 10 105 10M387-483L385-483L283-238L253-295L520-295L490-238" />
+            </group>
+
+        </group>
+    </group>
+</vector>
