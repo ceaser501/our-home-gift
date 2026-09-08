@@ -183,13 +183,17 @@ export default function SpendSheet({ gifticon, onSpend, onClose }) {
           </div>
 
           <div className="flex flex-col gap-2">
-            {/* 테두리를 보라로 둔다. 이 화면에서 채워야 하는 칸이 하나뿐이라는 말이다.
+            {/* 테두리는 평소 회색이고 만질 때만 보라다 — 공용 Input 과 같은 규칙이다.
+                한때 늘 보라였는데, 그러면 앱 안에 칸마다 규칙이 달라진다.
+                이 칸이 유일하게 채울 곳이라는 것은 화면에 칸이 하나뿐인 사실이 이미
+                말하고 있어서, 색까지 쓸 일은 아니다.
+
                 플레이스홀더는 굵기를 낮춘다 — 굵으면 이미 적힌 값처럼 보여서, 그대로
                 눌러도 되는 줄 안다.
 
                 라벨은 없앴다. 제목이 '얼마 쓰셨어요?'인데 라벨이 '이번에 쓴 금액'이면
                 같은 말을 두 번 하는 것이다. 읽어주는 기계를 위해 aria-label 로 남긴다. */}
-            <div className="flex h-14 items-center gap-2.5 rounded-lg border-[1.5px] border-primary bg-card px-4">
+            <div className="flex h-14 items-center gap-2.5 rounded-lg border border-input bg-card px-4 transition-colors focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/30">
               <input
                 id="spend-amount"
                 type="text"

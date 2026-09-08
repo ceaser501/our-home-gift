@@ -1,7 +1,7 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
-import ExtendSheet from '../components/ExtendSheet';
-import { addDays, formatDate, todayStr } from '../utils/date';
+import { describe, expect, it, vi, beforeEach } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
+import ExtendSheet from "../components/ExtendSheet";
+import { addDays, formatDate, todayStr } from "../utils/date";
 
 // 기한 늘리기 창. 두 화면으로 갈라져 있다.
 //
@@ -11,8 +11,8 @@ import { addDays, formatDate, todayStr } from '../utils/date';
 
 function gifticonDue(days) {
   return {
-    id: 'g1',
-    name: '썬키스트)애사비제로스파클링500',
+    id: "g1",
+    name: "썬키스트)애사비제로스파클링500",
     expires_at: addDays(todayStr(), days),
     thumb_image_url: null,
     image_url: null,
@@ -27,82 +27,109 @@ beforeEach(() => {
   onClose = vi.fn();
 });
 
-describe('기한 늘리기 — 두 화면', () => {
-  it('1단계에는 날짜를 바꾸는 버튼이 없다', () => {
-    render(<ExtendSheet gifticon={gifticonDue(1)} onExtend={onExtend} onClose={onClose} />);
+describe("기한 늘리기 — 두 화면", () => {
+  it("1단계에는 날짜를 바꾸는 것이 아무것도 없다", () => {
+    render(
+      <ExtendSheet
+        gifticon={gifticonDue(1)}
+        onExtend={onExtend}
+        onClose={onClose}
+      />,
+    );
 
-    expect(screen.getByText('1 / 2')).toBeTruthy();
-    expect(screen.queryByRole('button', { name: /까지로 바꾸기/ })).toBeNull();
+    expect(screen.getByText("1 / 2")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /까지로 바꾸기/ })).toBeNull();
+    // 날짜 칸 자체가 없어야 한다. 있으면 다녀오기 전에 고칠 수 있다.
+    expect(document.querySelector('input[type="date"]')).toBeNull();
   });
 
-  it("'연장했어요'를 눌러야 날짜를 고를 수 있고, 기본은 90일이다", async () => {
+  it("'연장했어요'를 눌러야 날짜를 고를 수 있고, 기본은 90일이다", () => {
     const gifticon = gifticonDue(1);
-    render(<ExtendSheet gifticon={gifticon} onExtend={onExtend} onClose={onClose} />);
+    render(
+      <ExtendSheet gifticon={gifticon} onExtend={onExtend} onClose={onClose} />,
+    );
 
-    fireEvent.click(screen.getByRole('button', { name: '연장했어요' }));
+    fireEvent.click(screen.getByRole("button", { name: "연장했어요" }));
 
-    expect(screen.getByText('2 / 2')).toBeTruthy();
+    expect(screen.getByText("2 / 2")).toBeTruthy();
     const expected = formatDate(addDays(gifticon.expires_at, 90));
-    fireEvent.click(screen.getByRole('button', { name: `${expected}까지로 바꾸기` }));
+    fireEvent.click(
+      screen.getByRole("button", { name: `${expected}까지로 바꾸기` }),
+    );
 
-    expect(onExtend).toHaveBeenCalledWith(gifticon, addDays(gifticon.expires_at, 90));
+    expect(onExtend).toHaveBeenCalledWith(
+      gifticon,
+      addDays(gifticon.expires_at, 90),
+    );
   });
 
   // 90일이 아닌 날짜를 받아 온 경우. 적은 날짜가 그대로 나가야 한다.
-  it('직접 날짜 선택으로 적은 날짜가 그대로 저장된다', () => {
+  //
+  // 한때 '직접 날짜 선택' 버튼을 눌러야 칸이 생겼다. 이제는 2단계에 들어서면 칸이
+  // 이미 있고 90일이 채워져 있다 — 누른 데와 바뀌는 데가 같아야 한다.
+  it("날짜를 고쳐 적으면 그대로 저장된다", () => {
     const gifticon = gifticonDue(1);
-    render(<ExtendSheet gifticon={gifticon} onExtend={onExtend} onClose={onClose} />);
+    render(
+      <ExtendSheet gifticon={gifticon} onExtend={onExtend} onClose={onClose} />,
+    );
 
-    fireEvent.click(screen.getByRole('button', { name: '연장했어요' }));
-    fireEvent.click(screen.getByRole('button', { name: '직접 날짜 선택' }));
+    fireEvent.click(screen.getByRole("button", { name: "연장했어요" }));
 
     const picked = addDays(gifticon.expires_at, 45);
-    fireEvent.change(document.querySelector('input[type="date"]'), { target: { value: picked } });
-    fireEvent.click(screen.getByRole('button', { name: `${formatDate(picked)}까지로 바꾸기` }));
+    fireEvent.change(screen.getByLabelText("새 기한"), {
+      target: { value: picked },
+    });
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: `${formatDate(picked)}까지로 바꾸기`,
+      }),
+    );
 
     expect(onExtend).toHaveBeenCalledWith(gifticon, picked);
   });
 
-  it("'나중에 할게요'는 창을 닫고 아무것도 바꾸지 않는다", () => {
-    render(<ExtendSheet gifticon={gifticonDue(1)} onExtend={onExtend} onClose={onClose} />);
-
-    fireEvent.click(screen.getByRole('button', { name: '나중에 할게요' }));
-
-    expect(onClose).toHaveBeenCalled();
-    expect(onExtend).not.toHaveBeenCalled();
-  });
-
   // 만료된 것에 연장을 권하면 헛걸음이다. 대신 환불받는 길을 알려준다.
-  it('기한이 지난 것은 단계 없이 환불 안내만 보여준다', () => {
-    render(<ExtendSheet gifticon={gifticonDue(-3)} onExtend={onExtend} onClose={onClose} />);
+  it("기한이 지난 것은 단계 없이 환불 안내만 보여준다", () => {
+    render(
+      <ExtendSheet
+        gifticon={gifticonDue(-3)}
+        onExtend={onExtend}
+        onClose={onClose}
+      />,
+    );
 
     expect(screen.getByText(/90% 환불/)).toBeTruthy();
-    expect(screen.queryByText('1 / 2')).toBeNull();
-    expect(screen.queryByRole('button', { name: '연장했어요' })).toBeNull();
+    expect(screen.queryByText("1 / 2")).toBeNull();
+    expect(screen.queryByRole("button", { name: "연장했어요" })).toBeNull();
   });
 
   // 저장을 누르기 직전인데 어느 기프티콘인지가 화면에 없었다. 목록에 카드가 많으면
   // 무엇을 바꾸는지 확인할 데가 없다.
-  it('2단계에도 상품명이 있다', () => {
+  //
+  // 1단계에는 두지 않는다. 그 화면은 아무 것도 바꾸지 않으므로 확인할 것이 없고,
+  // 뒤에는 방금 누른 카드가 있다.
+  it("상품명은 2단계에만 있다", () => {
     const gifticon = gifticonDue(1);
-    render(<ExtendSheet gifticon={gifticon} onExtend={onExtend} onClose={onClose} />);
+    render(
+      <ExtendSheet gifticon={gifticon} onExtend={onExtend} onClose={onClose} />,
+    );
 
-    fireEvent.click(screen.getByRole('button', { name: '연장했어요' }));
-
+    expect(screen.queryByText(gifticon.name)).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "연장했어요" }));
     expect(screen.getByText(gifticon.name)).toBeTruthy();
   });
 
-  // 붉은색은 임박한 것 하나만 가진다. 이미 지난 것까지 붉으면 두 색이 같은 뜻이 된다.
-  it('지난 것은 회색으로, 임박한 것만 붉게 적는다', () => {
-    const { unmount } = render(<ExtendSheet gifticon={gifticonDue(-22)} onExtend={onExtend} onClose={onClose} />);
+  // 지나갈 날짜와 새 날짜를 같은 꼴로 적어야 얼마나 늘어나는지 눈으로 견줘진다.
+  // 옛 날짜에는 취소선을 긋는다 — 라벨 없이 그것 하나로 '지나간 값'이 말이 된다.
+  it("2단계에는 지금 기한이 취소선으로 함께 있다", () => {
+    const gifticon = gifticonDue(1);
+    render(
+      <ExtendSheet gifticon={gifticon} onExtend={onExtend} onClose={onClose} />,
+    );
 
-    // '기한 만료 (22일 지남)'이 아니라 '22일 지남'. 제목이 이미 같은 말을 한다.
-    const pastLine = screen.getByText('22일 지남').parentElement;
-    expect(pastLine.className).toContain('text-muted-foreground');
-    expect(pastLine.className).not.toContain('text-destructive');
-    unmount();
+    fireEvent.click(screen.getByRole("button", { name: "연장했어요" }));
 
-    render(<ExtendSheet gifticon={gifticonDue(1)} onExtend={onExtend} onClose={onClose} />);
-    expect(screen.getByText('D-1').parentElement.className).toContain('text-destructive');
+    const old = screen.getByText(`${formatDate(gifticon.expires_at)} 까지`);
+    expect(old.className).toContain("line-through");
   });
 });
