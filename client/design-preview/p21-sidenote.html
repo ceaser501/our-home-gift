@@ -1,0 +1,56 @@
+<!doctype html>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>라벨 곁말</title>
+<style>
+  :root {
+    --foreground: #1c1e27; --muted-foreground: #545461; --card: #fbfbfd;
+    --border: #e7e7ec; --input: #e7e7ec;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body { background: var(--card); padding: 24px 20px 40px;
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", sans-serif; }
+  h3 { font-size: 12px; font-weight: 800; color: #8a8a90; letter-spacing: .04em;
+       margin: 0 0 10px; }
+  section { padding: 18px 0; border-bottom: 1px solid var(--border); }
+  section:last-child { border: 0; }
+  .grp { display: flex; flex-direction: column; gap: 10px; }
+  .lrow { display: flex; align-items: baseline; gap: 6px; }
+  label { font-size: 14px; font-weight: 600; line-height: 1; color: rgba(28,30,39,.7); }
+  .note { font-size: 12.5px; font-weight: 500; line-height: 1; }
+  .field { height: 52px; border: 1px solid var(--input); border-radius: 8px;
+           background: var(--card); padding: 0 16px; display: flex; align-items: center;
+           font-size: 16px; color: #a3a3ad; }
+</style>
+
+<section>
+  <h3>가 · 지금 — 곁말 muted-foreground 7.2:1</h3>
+  <div class="grp">
+    <div class="lrow"><label>내 이름</label><span class="note" style="color:#545461">가족에게 이렇게 보여요</span></div>
+    <div class="field">태수</div>
+  </div>
+</section>
+
+<section>
+  <h3>나 · 곁말도 라벨과 같은 색 6.1:1</h3>
+  <div class="grp">
+    <div class="lrow"><label>내 이름</label><span class="note" style="color:rgba(28,30,39,.7)">가족에게 이렇게 보여요</span></div>
+    <div class="field">태수</div>
+  </div>
+</section>
+
+<section>
+  <h3>다 · 곁말을 라벨보다 한 단 연하게 5.0:1</h3>
+  <div class="grp">
+    <div class="lrow"><label>내 이름</label><span class="note" style="color:rgba(28,30,39,.6)">가족에게 이렇게 보여요</span></div>
+    <div class="field">태수</div>
+  </div>
+</section>
+
+<section>
+  <h3>등록 시트의 메모 — 가(지금)</h3>
+  <div class="grp">
+    <div class="lrow"><label>메모</label><span class="note" style="color:#545461">선택 · 가족이 같이 봐요</span></div>
+    <div class="field">스벅 기프티콘</div>
+  </div>
+</section>

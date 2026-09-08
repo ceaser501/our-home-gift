@@ -13,6 +13,16 @@ import ExtendSheet from '../src/components/ExtendSheet';
 import AlertDialog from '../src/components/AlertDialog';
 import ImageViewerModal from '../src/components/ImageViewerModal';
 import BarcodeModal from '../src/components/BarcodeModal';
+import UploadSheet from '../src/components/UploadSheet';
+import ActivitySheet from '../src/components/ActivitySheet';
+import NoticesSheet from '../src/components/NoticesSheet';
+import ProfileMenu from '../src/components/ProfileMenu';
+import FamilyMembersSheet from '../src/components/FamilyMembersSheet';
+import UsageReportSheet from '../src/components/UsageReportSheet';
+import NearbyStoresSheet from '../src/components/NearbyStoresSheet';
+import StoreDetailSheet from '../src/components/StoreDetailSheet';
+import GalleryScanSheet from '../src/components/GalleryScanSheet';
+import FamilyOnboarding from '../src/components/FamilyOnboarding';
 
 // 제목이 한 줄인 경우와 두 줄인 경우를 다 본다. 닫기 버튼과 부딪히는 자리라
 // 한 줄만 보면 넘어간다.
@@ -32,6 +42,21 @@ const STAGES = {
   danger: '④ 삭제 다이얼로그',
   warn: '④ - 2 오류 다이얼로그',
   info: '④ - 3 알림 다이얼로그',
+  // 아래는 나중에 붙인 것들. 앱의 시트를 하나도 빠뜨리지 않고 보려는 것이다.
+  // 몇은 서버에서 받아온 것을 그린다 — 여기서는 못 받으니 기다리는 모습으로 선다.
+  // 그래도 머리(제목·부제)와 껍데기는 실제와 같아서, 그 자리를 재는 데는 쓴다.
+  upload: '⑦ 등록 시트 — 직접 등록',
+  uploadEdit: '⑦ - 2 등록 시트 — 고치기',
+  onboardCreate: '⑧ 가족 온보딩 — 만들기',
+  onboardJoin: '⑧ - 2 가족 온보딩 — 참여',
+  activity: '⑨ 활동',
+  notices: '⑩ 공지',
+  profile: '⑪ 프로필 메뉴',
+  members: '⑫ 가족 구성원',
+  report: '⑬ 사용 리포트',
+  stores: '⑭ 가까운 매장',
+  storeDetail: '⑮ 매장 자세히',
+  scan: '⑯ 사진첩에서 찾기',
 };
 
 const FAMILY = {
@@ -61,6 +86,21 @@ const shot = (fill) =>
 const SHOTS = [shot('%23e7e7ec'), shot('%23d8d8e0')];
 
 const SOON = new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10);
+
+const ACTIVITIES = [
+  { id: 1, kind: 'spend', actor_name: '클로이', gifticon_name: '스타벅스 5만원권',
+    amount: 12000, created_at: new Date(Date.now() - 3600e3).toISOString() },
+  { id: 2, kind: 'used', actor_name: '태수', gifticon_name: '카페 아메리카노 T 2잔',
+    created_at: new Date(Date.now() - 86400e3).toISOString() },
+  { id: 3, kind: 'added', actor_name: '태수', gifticon_name: '배스킨라빈스 파인트',
+    created_at: new Date(Date.now() - 3 * 86400e3).toISOString() },
+];
+
+const STORE = {
+  place: 'p1', name: '스타벅스 광화문점', category: '카페',
+  address: '서울 종로구 세종대로 175', phone: '02-123-4567',
+  distance: 320, lat: 37.5716, lng: 126.9769,
+};
 
 const GIFTICON = {
   id: 1,
@@ -126,6 +166,13 @@ function useCloseGuard() {
     return () => clearInterval(id);
   }, []);
 }
+
+// 온보딩의 참여 화면은 초대 코드가 이미 손에 있을 때 열린다. 그 자리를 미리 채운다.
+try {
+  const v = new URLSearchParams(location.search).get('v');
+  if (v === 'onboardJoin') sessionStorage.setItem('moacon:invite-code', 'A1B2C3');
+  else sessionStorage.removeItem('moacon:invite-code');
+} catch {}
 
 function App() {
   useCloseGuard();
@@ -313,6 +360,77 @@ function App() {
           confirmLabel="확인"
           onConfirm={reopen}
         />
+      )}
+
+      {/* ── 여기서부터는 나중에 붙인 것들 ─────────────────────────────
+          FamilyContext 를 물어보는 것이 많아 한 번에 감싼다. 서버에서 받아오는
+          것들은 기다리는 모습으로 서는데, 머리와 껍데기는 실제와 같다. */}
+
+      {cur === 'upload' && (
+        <FamilyContext.Provider value={FAMILY}>
+          <UploadSheet mode="create" onClose={reopen} onSaved={reopen} />
+        </FamilyContext.Provider>
+      )}
+
+      {/* 고치기로 열면 칸이 값으로 차 있다 — 라벨 여덟 개가 다 보이는 자리다. */}
+      {cur === 'uploadEdit' && (
+        <FamilyContext.Provider value={FAMILY}>
+          <UploadSheet
+            mode="edit"
+            initial={{ ...GIFTICON, code: '8801234567890123', owner: '태수',
+                       memo: '엄마가 준 것', image_urls: SHOTS }}
+            onClose={reopen}
+            onSaved={reopen}
+          />
+        </FamilyContext.Provider>
+      )}
+
+      {/* 온보딩은 코드를 프롭이 아니라 sessionStorage 에서 집는다(초대 링크로
+          들어온 걸음을 줄이려고 그렇게 돼 있다). 그 자리에 미리 넣어 두고 연다. */}
+      {cur === 'onboardCreate' && <FamilyOnboarding userEmail="taesu@example.com" onDone={reopen} />}
+      {cur === 'onboardJoin' && <FamilyOnboarding userEmail="taesu@example.com" onDone={reopen} />}
+
+      {cur === 'activity' && (
+        <ActivitySheet
+          activities={ACTIVITIES}
+          pinnedNotices={[]}
+          listedNotices={[]}
+          lastReadAt={new Date(Date.now() - 2 * 86400e3).toISOString()}
+          onClose={reopen}
+        />
+      )}
+
+      {cur === 'notices' && <NoticesSheet onClose={reopen} />}
+
+      {cur === 'profile' && (
+        <FamilyContext.Provider value={FAMILY}>
+          <ProfileMenu onClose={reopen} />
+        </FamilyContext.Provider>
+      )}
+
+      {cur === 'members' && (
+        <FamilyContext.Provider value={{ ...FAMILY, joinRequests: [] }}>
+          <FamilyMembersSheet onClose={reopen} />
+        </FamilyContext.Provider>
+      )}
+
+      {cur === 'report' && (
+        <FamilyContext.Provider value={FAMILY}>
+          <UsageReportSheet onClose={reopen} />
+        </FamilyContext.Provider>
+      )}
+
+      {cur === 'stores' && <NearbyStoresSheet gifticon={GIFTICON} onClose={reopen} />}
+
+      {/* 지도는 카카오를 부르는 자리라 여기서는 안 뜬다. 그 아래 줄들을 본다. */}
+      {cur === 'storeDetail' && (
+        <StoreDetailSheet store={STORE} origin={{ lat: 37.5665, lng: 126.978 }} onClose={reopen} />
+      )}
+
+      {cur === 'scan' && (
+        <FamilyContext.Provider value={FAMILY}>
+          <GalleryScanSheet onClose={reopen} onRegistered={reopen} />
+        </FamilyContext.Provider>
       )}
 
       {cur === 'info' && (
