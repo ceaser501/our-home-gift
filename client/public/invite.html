@@ -24,8 +24,15 @@
       앱이 있으면 열고, 없으면 S.browser_fallback_url 로 보낸다. 판단을 안드로이드가
       대신 해주므로 우리가 초를 세거나 짐작할 일이 없다.
 
-      아이폰에는 그런 길이 없다. 스킴으로 열어보고 안 열리면 그대로 있는 것을 재야 하는데,
-      그 재기가 늘 틀린다. 그래서 아이폰은 버튼으로 고르게 한다.
+      아이폰에는 그런 길이 없다. 스킴으로 열어보고, 앱이 떴는지를 우리가 재야 한다.
+      재는 방법은 화면이다 — 앱이 뜨면 이 페이지가 가려지고(visibilitychange), 안 뜨면
+      그대로 있다. 잠깐 기다려보고 그대로면 안 열린 것으로 친다. 카톡 열기가 쓰는 것과
+      같은 방법이다(client/src/utils/inviteLink.js의 wentToKakao).
+
+      완벽하지는 않다. 사람이 그사이 손수 앱을 내리면 열린 것으로 잘못 읽는다. 그래도
+      실패하는 쪽이 '스토어로 간다'라서 막다른 길은 아니다.
+
+      아이폰은 눌러야 연다. 페이지가 뜨자마자 스킴을 열면 사파리·카톡 웹뷰가 막는다.
 
       ── 앱이 없을 때 ─────────────────────────────────────────────────────────
       아직 스토어에 올라가 있지 않다. 지금 스토어로 보내면 '찾을 수 없는 페이지'가 뜬다.
@@ -33,14 +40,15 @@
 
       출시하면 아래 STORE_URL 한 줄만 채우면 된다.
 
-      ── 아이폰은 지금 사실상 전부 웹이다 ─────────────────────────────────────
-      아이폰 앱은 스토어에 없어서 만든 사람 테스트 기기 말고는 깔 수가 없다. 그런데
-      '앱으로 열기'를 주 버튼으로 세우면, 대부분에게 눌러도 아무 일 안 일어나는 버튼이
-      제일 크게 서 있게 된다. 앱이 없는 아이폰에서는 스킴을 열어도 조용히 끝난다 —
-      오류도 안 뜨고 아무 데도 안 간다. 그게 화면에서 제일 나쁜 자리다.
+      ── 아이폰은 STORE_URL 이 채워졌는지로 갈린다 ────────────────────────────
+      비어 있으면(지금) 웹이 주 버튼이다. 아이폰 앱은 스토어에 없어서 만든 사람 테스트
+      기기 말고는 깔 수가 없는데, 그때 '앱으로 열기'를 크게 세우면 대부분에게 눌러도
+      아무 일 안 일어나는 버튼이 제일 크게 서 있는 셈이 된다. 화면에서 제일 나쁜 자리다.
 
-      그래서 아이폰은 웹을 주 버튼으로 둔다. 앱으로 여는 길은 아래 조용한 줄로 남긴다 —
-      테스트 기기에서는 그게 필요하고, 스토어에 올라가면 둘을 맞바꾸면 된다.
+      채워지면 앱이 주 버튼이 된다. 눌러서 앱이 뜨면 그대로 끝이고, 안 뜨면 스토어로
+      간다 — 앱이 없는 사람에게도 갈 곳이 생기므로 그때는 앱을 앞에 세워도 된다.
+
+      한 줄만 채우면 둘이 함께 바뀐다. 손댈 곳이 여러 군데면 반쯤만 바뀐 채로 나간다.
     -->
     <style>
       :root { color-scheme: only light; }
@@ -151,6 +159,23 @@
           return;
         }
 
+        // 앱이 앞으로 나왔는지 본다. 나왔으면 이 페이지가 가려진다.
+        function wentToApp(ms) {
+          return new Promise(function (resolve) {
+            if (document.hidden) return resolve(true);
+            function done(value) {
+              clearTimeout(timer);
+              document.removeEventListener('visibilitychange', onHide);
+              resolve(value);
+            }
+            function onHide() {
+              if (document.hidden) done(true);
+            }
+            var timer = setTimeout(function () { done(false); }, ms);
+            document.addEventListener('visibilitychange', onHide);
+          });
+        }
+
         function toApp() {
           if (isAndroid) {
             // 앱이 있으면 열고, 없으면 fallback 으로 간다. 그 판단은 안드로이드가 한다.
@@ -173,18 +198,30 @@
           open.addEventListener('click', toApp);
           toApp();
         } else {
-          // 아이폰. 웹이 주 버튼이고 앱은 조용한 줄이다(위 주석 참고).
           title.textContent = family ? family + ' 가족의 초대' : '가족 초대를 받았어요';
           note.textContent = '이름만 적으면 참여 신청이 끝나요.';
-
-          web.textContent = '모아콘 시작하기';
-          web.className = '';
-          open.textContent = '앱으로 열기';
-          open.className = 'quiet';
           open.hidden = false;
-          open.addEventListener('click', toApp);
-          // 웹이 위, 앱이 아래로 오게 자리를 바꾼다.
-          buttons.insertBefore(web, open);
+
+          if (STORE_URL) {
+            // 앱이 주 버튼이다. 눌러서 안 열리면 스토어로 보낸다.
+            open.addEventListener('click', function () {
+              open.textContent = '모아콘을 여는 중…';
+              toApp();
+              wentToApp(1400).then(function (opened) {
+                if (opened) return;
+                open.textContent = '모아콘 앱으로 열기';
+                location.href = STORE_URL;
+              });
+            });
+          } else {
+            // 아직 스토어에 없다. 웹을 주 버튼으로 두고 앱은 조용한 줄로 내린다.
+            web.textContent = '모아콘 시작하기';
+            web.className = '';
+            open.textContent = '앱으로 열기';
+            open.className = 'quiet';
+            open.addEventListener('click', toApp);
+            buttons.insertBefore(web, open);
+          }
         }
       })();
     </script>
