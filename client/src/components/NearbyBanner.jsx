@@ -150,9 +150,19 @@ function readSaved() {
 // '찾았다'만 답으로 쓴다. '없더라'는 적어두기는 하지만(자리를 기억해야 해서) 답으로는
 // 안 쓴다 — 그래서 없다고 나온 자리에서는 앱을 열 때마다 다시 물어본다. 왜 그렇게
 // 갈랐는지는 아래 run() 안의 주석에 적어뒀다.
-function readCache(at) {
+function readCache(at, key) {
   const saved = readSaved();
   if (!saved || !saved.best || !cacheFresh(saved, at)) return null;
+  // 무엇으로 찾은 답인지도 봐야 한다.
+  //
+  // 가족을 바꾸면 기프티콘이 통째로 갈리고 물어볼 브랜드도 갈린다. 그런데 자리로만
+  // 판단하면 같은 자리에서는 앞 가족의 답을 그대로 쓴다 — 처가로 바꿨는데 우리집
+  // 스타벅스를 찾아둔 답이 나오는 셈이다.
+  //
+  // 그 답은 화면에 뜨지도 않았다. 띄우기 직전에 지금 목록으로 개수를 다시 세는데
+  // (liveCount) 그 브랜드가 없으니 0이 되어 걸러졌다. 대신 '찾아봤는데 없다'로
+  // 흘러가서, 새 가족 브랜드는 물어보지도 않은 채 '없어요'가 떴다.
+  if (saved.brands !== key) return null;
   return saved;
 }
 
@@ -168,10 +178,10 @@ function readCache(at) {
 //
 // 그사이 매장 찾기가 새 좌표를 적어뒀을 수 있다. 그게 멀면 먼저 그리지 않는다 — 잠깐이라도
 // 다른 동네 매장을 보여주느니 몇 초 기다리는 편이 낫다.
-function readCacheAhead() {
+function readCacheAhead(key) {
   try {
     const saved = readSaved();
-    if (!saved || !saved.best) return null;
+    if (!saved || !saved.best || saved.brands !== key) return null;
     // 견줄 위치가 없으면 그리지 않는다. 시간을 안 보게 된 뒤로, 자리를 확인하지 못한
     // 캐시는 언제 적 것인지 알 방법이 없다 — 며칠 전 동네의 띠를 잠깐 세울 수 있다.
     const last = readCachedPosition(CACHE_MAX_AGE_MS);
@@ -186,6 +196,11 @@ function formatDistance(meters) {
   if (meters == null) return "";
   if (meters < 1000) return `${Math.round(meters)}m`;
   return `${(meters / 1000).toFixed(1)}km`;
+}
+
+// 이 캐시가 어느 브랜드로 찾은 것인지. 가족을 바꾸면 이 값이 달라진다.
+function brandsKey(brands) {
+  return brands.map((b) => b.brand).join("|");
 }
 
 // 물어볼 브랜드를 고른다. 안 쓴 것 중 상호가 있는 것만, 만료가 가까운 쪽부터.
@@ -326,10 +341,12 @@ export default function NearbyBanner({ gifticons, onPick }) {
     async function run() {
       const brands = topBrands(gifticons);
       if (brands.length === 0) return;
+      // 이번에 무엇으로 찾는지. 적어둔 답이 이것으로 찾은 것인지 볼 때 쓴다.
+      const key = brandsKey(brands);
 
       // 위치를 기다리기 전에 먼저 그린다. 아래에서 진짜 위치를 받아 다시 판단한다.
       if (!knownAt) {
-        const ahead = readCacheAhead();
+        const ahead = readCacheAhead(key);
         if (ahead && !cancelled) setBest(ahead.best);
       }
 
@@ -347,7 +364,7 @@ export default function NearbyBanner({ gifticons, onPick }) {
         return;
       }
 
-      const cached = readCache(at);
+      const cached = readCache(at, key);
       if (cached) {
         // 여기 담기는 것은 '찾았다'뿐이다. '없더라'는 안 적으므로 이 자리로 오지 않는다.
         //
@@ -421,7 +438,8 @@ export default function NearbyBanner({ gifticons, onPick }) {
       // 못 물어본 것이 섞였을 때도 안 적는다. 더 가까운 매장을 놓쳤을 수 있다.
       // 아까 어디서 찾았었는지. 적어두기 전에 읽어야 한다.
       const previous = readSaved();
-      const movedAway = !previous || !cacheFresh(previous, at);
+      // 자리를 옮겼거나, 가족을 바꿔 물어볼 브랜드가 갈렸으면 새 이야기다.
+      const movedAway = !previous || !cacheFresh(previous, at) || previous.brands !== key;
 
       // 자리는 답이 어느 쪽이든 적어둔다. 답으로 쓰지 않더라도 '아까 어디였나'는
       // 알아야, 닫아둔 '없어요' 띠를 언제 되살릴지 정할 수 있다.
@@ -430,7 +448,7 @@ export default function NearbyBanner({ gifticons, onPick }) {
         try {
           localStorage.setItem(
             CACHE_KEY,
-            JSON.stringify({ ts: Date.now(), at, best: found }),
+            JSON.stringify({ ts: Date.now(), at, brands: key, best: found }),
           );
         } catch {
           // 캐시를 못 남겨도 동작에는 지장 없다.

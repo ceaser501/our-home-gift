@@ -269,6 +269,8 @@ describe('NearbyBanner', () => {
       JSON.stringify({
         ts: Date.now(),
         at: { lat: 37.5, lng: 127.0 },
+        // 무엇으로 찾은 답인지. 지금 목록의 브랜드와 같아야 쓴다.
+        brands: '스타벅스',
         best: { brand: '스타벅스', count: 2, store: '스타벅스 서울숲점', distance: 120 },
       })
     );
@@ -280,6 +282,32 @@ describe('NearbyBanner', () => {
     expect(await screen.findByText(/스타벅스 서울숲점/, {}, { timeout: 3000 })).toBeTruthy();
     // 먼저 그리는 것이지 다시 찾는 것이 아니다.
     expect(searchNearbyStores).not.toHaveBeenCalled();
+  });
+
+  // 가족을 바꾸면 기프티콘이 통째로 갈린다. 자리로만 판단하면 같은 자리에서는 앞 가족의
+  // 답을 그대로 쓰고, 새 가족 브랜드는 물어보지도 않은 채 '없어요'가 떴다.
+  it('가족을 바꾸면 앞 가족의 답을 쓰지 않고 다시 찾는다', async () => {
+    localStorage.setItem(
+      'nearby-banner:result',
+      JSON.stringify({
+        ts: Date.now(),
+        at: { lat: 37.5, lng: 127.0 },
+        brands: '스타벅스',
+        best: { brand: '스타벅스', count: 2, store: '스타벅스 서울숲점', distance: 120 },
+      })
+    );
+    searchNearbyStores.mockResolvedValue([{ name: 'GS25 서울숲점', distance: 200 }]);
+
+    // 처가로 바꿨다 — 스타벅스는 없고 GS25만 있다.
+    render(
+      <NearbyBanner
+        gifticons={[{ id: '9', brand: 'GS25', status: 'active', expires_at: '2027-07-24' }]}
+        onPick={() => {}}
+      />
+    );
+
+    expect(await screen.findByText(/GS25 서울숲점/, {}, { timeout: 3000 })).toBeTruthy();
+    expect(searchNearbyStores).toHaveBeenCalled();
   });
 
   // 먼저 그려놓고 권한이 없다는 걸 알게 되면 그것을 걷어야 한다. 그대로 두면 '켜기' 띠가
