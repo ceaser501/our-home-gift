@@ -3,6 +3,7 @@
 import { StrictMode, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import '../src/index.css';
+import { Trash2, UserRoundX } from 'lucide-react';
 import { FamilyContext } from '../src/FamilyContext';
 import RenameSheet from '../src/components/RenameSheet';
 import FilterBar from '../src/components/FilterBar';
@@ -26,22 +27,26 @@ import FamilyOnboarding from '../src/components/FamilyOnboarding';
 
 // 제목이 한 줄인 경우와 두 줄인 경우를 다 본다. 닫기 버튼과 부딪히는 자리라
 // 한 줄만 보면 넘어간다.
+//
+// [완료] 는 손을 다 본 것이다. 새로 붙이는 자리는 표식 없이 두고, 다 보고 나서
+// 붙인다 — 목록만 훑어도 어디까지 왔는지 보이게 하려는 것이다.
 const STAGES = {
-  rename1: '① 이름 바꾸기',
-  rename2: '① - 2 제목이 두 줄일 때',
-  spend: '② 금액 입력',
-  extend: '③ 기한 연장 — 기한 지남',
-  extend1: '③ - 2 기한 연장 1/2 — 임박',
-  extendbg: '③ - 3 기한 연장 — 뒤에 목록을 깔고',
-  photo: '⑥ 원본 사진 — 제목 아래가 값',
-  barcode: '⑥ - 2 바코드',
-  t16: '⑤ 제목이 16px 인 넷 — 고르개 시트',
-  t16b: '⑤ - 2 가족 바꾸기',
-  t16b2: '⑤ - 2b 가족 만들기 · 참여 (안쪽 화면)',
-  t16c: '⑤ - 3 카드 ⋮ 메뉴',
-  danger: '④ 삭제 다이얼로그',
-  warn: '④ - 2 오류 다이얼로그',
-  info: '④ - 3 알림 다이얼로그',
+  rename1: '[완료] ① 이름 바꾸기',
+  rename2: '[완료] ① - 2 제목이 두 줄일 때',
+  spend: '[완료] ② 금액 입력',
+  extend: '[완료] ③ 기한 연장 — 기한 지남',
+  extend1: '[완료] ③ - 2 기한 연장 1/2 — 임박',
+  extendbg: '[완료] ③ - 3 기한 연장 — 뒤에 목록을 깔고',
+  photo: '[완료] ⑥ 원본 사진 — 제목 아래가 값',
+  barcode: '[완료] ⑥ - 2 바코드',
+  t16: '[완료] ⑤ 제목이 16px 인 넷 — 고르개 시트',
+  t16b: '[완료] ⑤ - 2 가족 바꾸기',
+  t16b2: '[완료] ⑤ - 2b 가족 만들기 · 참여 (안쪽 화면)',
+  t16c: '[완료] ⑤ - 3 카드 ⋮ 메뉴',
+  danger: '④ 삭제 다이얼로그 — 이름·경고 한 줄',
+  warn: '④ - 2 안내 다이얼로그 — 확인만',
+  info: '④ - 3 되묻는 다이얼로그 — 확인·취소',
+  details: '④ - 4 목록이 붙는 다이얼로그',
   // 아래는 나중에 붙인 것들. 앱의 시트를 하나도 빠뜨리지 않고 보려는 것이다.
   // 몇은 서버에서 받아온 것을 그린다 — 여기서는 못 받으니 기다리는 모습으로 선다.
   // 그래도 머리(제목·부제)와 껍데기는 실제와 같아서, 그 자리를 재는 데는 쓴다.
@@ -340,25 +345,49 @@ function App() {
         </FamilyContext.Provider>
       )}
 
+      {/* App.jsx 의 삭제창을 그대로 옮겨 온다. 이름(subject)과 붉은 한마디(warning)가
+          붙는 자리라, 그 둘 없이 보면 이 창의 제 모습이 아니다. 이름은 긴 것으로 —
+          짧은 이름만 보면 몇 줄로 접히는지가 안 나온다. */}
       {cur === 'danger' && (
         <AlertDialog
           tone="danger"
-          title="이 기프티콘을 지울까요?"
-          description="지우면 되돌릴 수 없어요. 가족 모두의 목록에서 사라져요."
-          confirmLabel="지우기"
-          cancelLabel="그만두기"
+          icon={Trash2}
+          title="이 기프티콘을 삭제할까요?"
+          subject={GIFTICON.name}
+          warning="되돌릴 수 없어요"
+          confirmLabel="삭제"
           onConfirm={reopen}
           onClose={reopen}
         />
       )}
 
+      {/* onConfirm 을 안 넘기면 확인 하나짜리 안내창이 된다. 앞서 여기에 onConfirm 을
+          넘기고 있어서 없어야 할 '취소'가 붙어 나왔다. */}
       {cur === 'warn' && (
         <AlertDialog
           tone="warning"
           title="사진을 읽지 못했어요"
           description="바코드가 흐릿하게 찍혔어요. 다시 찍거나 직접 등록으로 올려주세요."
-          confirmLabel="확인"
+          onClose={reopen}
+        />
+      )}
+
+      {/* details 가 붙으면 가운데 정렬 안에 왼쪽 정렬 상자가 하나 들어온다.
+          탈퇴창이 그 모습이다 — 이 창에 제일 많은 것이 얹히는 갈래다. */}
+      {cur === 'details' && (
+        <AlertDialog
+          tone="danger"
+          icon={UserRoundX}
+          title="계정을 삭제할까요?"
+          description={"'가족 나가기'와 달라요.\n계정이 없어져서 다시 로그인할 수 없어요."}
+          details={[
+            '속한 가족에서 모두 빠져요',
+            '내가 올린 기프티콘은 사진까지 지워져요',
+            '나 혼자였던 가족은 없어져요',
+          ]}
+          confirmLabel="계속"
           onConfirm={reopen}
+          onClose={reopen}
         />
       )}
 
@@ -433,13 +462,15 @@ function App() {
         </FamilyContext.Provider>
       )}
 
+      {/* 되묻는 창. ProfileMenu 의 '전부 다시 찾을까요?'가 이 모습이다. */}
       {cur === 'info' && (
         <AlertDialog
           tone="info"
-          title="저장했어요"
-          description="기프티콘 3개를 목록에 넣었어요."
-          confirmLabel="확인"
+          title="전부 다시 찾을까요?"
+          description="지금 목록에 있는 것을 모두 다시 훑어요."
+          confirmLabel="다시 찾기"
           onConfirm={reopen}
+          onClose={reopen}
         />
       )}
     </>
