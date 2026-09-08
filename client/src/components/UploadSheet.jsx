@@ -1089,10 +1089,11 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
             <div className="flex flex-col gap-2.5">
               {/* 바코드 창에서 '○○님의 메모'로 크게 보이는 값인데, 여기서는 그걸 알 수
                   없었다. 칸 안 예시 문구로는 안 된다 — 적기 시작하면 사라진다. */}
-              <div className="flex items-baseline gap-1.5">
-                <Label htmlFor="f-memo">메모</Label>
-                <span className="text-caption font-medium text-muted-foreground">선택 · 가족이 같이 봐요</span>
-              </div>
+              {/* 곁말이 라벨보다 진해서 걷었다. '선택'은 남긴다 — 금액·사용기한과
+                  같은 표식이라, 메모만 빠지면 안 적어도 되는 칸인지 알 수 없다. */}
+              <Label htmlFor="f-memo">
+                메모 <Optional />
+              </Label>
               <Textarea
                 id="f-memo"
                 value={form.memo}

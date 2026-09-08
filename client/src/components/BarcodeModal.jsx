@@ -157,7 +157,7 @@ export default function BarcodeModal({ gifticon, onClose, onUsed, onSpend }) {
             기한 연장 시트에는 ‹ 가 있는데, 거기는 단계가 있는 흐름(1/2 → 2/2)이라
             되돌아갈 곳이 '앞 단계' 하나뿐이다. 여기는 두 화면을 오가는 것이고 그
             오가는 문이 아래에 이미 있다. */}
-        <SheetHeader className="gap-0">
+        <SheetHeader>
           <div className="flex items-center gap-2.5">
             <div className="flex min-w-0 flex-1 flex-col gap-1">
               {/* 사진 보기에서는 16, 바코드에서는 19 로 갈라 두었었다. 화면이 바뀐다고

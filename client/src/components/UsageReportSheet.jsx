@@ -120,7 +120,7 @@ export default function UsageReportSheet({ onClose }) {
   return (
     <Sheet open onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="max-h-[calc(92dvh/var(--ui-scale))] gap-0 overflow-y-auto pb-[var(--safe-bottom)]">
-        <SheetHeader className="gap-0">
+        <SheetHeader>
           <SheetTitle>사용 내역</SheetTitle>
           <SheetDescription>{family.name}</SheetDescription>
         </SheetHeader>

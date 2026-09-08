@@ -343,10 +343,7 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
             <div className="flex flex-col gap-1.5">
               {/* 왜 묻는지가 없으면 본명을 적는다. 그 힌트를 플레이스홀더가 혼자 지고
                   있었는데, 한 글자만 적어도 사라지는 자리다. */}
-              <div className="flex items-baseline gap-1.5">
-                <Label htmlFor="fam-my-name">내 이름</Label>
-                <span className="text-[12.5px] font-medium text-muted-foreground">가족에게 이렇게 보여요</span>
-              </div>
+              <Label htmlFor="fam-my-name">내 이름</Label>
               <Input
                 id="fam-my-name"
                 value={memberName}
@@ -392,10 +389,7 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
               />
             </div>
             <div className="flex flex-col gap-2.5">
-              <div className="flex items-baseline gap-1.5">
-                <Label htmlFor="fam-join-name">내 이름</Label>
-                <span className="text-[12.5px] font-medium text-muted-foreground">가족에게 이렇게 보여요</span>
-              </div>
+              <Label htmlFor="fam-join-name">내 이름</Label>
               <Input
                 id="fam-join-name"
                 value={memberName}

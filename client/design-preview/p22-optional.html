@@ -1,0 +1,53 @@
+<!doctype html>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>선택 표식</title>
+<style>
+  :root {
+    --foreground: #1c1e27; --muted-foreground: #545461; --card: #fbfbfd;
+    --border: #e7e7ec; --input: #e7e7ec; --primary: #5b4fe8; --destructive: #e03e49;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body { background: var(--card); padding: 22px 20px 40px;
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", sans-serif; }
+  h3 { font-size: 12px; font-weight: 800; color: #8a8a90; letter-spacing: .03em; margin: 0 0 4px; }
+  p.why { font-size: 12px; line-height: 1.5; color: var(--muted-foreground); margin: 0 0 12px; }
+  section { padding: 16px 0; border-bottom: 1px solid var(--border); }
+  section:last-child { border: 0; }
+  .grp { display: flex; flex-direction: column; gap: 10px; }
+  .grp + .grp { margin-top: 20px; }
+  label { font-size: 14px; font-weight: 600; line-height: 1; color: rgba(28,30,39,.7); }
+  .field { height: 52px; border: 1px solid var(--input); border-radius: 8px;
+           background: var(--card); padding: 0 16px; display: flex; align-items: center;
+           font-size: 16px; color: #a3a3ad; }
+  .star { font-weight: 700; }
+  .word { font-weight: 400; color: var(--muted-foreground); }
+</style>
+
+<section>
+  <h3>가 · 지금 — 「선택」 글자</h3>
+  <p class="why">안 적어도 되는 칸에만 붙는다. 필수 칸에는 아무것도 없다.</p>
+  <div class="grp"><label>상품명</label><div class="field">스타벅스 5만원권</div></div>
+  <div class="grp"><label>금액 <span class="word">선택</span></label><div class="field">50,000</div></div>
+</section>
+
+<section>
+  <h3>나 · 별을 선택 칸에 — primary</h3>
+  <p class="why">뜻이 뒤집힌다. 웹에서 <b>*</b> 는 백 년 가까이 「필수」였다.</p>
+  <div class="grp"><label>상품명</label><div class="field">스타벅스 5만원권</div></div>
+  <div class="grp"><label>금액 <span class="star" style="color:var(--primary)">*</span></label><div class="field">50,000</div></div>
+</section>
+
+<section>
+  <h3>다 · 별을 선택 칸에 — 붉은색</h3>
+  <p class="why">붉은색은 이 앱에서 「지우기·되돌릴 수 없음」에 쓴다.</p>
+  <div class="grp"><label>상품명</label><div class="field">스타벅스 5만원권</div></div>
+  <div class="grp"><label>금액 <span class="star" style="color:var(--destructive)">*</span></label><div class="field">50,000</div></div>
+</section>
+
+<section>
+  <h3>라 · 별을 <b>필수</b> 칸에 — 관례대로 뒤집는다</h3>
+  <p class="why">별이 붙은 곳이 꼭 적어야 하는 칸. 선택 칸은 맨몸이 된다.</p>
+  <div class="grp"><label>상품명 <span class="star" style="color:var(--destructive)">*</span></label><div class="field">스타벅스 5만원권</div></div>
+  <div class="grp"><label>금액</label><div class="field">50,000</div></div>
+</section>

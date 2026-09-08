@@ -37,7 +37,7 @@ export default function ImageViewerModal({ gifticon, onClose }) {
 
             몇 장 중 몇 번째인지는 여기 있다가 사진 아래로 내려갔다. 제목(33)과 부제(57.5)
             사이인 44.5 에 떠서 셋 중 아무 것과도 안 맞았고, 이름이 쓸 폭도 64px 잡아먹었다. */}
-        <SheetHeader className="gap-0">
+        <SheetHeader>
           <SheetTitle className="truncate">원본 사진</SheetTitle>
           <SheetDescription className="truncate">
             {gifticon.name}
