@@ -11,6 +11,7 @@ import { isNativeApp } from './utils/browser.js'
 import { catchInviteFromUrl } from './utils/inviteLink.js'
 import { applyUiScale, watchSystemUiScale } from './utils/uiScale.js'
 import { setLoginError } from './utils/loginError.js'
+import { watchForegroundPush } from './utils/foregroundPush.js'
 
 // 안드로이드 웹뷰는 내비게이션 바 높이를 env(safe-area-inset-bottom)으로 알려주지 않는다.
 // 그래서 화면 맨 아래 버튼이 제스처 바에 물려 눌리지 않았다. CSS가 그 사실을 알 수 있게
@@ -29,6 +30,9 @@ catchInviteFromUrl()
 // 실패해도(플러그인이 없는 옛 빌드 등) 기본 크기로 그대로 돌아간다.
 applyUiScale().catch(() => {})
 watchSystemUiScale()
+
+// 앱을 보고 있는 중에 온 알림을 갤럭시에서도 그린다. 웹·아이폰에서는 아무 일도 안 한다.
+watchForegroundPush().catch(() => {})
 
 watchForUpdates()
 
