@@ -51,7 +51,7 @@ export default function ProfileMenu({ onClose }) {
   // 갤러리 자동 스캔은 앱에서만 있다. 브라우저에는 폴더를 볼 방법이 없어서 줄 자체를 감춘다.
   const [scanSupported] = useState(() => isGalleryScanSupported());
   const [autoScan, setAutoScan] = useState(() => isAutoScanOn());
-  // 찾기에서 '아니다'라고 해둔 사진 수. 되살릴 것이 있을 때만 줄을 그린다.
+  // 찾기에서 '아니다'라고 해둔 사진 수. 줄에 그 수를 적는다.
   const [skipped, setSkipped] = useState(() => countSkipped());
   const [forgetAsking, setForgetAsking] = useState(false);
   // 목록 위 '내 주변' 띠. 여기는 앱·브라우저 둘 다 있어서 줄을 감추지 않는다.
@@ -230,11 +230,18 @@ export default function ProfileMenu({ onClose }) {
                 자주 올 자리가 아니다.
                 여기서는 기록만 지운다. 다음에 찾기를 열면 처음부터 다시 본다 —
                 설정에서 갑자기 사진첩을 훑기 시작하면 무슨 일인지 알 수가 없다. */}
-            {isGalleryScanSupported() && skipped > 0 && (
+            {/* 되살릴 것이 있을 때만 그리다가, 늘 그리는 것으로 바꿨다.
+                줄이 있다 없다 하면 "어제 있던 게 왜 없지"가 된다 — 실제로 그 말을
+                들었다. 되살릴 것이 없다는 사실도 이 줄이 말해주면 될 일이다. */}
+            {isGalleryScanSupported() && (
               <SettingLinkRow
                 icon={RotateCcw}
                 label="전부 다시 찾기"
-                hint="아니라고 해둔 사진까지 다시 봐요"
+                hint={
+                  skipped > 0
+                    ? `아니라고 해둔 사진 ${skipped}장을 다시 봐요`
+                    : '아니라고 해둔 사진이 아직 없어요'
+                }
                 onClick={() => setForgetAsking(true)}
               />
             )}

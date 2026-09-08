@@ -733,7 +733,10 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
           <button
             type="button"
             onClick={() => setResetAsking(true)}
-            className="absolute top-4 right-[62px] flex h-11 items-center rounded-full px-2.5 text-[13.5px] font-semibold text-muted-foreground"
+            // -mt-[5px]는 닫기 ✕과 같은 높이에 서기 위한 것이다. ✕은 -m-[5px]로 과녁을
+            // 넓혀둔 터라 실제로는 5px 위에서 시작한다. 그걸 안 맞추면 이 버튼만
+            // 5px 아래로 처져 보인다.
+            className="absolute top-4 right-[62px] -mt-[5px] flex h-11 items-center rounded-full px-2.5 text-[13.5px] font-semibold text-muted-foreground"
           >
             <RotateCcw className="mr-1 size-[15px]" />
             초기화

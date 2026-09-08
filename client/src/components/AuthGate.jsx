@@ -222,9 +222,17 @@ export default function AuthGate({ children }) {
   //
   // useState의 초기값으로 정할 수가 없다 — 처음 그릴 때는 로그인 정보를 아직 못 읽어서
   // 누구인지 모르고, 그때 정해버리면 영영 거짓으로 남는다. 그래서 그릴 때마다 본다.
-  // '시작하기'를 누르면 아래 값이 참이 되어 다시 세우지 않는다.
-  const [welcomeDone, setWelcomeDone] = useState(false);
-  const welcomeSetup = !welcomeDone && needsWelcomeSetup(session?.user?.id);
+  //
+  // '봤다'를 참·거짓이 아니라 '누가 봤는지'로 들고 있는다.
+  //
+  // 참·거짓이던 시절에 이렇게 됐다: 탈퇴하거나 로그아웃해도 이 관문은 그대로 서 있어서
+  // (사라지는 것은 아래 화면들이지 관문이 아니다) 그 값이 참인 채로 남았다. 그래서 다른
+  // 계정으로 새로 들어와도 첫 설정 화면이 안 떴다. 폰에 적어둔 표시(welcomeSetup.js)는
+  // 계정마다 따로인데, 화면 안의 이 값 하나가 그걸 덮어버린 것이다.
+  //
+  // 앱을 껐다 켜면 됐던 것도 그래서다 — 그때는 관문이 새로 서니까.
+  const [welcomeDoneFor, setWelcomeDoneFor] = useState(null);
+  const welcomeSetup = welcomeDoneFor !== userId && needsWelcomeSetup(userId);
 
   const waitingScreen = <LoadingScreen />;
 
@@ -262,7 +270,7 @@ export default function AuthGate({ children }) {
         userId={session.user.id}
         onDone={() => {
           markWelcomeSetupDone(session.user.id);
-          setWelcomeDone(true);
+          setWelcomeDoneFor(session.user.id);
         }}
       />
     );
