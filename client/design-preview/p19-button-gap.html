@@ -1,0 +1,61 @@
+<!doctype html>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>버튼 앞 간격</title>
+<style>
+  :root {
+    --foreground: #1c1e27; --muted-foreground: #545461; --card: #fbfbfd;
+    --border: #e7e7ec; --input: #e7e7ec; --primary: #5b4fe8;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { height: 100%; }
+  body {
+    background: #8a8a90;
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", sans-serif;
+    display: flex; flex-direction: column; justify-content: flex-end;
+  }
+  .tag { position: fixed; top: 12px; left: 0; right: 0; text-align: center;
+         color: #fff; font-size: 13px; font-weight: 700; }
+  .tag b { font-weight: 800; }
+  .sheet { background: var(--card); border-radius: 22px 22px 0 0; padding: 20px 0 22px; }
+  .head { display: flex; align-items: center; justify-content: space-between;
+          padding: 0 20px; margin-bottom: 18px; }
+  .head h2 { font-size: 20px; font-weight: 800; color: var(--foreground); letter-spacing: -.01em; }
+  .x { width: 24px; height: 24px; color: var(--muted-foreground); }
+  form { display: flex; flex-direction: column; padding: 8px 20px 0; gap: 20px; }
+  .grp { display: flex; flex-direction: column; gap: 10px; }
+  label { font-size: 14px; font-weight: 500; line-height: 1; color: var(--foreground); }
+  .field { height: 52px; border: 1px solid var(--input); border-radius: 8px;
+           background: var(--card); padding: 0 16px; display: flex; align-items: center;
+           font-size: 16px; color: var(--foreground); }
+  .field.ph { color: #a3a3ad; }
+  .row { display: flex; flex-direction: row-reverse; gap: 8px; }
+  .row > button { flex: 1; height: 52px; border-radius: 8px; font-size: 16px;
+                  letter-spacing: .02em; border: 0; }
+  .go { background: var(--primary); color: #fff; font-weight: 700; }
+  .back { background: var(--card); border: 1px solid var(--border) !important;
+          color: rgba(28,30,39,.8); font-weight: 600; }
+</style>
+
+<p class="tag" id="tag"></p>
+<div class="sheet">
+  <div class="head">
+    <h2>초대 코드로 참여</h2>
+    <svg class="x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+  </div>
+  <form>
+    <div class="grp"><label>초대 코드</label><div class="field">A1B2C3</div></div>
+    <div class="grp"><label>이 가족에서 쓸 내 이름</label><div class="field ph"></div></div>
+    <div class="row" id="row"><button class="go">참여하기</button><button class="back">뒤로</button></div>
+  </form>
+</div>
+
+<script>
+  var g = new URLSearchParams(location.search).get('g') || '24';
+  var name = { 20:'가 · <b>20</b> — 칸 사이와 같음',
+               24:'나 · <b>24</b> — 앱이 쓰던 값',
+               28:'나-2 · <b>28</b>',
+               32:'다 · <b>32</b> — 칸 사이의 1.6배' }[g];
+  document.getElementById('row').style.marginTop = (g - 20) + 'px';
+  document.getElementById('tag').innerHTML = name;
+</script>

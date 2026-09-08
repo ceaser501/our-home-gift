@@ -106,7 +106,9 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
 
         <form onSubmit={handleJoin} className="flex flex-1 flex-col gap-5 px-6 pt-6 pb-[max(24px,var(--safe-bottom))]">
           <div className="flex flex-col gap-2">
-            <Label htmlFor="invited-name" className="text-base font-bold">
+            {/* 이 자리의 Label 은 칸 이름이 아니라 화면이 묻는 말이다. 부품이 정한
+                회색·14 를 물려받으면 물음이 라벨처럼 물러난다 — 검정 16 으로 붙든다. */}
+            <Label htmlFor="invited-name" className="text-base font-bold text-foreground">
               가족에게 어떻게 보일 이름인가요?
             </Label>
             <Input
@@ -321,11 +323,12 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
         <form onSubmit={handleCreate} className="flex flex-col gap-4">
           {/* 적는 칸을 테두리 카드로 또 감싸지 않는다. 칸마다 테두리가 있으므로 두 겹이
               된다 — 이 앱에서 테두리는 '누르거나 적는 것' 하나만 가리켜야 한다.
-              칸끼리는 한 단 좁게(12px) 붙여서 둘이 한 묶음으로 읽히게 한다. */}
-          <div className="flex flex-col gap-3">
+              칸 묶음 사이는 20. 라벨과 칸 사이(10)의 곱절이라 라벨이 어느 칸에
+              딸린 말인지 망설임 없이 읽힌다. 앱의 폼 셋이 모두 같은 값이다. */}
+          <div className="flex flex-col gap-5">
             <div className="flex flex-col gap-2.5">
               {/* '이름'만 적으면 무엇의 이름인지 묻게 된다. 바로 아래가 '내 이름'이라 더 그렇다. */}
-              <Label htmlFor="fam-name" className="text-[14px] font-semibold">가족 이름</Label>
+              <Label htmlFor="fam-name">가족 이름</Label>
               {/* autoComplete="off": 예전에 적었던 값이 아래로 뜨지 않게 한다. */}
               <Input
                 id="fam-name"
@@ -341,7 +344,7 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
               {/* 왜 묻는지가 없으면 본명을 적는다. 그 힌트를 플레이스홀더가 혼자 지고
                   있었는데, 한 글자만 적어도 사라지는 자리다. */}
               <div className="flex items-baseline gap-1.5">
-                <Label htmlFor="fam-my-name" className="text-[14px] font-semibold">내 이름</Label>
+                <Label htmlFor="fam-my-name">내 이름</Label>
                 <span className="text-[12.5px] font-medium text-muted-foreground">가족에게 이렇게 보여요</span>
               </div>
               <Input
@@ -356,10 +359,12 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
             </div>
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
+          {/* 폼 gap 은 16 이고 버튼 앞만 28 이다 — mt-3 이 그 차를 메운다.
+              오류 문구는 칸 가까이 16 에 두고, 버튼만 떨어뜨린다. */}
           <Button
             type="submit"
             size="xl"
-            className={PRIMARY_BUTTON}
+            className={cn(PRIMARY_BUTTON, 'mt-3')}
             disabled={submitting}
           >
             {submitting ? '만드는 중…' : '만들기'}
@@ -367,9 +372,9 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
         </form>
       ) : (
         <form onSubmit={handleJoin} className="flex flex-col gap-4">
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-5">
             <div className="flex flex-col gap-2.5">
-              <Label htmlFor="fam-code" className="text-[14px] font-semibold">초대 코드</Label>
+              <Label htmlFor="fam-code">초대 코드</Label>
               <Input
                 id="fam-code"
                 value={code}
@@ -388,7 +393,7 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
             </div>
             <div className="flex flex-col gap-2.5">
               <div className="flex items-baseline gap-1.5">
-                <Label htmlFor="fam-join-name" className="text-[14px] font-semibold">내 이름</Label>
+                <Label htmlFor="fam-join-name">내 이름</Label>
                 <span className="text-[12.5px] font-medium text-muted-foreground">가족에게 이렇게 보여요</span>
               </div>
               <Input
@@ -406,7 +411,7 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
           <Button
             type="submit"
             size="xl"
-            className={PRIMARY_BUTTON}
+            className={cn(PRIMARY_BUTTON, 'mt-3')}
             disabled={submitting}
           >
             {submitting ? '참여하는 중…' : '참여하기'}

@@ -223,7 +223,7 @@ export default function FamilySwitcherSheet({ onClose, initialCode = "" }) {
             </div>
           </>
         ) : (
-          <form onSubmit={submit} className="flex flex-col gap-3 px-5 pt-2">
+          <form onSubmit={submit} className="flex flex-col gap-5 px-5 pt-2">
             {mode === "create" ? (
               <div className="flex flex-col gap-2.5">
                 <Label htmlFor="switch-fam-name">가족 이름</Label>
@@ -282,7 +282,9 @@ export default function FamilySwitcherSheet({ onClose, initialCode = "" }) {
             {/* 이 화면만 기본값(40)을 쓰고 있었다 — 칸도 버튼도. 다른 시트는 52 다.
                 취소·확정 짝은 ACTION_ROW 가 맡는다. 주 버튼이 오른쪽에 오도록
                 row-reverse 를 쓰므로 DOM 에서는 확정이 먼저다. */}
-            <div className={cn(ACTION_ROW, "pt-1")}>
+            {/* 칸 사이는 20, 버튼 앞은 28. 폼 gap 위에 8 을 더 얹는다.
+                적는 것과 누르는 것은 하는 일이 다르니 한 칸 더 벌린다. */}
+            <div className={cn(ACTION_ROW, "pt-2")}>
               <Button
                 type="submit"
                 size="xl"

@@ -862,9 +862,9 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
               안 적어도 되는 것에만 '선택'이라고 적는 편이 짧다. */}
           <div className="my-1 h-px bg-border/60" />
 
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-5">
             <div className="flex flex-col gap-2.5">
-              <Label htmlFor="f-name" className="text-[14px] font-semibold text-foreground/80">상품명</Label>
+              <Label htmlFor="f-name">상품명</Label>
               <Input
                 id="f-name"
                 value={form.name}
@@ -876,7 +876,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
 
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-2.5">
-                <Label htmlFor="f-brand" className="text-[14px] font-semibold text-foreground/80">상호</Label>
+                <Label htmlFor="f-brand">상호</Label>
                 <Input
                   id="f-brand"
                   value={form.brand}
@@ -886,7 +886,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
               </div>
 
               <div className="flex flex-col gap-2.5">
-                <Label className="text-[14px] font-semibold text-foreground/80">카테고리</Label>
+                <Label>카테고리</Label>
                 {/* 고르는 칸은 배경을 채운다. 적는 칸(흰 배경)과 갈라 보이게 하려는 것이다 —
                     테두리는 둘 다 갖는다. 둘 다 조작하는 자리라서.
                     아이콘은 목록에서 쓰는 것과 같다(constants의 CATEGORIES). 같은 분류가
@@ -939,7 +939,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
                 길어야 여섯 자리라 절반씩으로 충분하다. */}
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-2.5">
-                <Label htmlFor="f-code" className="text-[14px] font-semibold text-foreground/80">바코드 번호</Label>
+                <Label htmlFor="f-code">바코드 번호</Label>
                 <Input
                   id="f-code"
                   value={readableCode(form.code)}
@@ -950,7 +950,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
               </div>
 
               <div className="flex flex-col gap-2.5">
-                <Label htmlFor="f-amount" className="text-[14px] font-semibold text-foreground/80">
+                <Label htmlFor="f-amount">
                   금액 <Optional />
                 </Label>
                 {/* '원'을 예시 문구로 두면 한 글자만 적어도 사라져서, 무엇을 적는 칸인지가
@@ -1009,7 +1009,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
             )}
 
             <div className="flex flex-col gap-2.5">
-              <Label htmlFor="f-expires" className="text-[14px] font-semibold text-foreground/80">
+              <Label htmlFor="f-expires">
                 사용기한 <Optional />
               </Label>
               {/* 폰이 들고 있는 날짜 고르개를 그대로 쓴다. 직접 만든 달력으로 바꾸면
@@ -1044,7 +1044,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
                 동그란 아바타는 안 쓴다 — 옆에 이름이 그대로 있어서 '아들아들'처럼 두 번
                 읽힌다. 아바타는 이름이 안 보이는 자리에서 쓰는 것이다. */}
             <div className="flex flex-col gap-2.5">
-              <Label className="text-[14px] font-semibold text-foreground/80">받는 사람</Label>
+              <Label>받는 사람</Label>
               <Select value={form.owner} onValueChange={(v) => updateField('owner', v)}>
                 <SelectTrigger
                   size="lg"
@@ -1086,11 +1086,11 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
               </Select>
             </div>
 
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-2.5">
               {/* 바코드 창에서 '○○님의 메모'로 크게 보이는 값인데, 여기서는 그걸 알 수
                   없었다. 칸 안 예시 문구로는 안 된다 — 적기 시작하면 사라진다. */}
               <div className="flex items-baseline gap-1.5">
-                <Label htmlFor="f-memo" className="text-[14px] font-semibold text-foreground/80">메모</Label>
+                <Label htmlFor="f-memo">메모</Label>
                 <span className="text-caption font-medium text-muted-foreground">선택 · 가족이 같이 봐요</span>
               </div>
               <Textarea
@@ -1102,7 +1102,9 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
             </div>
           </div>
 
-          <div className="flex flex-col gap-2 pt-1">
+          {/* 폼 gap 16 위에 12 를 얹어 버튼 앞을 28 로 만든다. 칸 사이 20 보다
+              한 칸 넓어야 적는 자리와 누르는 자리가 갈린다. */}
+          <div className="flex flex-col gap-2 pt-3">
             <Button size="xl"
               type="submit"
               className={PRIMARY_BUTTON}
