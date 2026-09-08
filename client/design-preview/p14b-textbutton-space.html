@@ -1,0 +1,105 @@
+<!doctype html>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>글자 버튼의 자리</title>
+<script type="module" src="/src/index.css"></script>
+<style>
+  body { margin:0; background:#3a3a44; font-family:Pretendard, system-ui, sans-serif;
+         -webkit-font-smoothing:antialiased; color:#fff; }
+  .page { display:flex; gap:20px; align-items:flex-start; justify-content:center;
+          padding:16px 14px 80px; flex-wrap:wrap; }
+  .col { width:375px; flex:0 0 auto; }
+  .cap { font-size:13px; font-weight:800; margin:0 0 3px; }
+  .sub { color:#b8b8c4; font-size:11px; line-height:1.5; margin:0 0 8px; min-height:74px; }
+  .st  { color:#9d9daa; font-size:10px; font-weight:700; margin:8px 0 0; }
+  .note { color:#9d9daa; font-size:10px; font-weight:700; margin:12px 0 0; }
+
+  .sheet { background:var(--background); color:var(--foreground);
+           border-radius:16px 16px 0 0; overflow:hidden; box-shadow:0 -2px 24px rgba(0,0,0,.28); }
+  .hd  { padding:20px 60px 20px 20px; position:relative; }
+  .ttl { font-size:20px; line-height:1.2; font-weight:700; letter-spacing:-.025em; margin:0; }
+  .dsc { margin:2px 0 0; font-size:14px; line-height:1.5; font-weight:500;
+         color:var(--muted-foreground); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .x   { position:absolute; top:10px; right:10px; width:44px; height:44px; display:flex;
+         align-items:center; justify-content:center; color:var(--muted-foreground); }
+  .x svg { width:24px; height:24px; }
+  .bd  { padding:0 20px 20px; display:flex; flex-direction:column; }
+
+  .code { display:flex; flex-direction:column; align-items:center; gap:10px;
+          border-radius:14px; border:1px solid var(--border); background:#fff;
+          padding:14px 10px 12px; }
+  .bar  { width:100%; height:90px;
+          background:repeating-linear-gradient(90deg,#17171c 0 2px,transparent 2px 5px); }
+  .digits { display:flex; align-items:center; gap:8px; }
+  .digits p { margin:0; font-family:ui-monospace,monospace; font-size:15px; font-weight:600;
+              font-variant-numeric:tabular-nums; color:#17171c; }
+  .copy { width:32px; height:32px; border-radius:6px; border:1px solid var(--input);
+          background:var(--card); display:flex; align-items:center; justify-content:center;
+          color:var(--muted-foreground); }
+  .copy svg { width:15px; height:15px; }
+
+  .btnP { height:52px; border-radius:14px; border:0; background:var(--primary);
+          color:var(--primary-foreground); font-size:16px; font-weight:700; letter-spacing:.02em;
+          display:flex; align-items:center; justify-content:center; font-family:inherit; }
+  /* 과녁을 보이게 그린다 — 실제 앱에서는 이 점선이 없다 */
+  .link { align-self:center; display:flex; align-items:center; justify-content:center; gap:5px;
+          border:0; background:none; font-family:inherit; font-size:14px; font-weight:600;
+          color:var(--primary); outline:1px dashed color-mix(in srgb, var(--primary) 40%, transparent);
+          outline-offset:-1px; }
+  .link svg { width:15px; height:15px; }
+</style>
+
+<script>
+  const X = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+    stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>`;
+  const CP = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect
+    x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`;
+  const CH = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+    stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>`;
+  const CODE = `<div class="code"><div class="bar"></div>
+      <div class="digits"><p>8801 2345 6789 0123</p><span class="copy">${CP}</span></div></div>`;
+
+  // [주 버튼 앞, 글자 버튼 앞, 과녁 높이]
+  const V = {
+    '가': ['지금 — 12 / 12 · 과녁 36', 12, 12, 36,
+      '과녁이 36 이라 애플이 권하는 44 에 못 미친다. 주 버튼과 12 밖에 안 떨어져서 그 버튼에 딸린 꼬리처럼 읽힌다.'],
+    '나': ['과녁 44 · 사이 12', 12, 12, 44,
+      '과녁만 44 로 넓힌다. 글자는 제자리에 있고 누를 자리만 커진다 — 다만 그만큼 주 버튼과 더 붙어 보인다.'],
+    '다': ['과녁 44 · 사이 20', 12, 20, 44,
+      '과녁을 넓히고 주 버튼과도 뗀다. 아래 것이 위 것에 딸린 것이 아니라 따로 선 동작으로 읽힌다.'],
+  };
+
+  addEventListener('DOMContentLoaded', () => {
+    const page = document.querySelector('.page');
+    Object.entries(V).forEach(([k, [name, gapTop, gapLink, hit, note]]) => {
+      const col = document.createElement('div');
+      col.className = 'col';
+      col.innerHTML = `<p class="cap">${k} · ${name}</p><p class="sub">${note}</p>`
+        + `<div class="sheet" id="s${k}">
+             <div class="hd"><p class="ttl">스타벅스</p>
+               <p class="dsc">카페 아메리카노 T 2잔 + 딸기 생크림 케이크</p>
+               <span class="x">${X}</span></div>
+             <div class="bd">${CODE}
+               <button class="btnP" style="margin-top:${gapTop}px">잔액입력</button>
+               <button class="link" style="margin-top:${gapLink}px;height:${hit}px;padding:0 12px">
+                 원본 사진 2장 ${CH}</button>
+             </div></div>`
+        + `<p class="note">점선은 누를 자리다 — 실제 화면에는 없다.</p>`
+        + `<p class="st" id="n${k}"></p>`;
+      page.appendChild(col);
+    });
+    const measure = () => Object.keys(V).forEach((k) => {
+      const el = document.getElementById('s' + k);
+      const p = el.querySelector('.btnP').getBoundingClientRect();
+      const l = el.querySelector('.link').getBoundingClientRect();
+      document.getElementById('n' + k).textContent =
+        `시트 ${Math.round(el.getBoundingClientRect().height)}px · 과녁 ${Math.round(l.height)}px`
+        + ` · 주 버튼에서 ${Math.round(l.top - p.bottom)}px`;
+    });
+    new ResizeObserver(measure).observe(document.body);
+    document.fonts.ready.then(() => requestAnimationFrame(measure));
+    setTimeout(measure, 500); setTimeout(measure, 1400);
+  });
+</script>
+
+<div class="page"></div>

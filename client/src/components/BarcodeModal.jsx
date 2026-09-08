@@ -1,14 +1,7 @@
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
 import JsBarcode from "jsbarcode";
-import {
-  CheckCircle2,
-  ChevronLeft,
-  Image as ImageIcon,
-  ScanLine,
-  StickyNote,
-  Wallet,
-} from "lucide-react";
+import { CheckCircle2, ChevronRight, StickyNote } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -157,22 +150,18 @@ export default function BarcodeModal({ gifticon, onClose, onUsed, onSpend }) {
             사라지고, 그만큼 바코드와 버튼에 여백이 돌아간다.
             사진을 보는 동안에는 제목이 '원본 사진'으로 바뀐다 — 상품명은 바코드 화면에서
             이미 봤고, 여기서 알아야 하는 것은 "지금 어디에 있나"다. */}
+        {/* 헤더에 ‹ 를 두지 않는다. 아래 「바코드 보기」와 하는 일이 똑같았다 —
+            같은 문이 둘이었다. 남긴 쪽이 아래인 까닭은 이 창을 계산대에서 한 손으로
+            들고 쓰기 때문이다. 왼쪽 위는 엄지가 제일 안 닿는 자리다.
+
+            기한 연장 시트에는 ‹ 가 있는데, 거기는 단계가 있는 흐름(1/2 → 2/2)이라
+            되돌아갈 곳이 '앞 단계' 하나뿐이다. 여기는 두 화면을 오가는 것이고 그
+            오가는 문이 아래에 이미 있다. */}
         <SheetHeader className="gap-0">
           <div className="flex items-center gap-2.5">
-            {view === "photo" && (
-              <button
-                type="button"
-                onClick={() => setView("code")}
-                aria-label="바코드 보기"
-                className="-m-2.5 flex shrink-0 p-2.5 text-muted-foreground"
-              >
-                <ChevronLeft className="size-5" />
-              </button>
-            )}
             <div className="flex min-w-0 flex-1 flex-col gap-1">
               {/* 사진 보기에서는 16, 바코드에서는 19 로 갈라 두었었다. 화면이 바뀐다고
-                  제목 크기가 달라질 까닭이 없다 — 왼쪽에 돌아가기 버튼이 붙어 자리가
-                  좁아지는 것은 truncate 가 맡는다. */}
+                  제목 크기가 달라질 까닭이 없다. */}
               <SheetTitle className="truncate">
                 {view === "photo"
                   ? "원본 사진"
@@ -221,6 +210,33 @@ export default function BarcodeModal({ gifticon, onClose, onUsed, onSpend }) {
                 </p>
               </div>
             )}
+
+            {/* 바코드를 그림으로 못 띄웠을 때. 번호보다 위에 둔다 — 바코드가 뜰 줄 알고
+              연 창에 숫자만 있으면 "왜 없지"가 먼저 오고, 그 답이 아래에 있으면 한 번
+              내려갔다 다시 올라와야 한다. 무슨 일이 있었는지를 먼저 말하고 번호를 보인다.
+
+              계산대 앞에서 읽어야 하는 말이라 12 회색 한 줄로 둘 것이 아니다. 본문(14)으로
+              올리고 두 문장을 줄로 갈랐다. 뒤엣말만 검게 해서 할 일이 먼저 잡힌다.
+
+              가운데 정렬도 걷었다. 시트의 다른 글은 다 왼쪽에서 시작하는데 이 줄만
+              가운데면, 안내가 아니라 표어처럼 보인다. */}
+            {gifticon.code
+              ? renderError &&
+                !gifticon.barcode_image_url && (
+                  <p className="m-0 text-body leading-relaxed font-medium break-keep text-muted-foreground">
+                    이미지로 표시할 수 없어요.
+                    <br />
+                    <b className="font-bold text-foreground">
+                      매장에서 이 번호를 직접 입력해주세요.
+                    </b>
+                  </p>
+                )
+              : !gifticon.barcode_image_url && (
+                  <p className="m-0 text-center text-body break-keep text-muted-foreground">
+                    등록된 바코드/QR 정보가 없어요. 수정에서 직접 입력할 수
+                    있어요.
+                  </p>
+                )}
 
             {/* 그림과 번호를 테두리 하나로 묶는다. 계산대에서 리더기에 들이대는 것도,
               점원에게 불러주는 것도 이 한 덩어리다. 바코드 높이(150px)는 건드리지 않는다 —
@@ -288,28 +304,6 @@ export default function BarcodeModal({ gifticon, onClose, onUsed, onSpend }) {
               </div>
             )}
 
-            {/* 바코드를 그림으로 못 띄웠을 때. 계산대 앞에서 읽어야 하는 말이라 12 회색
-                한 줄로 둘 것이 아니다. 본문(14)으로 올리고 두 문장을 줄로 갈랐다 —
-                앞은 무슨 일이 있었는지, 뒤는 무엇을 하면 되는지다. 뒤엣말만 검게 해서
-                할 일이 먼저 잡히게 한다. */}
-            {gifticon.code
-              ? renderError &&
-                !gifticon.barcode_image_url && (
-                  <p className="m-0 text-center text-body leading-relaxed font-medium break-keep text-muted-foreground">
-                    이미지로 표시할 수 없어요.
-                    <br />
-                    <b className="font-bold text-foreground">
-                      매장에서 이 번호를 직접 입력해주세요.
-                    </b>
-                  </p>
-                )
-              : !gifticon.barcode_image_url && (
-                  <p className="m-0 text-center text-body break-keep text-muted-foreground">
-                    등록된 바코드/QR 정보가 없어요. 수정에서 직접 입력할 수
-                    있어요.
-                  </p>
-                )}
-
             {/* 계산이 끝난 그 자리에서 바로 눌러 끝낼 수 있게 한다. 창을 닫고 목록에서 다시
               카드를 찾아 누르게 하면, 그 한 걸음 때문에 표시를 미루다 잊는다.
               눌러도 되돌릴 수 있다(카드에서 "사용취소"). 그래서 다시 묻지 않고 바로 처리한다.
@@ -325,7 +319,6 @@ export default function BarcodeModal({ gifticon, onClose, onUsed, onSpend }) {
                   onClick={onSpend}
                   className={PRIMARY_BUTTON}
                 >
-                  <Wallet className="size-5" />
                   잔액입력
                 </Button>
               ) : (
@@ -342,24 +335,29 @@ export default function BarcodeModal({ gifticon, onClose, onUsed, onSpend }) {
                 )
               )}
 
-              {/* 글자만 있던 줄을 테두리 버튼으로. 이 앱에서 테두리는 '누르는 것'을 가리킨다.
-                위에 있던 구분선은 버튼이 생기면서 할 일이 없어졌다.
-                이름도 '원본 사진 보기 2장'에서 '보기'를 뺐다 — 버튼이 되었으니 누르면
-                열린다는 것을 모양이 이미 말한다. */}
+              {/* 테두리 버튼이었다가 글자로 내렸다. 위 버튼과 쓰는 빈도가 다르다 —
+                  잔액입력·사용완료는 기프티콘을 쓸 때마다이고, 원본 사진은 약관을
+                  확인하거나 바코드가 안 뜰 때 어쩌다 본다. 둘 다 52 짜리 네모면 계산대
+                  앞에서 어느 쪽을 눌러야 하는지 한 번 더 보게 된다.
+
+                  글자 버튼은 테두리도 채움도 없어 자기 경계를 스스로 못 말한다. 그래서
+                  둘을 따로 잡는다.
+                  — 누를 자리 44(h-11). 글자는 20px 이지만 그것만 눌리면 빗나간다.
+                    시트 닫기(보이는 24 · 누르는 44)와 헤더 ‹(20 · 40)에서 쓴 셈법이다.
+                  — 주 버튼과 20(gap 8 + mt-3). 12 면 그 버튼에 딸린 꼬리처럼 읽힌다.
+                    테두리가 있으면 12 로도 됐는데, 글자 버튼은 여백이 곧 경계다. */}
               {photos.length > 0 && (
-                <Button
+                <button
                   type="button"
-                  variant="outline"
-                  size="xl"
                   onClick={() => {
                     setPhotoIndex(0);
                     setView("photo");
                   }}
-                  className={SECONDARY_BUTTON}
+                  className="mt-3 flex h-11 items-center justify-center gap-1 self-center px-3 text-body font-semibold tracking-button text-primary"
                 >
-                  <ImageIcon className="size-4 text-muted-foreground" />
                   원본 사진 {photos.length}장
-                </Button>
+                  <ChevronRight className="size-4" strokeWidth={2.4} />
+                </button>
               )}
             </div>
           </div>
@@ -390,7 +388,6 @@ export default function BarcodeModal({ gifticon, onClose, onUsed, onSpend }) {
               {/* '돌아가기'가 아니라 '보기'다. 마주 보는 두 버튼이 같은 꼴이어야 한다 —
                   이쪽에서는 '원본 사진 2장', 저쪽에서는 '바코드 보기'. 어디서 왔는지가
                   아니라 무엇을 볼지를 말한다. */}
-              <ScanLine className="size-4 text-muted-foreground" />
               바코드 보기
             </Button>
           </div>
