@@ -136,14 +136,24 @@ function readDismissedToday() {
   }
 }
 
-function readCache(at) {
+// 적어둔 것을 그대로 꺼낸다. 답으로 쓸지는 부르는 쪽이 정한다.
+function readSaved() {
   try {
-    const saved = JSON.parse(localStorage.getItem(CACHE_KEY) || "null");
-    if (!saved || !cacheFresh(saved, at)) return null;
-    return saved;
+    return JSON.parse(localStorage.getItem(CACHE_KEY) || "null");
   } catch {
     return null;
   }
+}
+
+// 다시 안 찾아도 되는가.
+//
+// '찾았다'만 답으로 쓴다. '없더라'는 적어두기는 하지만(자리를 기억해야 해서) 답으로는
+// 안 쓴다 — 그래서 없다고 나온 자리에서는 앱을 열 때마다 다시 물어본다. 왜 그렇게
+// 갈랐는지는 아래 run() 안의 주석에 적어뒀다.
+function readCache(at) {
+  const saved = readSaved();
+  if (!saved || !saved.best || !cacheFresh(saved, at)) return null;
+  return saved;
 }
 
 // 위치를 기다리기 전에 먼저 꺼내는 캐시.
@@ -160,8 +170,8 @@ function readCache(at) {
 // 다른 동네 매장을 보여주느니 몇 초 기다리는 편이 낫다.
 function readCacheAhead() {
   try {
-    const saved = JSON.parse(localStorage.getItem(CACHE_KEY) || "null");
-    if (!saved) return null;
+    const saved = readSaved();
+    if (!saved || !saved.best) return null;
     // 견줄 위치가 없으면 그리지 않는다. 시간을 안 보게 된 뒤로, 자리를 확인하지 못한
     // 캐시는 언제 적 것인지 알 방법이 없다 — 며칠 전 동네의 띠를 잠깐 세울 수 있다.
     const last = readCachedPosition(CACHE_MAX_AGE_MS);
@@ -409,7 +419,14 @@ export default function NearbyBanner({ gifticons, onPick }) {
       // 브랜드 셋이니, 쓸 게 없는 사람이 하루 600번 넘게 앱을 열어야 닿는 수다.
       //
       // 못 물어본 것이 섞였을 때도 안 적는다. 더 가까운 매장을 놓쳤을 수 있다.
-      if (!failed && found) {
+      // 아까 어디서 찾았었는지. 적어두기 전에 읽어야 한다.
+      const previous = readSaved();
+      const movedAway = !previous || !cacheFresh(previous, at);
+
+      // 자리는 답이 어느 쪽이든 적어둔다. 답으로 쓰지 않더라도 '아까 어디였나'는
+      // 알아야, 닫아둔 '없어요' 띠를 언제 되살릴지 정할 수 있다.
+      // (못 물어본 것이 섞였으면 적지 않는다. 더 가까운 매장을 놓쳤을 수 있다.)
+      if (!failed) {
         try {
           localStorage.setItem(
             CACHE_KEY,
@@ -419,11 +436,15 @@ export default function NearbyBanner({ gifticons, onPick }) {
           // 캐시를 못 남겨도 동작에는 지장 없다.
         }
       }
+
       setBest(found);
       setSearched(true);
-      // 진짜로 다시 찾은 자리다. 100m 넘게 움직였다는 뜻이라, 닫아둔
-      // '없어요' 띠를 여기서 되살린다. 같은 자리에서 여닫는 것과는 갈린다.
-      setEmptyClosed(false);
+      // 닫아둔 '없어요' 띠는 자리를 옮겼을 때만 되살린다.
+      //
+      // 이 앱은 계산대 앞에서 열었다 닫았다 하는 앱이다. 홈을 눌렀다 3초 뒤 돌아올
+      // 때마다 방금 치운 것이 다시 서면 성가시다. 이제 없다고 나온 자리에서는 앱을
+      // 열 때마다 다시 물어보므로, '다시 찾았다'는 것만으로는 되살릴 근거가 안 된다.
+      if (movedAway) setEmptyClosed(false);
     }
 
     run();
