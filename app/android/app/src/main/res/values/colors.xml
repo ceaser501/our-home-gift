@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        알림을 펼쳤을 때 아이콘과 앱 이름에 입혀지는 색.
+
+        상태바의 작은 아이콘은 안드로이드가 흰색으로 덮어써서 여기 색이 안 먹는다.
+        알림을 펼쳐 보는 자리에서만 이 색이 쓰인다 — 그 한 자리라도 브랜드 색이면
+        어느 앱이 보낸 것인지 눈으로 먼저 갈린다.
+
+        client/src/index.css 의 primary 색과 같은 값이다.
+    -->
+    <color name="moacon_notification">#5B4FE8</color>
+</resources>

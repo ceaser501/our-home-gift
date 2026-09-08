@@ -55,6 +55,12 @@
             android:name="com.google.firebase.messaging.default_notification_icon"
             android:resource="@drawable/ic_stat_moacon" />
 
+        <!-- 알림을 펼쳤을 때 아이콘에 입혀지는 색. 상태바에서는 안 먹는다 —
+             거기는 안드로이드가 흰색으로 덮어쓴다. -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/moacon_notification" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

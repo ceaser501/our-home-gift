@@ -163,18 +163,25 @@ export default function FamilySwitcherSheet({ onClose, initialCode = '' }) {
                   했는데 아직인지, 거절당한 것인지 알 방법이 없었다.
                   누를 수 없는 줄로 둔다 — 아직 들어간 것이 아니라 고를 수가 없다.
                   승인이 나면 이 줄이 사라지고 위 목록에 하나가 는다. 로그아웃하지 않아도
-                  그 자리에서 바뀐다(AuthGate가 신청 줄을 듣고 있다). */}
+                  그 자리에서 바뀐다(AuthGate가 신청 줄을 듣고 있다).
+
+                  모양은 위의 가족 줄과 같게 둔다. 처음에는 점선 테두리에 흐린 바탕,
+                  주황 글씨로 눈에 띄게 했는데 그럴 자리가 아니었다 — 이건 경고가 아니라
+                  '기다리는 중'이라는 상태 하나다. 목록 안에서 혼자 다른 옷을 입고 있으면
+                  뭔가 잘못된 것처럼 읽힌다.
+
+                  누를 수 없다는 것은 색이 아니라 화살표가 없는 것으로 말한다. */}
               {(myJoinRequests ?? []).map((req) => (
                 <li key={req.id}>
-                  <div className="flex w-full items-center gap-3 rounded-2xl border border-dashed border-border bg-card/60 p-3.5">
-                    <span className="flex size-11 shrink-0 items-center justify-center rounded-[13px] bg-warning/12">
-                      <Clock className="size-5 text-warning" strokeWidth={2.1} />
+                  <div className="flex w-full items-center gap-3 rounded-2xl border border-border bg-card p-3.5">
+                    <span className="flex size-11 shrink-0 items-center justify-center rounded-[13px] bg-secondary">
+                      <Clock className="size-5 text-muted-foreground" strokeWidth={2.1} />
                     </span>
                     <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                      <span className="truncate text-base font-semibold tracking-[-0.015em] text-muted-foreground">
+                      <span className="truncate text-base font-semibold tracking-[-0.015em] text-foreground">
                         {req.family_name}
                       </span>
-                      <span className="text-[12.5px] font-medium tracking-[-0.01em] text-warning">
+                      <span className="text-[12.5px] font-medium tracking-[-0.01em] text-muted-foreground">
                         승인 대기중
                       </span>
                     </div>
