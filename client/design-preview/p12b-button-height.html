@@ -1,0 +1,82 @@
+<!doctype html>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>버튼 높이 — 44 / 48 / 52</title>
+<script type="module" src="/src/index.css"></script>
+<style>
+  body { margin:0; background:#3a3a44; font-family:Pretendard, system-ui, sans-serif;
+         -webkit-font-smoothing:antialiased; color:#fff; }
+  .page { display:flex; gap:20px; align-items:flex-start; justify-content:center;
+          padding:16px 14px 80px; flex-wrap:wrap; }
+  .col { width:375px; flex:0 0 auto; }
+  .cap { font-size:13px; font-weight:800; margin:0 0 3px; }
+  .sub { color:#b8b8c4; font-size:11px; line-height:1.5; margin:0 0 8px; min-height:74px; }
+  .st  { color:#9d9daa; font-size:10px; font-weight:700; margin:8px 0 0; }
+
+  .sheet { background:var(--background); color:var(--foreground);
+           border-radius:16px 16px 0 0; overflow:hidden; box-shadow:0 -2px 24px rgba(0,0,0,.28); }
+  .hd  { display:flex; flex-direction:column; gap:5px; padding:20px 60px 20px 20px; position:relative; }
+  .ttl { font-size:20px; line-height:1.2; font-weight:700; letter-spacing:-.025em; margin:0; }
+  .x   { position:absolute; top:10px; right:10px; width:44px; height:44px; display:flex;
+         align-items:center; justify-content:center; color:var(--muted-foreground); }
+  .x svg { width:24px; height:24px; }
+  .bd  { padding:0 20px 20px; display:flex; flex-direction:column; }
+  .nm  { margin:0; font-size:14px; font-weight:600; }
+  .cut { margin:4px 0 0; font-size:14px; font-weight:600; color:var(--muted-foreground);
+         text-decoration:line-through; font-variant-numeric:tabular-nums; }
+  .fld { position:relative; display:flex; align-items:center; gap:8px; height:52px; margin-top:16px;
+         border:1px solid var(--input); border-radius:14px; background:var(--card); padding:0 15px; }
+  .fld .val { flex:1; font-size:20px; font-weight:700; letter-spacing:-.025em;
+              font-variant-numeric:tabular-nums; }
+  .fld .val .suf { font-size:14px; font-weight:600; color:var(--muted-foreground); }
+  .fld .cal { display:flex; color:var(--muted-foreground); }
+  .fld .cal svg { width:19px; height:19px; }
+  .help { display:flex; align-items:flex-start; gap:6px; padding-left:4px; margin-top:8px; }
+  .help .i { margin-top:2px; width:16px; height:16px; flex:0 0 auto; border-radius:99px;
+             background:var(--border); color:var(--muted-foreground); font-size:12px;
+             font-weight:700; display:flex; align-items:center; justify-content:center; }
+  .help p { margin:0; flex:1; font-size:12px; line-height:1.6; color:var(--muted-foreground); }
+  .btnP { border-radius:14px; border:0; background:var(--primary); margin-top:24px;
+          color:var(--primary-foreground); font-size:16px; font-weight:700;
+          letter-spacing:0.02em; display:flex; align-items:center; justify-content:center;
+          font-family:inherit; }
+</style>
+
+<script>
+  const X = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+    stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>`;
+  const CAL = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+    stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4M16 2v4M3 10h18"/><rect
+    x="3" y="4" width="18" height="18" rx="2"/></svg>`;
+
+  const V = {
+    '가': ['44 — ui/button 의 lg',
+      '애플이 권하는 최소 과녁이라 못 누를 크기는 아니다. 다만 위 입력칸(52)보다 작아서, 이 화면에서 제일 중요한 것이 제일 작아 보인다.', 44],
+    '나': ['48', '입력칸보다 4 작다. 아직 어긋난다.', 48],
+    '다': ['52 — 지금', '입력칸과 같다. 칸과 버튼이 한 폭으로 서서 아래가 안정된다.', 52],
+  };
+
+  addEventListener('DOMContentLoaded', () => {
+    const page = document.querySelector('.page');
+    Object.entries(V).forEach(([k, [name, note, h]]) => {
+      const col = document.createElement('div');
+      col.className = 'col';
+      col.innerHTML = `<p class="cap">${k} · ${name}</p><p class="sub">${note}</p>
+        <div class="sheet">
+          <div class="hd"><p class="ttl">늘어난 기한을 앱에도 반영할게요</p><span class="x">${X}</span></div>
+          <div class="bd">
+            <p class="nm">카페 아메리카노 T 2잔 + 딸기 생크림 케이크</p>
+            <p class="cut">2026.09.11 까지</p>
+            <div class="fld"><span class="val">2026.12.10<span class="suf"> 까지</span></span>
+              <span class="cal">${CAL}</span></div>
+            <div class="help"><span class="i">i</span><p>앱 안의 날짜만 바뀌어요. 실제 기한은 발행처 기준이에요.</p></div>
+            <button class="btnP" style="height:${h}px">2026.12.10까지로 바꾸기</button>
+          </div>
+        </div>
+        <p class="st">버튼 ${h} · 입력칸 52 · 차이 ${52 - h}</p>`;
+      page.appendChild(col);
+    });
+  });
+</script>
+
+<div class="page"></div>

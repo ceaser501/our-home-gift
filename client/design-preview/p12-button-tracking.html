@@ -1,0 +1,74 @@
+<!doctype html>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>버튼 자간</title>
+<script type="module" src="/src/index.css"></script>
+<style>
+  body { margin:0; background:#3a3a44; font-family:Pretendard, system-ui, sans-serif;
+         -webkit-font-smoothing:antialiased; color:#fff; }
+  .wrap { max-width:420px; margin:0 auto; padding:20px 16px 80px; }
+  h1 { font-size:15px; font-weight:800; margin:0 0 4px; }
+  .lead { color:#b8b8c4; font-size:12px; line-height:1.6; margin:0 0 20px; }
+  .row { background:var(--background); border-radius:12px; padding:14px 16px; margin:0 0 12px; }
+  .row h2 { font-size:12px; font-weight:800; margin:0 0 2px; color:var(--foreground); }
+  .row p  { font-size:11px; line-height:1.5; color:var(--muted-foreground); margin:0 0 10px; }
+  .btnP { height:52px; width:100%; border-radius:8px; border:0; background:var(--primary);
+          color:var(--primary-foreground); font-size:15.5px; font-weight:700;
+          display:flex; align-items:center; justify-content:center; font-family:inherit; }
+  .btnP + .btnP { margin-top:8px; }
+  .n { color:#9d9daa; font-size:10px; font-weight:700; margin:8px 0 0;
+       font-variant-numeric:tabular-nums; }
+</style>
+
+<div class="wrap">
+  <h1>버튼 자간 — 숫자가 든 것과 안 든 것</h1>
+  <p class="lead">
+    공용 PRIMARY_BUTTON 스펙이라 모든 시트의 주 버튼에 걸린다. 숫자가 없는 문구
+    (「연장했어요」)도 같이 봐야 한다 — 숫자 때문에 넓혔다가 한글만 있는 버튼이
+    헐거워지면 안 된다.
+  </p>
+  <div id="rows"></div>
+</div>
+
+<script>
+  // 고정폭은 걷었다 — 세로로 줄 맞출 때 쓰는 것이고, 버튼 글자는 문장이다.
+  // 1 이 0 과 같은 칸을 쓰면 그 둘레가 휑해 보인다.
+  const V = {
+    '가': ['지금 — 자간 0',
+      '아무 것도 안 건다. 15.5px 굵게(700)라 획이 두꺼워 글자 사이 흰 자리가 줄어든다.',
+      'letter-spacing:normal'],
+    '나': ['자간 0.01em (0.16px)',
+      '아주 조금. 작은 글씨를 굵게 쓰면 자간을 조금 벌려주는 것이 활자의 오랜 셈법이다 — 획이 두꺼워진 만큼 사이를 돌려준다.',
+      'letter-spacing:0.01em'],
+    '다': ['자간 0.02em (0.31px)',
+      '한 단 더. 숫자가 확실히 풀린다.',
+      'letter-spacing:0.02em'],
+    '라': ['자간 0.03em (0.47px)',
+      '더 벌린다. 숫자는 시원한데 한글 버튼(「연장했어요」)이 헐거워지기 시작한다.',
+      'letter-spacing:0.03em'],
+  };
+
+  const rows = document.getElementById('rows');
+  Object.entries(V).forEach(([k, [name, note, css]]) => {
+    const el = document.createElement('div');
+    el.className = 'row';
+    el.innerHTML = `<h2>${k} · ${name}</h2><p>${note}</p>
+      <button class="btnP" style="${css}">2026.12.11까지로 바꾸기</button>
+      <button class="btnP" style="${css}">31,000원 썼어요</button>
+      <button class="btnP" style="${css}">연장했어요</button>
+      <p class="n" id="n${k}"></p>`;
+    rows.appendChild(el);
+  });
+
+  const measure = () => Object.keys(V).forEach((k) => {
+    const el = document.getElementById('n' + k).parentElement;
+    const b = el.querySelectorAll('.btnP');
+    const w = (i) => { const r = document.createRange(); r.selectNodeContents(b[i]);
+      return Math.round(r.getBoundingClientRect().width); };
+    document.getElementById('n' + k).textContent =
+      `글자 폭  날짜 ${w(0)} · 금액 ${w(1)} · 한글만 ${w(2)}`;
+  });
+  new ResizeObserver(measure).observe(document.body);
+  document.fonts.ready.then(() => requestAnimationFrame(measure));
+  setTimeout(measure, 500); setTimeout(measure, 1400);
+</script>
