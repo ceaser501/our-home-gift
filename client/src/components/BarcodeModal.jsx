@@ -163,10 +163,10 @@ export default function BarcodeModal({ gifticon, onClose, onUsed, onSpend }) {
               <button
                 type="button"
                 onClick={() => setView("code")}
-                aria-label="바코드로 돌아가기"
-                className="flex size-9 shrink-0 items-center justify-center rounded-full bg-secondary text-foreground"
+                aria-label="바코드 보기"
+                className="-m-2.5 flex shrink-0 p-2.5 text-muted-foreground"
               >
-                <ChevronLeft className="size-4" />
+                <ChevronLeft className="size-5" />
               </button>
             )}
             <div className="flex min-w-0 flex-1 flex-col gap-1">
@@ -288,12 +288,19 @@ export default function BarcodeModal({ gifticon, onClose, onUsed, onSpend }) {
               </div>
             )}
 
+            {/* 바코드를 그림으로 못 띄웠을 때. 계산대 앞에서 읽어야 하는 말이라 12 회색
+                한 줄로 둘 것이 아니다. 본문(14)으로 올리고 두 문장을 줄로 갈랐다 —
+                앞은 무슨 일이 있었는지, 뒤는 무엇을 하면 되는지다. 뒤엣말만 검게 해서
+                할 일이 먼저 잡히게 한다. */}
             {gifticon.code
               ? renderError &&
                 !gifticon.barcode_image_url && (
-                  <p className="m-0 text-center text-xs break-keep text-muted-foreground">
-                    이미지로 표시할 수 없어요. 매장에서 이 번호를 직접
-                    입력해주세요.
+                  <p className="m-0 text-center text-body leading-relaxed font-medium break-keep text-muted-foreground">
+                    이미지로 표시할 수 없어요.
+                    <br />
+                    <b className="font-bold text-foreground">
+                      매장에서 이 번호를 직접 입력해주세요.
+                    </b>
                   </p>
                 )
               : !gifticon.barcode_image_url && (
@@ -343,7 +350,7 @@ export default function BarcodeModal({ gifticon, onClose, onUsed, onSpend }) {
                 <Button
                   type="button"
                   variant="outline"
-                  size="lg"
+                  size="xl"
                   onClick={() => {
                     setPhotoIndex(0);
                     setView("photo");
@@ -376,12 +383,15 @@ export default function BarcodeModal({ gifticon, onClose, onUsed, onSpend }) {
             <Button
               type="button"
               variant="outline"
-              size="lg"
+              size="xl"
               onClick={() => setView("code")}
-              className={SECONDARY_BUTTON}
+              className={cn(SECONDARY_BUTTON, "mt-3")}
             >
+              {/* '돌아가기'가 아니라 '보기'다. 마주 보는 두 버튼이 같은 꼴이어야 한다 —
+                  이쪽에서는 '원본 사진 2장', 저쪽에서는 '바코드 보기'. 어디서 왔는지가
+                  아니라 무엇을 볼지를 말한다. */}
               <ScanLine className="size-4 text-muted-foreground" />
-              바코드로 돌아가기
+              바코드 보기
             </Button>
           </div>
         )}

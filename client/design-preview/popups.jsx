@@ -46,6 +46,14 @@ const FAMILY = {
 };
 
 // 사흘 뒤. 오늘이 언제든 '임박'으로 잡히게 지금 날짜에서 센다.
+// 사진 두 장 — 회색 판. 바코드 창의 사진 화면을 열어보기 위한 것이다.
+const shot = (fill) =>
+  'data:image/svg+xml;utf8,' +
+  encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="300" height="420"><rect width="300" height="420" fill="${fill}"/></svg>`
+  );
+const SHOTS = [shot('%23e7e7ec'), shot('%23d8d8e0')];
+
 const SOON = new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10);
 
 const GIFTICON = {
@@ -216,7 +224,8 @@ function App() {
         // BarcodeModal 은 useFamily 를 부른다. 감싸지 않으면 흰 화면만 나온다.
         <FamilyContext.Provider value={FAMILY}>
           <BarcodeModal
-            gifticon={{ ...GIFTICON, code: '8801234567890123' }}
+            // 사진 화면(원본 사진 N장)까지 보려면 사진이 있어야 한다.
+            gifticon={{ ...GIFTICON, code: '8801234567890123', image_urls: SHOTS }}
             onClose={reopen}
             onUsed={reopen}
             onSpend={reopen}

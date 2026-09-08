@@ -106,7 +106,9 @@ export function PhotoDeck({ photos, index, onPick, alt }) {
 // 점은 장식이라 읽어주는 기계에게는 숨기고, 대신 몇 번째인지를 글로 따로 남긴다.
 export function PhotoDots({ index, total }) {
   return (
-    <div className="flex justify-center pt-3">
+    // 위아래 여백은 감싸는 쪽이 준다. 여기서 pt 를 들고 있으면 감싼 gap 과 더해져,
+    // 사진에서 24 · 버튼에서 12 로 아래가 더 가까워진다. 점은 사진에 딸린 것이다.
+    <div className="flex justify-center">
       <span className="sr-only">
         {total}장 중 {index + 1}번째
       </span>
