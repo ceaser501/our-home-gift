@@ -8,6 +8,40 @@ import { LEGACY_CATEGORIES, normalizeCategory } from './constants';
 // 앱이 다시 화면에 나올 때 목록을 새로 읽으므로(App.jsx의 visibilitychange) 저절로 낫는다.
 const SIGNED_URL_TTL_SECONDS = 60 * 60;
 
+// 한 번 발급받은 주소는 같은 사진에 대해 계속 같은 것을 쓴다.
+//
+// ── 목록이 깜빡이던 이유가 이것이다 ──
+//
+// 발급은 부를 때마다 새 주소를 만들어낸다. 같은 사진인데 글자가 달라지는 것이다. 목록을
+// 다시 읽을 때마다 카드의 <img src>가 통째로 바뀌었고, 브라우저는 주소가 달라졌으니
+// 처음 보는 사진으로 알고 다시 받아왔다 — 받아오는 동안 그 자리가 비었다가 채워진다.
+// 그게 눈에는 목록이 빤짝이는 것으로 보였다.
+//
+// 목록을 다시 읽는 일은 생각보다 잦다. 가족이 기프티콘을 올리거나, 누가 가족에 들어오거나,
+// 앱이 다시 앞으로 나올 때마다 읽는다. 가족 초대를 받고 기프티콘을 올리는 동안 신호가
+// 잇달아 오면서 대여섯 번을 내리 깜빡인 것이 그래서다.
+//
+// 주소를 붙들어두면 글자가 그대로라 브라우저가 손대지 않는다. 다시 받아오지 않으니
+// 깜빡임도 없다. 발급 왕복도 함께 줄어든다.
+//
+// 만료 10분 전까지만 다시 쓴다. 발급받은 주소는 한 시간짜리인데, 그 끝에 붙어서 쓰면
+// 화면에 그리는 사이에 만료돼 사진이 깨질 수 있다.
+const REUSE_MS = (SIGNED_URL_TTL_SECONDS - 10 * 60) * 1000;
+const signedUrls = new Map();
+
+function cachedUrl(path, now) {
+  const hit = signedUrls.get(path);
+  return hit && hit.until > now ? hit.url : null;
+}
+
+// 지난 것을 치운다. 기프티콘이 늘고 사진을 바꿔 올리다 보면 안 쓰는 것이 쌓인다.
+function pruneSignedUrls(now) {
+  if (signedUrls.size < 500) return;
+  for (const [path, hit] of signedUrls) {
+    if (hit.until <= now) signedUrls.delete(path);
+  }
+}
+
 function imagePathsOf(row) {
   return [...(row?.image_paths || []), row?.barcode_image_path, row?.thumb_image_path].filter(Boolean);
 }
@@ -17,12 +51,34 @@ async function signImagePaths(paths) {
   const unique = [...new Set(paths)];
   if (unique.length === 0) return new Map();
 
-  const { data, error } = await supabase.storage.from(IMAGE_BUCKET).createSignedUrls(unique, SIGNED_URL_TTL_SECONDS);
+  const now = Date.now();
+  const found = new Map();
+  const missing = [];
+  for (const path of unique) {
+    const url = cachedUrl(path, now);
+    if (url) found.set(path, url);
+    else missing.push(path);
+  }
+  // 전부 손에 있으면 서버에 묻지 않는다. 목록을 다시 읽는 대부분이 여기서 끝난다.
+  if (missing.length === 0) return found;
+
+  const { data, error } = await supabase.storage.from(IMAGE_BUCKET).createSignedUrls(missing, SIGNED_URL_TTL_SECONDS);
   // 사진을 못 불러오는 것과 기프티콘을 못 보는 것은 다르다. 여기서 던지면 사진 하나 때문에
   // 목록 전체가 안 뜬다. 주소 없이 돌려주면 사진 자리만 비고 나머지는 그대로 보인다.
-  if (error) return new Map();
+  if (error) return found;
 
-  return new Map((data || []).filter((item) => item?.signedUrl).map((item) => [item.path, item.signedUrl]));
+  for (const item of data || []) {
+    if (!item?.signedUrl) continue;
+    signedUrls.set(item.path, { url: item.signedUrl, until: now + REUSE_MS });
+    found.set(item.path, item.signedUrl);
+  }
+  pruneSignedUrls(now);
+  return found;
+}
+
+// 사진을 지우면 그 주소도 잊는다. 안 지우면 없는 사진의 주소를 계속 들고 있게 된다.
+function forgetSignedUrls(paths) {
+  for (const path of paths) signedUrls.delete(path);
 }
 
 // image_urls는 image_paths와 자리를 맞춰 둔다(못 받은 자리는 null). 수정 화면이 두 배열을
@@ -118,6 +174,7 @@ function pathsOf(stored) {
 export async function removeImages(paths) {
   if (!paths || paths.length === 0) return;
   await supabase.storage.from(IMAGE_BUCKET).remove(paths);
+  forgetSignedUrls(paths);
 }
 
 // 검색어를 PostgREST의 or() 문법에 안전하게 끼워 넣는다.
