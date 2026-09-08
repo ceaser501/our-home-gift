@@ -1,0 +1,205 @@
+<!doctype html>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>기한 연장 — 블럭 줄이기</title>
+<script type="module" src="/src/index.css"></script>
+<style>
+  body { margin:0; background:#3a3a44; font-family:Pretendard, system-ui, sans-serif;
+         -webkit-font-smoothing:antialiased; color:#fff; }
+  .page { display:flex; gap:20px; align-items:flex-start; justify-content:center;
+          padding:16px 14px 80px; flex-wrap:wrap; }
+  .col { width:375px; flex:0 0 auto; }
+  .cap { font-size:13px; font-weight:800; margin:0 0 3px; }
+  .sub { color:#b8b8c4; font-size:11px; line-height:1.5; margin:0 0 8px; min-height:88px; }
+  .st  { color:#9d9daa; font-size:10px; font-weight:700; margin:14px 0 4px; }
+
+  .sheet { background:var(--background); color:var(--foreground);
+           border-radius:16px 16px 0 0; overflow:hidden; box-shadow:0 -2px 24px rgba(0,0,0,.28); }
+  .hd  { display:flex; flex-direction:column; gap:4px; padding:20px 60px 20px 20px; position:relative; }
+  .ttl { font-size:20px; line-height:1.2; font-weight:700; letter-spacing:-.025em; margin:0;
+         word-break:keep-all; }
+  .x   { position:absolute; top:10px; right:10px; width:44px; height:44px; display:flex;
+         align-items:center; justify-content:center; color:var(--muted-foreground); }
+  .x svg { width:24px; height:24px; }
+  .bd  { padding:0 20px 20px; display:flex; flex-direction:column; gap:14px; }
+  .steps { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+  .steps i { display:block; height:4px; width:22px; border-radius:99px; background:var(--input); }
+  .steps i.on { background:var(--primary); }
+  .steps b { font-size:12px; font-weight:700; color:var(--muted-foreground);
+             font-variant-numeric:tabular-nums; margin-left:4px; }
+
+  .desc { margin:0; font-size:14px; line-height:1.5; font-weight:500; color:var(--muted-foreground); }
+  .desc.two { line-height:1.6; }
+  .who { display:flex; align-items:baseline; justify-content:space-between; gap:10px; }
+  .who .nm { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .who .dd { flex:0 0 auto; font-size:13px; font-weight:700; font-variant-numeric:tabular-nums;
+             color:var(--destructive); }
+  .body { margin:0; font-size:14px; line-height:1.6; font-weight:500;
+          color:var(--muted-foreground); word-break:keep-all; }
+
+  /* 블럭 — 갈래마다 다르게 입힌다 */
+  .bx      { border-radius:8px; padding:13px; display:flex; align-items:center; gap:12px; }
+  .bx.gray { background:color-mix(in srgb, var(--secondary) 60%, transparent); }
+  .bx.line { border:1px solid var(--border); }
+  .bx.acc  { background:var(--accent); border-radius:16px; padding:17px 16px; }
+  .th { width:52px; height:52px; flex:0 0 auto; border-radius:12px; background:var(--accent);
+        display:flex; align-items:center; justify-content:center; overflow:hidden; }
+  .th.sm { width:40px; height:40px; border-radius:6px; }
+  .th svg { width:20px; height:20px; color:color-mix(in srgb, var(--primary) 60%, transparent); }
+  .nm2 { font-size:15.5px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+  .open { display:flex; align-items:center; height:40px; padding:0 14px; gap:5px; flex:0 0 auto;
+          border:1px solid var(--input); border-radius:6px; font-size:14px; font-weight:600;
+          color:color-mix(in srgb, var(--foreground) 80%, transparent); }
+  .open svg { width:14px; height:14px; color:var(--muted-foreground); }
+  .openF { display:flex; align-items:center; height:40px; padding:0 14px; gap:5px; flex:0 0 auto;
+           background:var(--secondary); border-radius:8px; font-size:14px; font-weight:600;
+           color:var(--foreground); }
+  .openF svg { width:14px; height:14px; color:var(--muted-foreground); }
+
+  .btnP { height:52px; border-radius:8px; border:0; background:var(--primary);
+          color:var(--primary-foreground); font-size:15.5px; font-weight:700;
+          display:flex; align-items:center; justify-content:center; font-family:inherit; }
+  .btnS { height:52px; border-radius:8px; border:1px solid var(--input); background:var(--card);
+          font-size:15.5px; font-weight:600; font-family:inherit;
+          color:color-mix(in srgb, var(--foreground) 80%, transparent); }
+  .acts { display:flex; flex-direction:column; gap:8px; margin-top:8px; }
+  .tab { font-variant-numeric:tabular-nums; }
+  .mut { color:var(--muted-foreground); }
+</style>
+
+<script>
+  const NAME = '카페 아메리카노 T 2잔 + 딸기 생크림 케이크';
+  const X = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+    stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>`;
+  const TICKET = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path
+    d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/></svg>`;
+  const LINK = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+    stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>`;
+
+  const head = (step, title, desc) => `
+    <div class="hd">
+      <div class="steps"><i class="${step === 1 ? 'on' : ''}"></i><i class="${step === 2 ? 'on' : ''}"></i><b>${step} / 2</b></div>
+      <p class="ttl">${title}</p>
+      ${desc || ''}
+      <span class="x">${X}</span>
+    </div>`;
+
+  const targetBox = (big) => `
+    <div class="bx gray">
+      <span class="th ${big ? '' : 'sm'}">${TICKET}</span>
+      <span style="display:flex;min-width:0;flex:1;flex-direction:column;gap:3px">
+        <span class="nm2">${NAME}</span>
+        ${big ? `<span style="display:flex;align-items:baseline;gap:5px;color:var(--destructive)">
+          <span style="font-size:13.5px;font-weight:700" class="tab">D-2</span>
+          <span style="font-size:14px;font-weight:600" class="tab">2026.09.10까지</span></span>` : ''}
+      </span>
+    </div>`;
+
+  const kakao = (filled) => `
+    <div class="bx ${filled ? 'gray' : 'line'}">
+      <span style="display:flex;min-width:0;flex:1;flex-direction:column;gap:2px">
+        <span style="font-size:14.5px;font-weight:700;word-break:keep-all">카카오톡 선물하기 상품인가요?</span>
+        <span class="mut" style="font-size:14px;font-weight:500">선물함에서 바로 연장할 수 있어요</span>
+      </span>
+      <span class="${filled ? 'openF' : 'open'}">열기 ${LINK}</span>
+    </div>`;
+
+  const dates = () => `
+    <div class="bx acc">
+      <span style="display:flex;flex-direction:column;gap:3px">
+        <span class="mut" style="font-size:12px;font-weight:600">지금</span>
+        <span class="mut tab" style="font-size:15px;font-weight:600;text-decoration:line-through">2026.09.10</span>
+      </span>
+      <span aria-hidden="true" style="flex:1;text-align:center;font-size:16px;
+        color:color-mix(in srgb, var(--primary) 40%, transparent)">→</span>
+      <span style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">
+        <span style="font-size:12px;font-weight:700;color:var(--primary)">변경 후</span>
+        <span class="tab" style="font-size:20px;font-weight:700;letter-spacing:-.025em">2026.12.09</span>
+      </span>
+    </div>`;
+
+  // 날짜 블럭을 회색·반지름 8 로 맞춘 것 (갈래 나·다에서 쓴다)
+  const datesFlat = () => `
+    <div class="bx gray" style="padding:15px 16px">
+      <span style="display:flex;flex-direction:column;gap:3px">
+        <span class="mut" style="font-size:12px;font-weight:600">지금</span>
+        <span class="mut tab" style="font-size:15px;font-weight:600;text-decoration:line-through">2026.09.10</span>
+      </span>
+      <span aria-hidden="true" style="flex:1;text-align:center;font-size:16px" class="mut">→</span>
+      <span style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">
+        <span style="font-size:12px;font-weight:700;color:var(--primary)">변경 후</span>
+        <span class="tab" style="font-size:20px;font-weight:700;letter-spacing:-.025em">2026.12.09</span>
+      </span>
+    </div>`;
+
+  const V = {
+    '가': ['지금 — 블럭 둘',
+      '대상(회색)과 링크(테두리)가 다른 옷을 입고 있다. 2/2 에서는 회색 상자의 썸네일이 52 에서 40 으로 줄고, 날짜 상자만 연보라에 반지름 16 이다. 게다가 1/2 은 테두리 상자 안에 테두리 상자(열기)가 들어 있다.',
+      (s) => s === 1
+        ? head(1, '기한 연장은<br>기프티콘 발행처에서',
+            `<p class="desc two">받으신 문자나 발행처 앱에서 연장할 수 있어요. 보통 90일씩, 최대 5년까지요.</p>`)
+          + `<div class="bd">${targetBox(true)}${kakao(false)}
+             <div class="acts"><button class="btnP">연장했어요</button>
+             <button class="btnS">나중에 할게요</button></div></div>`
+        : head(2, '늘어난 기한을<br>앱에도 반영할게요')
+          + `<div class="bd"><p class="body">앱 안의 날짜만 바뀌어요. 실제 기프티콘은 발행처 기준입니다.</p>
+             ${targetBox(false)}${dates()}
+             <div class="acts"><button class="btnP">2026.12.09까지로 바꾸기</button>
+             <button class="btnS">직접 날짜 선택</button></div></div>`],
+
+    '나': ['대상을 부제 자리로 — 블럭 하나',
+      '회색 상자를 걷고 상품명을 부제 자리에 둔다. 방금 그 카드를 눌러서 들어왔으므로 썸네일까지 다시 보여줄 일은 아니다 — 금액 입력 시트와 같은 규칙이다. 남는 블럭은 화면마다 하나뿐이고, 날짜 블럭도 회색·반지름 8 로 맞춘다.',
+      (s) => s === 1
+        ? head(1, '기한을 늘리시려면',
+            `<p class="desc who"><span class="nm">${NAME}</span><span class="dd">D-2</span></p>`)
+          + `<div class="bd"><p class="body">받으신 문자나 발행처 앱에서 연장할 수 있어요. 보통 90일씩, 최대 5년까지요.</p>
+             ${kakao(true)}
+             <div class="acts"><button class="btnP">연장했어요</button>
+             <button class="btnS">나중에 할게요</button></div></div>`
+        : head(2, '늘어난 기한을<br>앱에도 반영할게요',
+            `<p class="desc who"><span class="nm">${NAME}</span></p>`)
+          + `<div class="bd">${datesFlat()}
+             <p class="body" style="font-size:12px;line-height:1.6">앱 안의 날짜만 바뀌어요. 실제 기프티콘은 발행처 기준입니다.</p>
+             <div class="acts"><button class="btnP">2026.12.09까지로 바꾸기</button>
+             <button class="btnS">직접 날짜 선택</button></div></div>`],
+
+    '다': ['옷만 맞춤 — 블럭은 둘',
+      '블럭 수는 그대로 두고 모양만 하나로 맞춘다. 둘 다 회색 채움, 반지름 8, 여백 13. 썸네일도 화면마다 같은 52. 「열기」의 테두리도 걷어 채움으로 바꾼다. 지금 짜임을 제일 적게 건드리는 길이다.',
+      (s) => s === 1
+        ? head(1, '기한 연장은<br>기프티콘 발행처에서',
+            `<p class="desc two">받으신 문자나 발행처 앱에서 연장할 수 있어요. 보통 90일씩, 최대 5년까지요.</p>`)
+          + `<div class="bd">${targetBox(true)}${kakao(true)}
+             <div class="acts"><button class="btnP">연장했어요</button>
+             <button class="btnS">나중에 할게요</button></div></div>`
+        : head(2, '늘어난 기한을<br>앱에도 반영할게요')
+          + `<div class="bd"><p class="body">앱 안의 날짜만 바뀌어요. 실제 기프티콘은 발행처 기준입니다.</p>
+             ${targetBox(true)}${datesFlat()}
+             <div class="acts"><button class="btnP">2026.12.09까지로 바꾸기</button>
+             <button class="btnS">직접 날짜 선택</button></div></div>`],
+  };
+
+  addEventListener('DOMContentLoaded', () => {
+    const page = document.querySelector('.page');
+    Object.entries(V).forEach(([k, [name, note, build]]) => {
+      const col = document.createElement('div');
+      col.className = 'col';
+      col.innerHTML = `<p class="cap">${k} · ${name}</p><p class="sub">${note}</p>`
+        + `<p class="st">1 / 2 — 가서 연장하세요</p><div class="sheet" id="s${k}1">${build(1)}</div>`
+        + `<p class="st">2 / 2 — 앱에도 반영할게요</p><div class="sheet" id="s${k}2">${build(2)}</div>`
+        + `<p class="st" id="n${k}"></p>`;
+      page.appendChild(col);
+    });
+    const measure = () => Object.keys(V).forEach((k) => {
+      const a = document.getElementById('s' + k + '1').getBoundingClientRect().height;
+      const b = document.getElementById('s' + k + '2').getBoundingClientRect().height;
+      document.getElementById('n' + k).textContent =
+        `1/2 ${Math.round(a)}px · 2/2 ${Math.round(b)}px`;
+    });
+    new ResizeObserver(measure).observe(document.body);
+    document.fonts.ready.then(() => requestAnimationFrame(measure));
+    setTimeout(measure, 500); setTimeout(measure, 1400);
+  });
+</script>
+
+<div class="page"></div>

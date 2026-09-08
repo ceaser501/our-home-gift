@@ -1,0 +1,140 @@
+<!doctype html>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>기한 연장 2/2 — 까지와 제목 줄</title>
+<script type="module" src="/src/index.css"></script>
+<style>
+  body { margin:0; background:#3a3a44; font-family:Pretendard, system-ui, sans-serif;
+         -webkit-font-smoothing:antialiased; color:#fff; }
+  .page { display:flex; gap:20px; align-items:flex-start; justify-content:center;
+          padding:16px 14px 80px; flex-wrap:wrap; }
+  .col { width:375px; flex:0 0 auto; }
+  .cap { font-size:13px; font-weight:800; margin:0 0 3px; }
+  .sub { color:#b8b8c4; font-size:11px; line-height:1.5; margin:0 0 8px; min-height:76px; }
+  .st  { color:#9d9daa; font-size:10px; font-weight:700; margin:8px 0 0; }
+
+  .sheet { background:var(--background); color:var(--foreground);
+           border-radius:16px 16px 0 0; overflow:hidden; box-shadow:0 -2px 24px rgba(0,0,0,.28); }
+  .hd  { display:flex; flex-direction:column; gap:5px; padding:20px 60px 16px 20px; position:relative; }
+  .ttl { font-size:20px; line-height:1.2; font-weight:700; letter-spacing:-.025em; margin:0;
+         word-break:keep-all; }
+  .x   { position:absolute; top:10px; right:10px; width:44px; height:44px; display:flex;
+         align-items:center; justify-content:center; color:var(--muted-foreground); }
+  .x svg { width:24px; height:24px; }
+  .back { margin:-10px 4px -10px -10px; padding:10px; display:flex; flex:0 0 auto;
+          color:var(--muted-foreground); }
+  .back svg { width:20px; height:20px; }
+  .bd  { padding:0 20px 20px; display:flex; flex-direction:column; gap:14px; }
+  .steps { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+  .steps i { display:block; height:4px; width:22px; border-radius:99px; background:var(--input); }
+  .steps i.on { background:var(--primary); }
+  .steps b { font-size:12px; font-weight:700; color:var(--muted-foreground);
+             font-variant-numeric:tabular-nums; margin-left:4px; }
+
+  .nm  { margin:0 0 7px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+         font-size:15px; font-weight:600; }
+  .cut { font-size:15px; font-weight:600; color:var(--muted-foreground);
+         text-decoration:line-through; text-decoration-thickness:1.5px;
+         font-variant-numeric:tabular-nums; }
+  /* 「까지」를 날짜와 같은 크기로 두면 선이 한 줄로 곧게 간다 */
+  .cut .same { font-size:15px; font-weight:600; }
+  .cut .small { font-size:13px; font-weight:600; }
+
+  .fld { position:relative; display:flex; align-items:center; gap:8px; height:52px;
+         border:1px solid var(--input); border-radius:8px; background:var(--card);
+         padding:0 15px; transition:border-color .15s, box-shadow .15s; }
+  .fld:focus-within { border-color:var(--ring);
+         box-shadow:0 0 0 2px color-mix(in srgb, var(--ring) 30%, transparent); }
+  .fld input { position:absolute; inset:0; opacity:0; border:0; padding:0; margin:0; font:inherit; }
+  .fld .val { flex:1; font-size:20px; font-weight:700; letter-spacing:-.025em;
+              font-variant-numeric:tabular-nums; }
+  .fld .val .suf { font-size:15px; font-weight:600; color:var(--muted-foreground); }
+  .fld .cal { flex:0 0 auto; display:flex; color:var(--muted-foreground); }
+  .fld .cal svg { width:19px; height:19px; }
+
+  .help { display:flex; align-items:flex-start; gap:6px; padding-left:4px; margin-top:10px; }
+  .help .i { margin-top:2px; width:16px; height:16px; flex:0 0 auto; border-radius:99px;
+             background:var(--border); color:var(--muted-foreground); font-size:12px;
+             font-weight:700; display:flex; align-items:center; justify-content:center; }
+  .help p { margin:0; flex:1; font-size:12px; line-height:1.6; color:var(--muted-foreground);
+            word-break:keep-all; }
+  .btnP { height:52px; border-radius:8px; border:0; background:var(--primary);
+          color:var(--primary-foreground); font-size:15.5px; font-weight:700;
+          display:flex; align-items:center; justify-content:center; font-family:inherit;
+          margin-top:8px; }
+</style>
+
+<script>
+  const NAME = '카페 아메리카노 T 2잔 + 딸기 생크림 케이크';
+  const X = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+    stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>`;
+  const BACK = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+    stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>`;
+  const CAL = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+    stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4M16 2v4M3 10h18"/><rect
+    x="3" y="4" width="18" height="18" rx="2"/></svg>`;
+  const HELP = '앱 안의 날짜만 바뀌어요. 실제 기한은 발행처 기준이에요.';
+  const fld = (suf) => `
+    <label class="fld">
+      <span class="val">2026.12.09${suf ? '<span class="suf"> 까지</span>' : ''}</span>
+      <span class="cal">${CAL}</span>
+      <input type="date" value="2026-12-09" />
+    </label>`;
+
+  const V = {
+    '가': ['둘 다 「까지」 · 제목 한 줄',
+      '옛 날짜의 「까지」를 날짜와 같은 15 로 두어 선이 한 줄로 곧게 간다. 두 줄이 같은 꼴이 되어 포맷이 맞는다.',
+      '늘어난 기한을 앱에도 반영할게요',
+      `<span class="cut">2026.09.10<span class="same"> 까지</span></span>`, true],
+
+    '나': ['둘 다 「까지」 없이 · 제목 한 줄',
+      '날짜만 남긴다. 「까지」는 아래 버튼이 말한다. 제일 적게 그리지만, 60대에게 날짜 하나만 있으면 기한인지 무엇인지 한 번 더 생각하게 된다.',
+      '늘어난 기한을 앱에도 반영할게요',
+      `<span class="cut">2026.09.10</span>`, false],
+
+    '다': ['지금 시안 — 옛 날짜만 「까지」 없이',
+      '포맷을 맞추자고 해놓고 한쪽만 뺐다. 선이 꺾이는 것을 피하려던 것인데, 그건 크기를 맞추면 풀리는 문제였다.',
+      '늘어난 기한을 앱에도 반영할게요',
+      `<span class="cut">2026.09.10</span>`, true],
+
+    '라': ['가 + 제목 두 줄 — 지금 코드',
+      '한 줄로 두어도 247px 이라 295 안에 들어가는데, 코드가 <br> 로 직접 끊고 있다. 두 줄이면 제목이 덩어리로 서지만 24px 길어진다.',
+      '늘어난 기한을<br>앱에도 반영할게요',
+      `<span class="cut">2026.09.10<span class="same"> 까지</span></span>`, true],
+  };
+
+  addEventListener('DOMContentLoaded', () => {
+    const page = document.querySelector('.page');
+    Object.entries(V).forEach(([k, [name, note, title, cut, suf]]) => {
+      const col = document.createElement('div');
+      col.className = 'col';
+      col.innerHTML = `<p class="cap">${k} · ${name}</p><p class="sub">${note}</p>`
+        + `<div class="sheet" id="s${k}">
+             <div class="hd">
+               <div class="steps"><span class="back">${BACK}</span><i></i><i class="on"></i><b>2 / 2</b></div>
+               <p class="ttl">${title}</p><span class="x">${X}</span>
+             </div>
+             <div class="bd">
+               <div><p class="nm">${NAME}</p>
+                 <p style="margin:0 0 7px">${cut}</p>
+                 ${fld(suf)}
+                 <div class="help"><span class="i">i</span><p>${HELP}</p></div></div>
+               <button class="btnP">2026.12.09까지로 바꾸기</button>
+             </div>
+           </div>`
+        + `<p class="st" id="n${k}"></p>`;
+      page.appendChild(col);
+    });
+    const measure = () => Object.keys(V).forEach((k) => {
+      const el = document.getElementById('s' + k);
+      document.getElementById('n' + k).textContent =
+        `시트 ${Math.round(el.getBoundingClientRect().height)}px · `
+        + `제목 ${Math.round(el.querySelector('.ttl').getBoundingClientRect().height)}px`;
+    });
+    new ResizeObserver(measure).observe(document.body);
+    document.fonts.ready.then(() => requestAnimationFrame(measure));
+    setTimeout(measure, 500); setTimeout(measure, 1400);
+  });
+</script>
+
+<div class="page"></div>

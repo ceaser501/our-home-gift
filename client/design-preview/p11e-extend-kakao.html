@@ -1,0 +1,118 @@
+<!doctype html>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>기한 연장 — 카카오 줄</title>
+<script type="module" src="/src/index.css"></script>
+<style>
+  body { margin:0; background:#3a3a44; font-family:Pretendard, system-ui, sans-serif;
+         -webkit-font-smoothing:antialiased; color:#fff; }
+  .page { display:flex; gap:20px; align-items:flex-start; justify-content:center;
+          padding:16px 14px 80px; flex-wrap:wrap; }
+  .col { width:375px; flex:0 0 auto; }
+  .cap { font-size:13px; font-weight:800; margin:0 0 3px; }
+  .sub { color:#b8b8c4; font-size:11px; line-height:1.5; margin:0 0 8px; min-height:78px; }
+  .st  { color:#9d9daa; font-size:10px; font-weight:700; margin:14px 0 4px; }
+
+  .sheet { background:var(--background); color:var(--foreground);
+           border-radius:16px 16px 0 0; overflow:hidden; box-shadow:0 -2px 24px rgba(0,0,0,.28); }
+  .hd  { display:flex; flex-direction:column; gap:4px; padding:20px 60px 16px 20px; position:relative; }
+  .ttl { font-size:20px; line-height:1.2; font-weight:700; letter-spacing:-.025em; margin:0;
+         word-break:keep-all; }
+  .x   { position:absolute; top:10px; right:10px; width:44px; height:44px; display:flex;
+         align-items:center; justify-content:center; color:var(--muted-foreground); }
+  .x svg { width:24px; height:24px; }
+  .bd  { padding:0 20px 20px; display:flex; flex-direction:column; gap:14px; }
+  .steps { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+  .steps i { display:block; height:4px; width:22px; border-radius:99px; background:var(--input); }
+  .steps i.on { background:var(--primary); }
+  .steps b { font-size:12px; font-weight:700; color:var(--muted-foreground);
+             font-variant-numeric:tabular-nums; margin-left:4px; }
+
+  .dd { flex:0 0 auto; border-radius:99px; padding:2px 8px; font-size:12px; font-weight:700;
+        font-variant-numeric:tabular-nums; background:var(--destructive); color:#fff; line-height:1.4; }
+  .nm { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+        font-size:15px; font-weight:700; }
+  .bx { background:color-mix(in srgb, var(--secondary) 60%, transparent);
+        border-radius:8px; padding:12px 14px; display:flex; align-items:center; gap:8px; }
+  .body { margin:0; font-size:14px; line-height:1.6; font-weight:500;
+          color:var(--muted-foreground); word-break:keep-all; }
+
+  /* 카카오 자리 — 갈래마다 다르게 */
+  .kk { display:flex; align-items:center; gap:12px; }
+  .kk .t { font-size:15px; font-weight:700; word-break:keep-all; display:block; }
+  .kk .s { font-size:14px; font-weight:500; color:var(--muted-foreground); margin-top:2px; display:block; }
+  .kk .go { flex:0 0 auto; display:flex; align-items:center; gap:5px; font-size:14px;
+            font-weight:600; color:var(--primary); }
+  .kk .go svg { width:14px; height:14px; }
+  .kk.line { border:1px solid var(--border); border-radius:8px; padding:13px 14px; }
+  .kk.hr   { border-top:1px solid var(--border); border-bottom:1px solid var(--border);
+             padding:14px 0; }
+  .kk.bare { padding:0; }
+
+  .btnP { height:52px; border-radius:8px; border:0; background:var(--primary);
+          color:var(--primary-foreground); font-size:15.5px; font-weight:700;
+          display:flex; align-items:center; justify-content:center; font-family:inherit; }
+  .acts { display:flex; flex-direction:column; gap:8px; margin-top:8px; }
+</style>
+
+<script>
+  const NAME = '카페 아메리카노 T 2잔 + 딸기 생크림 케이크';
+  const X = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+    stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>`;
+  const LINK = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+    stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>`;
+  const NOTE1 = '받으신 문자나 발행처 앱에서 연장할 수 있어요. 보통 90일씩, 최대 5년까지요.';
+
+  const kk = (cls) => `
+    <div class="kk ${cls}">
+      <span style="flex:1;min-width:0">
+        <span class="t">카카오톡 선물하기 상품인가요?</span>
+        <span class="s">선물함에서 바로 연장할 수 있어요</span>
+      </span>
+      <span class="go">열기 ${LINK}</span>
+    </div>`;
+
+  const V = {
+    '가': ['테두리 상자 — 「열기」는 글자로',
+      '원래 옷으로 되돌리되 안에 있던 테두리 상자(「열기」)를 걷고 글자와 화살표만 남긴다. 상자 안 상자가 없어지고 여백 20 도 지켜진다. 이 앱 규칙대로 「누르는 것」에는 테두리다.',
+      'line'],
+    '나': ['실선 — 여백 안쪽으로 들여서',
+      '선은 남기되 시트 폭이 아니라 본문 폭에 맞춘다. 여백은 지켜지지만, 양끝이 허공에서 시작하고 끝나서 선 하나가 떠 있는 것처럼 보인다.',
+      'hr'],
+    '다': ['아무 것도 없이 — 링크만',
+      '선도 상자도 없다. 오른쪽 「열기 ↗」가 보라라서 누를 데는 알 수 있다. 제일 가볍지만 누를 자리가 그 두 글자로 좁아 보인다 — 실제로는 줄 전체가 눌린다.',
+      'bare'],
+  };
+
+  addEventListener('DOMContentLoaded', () => {
+    const page = document.querySelector('.page');
+    Object.entries(V).forEach(([k, [name, note, cls]]) => {
+      const col = document.createElement('div');
+      col.className = 'col';
+      col.innerHTML = `<p class="cap">${k} · ${name}</p><p class="sub">${note}</p>`
+        + `<div class="sheet" id="s${k}">
+            <div class="hd">
+              <div class="steps"><i class="on"></i><i></i><b>1 / 2</b></div>
+              <p class="ttl">기한을 늘리시려면</p><span class="x">${X}</span>
+            </div>
+            <div class="bd">
+              <div class="bx"><span class="dd">D-2</span><span class="nm">${NAME}</span></div>
+              <p class="body">${NOTE1}</p>
+              ${kk(cls)}
+              <div class="acts"><button class="btnP">연장했어요</button></div>
+            </div>
+          </div>`
+        + `<p class="st" id="n${k}"></p>`;
+      page.appendChild(col);
+    });
+    const measure = () => Object.keys(V).forEach((k) => {
+      document.getElementById('n' + k).textContent =
+        `시트 ${Math.round(document.getElementById('s' + k).getBoundingClientRect().height)}px`;
+    });
+    new ResizeObserver(measure).observe(document.body);
+    document.fonts.ready.then(() => requestAnimationFrame(measure));
+    setTimeout(measure, 500); setTimeout(measure, 1400);
+  });
+</script>
+
+<div class="page"></div>

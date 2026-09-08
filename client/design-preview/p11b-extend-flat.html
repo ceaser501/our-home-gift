@@ -1,0 +1,208 @@
+<!doctype html>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>기한 연장 — 펼치기</title>
+<script type="module" src="/src/index.css"></script>
+<style>
+  body { margin:0; background:#3a3a44; font-family:Pretendard, system-ui, sans-serif;
+         -webkit-font-smoothing:antialiased; color:#fff; }
+  .page { display:flex; gap:20px; align-items:flex-start; justify-content:center;
+          padding:16px 14px 80px; flex-wrap:wrap; }
+  .col { width:375px; flex:0 0 auto; }
+  .cap { font-size:13px; font-weight:800; margin:0 0 3px; }
+  .sub { color:#b8b8c4; font-size:11px; line-height:1.5; margin:0 0 8px; min-height:92px; }
+  .st  { color:#9d9daa; font-size:10px; font-weight:700; margin:14px 0 4px; }
+
+  .sheet { background:var(--background); color:var(--foreground);
+           border-radius:16px 16px 0 0; overflow:hidden; box-shadow:0 -2px 24px rgba(0,0,0,.28); }
+  .hd  { display:flex; flex-direction:column; gap:4px; padding:20px 60px 20px 20px; position:relative; }
+  .ttl { font-size:20px; line-height:1.2; font-weight:700; letter-spacing:-.025em; margin:0;
+         word-break:keep-all; }
+  .x   { position:absolute; top:10px; right:10px; width:44px; height:44px; display:flex;
+         align-items:center; justify-content:center; color:var(--muted-foreground); }
+  .x svg { width:24px; height:24px; }
+  .bd  { padding:0 20px 20px; display:flex; flex-direction:column; gap:14px; }
+  .steps { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+  .steps i { display:block; height:4px; width:22px; border-radius:99px; background:var(--input); }
+  .steps i.on { background:var(--primary); }
+  .steps b { font-size:12px; font-weight:700; color:var(--muted-foreground);
+             font-variant-numeric:tabular-nums; margin-left:4px; }
+
+  .desc { margin:0; font-size:14px; line-height:1.5; font-weight:500; color:var(--muted-foreground);
+          display:flex; align-items:baseline; justify-content:space-between; gap:10px; }
+  .desc .nm { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .desc .dd { flex:0 0 auto; font-size:13px; font-weight:700; color:var(--destructive);
+              font-variant-numeric:tabular-nums; }
+  .body { margin:0; font-size:14px; line-height:1.6; font-weight:500;
+          color:var(--muted-foreground); word-break:keep-all; }
+
+  /* 펼친 줄 — 상자 대신 실선. 시트 폭 끝까지 그어야 '누르는 줄'로 읽힌다. */
+  .rows { margin:0 -20px; border-top:1px solid var(--border); }
+  .row  { display:flex; align-items:center; gap:12px; padding:14px 20px;
+          border-bottom:1px solid var(--border); }
+  .row .t { font-size:15px; font-weight:700; word-break:keep-all; }
+  .row .s { font-size:14px; font-weight:500; color:var(--muted-foreground); margin-top:2px; }
+  .row .go { flex:0 0 auto; display:flex; align-items:center; gap:5px; font-size:14px;
+             font-weight:600; color:var(--primary); }
+  .row .go svg { width:14px; height:14px; }
+
+  /* 날짜를 상자 없이 두 줄로 */
+  .kv { display:flex; align-items:baseline; justify-content:space-between; gap:10px;
+        padding:9px 0; }
+  .kv + .kv { border-top:1px solid var(--border); }
+  .kv .k { font-size:14px; font-weight:600; color:var(--muted-foreground); }
+  .kv .v { font-size:15px; font-weight:600; color:var(--muted-foreground);
+           text-decoration:line-through; font-variant-numeric:tabular-nums; }
+  .kv .v.now { font-size:20px; font-weight:700; letter-spacing:-.025em; color:var(--foreground);
+               text-decoration:none; }
+  .kv .k.now { color:var(--primary); font-weight:700; }
+  .pick { font-size:14px; font-weight:600; color:var(--primary); }
+
+  .btnP { height:52px; border-radius:8px; border:0; background:var(--primary);
+          color:var(--primary-foreground); font-size:15.5px; font-weight:700;
+          display:flex; align-items:center; justify-content:center; font-family:inherit; }
+  .btnS { height:52px; border-radius:8px; border:1px solid var(--input); background:var(--card);
+          font-size:15.5px; font-weight:600; font-family:inherit;
+          color:color-mix(in srgb, var(--foreground) 80%, transparent); }
+  .later { height:44px; border:0; background:none; font-family:inherit; font-size:14.5px;
+           font-weight:600; color:var(--muted-foreground); }
+  .acts { display:flex; flex-direction:column; gap:8px; margin-top:8px; }
+  .bx.gray { background:color-mix(in srgb, var(--secondary) 60%, transparent);
+             border-radius:8px; padding:13px; display:flex; align-items:center; gap:12px; }
+  .openF { display:flex; align-items:center; height:40px; padding:0 14px; gap:5px; flex:0 0 auto;
+           background:var(--secondary); border-radius:8px; font-size:14px; font-weight:600; }
+  .openF svg { width:14px; height:14px; color:var(--muted-foreground); }
+  .tab { font-variant-numeric:tabular-nums; }
+  .mut { color:var(--muted-foreground); }
+</style>
+
+<script>
+  const NAME = '카페 아메리카노 T 2잔 + 딸기 생크림 케이크';
+  const X = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+    stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>`;
+  const LINK = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+    stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>`;
+
+  const head = (step, title, dd) => `
+    <div class="hd">
+      <div class="steps"><i class="${step === 1 ? 'on' : ''}"></i><i class="${step === 2 ? 'on' : ''}"></i><b>${step} / 2</b></div>
+      <p class="ttl">${title}</p>
+      <p class="desc"><span class="nm">${NAME}</span>${dd ? `<span class="dd">D-2</span>` : ''}</p>
+      <span class="x">${X}</span>
+    </div>`;
+
+  const kakaoRow = () => `
+    <div class="rows"><div class="row">
+      <span style="flex:1;min-width:0">
+        <span class="t">카카오톡 선물하기 상품인가요?</span>
+        <span class="s" style="display:block">선물함에서 바로 연장할 수 있어요</span>
+      </span>
+      <span class="go">열기 ${LINK}</span>
+    </div></div>`;
+
+  const kakaoBox = () => `
+    <div class="bx gray">
+      <span style="display:flex;min-width:0;flex:1;flex-direction:column;gap:2px">
+        <span style="font-size:14.5px;font-weight:700;word-break:keep-all">카카오톡 선물하기 상품인가요?</span>
+        <span class="mut" style="font-size:14px;font-weight:500">선물함에서 바로 연장할 수 있어요</span>
+      </span>
+      <span class="openF">열기 ${LINK}</span>
+    </div>`;
+
+  const datesFlat = () => `
+    <div>
+      <div class="kv"><span class="k">지금</span><span class="v tab">2026.09.10</span></div>
+      <div class="kv"><span class="k now">변경 후</span>
+        <span style="display:flex;align-items:baseline;gap:10px">
+          <span class="v now tab">2026.12.09</span></span></div>
+    </div>`;
+
+  const datesBox = () => `
+    <div class="bx gray" style="padding:15px 16px">
+      <span style="display:flex;flex-direction:column;gap:3px">
+        <span class="mut" style="font-size:12px;font-weight:600">지금</span>
+        <span class="mut tab" style="font-size:15px;font-weight:600;text-decoration:line-through">2026.09.10</span>
+      </span>
+      <span style="flex:1;text-align:center;font-size:16px" class="mut">→</span>
+      <span style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">
+        <span style="font-size:12px;font-weight:700;color:var(--primary)">변경 후</span>
+        <span class="tab" style="font-size:20px;font-weight:700;letter-spacing:-.025em">2026.12.09</span>
+      </span>
+    </div>`;
+
+  const NOTE1 = '받으신 문자나 발행처 앱에서 연장할 수 있어요. 보통 90일씩, 최대 5년까지요.';
+  const NOTE2 = '앱 안의 날짜만 바뀌어요. 실제 기프티콘은 발행처 기준입니다.';
+
+  const V = {
+    '나': ['블럭 하나 + 버튼 둘',
+      '앞서 본 갈래. 대상 상자는 걷었지만 카카오 블럭 · 주 버튼 · 보조 버튼으로 상자가 셋 남는다. 「열기」까지 세면 넷이다.',
+      (s) => s === 1
+        ? head(1, '기한을 늘리시려면', true)
+          + `<div class="bd"><p class="body">${NOTE1}</p>${kakaoBox()}
+             <div class="acts"><button class="btnP">연장했어요</button>
+             <button class="btnS">나중에 할게요</button></div></div>`
+        : head(2, '늘어난 기한을<br>앱에도 반영할게요', false)
+          + `<div class="bd">${datesBox()}
+             <p class="body" style="font-size:12px">${NOTE2}</p>
+             <div class="acts"><button class="btnP">2026.12.09까지로 바꾸기</button>
+             <button class="btnS">직접 날짜 선택</button></div></div>`],
+
+    '라': ['펼침 + 「나중에」는 글자',
+      '상자를 다 걷고 실선으로만 나눈다. 카카오는 목록 한 줄이 되고, 날짜도 지금/변경 후 두 줄이 된다. 남는 상자는 주 버튼 하나뿐 — 「나중에 할게요」와 「직접 날짜 선택」은 글자로 내린다.',
+      (s) => s === 1
+        ? head(1, '기한을 늘리시려면', true)
+          + `<div class="bd"><p class="body">${NOTE1}</p>${kakaoRow()}
+             <div class="acts"><button class="btnP">연장했어요</button>
+             <button class="later">나중에 할게요</button></div></div>`
+        : head(2, '늘어난 기한을<br>앱에도 반영할게요', false)
+          + `<div class="bd">${datesFlat()}
+             <p class="body" style="font-size:12px">${NOTE2}</p>
+             <div class="acts"><button class="btnP">2026.12.09까지로 바꾸기</button>
+             <button class="later">직접 날짜 선택</button></div></div>`],
+
+    '마': ['펼침 + 버튼 하나',
+      '「나중에 할게요」를 아예 뺀다 — 오른쪽 위 ✕ 와 아래로 쓸어내리기가 이미 같은 일을 한다. 「직접 날짜 선택」은 날짜 줄 안으로 들어간다. 상자가 화면에 하나뿐이 된다.',
+      (s) => s === 1
+        ? head(1, '기한을 늘리시려면', true)
+          + `<div class="bd"><p class="body">${NOTE1}</p>${kakaoRow()}
+             <div class="acts"><button class="btnP">연장했어요</button></div></div>`
+        : head(2, '늘어난 기한을<br>앱에도 반영할게요', false)
+          + `<div class="bd">
+             <div>
+               <div class="kv"><span class="k">지금</span><span class="v tab">2026.09.10</span></div>
+               <div class="kv"><span class="k now">변경 후</span>
+                 <span style="display:flex;align-items:baseline;gap:12px">
+                   <span class="pick">직접 고르기</span>
+                   <span class="v now tab">2026.12.09</span></span></div>
+             </div>
+             <p class="body" style="font-size:12px">${NOTE2}</p>
+             <div class="acts"><button class="btnP">2026.12.09까지로 바꾸기</button></div></div>`],
+  };
+
+  addEventListener('DOMContentLoaded', () => {
+    const page = document.querySelector('.page');
+    Object.entries(V).forEach(([k, [name, note, build]]) => {
+      const col = document.createElement('div');
+      col.className = 'col';
+      col.innerHTML = `<p class="cap">${k} · ${name}</p><p class="sub">${note}</p>`
+        + `<p class="st">1 / 2</p><div class="sheet" id="s${k}1">${build(1)}</div>`
+        + `<p class="st">2 / 2</p><div class="sheet" id="s${k}2">${build(2)}</div>`
+        + `<p class="st" id="n${k}"></p>`;
+      page.appendChild(col);
+    });
+    const measure = () => Object.keys(V).forEach((k) => {
+      const one = document.getElementById('s' + k + '1');
+      const two = document.getElementById('s' + k + '2');
+      // 상자로 세는 것 — 채워졌거나 테두리가 있는 네모
+      const boxes = (el) => el.querySelectorAll('.bx, .btnP, .btnS, .openF, .row').length;
+      document.getElementById('n' + k).textContent =
+        `1/2 ${Math.round(one.getBoundingClientRect().height)}px · 상자 ${boxes(one)}개   |   `
+        + `2/2 ${Math.round(two.getBoundingClientRect().height)}px · 상자 ${boxes(two)}개`;
+    });
+    new ResizeObserver(measure).observe(document.body);
+    document.fonts.ready.then(() => requestAnimationFrame(measure));
+    setTimeout(measure, 500); setTimeout(measure, 1400);
+  });
+</script>
+
+<div class="page"></div>

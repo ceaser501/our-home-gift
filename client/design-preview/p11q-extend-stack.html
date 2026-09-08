@@ -1,0 +1,154 @@
+<!doctype html>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>기한 연장 2/2 — 라벨을 세로로</title>
+<script type="module" src="/src/index.css"></script>
+<style>
+  body { margin:0; background:#3a3a44; font-family:Pretendard, system-ui, sans-serif;
+         -webkit-font-smoothing:antialiased; color:#fff; }
+  .page { display:flex; gap:20px; align-items:flex-start; justify-content:center;
+          padding:16px 14px 80px; flex-wrap:wrap; }
+  .col { width:375px; flex:0 0 auto; }
+  .cap { font-size:13px; font-weight:800; margin:0 0 3px; }
+  .sub { color:#b8b8c4; font-size:11px; line-height:1.5; margin:0 0 8px; min-height:80px; }
+  .st  { color:#9d9daa; font-size:10px; font-weight:700; margin:8px 0 0; }
+
+  .sheet { background:var(--background); color:var(--foreground);
+           border-radius:16px 16px 0 0; overflow:hidden; box-shadow:0 -2px 24px rgba(0,0,0,.28); }
+  .hd  { display:flex; flex-direction:column; gap:5px; padding:20px 60px 16px 20px; position:relative; }
+  .ttl { font-size:20px; line-height:1.2; font-weight:700; letter-spacing:-.025em; margin:0;
+         word-break:keep-all; }
+  .x   { position:absolute; top:10px; right:10px; width:44px; height:44px; display:flex;
+         align-items:center; justify-content:center; color:var(--muted-foreground); }
+  .x svg { width:24px; height:24px; }
+  .back { margin:-10px 4px -10px -10px; padding:10px; display:flex; flex:0 0 auto;
+          color:var(--muted-foreground); }
+  .back svg { width:20px; height:20px; }
+  .bd  { padding:0 20px 20px; display:flex; flex-direction:column; gap:14px; }
+  .steps { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+  .steps i { display:block; height:4px; width:22px; border-radius:99px; background:var(--input); }
+  .steps i.on { background:var(--primary); }
+  .steps b { font-size:12px; font-weight:700; color:var(--muted-foreground);
+             font-variant-numeric:tabular-nums; margin-left:4px; }
+
+  .nm { margin:0 0 12px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+        font-size:15px; font-weight:600; }
+  .lab { margin:0; font-size:13px; font-weight:700; color:var(--muted-foreground); }
+  .lab.now { color:var(--primary); }
+  .oldv { font-size:15px; font-weight:600; color:var(--muted-foreground);
+          font-variant-numeric:tabular-nums; }
+  .suf { font-size:13px; font-weight:600; }
+
+  .rowH { display:flex; align-items:center; gap:10px; }
+  .rowH + .rowH { margin-top:8px; }
+  .rowH .lab { flex:0 0 56px; }
+  .rowH .oldv { padding-left:16px; }
+
+  .fld { position:relative; display:flex; align-items:center; gap:8px; height:52px; flex:1;
+         min-width:0; border:1px solid var(--input); border-radius:8px; background:var(--card);
+         padding:0 15px; transition:border-color .15s, box-shadow .15s; }
+  .fld:focus-within { border-color:var(--ring);
+         box-shadow:0 0 0 2px color-mix(in srgb, var(--ring) 30%, transparent); }
+  .fld input { position:absolute; inset:0; opacity:0; border:0; padding:0; margin:0; font:inherit; }
+  .fld .val { flex:1; font-size:20px; font-weight:700; letter-spacing:-.025em;
+              font-variant-numeric:tabular-nums; }
+  .fld .val .suf { font-size:15px; color:var(--muted-foreground); }
+  .fld .cal { flex:0 0 auto; display:flex; color:var(--muted-foreground); }
+  .fld .cal svg { width:19px; height:19px; }
+
+  .help { display:flex; align-items:flex-start; gap:6px; padding-left:4px; margin-top:10px; }
+  .help .i { margin-top:2px; width:16px; height:16px; flex:0 0 auto; border-radius:99px;
+             background:var(--border); color:var(--muted-foreground); font-size:12px;
+             font-weight:700; display:flex; align-items:center; justify-content:center; }
+  .help p { margin:0; flex:1; font-size:12px; line-height:1.6; color:var(--muted-foreground);
+            word-break:keep-all; }
+  .btnP { height:52px; border-radius:8px; border:0; background:var(--primary);
+          color:var(--primary-foreground); font-size:15.5px; font-weight:700;
+          display:flex; align-items:center; justify-content:center; font-family:inherit;
+          margin-top:8px; }
+</style>
+
+<script>
+  const NAME = '카페 아메리카노 T 2잔 + 딸기 생크림 케이크';
+  const X = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+    stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>`;
+  const BACK = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+    stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>`;
+  const CAL = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+    stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4M16 2v4M3 10h18"/><rect
+    x="3" y="4" width="18" height="18" rx="2"/></svg>`;
+  const HELP = '앱 안의 날짜만 바뀌어요. 실제 기프티콘은 발행처 기준입니다.';
+  const FLD = `
+    <label class="fld">
+      <span class="val">2026.12.09<span class="suf"> 까지</span></span>
+      <span class="cal">${CAL}</span>
+      <input type="date" value="2026-12-09" />
+    </label>`;
+
+  const V = {
+    '가': ['가로 — 라벨을 옆에',
+      '라벨이 56 폭의 칸에 서고 값이 그 오른쪽에. 두 날짜가 같은 세로선(102)에서 시작해 자릿수까지 맞는다. 대신 값이 쓸 수 있는 폭이 라벨만큼 줄어든다.',
+      `<div class="rowH"><span class="lab">지금</span>
+         <span class="oldv">2026.09.10<span class="suf"> 까지</span></span></div>
+       <div class="rowH"><span class="lab now">새 기한</span>${FLD}</div>`],
+
+    '나': ['세로 — 값을 필드에 맞춰 들여서',
+      '라벨이 값 위에 선다. 「지금」 값을 16 들여 필드 안 글자와 같은 세로선에 놓는다. 두 날짜는 여전히 맞지만 라벨과 값이 어긋나 보인다.',
+      `<div><p class="lab">지금</p>
+         <p class="oldv" style="margin:3px 0 0;padding-left:16px">2026.09.10<span class="suf"> 까지</span></p></div>
+       <div style="margin-top:12px"><p class="lab now" style="margin-bottom:6px">새 기한</p>
+         <div style="display:flex">${FLD}</div></div>`],
+
+    '다': ['세로 — 라벨과 값을 같은 선에',
+      '들여쓰지 않는다. 라벨과 값이 한 왼쪽선에 맞아 덩어리로 읽히지만, 두 날짜끼리는 16 어긋난다 — 세로로 떨어져 있어 자릿수를 견줄 일이 적다면 이쪽이 깔끔하다.',
+      `<div><p class="lab">지금</p>
+         <p class="oldv" style="margin:3px 0 0">2026.09.10<span class="suf"> 까지</span></p></div>
+       <div style="margin-top:12px"><p class="lab now" style="margin-bottom:6px">새 기한</p>
+         <div style="display:flex">${FLD}</div></div>`],
+  };
+
+  addEventListener('DOMContentLoaded', () => {
+    const page = document.querySelector('.page');
+    Object.entries(V).forEach(([k, [name, note, rows]]) => {
+      const col = document.createElement('div');
+      col.className = 'col';
+      col.innerHTML = `<p class="cap">${k} · ${name}</p><p class="sub">${note}</p>`
+        + `<div class="sheet" id="s${k}">
+             <div class="hd">
+               <div class="steps"><span class="back">${BACK}</span><i></i><i class="on"></i><b>2 / 2</b></div>
+               <p class="ttl">늘어난 기한을<br>앱에도 반영할게요</p><span class="x">${X}</span>
+             </div>
+             <div class="bd">
+               <div><p class="nm">${NAME}</p>${rows}
+                 <div class="help"><span class="i">i</span><p>${HELP}</p></div></div>
+               <button class="btnP">2026.12.09까지로 바꾸기</button>
+             </div>
+           </div>`
+        + `<p class="st" id="n${k}"></p>`;
+      page.appendChild(col);
+    });
+    document.querySelectorAll('.fld input').forEach((inp) => {
+      inp.addEventListener('change', () => {
+        const [y, m, d] = inp.value.split('-');
+        const box = inp.closest('.fld');
+        box.querySelector('.val').innerHTML = `${y}.${m}.${d}<span class="suf"> 까지</span>`;
+        box.closest('.bd').querySelector('.btnP').textContent = `${y}.${m}.${d}까지로 바꾸기`;
+      });
+    });
+    const measure = () => Object.keys(V).forEach((k) => {
+      const el = document.getElementById('s' + k);
+      const bd = el.querySelector('.bd').getBoundingClientRect();
+      const t = (node) => { const r = document.createRange(); r.selectNodeContents(node);
+        return Math.round(r.getBoundingClientRect().left - bd.left); };
+      document.getElementById('n' + k).textContent =
+        `시트 ${Math.round(el.getBoundingClientRect().height)}px · `
+        + `라벨 ${t(el.querySelector('.lab'))} · 지금 ${t(el.querySelector('.oldv'))} · `
+        + `새 기한 ${t(el.querySelector('.fld .val'))}`;
+    });
+    new ResizeObserver(measure).observe(document.body);
+    document.fonts.ready.then(() => requestAnimationFrame(measure));
+    setTimeout(measure, 500); setTimeout(measure, 1400);
+  });
+</script>
+
+<div class="page"></div>

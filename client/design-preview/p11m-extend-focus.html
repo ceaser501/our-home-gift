@@ -1,0 +1,114 @@
+<!doctype html>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>기한 연장 2/2 — 포커스와 헬퍼</title>
+<script type="module" src="/src/index.css"></script>
+<style>
+  body { margin:0; background:#3a3a44; font-family:Pretendard, system-ui, sans-serif;
+         -webkit-font-smoothing:antialiased; color:#fff; }
+  .page { display:flex; gap:20px; align-items:flex-start; justify-content:center;
+          padding:16px 14px 80px; flex-wrap:wrap; }
+  .col { width:375px; flex:0 0 auto; }
+  .cap { font-size:13px; font-weight:800; margin:0 0 3px; }
+  .sub { color:#b8b8c4; font-size:11px; line-height:1.5; margin:0 0 8px; min-height:56px; }
+  .st  { color:#9d9daa; font-size:10px; font-weight:700; margin:8px 0 0; }
+
+  .sheet { background:var(--background); color:var(--foreground);
+           border-radius:16px 16px 0 0; overflow:hidden; box-shadow:0 -2px 24px rgba(0,0,0,.28); }
+  .hd  { display:flex; flex-direction:column; gap:5px; padding:20px 60px 16px 20px; position:relative; }
+  .ttl { font-size:20px; line-height:1.2; font-weight:700; letter-spacing:-.025em; margin:0;
+         word-break:keep-all; }
+  .x   { position:absolute; top:10px; right:10px; width:44px; height:44px; display:flex;
+         align-items:center; justify-content:center; color:var(--muted-foreground); }
+  .x svg { width:24px; height:24px; }
+  .back { margin:-10px 4px -10px -10px; padding:10px; display:flex; flex:0 0 auto;
+          color:var(--muted-foreground); }
+  .back svg { width:20px; height:20px; }
+  .bd  { padding:0 20px 20px; display:flex; flex-direction:column; gap:14px; }
+  .steps { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+  .steps i { display:block; height:4px; width:22px; border-radius:99px; background:var(--input); }
+  .steps i.on { background:var(--primary); }
+  .steps b { font-size:12px; font-weight:700; color:var(--muted-foreground);
+             font-variant-numeric:tabular-nums; margin-left:4px; }
+
+  .nm  { margin:0 0 6px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+         font-size:15px; font-weight:700; }
+  .now { margin:0 0 12px; font-size:13px; font-weight:600; color:var(--muted-foreground);
+         font-variant-numeric:tabular-nums; }
+
+  /* 평소에는 회색, 포커스 때만 보라 — 공용 Input 과 같은 규칙 */
+  .fld { height:52px; width:100%; box-sizing:border-box; border-radius:8px;
+         border:1px solid var(--input); background:var(--card); padding:0 15px;
+         font-family:inherit; font-size:18px; font-weight:700; color:var(--foreground);
+         font-variant-numeric:tabular-nums; transition:border-color .15s, box-shadow .15s; }
+  .fld:focus { border-color:var(--ring); box-shadow:0 0 0 2px color-mix(in srgb, var(--ring) 30%, transparent);
+               outline:none; }
+  .fld.on { border-color:var(--ring); box-shadow:0 0 0 2px color-mix(in srgb, var(--ring) 30%, transparent); }
+
+  /* 헬퍼 — 이름 바꾸기 시트와 같은 옷 */
+  .help { display:flex; align-items:flex-start; gap:6px; padding-left:4px; margin-top:8px; }
+  .help .i { margin-top:2px; width:16px; height:16px; flex:0 0 auto; border-radius:99px;
+             background:var(--border); color:var(--muted-foreground); font-size:12px;
+             font-weight:700; display:flex; align-items:center; justify-content:center; }
+  .help p { margin:0; flex:1; font-size:12px; line-height:1.6; color:var(--muted-foreground);
+            word-break:keep-all; }
+
+  .btnP { height:52px; border-radius:8px; border:0; background:var(--primary);
+          color:var(--primary-foreground); font-size:15.5px; font-weight:700;
+          display:flex; align-items:center; justify-content:center; font-family:inherit;
+          margin-top:8px; }
+</style>
+
+<script>
+  const NAME = '카페 아메리카노 T 2잔 + 딸기 생크림 케이크';
+  const X = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+    stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>`;
+  const BACK = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+    stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>`;
+  const HELP = `앱 안의 날짜만 바뀌어요. 실제 기프티콘은 발행처 기준입니다.`;
+
+  const sheet = (focused) => `
+    <div class="sheet">
+      <div class="hd">
+        <div class="steps"><span class="back">${BACK}</span><i></i><i class="on"></i><b>2 / 2</b></div>
+        <p class="ttl">늘어난 기한을<br>앱에도 반영할게요</p><span class="x">${X}</span>
+      </div>
+      <div class="bd">
+        <div>
+          <p class="nm">${NAME}</p>
+          <p class="now">지금 2026.09.10 까지</p>
+          <input class="fld${focused ? ' on' : ''}" type="date" value="2026-12-09" />
+          <div class="help"><span class="i">i</span><p>${HELP}</p></div>
+        </div>
+        <button class="btnP">2026.12.09까지로 바꾸기</button>
+      </div>
+    </div>`;
+
+  addEventListener('DOMContentLoaded', () => {
+    const page = document.querySelector('.page');
+    [['평소 — 회색 테두리', '이미 90일이 채워져 들어온다. 대개 그대로 쓰는 값이라 「여기 채우세요」라고 말할 일이 없다.', false],
+     ['만질 때 — 보라 테두리와 링', '누르면 그때 보라가 된다. 공용 Input 과 같은 규칙이다.', true]]
+      .forEach(([name, note, f]) => {
+        const col = document.createElement('div');
+        col.className = 'col';
+        col.innerHTML = `<p class="cap">${name}</p><p class="sub">${note}</p>`
+          + `<div class="wrap">${sheet(f)}</div><p class="st"></p>`;
+        page.appendChild(col);
+      });
+    const measure = () => {
+      document.querySelectorAll('.col').forEach((c) => {
+        const el = c.querySelector('.sheet');
+        const fld = c.querySelector('.fld');
+        const help = c.querySelector('.help');
+        c.querySelector('.st').textContent =
+          `시트 ${Math.round(el.getBoundingClientRect().height)}px · 칸에서 헬퍼까지 `
+          + `${Math.round(help.getBoundingClientRect().top - fld.getBoundingClientRect().bottom)}px`;
+      });
+    };
+    new ResizeObserver(measure).observe(document.body);
+    document.fonts.ready.then(() => requestAnimationFrame(measure));
+    setTimeout(measure, 500); setTimeout(measure, 1400);
+  });
+</script>
+
+<div class="page"></div>

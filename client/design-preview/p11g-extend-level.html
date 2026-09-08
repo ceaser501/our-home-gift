@@ -1,0 +1,127 @@
+<!doctype html>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>기한 연장 — 안내문의 층</title>
+<script type="module" src="/src/index.css"></script>
+<style>
+  body { margin:0; background:#3a3a44; font-family:Pretendard, system-ui, sans-serif;
+         -webkit-font-smoothing:antialiased; color:#fff; }
+  .page { display:flex; gap:20px; align-items:flex-start; justify-content:center;
+          padding:16px 14px 80px; flex-wrap:wrap; }
+  .col { width:375px; flex:0 0 auto; }
+  .cap { font-size:13px; font-weight:800; margin:0 0 3px; }
+  .sub { color:#b8b8c4; font-size:11px; line-height:1.5; margin:0 0 8px; min-height:82px; }
+  .st  { color:#9d9daa; font-size:10px; font-weight:700; margin:8px 0 0; }
+
+  .sheet { background:var(--background); color:var(--foreground);
+           border-radius:16px 16px 0 0; overflow:hidden; box-shadow:0 -2px 24px rgba(0,0,0,.28); }
+  .hd  { display:flex; flex-direction:column; gap:5px; padding:20px 60px 16px 20px; position:relative; }
+  .ttl { font-size:20px; line-height:1.2; font-weight:700; letter-spacing:-.025em; margin:0;
+         word-break:keep-all; }
+  .dsc { margin:0; font-size:14px; line-height:1.5; font-weight:500; color:var(--muted-foreground);
+         word-break:keep-all; }
+  .x   { position:absolute; top:10px; right:10px; width:44px; height:44px; display:flex;
+         align-items:center; justify-content:center; color:var(--muted-foreground); }
+  .x svg { width:24px; height:24px; }
+  .bd  { padding:0 20px 20px; display:flex; flex-direction:column; gap:14px; }
+  .steps { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+  .steps i { display:block; height:4px; width:22px; border-radius:99px; background:var(--input); }
+  .steps i.on { background:var(--primary); }
+  .steps b { font-size:12px; font-weight:700; color:var(--muted-foreground);
+             font-variant-numeric:tabular-nums; margin-left:4px; }
+  .body { margin:0; font-size:14px; line-height:1.6; font-weight:500;
+          color:var(--muted-foreground); word-break:keep-all; }
+
+  .dd { flex:0 0 auto; border-radius:99px; padding:1px 7px; font-size:11px; font-weight:700;
+        font-variant-numeric:tabular-nums; background:var(--destructive); color:#fff; line-height:1.5; }
+  .quiet { display:flex; align-items:center; gap:6px; margin:2px 0 0; }
+  .quiet .nm { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+               font-size:13px; font-weight:600; color:var(--muted-foreground); }
+
+  .kk { display:flex; align-items:center; gap:12px; border:1px solid var(--border);
+        border-radius:8px; padding:13px 14px; }
+  .kk .t { font-size:15px; font-weight:700; word-break:keep-all; display:block; }
+  .kk .s { font-size:14px; font-weight:500; color:var(--muted-foreground); margin-top:2px; display:block; }
+  .kk .go { flex:0 0 auto; display:flex; align-items:center; gap:5px; font-size:14px;
+            font-weight:600; color:var(--primary); }
+  .kk .go svg { width:14px; height:14px; }
+  .btnP { height:52px; border-radius:8px; border:0; background:var(--primary);
+          color:var(--primary-foreground); font-size:15.5px; font-weight:700;
+          display:flex; align-items:center; justify-content:center; font-family:inherit; margin-top:8px; }
+</style>
+
+<script>
+  const NAME = '카페 아메리카노 T 2잔 + 딸기 생크림 케이크';
+  const X = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+    stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>`;
+  const LINK = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+    stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>`;
+  const KK = `
+    <div class="kk">
+      <span style="flex:1;min-width:0">
+        <span class="t">카카오톡 선물하기 상품인가요?</span>
+        <span class="s">선물함에서 바로 연장할 수 있어요</span>
+      </span>
+      <span class="go">열기 ${LINK}</span>
+    </div>`;
+  const TAIL = `
+    <p class="quiet"><span class="dd">D-2</span><span class="nm">${NAME}</span></p>
+    <button class="btnP">연장했어요</button>`;
+
+  const A = '받으신 문자나 발행처 앱에서 할 수 있어요.';
+  const B = '보통 90일씩, 최대 5년까지 늘어납니다.';
+
+  const V = {
+    '가': ['둘 다 부제 — 지금',
+      '제목에 4px 로 붙는다. 한 덩어리로 읽혀서 제목이 두 문장 더 이어지는 느낌이다. 대신 회색 두 줄이 제목 바로 밑에 깔려 제목이 조금 눌린다.',
+      `<div class="hd">
+         <div class="steps"><i class="on"></i><i></i><b>1 / 2</b></div>
+         <p class="ttl">기한을 늘릴 수 있어요</p>
+         <p class="dsc">${A} ${B}</p>
+         <span class="x">${X}</span>
+       </div>
+       <div class="bd">${KK}${TAIL}</div>`],
+
+    '나': ['둘 다 본문',
+      '제목만 남기고 여백 20 아래로 내린다. 제목이 혼자 서서 또렷하다. 대신 제목과 이 말 사이가 벌어져 딴 이야기처럼 읽힐 수 있다 — 예전에 그래서 부제로 올렸던 기록이 코드에 있다.',
+      `<div class="hd">
+         <div class="steps"><i class="on"></i><i></i><b>1 / 2</b></div>
+         <p class="ttl">기한을 늘릴 수 있어요</p>
+         <span class="x">${X}</span>
+       </div>
+       <div class="bd"><p class="body">${A} ${B}</p>${KK}${TAIL}</div>`],
+
+    '다': ['갈라서 — 어디서는 부제, 얼마나는 본문',
+      '두 문장이 하는 일이 다르다. 앞은 제목의 「어디서」를 채우니 붙이고, 뒤는 새 사실이니 따로 세운다. 제목 밑이 한 줄로 가벼워지고, 「최대 5년」이 제 덩어리를 갖는다.',
+      `<div class="hd">
+         <div class="steps"><i class="on"></i><i></i><b>1 / 2</b></div>
+         <p class="ttl">기한을 늘릴 수 있어요</p>
+         <p class="dsc">${A}</p>
+         <span class="x">${X}</span>
+       </div>
+       <div class="bd"><p class="body">${B}</p>${KK}${TAIL}</div>`],
+  };
+
+  addEventListener('DOMContentLoaded', () => {
+    const page = document.querySelector('.page');
+    Object.entries(V).forEach(([k, [name, note, html]]) => {
+      const col = document.createElement('div');
+      col.className = 'col';
+      col.innerHTML = `<p class="cap">${k} · ${name}</p><p class="sub">${note}</p>`
+        + `<div class="sheet" id="s${k}">${html}</div><p class="st" id="n${k}"></p>`;
+      page.appendChild(col);
+    });
+    const measure = () => Object.keys(V).forEach((k) => {
+      const el = document.getElementById('s' + k);
+      const t = el.querySelector('.ttl').getBoundingClientRect();
+      const first = el.querySelector('.dsc, .body').getBoundingClientRect();
+      document.getElementById('n' + k).textContent =
+        `시트 ${Math.round(el.getBoundingClientRect().height)}px · 제목에서 안내문까지 ${Math.round(first.top - t.bottom)}px`;
+    });
+    new ResizeObserver(measure).observe(document.body);
+    document.fonts.ready.then(() => requestAnimationFrame(measure));
+    setTimeout(measure, 500); setTimeout(measure, 1400);
+  });
+</script>
+
+<div class="page"></div>

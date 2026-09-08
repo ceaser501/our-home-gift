@@ -20,7 +20,9 @@ const STAGES = {
   rename1: '① 이름 바꾸기',
   rename2: '① - 2 제목이 두 줄일 때',
   spend: '② 금액 입력',
-  extend: '③ 기한 연장 — 긴 제목 + 부제',
+  extend: '③ 기한 연장 — 기한 지남',
+  extend1: '③ - 2 기한 연장 1/2 — 임박',
+  extendbg: '③ - 3 기한 연장 — 뒤에 목록을 깔고',
   photo: '⑥ 원본 사진 — 제목 아래가 값',
   barcode: '⑥ - 2 바코드',
   t16: '⑤ 제목이 16px 인 넷 — 고르개 시트',
@@ -42,6 +44,9 @@ const FAMILY = {
   switchFamily: () => {},
   refresh: () => {},
 };
+
+// 사흘 뒤. 오늘이 언제든 '임박'으로 잡히게 지금 날짜에서 센다.
+const SOON = new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10);
 
 const GIFTICON = {
   id: 1,
@@ -155,6 +160,37 @@ function App() {
       {cur === 'spend' && <SpendSheet gifticon={GIFTICON} onSpend={async () => {}} onClose={reopen} />}
 
       {cur === 'extend' && <ExtendSheet gifticon={GIFTICON} onExtend={async () => {}} onClose={reopen} />}
+
+      {/* 임박한 것 — 두 화면짜리 갈래. 2/2 는 '연장했어요'를 눌러서 본다. */}
+      {/* 뒤에 무엇이 남는지 보려고 목록을 깔아 둔다. 카드의 기한 줄 ⓘ 로 열리는
+          창이라, 실제로는 이 목록이 뒤에 있고 50% 검은 판이 덮인다. */}
+      {cur === 'extendbg' && (
+        <FamilyContext.Provider value={FAMILY}>
+          <ul style={{ listStyle: 'none', margin: 0, padding: 12, display: 'flex',
+                       flexDirection: 'column', gap: 14 }}>
+            {[0, 1, 2, 3, 4].map((i) => (
+              <GifticonCard
+                key={i}
+                gifticon={{ ...GIFTICON, id: i + 1, expires_at: SOON, owner: '태수',
+                            status: 'active', name: i === 2 ? GIFTICON.name : `기프티콘 ${i + 1}` }}
+                onViewCode={() => {}} onViewImage={() => {}} onToggleUsed={() => {}}
+                onEdit={() => {}} onDelete={() => {}} onFindStores={() => {}}
+                onToggleClaim={() => {}} onExtend={() => {}} onSpend={() => {}}
+              />
+            ))}
+          </ul>
+          <ExtendSheet gifticon={{ ...GIFTICON, expires_at: SOON }}
+            onExtend={async () => {}} onClose={reopen} />
+        </FamilyContext.Provider>
+      )}
+
+      {cur === 'extend1' && (
+        <ExtendSheet
+          gifticon={{ ...GIFTICON, expires_at: SOON }}
+          onExtend={async () => {}}
+          onClose={reopen}
+        />
+      )}
 
       {cur === 'photo' && (
         <ImageViewerModal

@@ -1,0 +1,124 @@
+<!doctype html>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>기한 연장 2/2 — 새 날짜를 드러내기</title>
+<script type="module" src="/src/index.css"></script>
+<style>
+  body { margin:0; background:#3a3a44; font-family:Pretendard, system-ui, sans-serif;
+         -webkit-font-smoothing:antialiased; color:#fff; }
+  .page { display:flex; gap:20px; align-items:flex-start; justify-content:center;
+          padding:16px 14px 80px; flex-wrap:wrap; }
+  .col { width:375px; flex:0 0 auto; }
+  .cap { font-size:13px; font-weight:800; margin:0 0 3px; }
+  .sub { color:#b8b8c4; font-size:11px; line-height:1.5; margin:0 0 8px; min-height:76px; }
+  .st  { color:#9d9daa; font-size:10px; font-weight:700; margin:8px 0 0; }
+
+  .sheet { background:var(--background); color:var(--foreground);
+           border-radius:16px 16px 0 0; overflow:hidden; box-shadow:0 -2px 24px rgba(0,0,0,.28); }
+  .hd  { display:flex; flex-direction:column; gap:5px; padding:20px 60px 16px 20px; position:relative; }
+  .ttl { font-size:20px; line-height:1.2; font-weight:700; letter-spacing:-.025em; margin:0;
+         word-break:keep-all; }
+  .x   { position:absolute; top:10px; right:10px; width:44px; height:44px; display:flex;
+         align-items:center; justify-content:center; color:var(--muted-foreground); }
+  .x svg { width:24px; height:24px; }
+  .back { margin:-10px 4px -10px -10px; padding:10px; display:flex; flex:0 0 auto;
+          color:var(--muted-foreground); }
+  .back svg { width:20px; height:20px; }
+  .bd  { padding:0 20px 20px; display:flex; flex-direction:column; gap:14px; }
+  .steps { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+  .steps i { display:block; height:4px; width:22px; border-radius:99px; background:var(--input); }
+  .steps i.on { background:var(--primary); }
+  .steps b { font-size:12px; font-weight:700; color:var(--muted-foreground);
+             font-variant-numeric:tabular-nums; margin-left:4px; }
+
+  .nm   { margin:0; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .now  { margin:0; font-size:13px; font-weight:600; color:var(--muted-foreground);
+          font-variant-numeric:tabular-nums; }
+  .lbl  { margin:0; font-size:12px; font-weight:700; color:var(--muted-foreground); }
+
+  .fld { height:52px; width:100%; box-sizing:border-box; border-radius:8px;
+         border:1px solid var(--input); background:var(--card); padding:0 15px;
+         font-family:inherit; font-weight:700; color:var(--foreground);
+         font-variant-numeric:tabular-nums; transition:border-color .15s, box-shadow .15s; }
+  .fld:focus { border-color:var(--ring); outline:none;
+               box-shadow:0 0 0 2px color-mix(in srgb, var(--ring) 30%, transparent); }
+
+  .help { display:flex; align-items:flex-start; gap:6px; padding-left:4px; margin-top:8px; }
+  .help .i { margin-top:2px; width:16px; height:16px; flex:0 0 auto; border-radius:99px;
+             background:var(--border); color:var(--muted-foreground); font-size:12px;
+             font-weight:700; display:flex; align-items:center; justify-content:center; }
+  .help p { margin:0; flex:1; font-size:12px; line-height:1.6; color:var(--muted-foreground);
+            word-break:keep-all; }
+  .btnP { height:52px; border-radius:8px; border:0; background:var(--primary);
+          color:var(--primary-foreground); font-size:15.5px; font-weight:700;
+          display:flex; align-items:center; justify-content:center; font-family:inherit;
+          margin-top:8px; }
+</style>
+
+<script>
+  const NAME = '카페 아메리카노 T 2잔 + 딸기 생크림 케이크';
+  const X = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+    stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>`;
+  const BACK = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+    stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>`;
+  const HELP = '앱 안의 날짜만 바뀌어요. 실제 기프티콘은 발행처 기준입니다.';
+  const H = `<div class="help"><span class="i">i</span><p>${HELP}</p></div>`;
+
+  const V = {
+    '가': ['지금 — 이름이 제일 굵다',
+      '이름 15 굵은 검정, 날짜 18. 3px 차이인데 이름이 먼저 온다. 이 화면에서 제일 중요한 것은 바뀔 날짜인데 이름이 앞선다.',
+      `<p class="nm" style="font-size:15px;font-weight:700;margin-bottom:6px">${NAME}</p>
+       <p class="now" style="margin-bottom:12px">지금 2026.09.10 까지</p>
+       <input class="fld" type="date" value="2026-12-09" style="font-size:18px" />${H}`],
+
+    '나': ['이름을 낮추고 날짜를 키운다',
+      '이름은 확인용이라 13 회색으로 물러난다. 날짜 칸의 글자를 20 으로 올리면 화면에서 제일 큰 숫자가 된다. 더 얹는 것 없이 무게만 바꾼 것.',
+      `<p class="nm" style="font-size:13px;font-weight:600;color:var(--muted-foreground);margin-bottom:3px">${NAME}</p>
+       <p class="now" style="margin-bottom:12px">지금 2026.09.10 까지</p>
+       <input class="fld" type="date" value="2026-12-09" style="font-size:20px" />${H}`],
+
+    '다': ['나 + 「새 기한」 라벨',
+      '「지금」과 짝이 되게 칸 위에 「새 기한」을 붙인다. 이 시트에는 날짜가 둘이라, 다른 시트에서 라벨을 걷은 것과 사정이 다르다 — 어느 쪽이 새것인지 말해줄 것이 필요하다.',
+      `<p class="nm" style="font-size:13px;font-weight:600;color:var(--muted-foreground);margin-bottom:3px">${NAME}</p>
+       <p class="now" style="margin-bottom:12px">지금 2026.09.10 까지</p>
+       <p class="lbl" style="margin-bottom:6px">새 기한</p>
+       <input class="fld" type="date" value="2026-12-09" style="font-size:20px" />${H}`],
+
+    '라': ['다 + 얼마나 늘어나는지',
+      '칸 아래에 「90일 늘어나요」를 얹는다. 날짜만으로는 얼마나 늘어나는지 세어봐야 아는데, 발행처에서 들은 기간과 맞춰보는 자리가 여기다.',
+      `<p class="nm" style="font-size:13px;font-weight:600;color:var(--muted-foreground);margin-bottom:3px">${NAME}</p>
+       <p class="now" style="margin-bottom:12px">지금 2026.09.10 까지</p>
+       <p class="lbl" style="margin-bottom:6px">새 기한</p>
+       <input class="fld" type="date" value="2026-12-09" style="font-size:20px" />
+       <p style="margin:7px 0 0;padding-left:2px;font-size:13px;font-weight:700;color:var(--primary)">90일 늘어나요</p>
+       ${H}`],
+  };
+
+  addEventListener('DOMContentLoaded', () => {
+    const page = document.querySelector('.page');
+    Object.entries(V).forEach(([k, [name, note, inner]]) => {
+      const col = document.createElement('div');
+      col.className = 'col';
+      col.innerHTML = `<p class="cap">${k} · ${name}</p><p class="sub">${note}</p>`
+        + `<div class="sheet" id="s${k}">
+             <div class="hd">
+               <div class="steps"><span class="back">${BACK}</span><i></i><i class="on"></i><b>2 / 2</b></div>
+               <p class="ttl">늘어난 기한을<br>앱에도 반영할게요</p><span class="x">${X}</span>
+             </div>
+             <div class="bd"><div>${inner}</div>
+               <button class="btnP">2026.12.09까지로 바꾸기</button></div>
+           </div>`
+        + `<p class="st" id="n${k}"></p>`;
+      page.appendChild(col);
+    });
+    const measure = () => Object.keys(V).forEach((k) => {
+      document.getElementById('n' + k).textContent =
+        `시트 ${Math.round(document.getElementById('s' + k).getBoundingClientRect().height)}px`;
+    });
+    new ResizeObserver(measure).observe(document.body);
+    document.fonts.ready.then(() => requestAnimationFrame(measure));
+    setTimeout(measure, 500); setTimeout(measure, 1400);
+  });
+</script>
+
+<div class="page"></div>

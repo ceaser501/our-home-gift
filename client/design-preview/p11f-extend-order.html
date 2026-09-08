@@ -1,0 +1,186 @@
+<!doctype html>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>기한 연장 — 읽는 순서</title>
+<script type="module" src="/src/index.css"></script>
+<style>
+  body { margin:0; background:#3a3a44; font-family:Pretendard, system-ui, sans-serif;
+         -webkit-font-smoothing:antialiased; color:#fff; }
+  .page { display:flex; gap:20px; align-items:flex-start; justify-content:center;
+          padding:16px 14px 80px; flex-wrap:wrap; }
+  .col { width:375px; flex:0 0 auto; }
+  .cap { font-size:13px; font-weight:800; margin:0 0 3px; }
+  .sub { color:#b8b8c4; font-size:11px; line-height:1.5; margin:0 0 8px; min-height:76px; }
+  .st  { color:#9d9daa; font-size:10px; font-weight:700; margin:14px 0 4px; }
+
+  .sheet { background:var(--background); color:var(--foreground);
+           border-radius:16px 16px 0 0; overflow:hidden; box-shadow:0 -2px 24px rgba(0,0,0,.28);
+           position:relative; }
+  .hd  { display:flex; flex-direction:column; gap:5px; padding:20px 60px 16px 20px; position:relative; }
+  .ttl { font-size:20px; line-height:1.2; font-weight:700; letter-spacing:-.025em; margin:0;
+         word-break:keep-all; }
+  .dsc { margin:0; font-size:14px; line-height:1.5; font-weight:500; color:var(--muted-foreground);
+         word-break:keep-all; }
+  .x   { position:absolute; top:10px; right:10px; width:44px; height:44px; display:flex;
+         align-items:center; justify-content:center; color:var(--muted-foreground); }
+  .x svg { width:24px; height:24px; }
+  .bd  { padding:0 20px 20px; display:flex; flex-direction:column; gap:14px; }
+  .steps { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+  .steps i { display:block; height:4px; width:22px; border-radius:99px; background:var(--input); }
+  .steps i.on { background:var(--primary); }
+  .steps b { font-size:12px; font-weight:700; color:var(--muted-foreground);
+             font-variant-numeric:tabular-nums; margin-left:4px; }
+
+  .dd { flex:0 0 auto; border-radius:99px; padding:2px 8px; font-size:12px; font-weight:700;
+        font-variant-numeric:tabular-nums; background:var(--destructive); color:#fff; line-height:1.4; }
+  .nm { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .bx { background:color-mix(in srgb, var(--secondary) 60%, transparent);
+        border-radius:8px; padding:12px 14px; display:flex; align-items:center; gap:8px; }
+  .bx .nm { font-size:15px; font-weight:700; }
+  /* 확인용으로 물러난 대상 — 상자 없이 작게 */
+  .quiet { display:flex; align-items:center; gap:6px; font-size:13px; font-weight:500;
+           color:var(--muted-foreground); }
+  .quiet .nm { font-size:13px; font-weight:600; }
+  .quiet .dd { font-size:11px; padding:1px 7px; }
+
+  .body { margin:0; font-size:14px; line-height:1.6; font-weight:500;
+          color:var(--muted-foreground); word-break:keep-all; }
+  .kk { display:flex; align-items:center; gap:12px; border:1px solid var(--border);
+        border-radius:8px; padding:13px 14px; }
+  .kk .t { font-size:15px; font-weight:700; word-break:keep-all; display:block; }
+  .kk .s { font-size:14px; font-weight:500; color:var(--muted-foreground); margin-top:2px; display:block; }
+  .kk .go { flex:0 0 auto; display:flex; align-items:center; gap:5px; font-size:14px;
+            font-weight:600; color:var(--primary); }
+  .kk .go svg { width:14px; height:14px; }
+  .dates { background:color-mix(in srgb, var(--secondary) 60%, transparent);
+           border-radius:8px; padding:15px 16px; display:flex; align-items:center; gap:12px; }
+  .btnP { height:52px; border-radius:8px; border:0; background:var(--primary);
+          color:var(--primary-foreground); font-size:15.5px; font-weight:700;
+          display:flex; align-items:center; justify-content:center; font-family:inherit; }
+  .acts { display:flex; flex-direction:column; gap:8px; margin-top:8px; }
+  .tab { font-variant-numeric:tabular-nums; }
+  .mut { color:var(--muted-foreground); }
+
+  /* 읽는 순서 표시 */
+  .ord { position:absolute; left:-9px; width:20px; height:20px; border-radius:99px;
+         background:#5b4fe8; color:#fff; font-size:11px; font-weight:800; display:flex;
+         align-items:center; justify-content:center; z-index:2; }
+  .anchor { position:relative; }
+</style>
+
+<script>
+  const NAME = '카페 아메리카노 T 2잔 + 딸기 생크림 케이크';
+  const X = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+    stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>`;
+  const LINK = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+    stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>`;
+
+  const KK = `
+    <div class="kk">
+      <span style="flex:1;min-width:0">
+        <span class="t">카카오톡 선물하기 상품인가요?</span>
+        <span class="s">선물함에서 바로 연장할 수 있어요</span>
+      </span>
+      <span class="go">열기 ${LINK}</span>
+    </div>`;
+
+  const DATES = `
+    <div class="dates">
+      <span style="display:flex;flex-direction:column;gap:3px">
+        <span class="mut" style="font-size:12px;font-weight:600">지금</span>
+        <span class="mut tab" style="font-size:15px;font-weight:600;text-decoration:line-through">2026.09.10</span>
+      </span>
+      <span style="flex:1;text-align:center;font-size:16px" class="mut">→</span>
+      <span style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">
+        <span style="font-size:12px;font-weight:700;color:var(--primary)">변경 후</span>
+        <span class="tab" style="font-size:20px;font-weight:700;letter-spacing:-.025em">2026.12.09</span>
+      </span></div>`;
+
+  const V = {
+    '가': ['지금 시안 — 순서가 뒤집혔다',
+      '제목이 조건절이라 「늘릴 수 있다」는 사실을 아무도 말하지 않는다. 대신 제일 안 중요한 상품명이 채운 상자로 둘째 자리에 앉아 있다.',
+      `<div class="hd">
+         <div class="steps"><i class="on"></i><i></i><b>1 / 2</b></div>
+         <div class="anchor"><span class="ord" style="top:2px">1</span><p class="ttl">기한을 늘리시려면</p></div>
+         <span class="x">${X}</span>
+       </div>
+       <div class="bd">
+         <div class="anchor"><span class="ord" style="top:11px">2</span>
+           <div class="bx"><span class="dd">D-2</span><span class="nm">${NAME}</span></div></div>
+         <div class="anchor"><span class="ord" style="top:2px">3</span>
+           <p class="body">받으신 문자나 발행처 앱에서 연장할 수 있어요. 보통 90일씩, 최대 5년까지요.</p></div>
+         <div class="anchor"><span class="ord" style="top:22px">4</span>${KK}</div>
+         <div class="acts"><button class="btnP">연장했어요</button></div>
+       </div>`],
+
+    '나': ['순서대로 — 사실을 먼저',
+      '제목이 「아직 늘릴 수 있어요」로 사실을 말하고, 부제가 얼마나·어디서를 잇는다. 상품명은 확인용이라 상자를 벗고 버튼 바로 위로 내려간다 — 누르기 직전에 한 번 보는 자리다.',
+      `<div class="hd">
+         <div class="steps"><i class="on"></i><i></i><b>1 / 2</b></div>
+         <div class="anchor"><span class="ord" style="top:2px">1</span><p class="ttl">아직 늘릴 수 있어요</p></div>
+         <div class="anchor"><span class="ord" style="top:1px">2</span>
+           <p class="dsc">받으신 문자나 발행처 앱에서요. 보통 90일씩, 최대 5년까지 늘어납니다.</p></div>
+         <span class="x">${X}</span>
+       </div>
+       <div class="bd">
+         <div class="anchor"><span class="ord" style="top:22px">3</span>${KK}</div>
+         <div class="anchor" style="margin-top:2px"><span class="ord" style="top:1px">4</span>
+           <p class="quiet"><span class="dd">D-2</span><span class="nm">${NAME}</span></p></div>
+         <div class="acts" style="margin-top:2px"><button class="btnP">연장했어요</button></div>
+       </div>`],
+  };
+
+  const TWO = {
+    '가': ['지금 시안',
+      '상품명이 날짜보다 위에 있다. 이 화면에서 제일 중요한 것은 바뀔 날짜인데 그 앞을 확인용이 막고 있다.',
+      `<div class="hd">
+         <div class="steps"><i></i><i class="on"></i><b>2 / 2</b></div>
+         <p class="ttl">늘어난 기한을<br>앱에도 반영할게요</p><span class="x">${X}</span>
+       </div>
+       <div class="bd">
+         <div class="anchor"><span class="ord" style="top:11px">2</span>
+           <div class="bx"><span class="dd">D-2</span><span class="nm">${NAME}</span></div></div>
+         <div class="anchor"><span class="ord" style="top:22px">1</span>${DATES}</div>
+         <p class="body" style="font-size:12px">앱 안의 날짜만 바뀌어요. 실제 기프티콘은 발행처 기준입니다.</p>
+         <div class="acts"><button class="btnP">2026.12.09까지로 바꾸기</button></div>
+       </div>`],
+
+    '나': ['순서대로',
+      '날짜가 먼저 오고, 상품명은 그 아래에서 조용히 「이 기프티콘 맞다」를 말한다. 주의문은 버튼 바로 위에 남는다 — 누르기 전에 읽어야 하는 말이라서다.',
+      `<div class="hd">
+         <div class="steps"><i></i><i class="on"></i><b>2 / 2</b></div>
+         <p class="ttl">늘어난 기한을<br>앱에도 반영할게요</p><span class="x">${X}</span>
+       </div>
+       <div class="bd">
+         <div class="anchor"><span class="ord" style="top:22px">1</span>${DATES}</div>
+         <div class="anchor"><span class="ord" style="top:1px">2</span>
+           <p class="quiet"><span class="nm">${NAME}</span></p></div>
+         <div class="anchor"><span class="ord" style="top:1px">3</span>
+           <p class="body" style="font-size:12px">앱 안의 날짜만 바뀌어요. 실제 기프티콘은 발행처 기준입니다.</p></div>
+         <div class="acts"><button class="btnP">2026.12.09까지로 바꾸기</button></div>
+       </div>`],
+  };
+
+  addEventListener('DOMContentLoaded', () => {
+    const page = document.querySelector('.page');
+    Object.entries(V).forEach(([k, [name, note, html]]) => {
+      const col = document.createElement('div');
+      col.className = 'col';
+      col.innerHTML = `<p class="cap">${k} · ${name}</p><p class="sub">${note}</p>`
+        + `<p class="st">1 / 2</p><div class="sheet" id="a${k}">${html}</div>`
+        + `<p class="st">2 / 2 — ${TWO[k][0]}</p><div class="sheet" id="b${k}">${TWO[k][2]}</div>`
+        + `<p class="st" id="n${k}"></p>`;
+      page.appendChild(col);
+    });
+    const measure = () => Object.keys(V).forEach((k) => {
+      const a = document.getElementById('a' + k).getBoundingClientRect().height;
+      const b = document.getElementById('b' + k).getBoundingClientRect().height;
+      document.getElementById('n' + k).textContent = `1/2 ${Math.round(a)}px · 2/2 ${Math.round(b)}px`;
+    });
+    new ResizeObserver(measure).observe(document.body);
+    document.fonts.ready.then(() => requestAnimationFrame(measure));
+    setTimeout(measure, 500); setTimeout(measure, 1400);
+  });
+</script>
+
+<div class="page"></div>
