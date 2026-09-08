@@ -1,0 +1,86 @@
+<!doctype html>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>고르개 시트 — 줄의 크기</title>
+<script type="module" src="/src/index.css"></script>
+<style>
+  body { margin:0; background:#3a3a44; font-family:Pretendard, system-ui, sans-serif;
+         -webkit-font-smoothing:antialiased; color:#fff; }
+  .page { display:flex; gap:20px; align-items:flex-start; justify-content:center;
+          padding:16px 14px 80px; flex-wrap:wrap; }
+  .col { width:375px; flex:0 0 auto; }
+  .cap { font-size:13px; font-weight:800; margin:0 0 3px; }
+  .sub { color:#b8b8c4; font-size:11px; line-height:1.5; margin:0 0 8px; min-height:74px; }
+  .st  { color:#9d9daa; font-size:10px; font-weight:700; margin:8px 0 0;
+         font-variant-numeric:tabular-nums; }
+  .two { color:#9d9daa; font-size:10px; font-weight:700; margin:14px 0 4px; }
+
+  .sheet { background:var(--background); color:var(--foreground);
+           border-radius:16px 16px 0 0; overflow:hidden; box-shadow:0 -2px 24px rgba(0,0,0,.28); }
+  .hd  { padding:20px 60px 20px 20px; position:relative; }
+  .ttl { font-size:20px; line-height:1.2; font-weight:700; letter-spacing:-.025em; margin:0; }
+  .x   { position:absolute; top:10px; right:10px; width:44px; height:44px; display:flex;
+         align-items:center; justify-content:center; color:var(--muted-foreground); }
+  .x svg { width:24px; height:24px; }
+  .bd  { padding:0 20px 20px; display:flex; flex-direction:column; }
+
+  .row { display:flex; align-items:center; gap:12px; padding:0 4px; text-align:left;
+         border:0; background:none; font-family:inherit; width:100%; }
+  .row span { flex:1; }
+  .row svg { width:18px; height:18px; color:var(--primary); flex:0 0 auto; }
+  .row.on span { font-weight:600; color:var(--primary); }
+  .row span { color:var(--foreground); }
+</style>
+
+<script>
+  const X = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+    stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>`;
+  const CK = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"
+    stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>`;
+
+  // [글자, 위아래 여백]
+  const V = {
+    '가': ['지금 — 14 · 여백 12', 14, 12,
+      '줄 높이 45 에 글자 14. 글자가 줄의 31% 만 채워서 띄엄띄엄해 보인다. 고르는 항목인데 설명글과 같은 크기다.'],
+    '나': ['글자만 16 으로', 16, 12,
+      '고르는 항목이니 본문보다 한 단 위(callout). 줄 높이는 그대로라 채워지는 비율이 는다.'],
+    '다': ['여백만 10 으로', 14, 10,
+      '글자는 그대로 두고 줄을 좁힌다. 빽빽해지지만 글자는 여전히 작다.'],
+    '라': ['글자 16 · 여백 10', 16, 10,
+      '둘 다. 고르는 것이 또렷해지고 셋이 한 덩어리로 모인다.'],
+  };
+
+  const LIST = ['전체', '사용 전', '사용 완료'];
+
+  addEventListener('DOMContentLoaded', () => {
+    const page = document.querySelector('.page');
+    Object.entries(V).forEach(([k, [name, fs, pad, note]]) => {
+      const rows = LIST.map((t, i) => `
+        <button class="row${i === 1 ? ' on' : ''}" style="font-size:${fs}px;padding-top:${pad}px;padding-bottom:${pad}px">
+          <span>${t}</span>${i === 1 ? CK : ''}
+        </button>`).join('');
+      const col = document.createElement('div');
+      col.className = 'col';
+      col.innerHTML = `<p class="cap">${k} · ${name}</p><p class="sub">${note}</p>
+        <div class="sheet" id="s${k}">
+          <div class="hd"><p class="ttl">어떤 기프티콘을 볼까요?</p><span class="x">${X}</span></div>
+          <div class="bd">${rows}</div>
+        </div>
+        <p class="st" id="n${k}"></p>`;
+      page.appendChild(col);
+    });
+    const measure = () => Object.keys(V).forEach((k) => {
+      const el = document.getElementById('s' + k);
+      const r = el.querySelector('.row').getBoundingClientRect();
+      const fs = parseFloat(getComputedStyle(el.querySelector('.row')).fontSize);
+      document.getElementById('n' + k).textContent =
+        `시트 ${Math.round(el.getBoundingClientRect().height)}px · 줄 ${Math.round(r.height)}px`
+        + ` · 글자가 줄을 채우는 비율 ${Math.round((fs / r.height) * 100)}%`;
+    });
+    new ResizeObserver(measure).observe(document.body);
+    document.fonts.ready.then(() => requestAnimationFrame(measure));
+    setTimeout(measure, 500); setTimeout(measure, 1400);
+  });
+</script>
+
+<div class="page"></div>

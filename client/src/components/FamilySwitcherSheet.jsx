@@ -1,40 +1,45 @@
-import { useState } from 'react';
-import { Check, ChevronRight, Clock, Home } from 'lucide-react';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { useFamily } from '../FamilyContext';
-import { createFamily, requestJoinFamily } from '../family';
-import { forgetInviteCode } from '../utils/inviteLink';
-import { cn } from '@/lib/utils';
-import useBackClose from '../utils/useBackClose';
+import { useState } from "react";
+import { Check, ChevronRight, Clock, Home } from "lucide-react";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useFamily } from "../FamilyContext";
+import { createFamily, requestJoinFamily } from "../family";
+import { forgetInviteCode } from "../utils/inviteLink";
+import { cn } from "@/lib/utils";
+import useBackClose from "../utils/useBackClose";
 
 // 보는 가족을 바꾸는 창. 한 사람이 여러 가족에 속할 수 있어서(연인끼리 하나, 부모님과 하나)
 // 여기서 오가며 본다.
 //
 // 새 가족을 만들거나 초대 코드로 들어가는 것도 이 창 안에서 화면만 바꿔 처리한다.
 // 창을 하나 더 띄우면 목록 위에 창이 두 겹 쌓여서, 어디까지 닫아야 하는지 헷갈린다.
-export default function FamilySwitcherSheet({ onClose, initialCode = '' }) {
+export default function FamilySwitcherSheet({ onClose, initialCode = "" }) {
   // 뒤로가기로 이 창을 닫는다. 안 그러면 설치해서 쓸 때 앱이 통째로 꺼진다.
   useBackClose(onClose);
   const { families, family, members, user, switchFamily } = useFamily();
-  const myName = members.find((m) => m.user_id === user.id)?.display_name || '';
+  const myName = members.find((m) => m.user_id === user.id)?.display_name || "";
 
   // 초대 링크를 눌러 온 사람에게는 참여 칸을 이미 열어 코드까지 채워서 보여준다.
   // 그러라고 링크를 만든 것이다 — 목록을 보여주고 '가족 추가하기'를 찾게 하면 걸음이
   // 도로 늘어난다.
-  const [mode, setMode] = useState(initialCode ? 'join' : 'list'); // list | create | join
+  const [mode, setMode] = useState(initialCode ? "join" : "list"); // list | create | join
   // 빈 칸으로 시작한다.
   //
   // 예전에는 가족 이름에 '우리집', 내 이름에 지금 쓰는 이름을 미리 넣어뒀다. 새 가족을
   // 만드는 화면인데 이미 쓰고 있는 가족의 값이 적혀 있으면, 그대로 눌러 똑같은 이름의
   // 가족이 하나 더 생긴다. 무엇을 적어야 하는지는 아래 예시(placeholder)가 말한다.
-  const [familyName, setFamilyName] = useState('');
-  const [memberName, setMemberName] = useState('');
+  const [familyName, setFamilyName] = useState("");
+  const [memberName, setMemberName] = useState("");
   const [code, setCode] = useState(initialCode);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [pendingFor, setPendingFor] = useState(null);
 
   async function pick(id) {
@@ -50,10 +55,13 @@ export default function FamilySwitcherSheet({ onClose, initialCode = '' }) {
     e.preventDefault();
     if (submitting) return;
     setSubmitting(true);
-    setError('');
+    setError("");
     try {
-      if (mode === 'create') {
-        const created = await createFamily(familyName.trim(), memberName.trim());
+      if (mode === "create") {
+        const created = await createFamily(
+          familyName.trim(),
+          memberName.trim(),
+        );
         await switchFamily(created.id);
         onClose();
         return;
@@ -63,7 +71,7 @@ export default function FamilySwitcherSheet({ onClose, initialCode = '' }) {
       const result = await requestJoinFamily(code.trim(), memberName.trim());
       // 링크로 들고 온 코드는 다 썼다. 남겨두면 다음에 앱을 열 때 또 이 창이 열린다.
       forgetInviteCode();
-      if (result.status === 'joined') {
+      if (result.status === "joined") {
         await switchFamily(result.family_id);
         onClose();
         return;
@@ -71,12 +79,23 @@ export default function FamilySwitcherSheet({ onClose, initialCode = '' }) {
       setPendingFor(result.family_name);
       setSubmitting(false);
     } catch (err) {
-      setError(err.message || (mode === 'create' ? '가족을 만들지 못했어요.' : '초대 코드로 참여하지 못했어요.'));
+      setError(
+        err.message ||
+          (mode === "create"
+            ? "가족을 만들지 못했어요."
+            : "초대 코드로 참여하지 못했어요."),
+      );
       setSubmitting(false);
     }
   }
 
-  const title = pendingFor ? '승인을 기다리는 중' : mode === 'create' ? '새 가족 만들기' : mode === 'join' ? '초대 코드로 참여' : '가족 바꾸기';
+  const title = pendingFor
+    ? "승인을 기다리는 중"
+    : mode === "create"
+      ? "새 가족 만들기"
+      : mode === "join"
+        ? "초대 코드로 참여"
+        : "가족 바꾸기";
 
   return (
     <Sheet open onOpenChange={(open) => !open && onClose()}>
@@ -88,19 +107,22 @@ export default function FamilySwitcherSheet({ onClose, initialCode = '' }) {
         {pendingFor ? (
           <div className="flex flex-col items-center gap-3 px-8 py-8 text-center">
             <Clock className="size-7 text-primary" />
-            <p className="m-0 text-base font-semibold text-foreground">'{pendingFor}'에 참여를 신청했어요</p>
-            <p className="m-0 text-sm leading-relaxed break-keep text-muted-foreground">
-              그 가족의 구성원이 승인하면 목록에 나타나요. 초대 코드를 알려준 분에게 확인해달라고 말씀해주세요.
+            <p className="m-0 text-callout font-semibold text-foreground">
+              '{pendingFor}'에 참여를 신청했어요
+            </p>
+            <p className="m-0 text-body leading-relaxed break-keep text-muted-foreground">
+              그 가족의 구성원이 승인하면 목록에 나타나요. 초대 코드를 알려준
+              분에게 확인해달라고 말씀해주세요.
             </p>
             <Button className="mt-1 w-full rounded-xl" onClick={onClose}>
               알겠어요
             </Button>
           </div>
-        ) : mode === 'list' ? (
+        ) : mode === "list" ? (
           <>
             {/* 이 창을 처음 여는 사람에게는 이 한 줄이 창 전체의 설명이다. 다른 회색
                 글씨와 같은 크기로 두면 그냥 지나친다. 한 단 키워둔다. */}
-            <p className="m-0 px-5 pb-2 text-sm break-keep text-muted-foreground">
+            <p className="m-0 px-5 pb-2 text-body break-keep text-muted-foreground">
               기프티콘은 가족마다 따로 모여요. 보고 싶은 가족을 고르세요.
             </p>
 
@@ -117,33 +139,46 @@ export default function FamilySwitcherSheet({ onClose, initialCode = '' }) {
                       type="button"
                       onClick={() => pick(item.id)}
                       className={cn(
-                        'flex w-full items-center gap-3 rounded-2xl p-3.5 text-left transition-colors',
-                        isCurrent ? 'border-[1.5px] border-primary bg-primary/4' : 'border border-border bg-card'
+                        "flex w-full items-center gap-3 rounded-2xl p-3.5 text-left transition-colors",
+                        isCurrent
+                          ? "border-[1.5px] border-primary bg-primary/4"
+                          : "border border-border bg-card",
                       )}
                     >
                       <span
                         className={cn(
-                          'flex size-11 shrink-0 items-center justify-center rounded-lg',
-                          isCurrent ? 'bg-primary' : 'bg-secondary'
+                          "flex size-11 shrink-0 items-center justify-center rounded-lg",
+                          isCurrent ? "bg-primary" : "bg-secondary",
                         )}
                       >
                         <Home
-                          className={cn('size-5', isCurrent ? 'text-primary-foreground' : 'text-muted-foreground')}
+                          className={cn(
+                            "size-5",
+                            isCurrent
+                              ? "text-primary-foreground"
+                              : "text-muted-foreground",
+                          )}
                           strokeWidth={2.1}
                         />
                       </span>
                       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                        <span className="truncate text-base font-semibold text-foreground">
+                        <span className="truncate text-callout font-semibold text-foreground">
                           {item.name}
                         </span>
                         <span className="text-caption font-medium text-muted-foreground">
-                          {isCurrent ? '지금 보는 중' : '눌러서 바꾸기'}
+                          {isCurrent ? "지금 보는 중" : "눌러서 바꾸기"}
                         </span>
                       </div>
                       {isCurrent ? (
-                        <Check className="size-5 shrink-0 text-primary" strokeWidth={2.6} />
+                        <Check
+                          className="size-5 shrink-0 text-primary"
+                          strokeWidth={2.6}
+                        />
                       ) : (
-                        <ChevronRight className="size-4 shrink-0 text-muted-foreground/70" strokeWidth={2.2} />
+                        <ChevronRight
+                          className="size-4 shrink-0 text-muted-foreground/70"
+                          strokeWidth={2.2}
+                        />
                       )}
                     </button>
                   </li>
@@ -157,31 +192,33 @@ export default function FamilySwitcherSheet({ onClose, initialCode = '' }) {
                 '이름 바꾸기'도 뺐다. 목록의 세 번째 항목처럼 보여서, 누르면 가족이 바뀔 것처럼
                 읽혔다. 이름 바꾸기는 가족 관리 안에 있다. */}
             <div className="mt-4 flex flex-col gap-2 px-5">
-              <p className="m-0 px-0.5 text-body font-bold text-muted-foreground">가족 추가하기</p>
+              <p className="m-0 px-0.5 text-body font-bold text-muted-foreground">
+                가족 추가하기
+              </p>
               <div className="flex gap-2">
                 <Button
                   variant="outline"
-                  className="h-12 flex-1 rounded-xl text-[14.5px] font-semibold"
+                  className="h-12 flex-1 rounded-xl text-body font-semibold"
                   onClick={() => {
-                    setError('');
+                    setError("");
                     // 반대쪽에서 적다 만 값이 남아 있지 않게 한다.
-                    setFamilyName('');
-                    setCode('');
-                    setMemberName('');
-                    setMode('create');
+                    setFamilyName("");
+                    setCode("");
+                    setMemberName("");
+                    setMode("create");
                   }}
                 >
                   새로 만들기
                 </Button>
                 <Button
                   variant="outline"
-                  className="h-12 flex-1 rounded-xl text-[14.5px] font-semibold"
+                  className="h-12 flex-1 rounded-xl text-body font-semibold"
                   onClick={() => {
-                    setError('');
-                    setFamilyName('');
-                    setCode('');
-                    setMemberName('');
-                    setMode('join');
+                    setError("");
+                    setFamilyName("");
+                    setCode("");
+                    setMemberName("");
+                    setMode("join");
                   }}
                 >
                   초대 코드로 참여
@@ -191,7 +228,7 @@ export default function FamilySwitcherSheet({ onClose, initialCode = '' }) {
           </>
         ) : (
           <form onSubmit={submit} className="flex flex-col gap-3 px-5 pt-2">
-            {mode === 'create' ? (
+            {mode === "create" ? (
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="switch-fam-name">가족 이름</Label>
                 {/* autoComplete="off": 예전에 적었던 값이 아래로 뜨지 않게 한다. */}
@@ -216,7 +253,7 @@ export default function FamilySwitcherSheet({ onClose, initialCode = '' }) {
                   placeholder="6자리 코드"
                   /* 고정폭 글꼴과 넓은 자간은 값이 들어온 뒤에만 쓴다. 빈 칸에 미리 걸면
                      예시 문구가 이미 적힌 코드처럼 보인다. */
-                  className={cn('uppercase', code && 'font-mono tracking-code')}
+                  className={cn("uppercase", code && "font-mono tracking-code")}
                   maxLength={6}
                   autoComplete="off"
                   autoFocus
@@ -238,19 +275,31 @@ export default function FamilySwitcherSheet({ onClose, initialCode = '' }) {
               />
             </div>
 
-            {error && <p className="m-0 text-sm text-destructive">{error}</p>}
+            {error && <p className="m-0 text-body text-destructive">{error}</p>}
 
             <div className="flex gap-2 pt-1">
-              <Button type="button" variant="outline" className="flex-1 rounded-xl" onClick={() => setMode('list')}>
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1 rounded-xl"
+                onClick={() => setMode("list")}
+              >
                 뒤로
               </Button>
-              <Button type="submit" className="flex-1 rounded-xl" disabled={submitting}>
-                {submitting ? '잠시만요…' : mode === 'create' ? '만들기' : '참여하기'}
+              <Button
+                type="submit"
+                className="flex-1 rounded-xl"
+                disabled={submitting}
+              >
+                {submitting
+                  ? "잠시만요…"
+                  : mode === "create"
+                    ? "만들기"
+                    : "참여하기"}
               </Button>
             </div>
           </form>
         )}
-
       </SheetContent>
     </Sheet>
   );

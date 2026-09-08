@@ -1,11 +1,31 @@
-import { useEffect, useRef, useState } from 'react';
-import { CheckCircle2, Heart, Info, MapPin, MoreVertical, Pencil, RotateCcw, Ticket, Trash2 } from 'lucide-react';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { formatDday, formatDate, formatDateShortYear, ddayUrgency } from '../utils/date';
-import { nameTagColorClass, tagColorClass } from '../utils/tagColor';
-import { cn } from '@/lib/utils';
-import { useFamily } from '../FamilyContext';
-import useBackClose from '../utils/useBackClose';
+import { useEffect, useRef, useState } from "react";
+import {
+  CheckCircle2,
+  Heart,
+  Info,
+  MapPin,
+  MoreVertical,
+  Pencil,
+  RotateCcw,
+  Ticket,
+  Trash2,
+} from "lucide-react";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import {
+  formatDday,
+  formatDate,
+  formatDateShortYear,
+  ddayUrgency,
+} from "../utils/date";
+import { nameTagColorClass, tagColorClass } from "../utils/tagColor";
+import { cn } from "@/lib/utils";
+import { useFamily } from "../FamilyContext";
+import useBackClose from "../utils/useBackClose";
 
 // 카드 아래 한 줄로 붙는 버튼들. 폭을 똑같이 나눠 가져서 누르기 쉽다.
 //
@@ -14,7 +34,8 @@ import useBackClose from '../utils/useBackClose';
 // 보였다. 원래대로 칸을 구분선으로만 나눈다 — 카드 폭을 끝까지 쓰는 쪽이 넓다.
 //
 // 대신 높이를 44px로 올렸다. 손가락 하나가 온전히 들어가는 크기다.
-const BAR_BUTTON = 'flex h-11 flex-1 items-center justify-center gap-1.5 text-body font-semibold';
+const BAR_BUTTON =
+  "flex h-11 flex-1 items-center justify-center gap-1.5 text-body font-semibold";
 
 // 카드의 ⋮ 메뉴. 따로 떼어낸 이유가 둘 있다.
 //
@@ -54,7 +75,7 @@ function CardMenuSheet({ gifticon, onClose, onEdit, onDelete }) {
           <button
             type="button"
             onClick={() => choose(onEdit)}
-            className="flex w-full items-center gap-3 px-1 py-3 text-left text-sm text-foreground"
+            className="flex w-full items-center gap-3 px-1 py-2.5 text-left text-callout text-foreground"
           >
             <Pencil className="size-4.5 text-muted-foreground" />
             수정
@@ -62,7 +83,7 @@ function CardMenuSheet({ gifticon, onClose, onEdit, onDelete }) {
           <button
             type="button"
             onClick={() => choose(onDelete)}
-            className="flex w-full items-center gap-3 px-1 py-3 text-left text-sm text-destructive"
+            className="flex w-full items-center gap-3 px-1 py-2.5 text-left text-callout text-destructive"
           >
             <Trash2 className="size-4.5" />
             삭제
@@ -89,29 +110,33 @@ export default function GifticonCard({
   // 뒤로가기 처리는 CardMenuSheet가 직접 한다. 여기서도 걸면 표시가 두 번 쌓여서
   // 뒤로가기를 두 번 눌러야 창이 닫힌다.
   const [menuOpen, setMenuOpen] = useState(false);
-  const isUsed = gifticon.status === 'used';
-  const urgency = isUsed ? 'none' : ddayUrgency(gifticon.expires_at);
+  const isUsed = gifticon.status === "used";
+  const urgency = isUsed ? "none" : ddayUrgency(gifticon.expires_at);
   // 이름표 색은 가족에 들어올 때 정해진 번호(tag_color)를 쓴다. 목록에서 몇 번째냐로
   // 정하면 누가 빠졌을 때 남은 사람들 색이 밀린다. 아직 번호가 없는(예전) 데이터는
   // 예전과 같은 순서 기준으로 보여준다.
-  const ownerIndex = members.findIndex((m) => m.display_name === gifticon.owner);
+  const ownerIndex = members.findIndex(
+    (m) => m.display_name === gifticon.owner,
+  );
   // 지금 가족에 있는 사람은 그 사람의 색 번호를, 없는 이름(나간 사람 등)은 이름에서 뽑은
   // 색을 쓴다. 전부 회색으로 뭉개면 목록에서 누구 것인지 구분이 사라진다.
   const ownerDotClass =
     tagColorClass(members[ownerIndex]?.tag_color ?? ownerIndex) ||
     nameTagColorClass(gifticon.owner) ||
-    'bg-muted-foreground';
+    "bg-muted-foreground";
 
   // 이미 쓴 것과 기한이 지난 것은 매장에서 쓸 수 없으니 바코드를 열지 않는다.
   // 둘은 "이제 못 쓰는 것"이라는 점에서 같아서, 흐리게 깔고 목록 아래로 내리는 것까지
   // 같이 간다. 기한이 지난 것만 멀쩡한 얼굴로 맨 위에 있으면 쓸 수 있는 줄 안다.
-  const isExpired = urgency === 'expired';
+  const isExpired = urgency === "expired";
   const codeLocked = isUsed || isExpired;
   // 열 바코드가 실제로 있는지. 없는데 띠를 붙이면 눌러보고 나서야 없는 걸 알게 된다.
-  const canOpenCode = !codeLocked && Boolean(gifticon.code || gifticon.barcode_image_url);
+  const canOpenCode =
+    !codeLocked && Boolean(gifticon.code || gifticon.barcode_image_url);
   const photoCount = gifticon.image_urls?.filter(Boolean).length ?? 0;
   // 기한이 급한 것과 이미 지난 것만 연장 안내를 열 수 있다. 넉넉한 것은 아직 할 일이 없다.
-  const canExtend = !isUsed && Boolean(gifticon.expires_at) && urgency !== 'normal';
+  const canExtend =
+    !isUsed && Boolean(gifticon.expires_at) && urgency !== "normal";
   // 금액권은 쓴 만큼 깎아 나간다. 잔액이 남아 있으면 아직 쓸 수 있는 돈이라 사용완료가 아니다.
   const isVoucher = Boolean(gifticon.is_voucher) && Number(gifticon.amount) > 0;
   const spent = Number(gifticon.spent_amount || 0);
@@ -130,11 +155,12 @@ export default function GifticonCard({
   // 오른쪽 위고, 만료·사용완료를 덮는 판은 D-day가 없는 카드에만 깔린다.
   const ddayLabel = codeLocked ? null : formatDday(gifticon.expires_at);
   // 급한 것만 붉은색을 가진다. 목록에 색이 하나뿐이라야 급한 게 눈에 바로 들어온다.
-  const urgent = urgency === 'soon' || urgency === 'urgent';
+  const urgent = urgency === "soon" || urgency === "urgent";
 
   // 잔액이 있는 금액권과, 액면만 있는 보통 기프티콘. 기한 줄 오른쪽에 붙는다.
   const hasAmount = Number(gifticon.amount) > 0;
-  const shownAmount = isVoucher && spent > 0 ? left : Number(gifticon.amount || 0);
+  const shownAmount =
+    isVoucher && spent > 0 ? left : Number(gifticon.amount || 0);
 
   // "이건 내가 쓸게" 표시. 잠금이 아니라 표시라, 남이 찜해뒀어도 바코드는 그대로 열린다.
   const claimed = Boolean(gifticon.claimed_by);
@@ -154,8 +180,8 @@ export default function GifticonCard({
   const dateNode = (
     <span
       className={cn(
-        'text-body font-semibold whitespace-nowrap tabular-nums',
-        urgent ? 'text-destructive' : 'text-muted-foreground'
+        "text-body font-semibold whitespace-nowrap tabular-nums",
+        urgent ? "text-destructive" : "text-muted-foreground",
       )}
     >
       {formatDateShortYear(gifticon.expires_at)}까지
@@ -185,8 +211,8 @@ export default function GifticonCard({
   return (
     <li
       className={cn(
-        'relative overflow-hidden rounded-2xl border',
-        codeLocked ? 'border-border/60 bg-muted/30' : 'border-border bg-card'
+        "relative overflow-hidden rounded-2xl border",
+        codeLocked ? "border-border/60 bg-muted/30" : "border-border bg-card",
       )}
     >
       <div className="relative flex gap-3 p-3">
@@ -203,8 +229,10 @@ export default function GifticonCard({
           type="button"
           className="absolute inset-0"
           disabled={!canOpenCode && photoCount === 0}
-          onClick={() => (canOpenCode ? onViewCode(gifticon) : onViewImage(gifticon))}
-          aria-label={canOpenCode ? '바코드 보기' : '업로드한 이미지 보기'}
+          onClick={() =>
+            canOpenCode ? onViewCode(gifticon) : onViewImage(gifticon)
+          }
+          aria-label={canOpenCode ? "바코드 보기" : "업로드한 이미지 보기"}
         />
 
         {/* 사진을 분류 아이콘으로 바꾸지 않는 이유: 사람은 기프티콘을 "스타벅스 초록색 그거"로
@@ -220,13 +248,17 @@ export default function GifticonCard({
         <span className="pointer-events-none relative shrink-0">
           <span className="relative flex size-16 items-center justify-center overflow-hidden rounded-lg bg-accent">
             {thumbUrl ? (
-              <img src={thumbUrl} alt={gifticon.name} className="h-full w-full object-cover" />
+              <img
+                src={thumbUrl}
+                alt={gifticon.name}
+                className="h-full w-full object-cover"
+              />
             ) : (
               <Ticket className="size-6 text-primary/60" />
             )}
             {codeLocked && (
               <span className="absolute inset-0 flex items-center justify-center bg-black/45 text-caption font-bold text-white">
-                {isUsed ? '사용완료' : '기한만료'}
+                {isUsed ? "사용완료" : "기한만료"}
               </span>
             )}
             {photoCount > 1 && (
@@ -241,8 +273,10 @@ export default function GifticonCard({
           {ddayLabel && (
             <span
               className={cn(
-                'absolute -top-1.5 -left-1.5 rounded-full px-2 py-0.5 text-caption font-bold tabular-nums ring-2 ring-card',
-                urgent ? 'bg-destructive text-white' : 'bg-foreground/80 text-background'
+                "absolute -top-1.5 -left-1.5 rounded-full px-2 py-0.5 text-caption font-bold tabular-nums ring-2 ring-card",
+                urgent
+                  ? "bg-destructive text-white"
+                  : "bg-foreground/80 text-background",
               )}
             >
               {ddayLabel}
@@ -264,15 +298,21 @@ export default function GifticonCard({
               상품명으로 상호를 메우는데(imageAnalyze), 그것까지 적으면 같은 글자가
               한 줄 사이로 두 번 나온다. */}
           <div className="flex items-center gap-1.5">
-            {gifticon.owner && <i className={cn('size-1.5 shrink-0 rounded-full', ownerDotClass)} />}
+            {gifticon.owner && (
+              <i
+                className={cn("size-1.5 shrink-0 rounded-full", ownerDotClass)}
+              />
+            )}
             <span className="min-w-0 flex-1 truncate text-caption font-medium text-muted-foreground">
               {[
                 gifticon.owner,
                 gifticon.brand === gifticon.name ? null : gifticon.brand,
-                isVoucher && hasAmount ? `${Number(gifticon.amount).toLocaleString()}원권` : null,
+                isVoucher && hasAmount
+                  ? `${Number(gifticon.amount).toLocaleString()}원권`
+                  : null,
               ]
                 .filter(Boolean)
-                .join(' · ')}
+                .join(" · ")}
             </span>
           </div>
 
@@ -287,8 +327,10 @@ export default function GifticonCard({
               실제 이름은 거의 다 들어온다. */}
           <span
             className={cn(
-              'line-clamp-2 text-callout leading-snug break-keep',
-              codeLocked ? 'font-medium text-muted-foreground' : 'font-semibold text-foreground'
+              "line-clamp-2 text-callout leading-snug break-keep",
+              codeLocked
+                ? "font-medium text-muted-foreground"
+                : "font-semibold text-foreground",
             )}
           >
             {gifticon.name}
@@ -326,8 +368,8 @@ export default function GifticonCard({
                 <div className="flex shrink-0 items-baseline gap-0.5">
                   <span
                     className={cn(
-                      'text-body font-bold tabular-nums',
-                      codeLocked ? 'text-muted-foreground' : 'text-foreground'
+                      "text-body font-bold tabular-nums",
+                      codeLocked ? "text-muted-foreground" : "text-foreground",
                     )}
                   >
                     {shownAmount.toLocaleString()}원
@@ -335,7 +377,9 @@ export default function GifticonCard({
                   {/* 금액권은 액면가보다 "지금 얼마 남았나"가 먼저다. 계산대 앞에서 알아야
                       할 값이라 잔액을 적고, 얼마짜리였는지는 맨 윗줄이 말한다. */}
                   {isVoucher && spent > 0 && (
-                    <span className="text-caption font-medium text-muted-foreground">남음</span>
+                    <span className="text-caption font-medium text-muted-foreground">
+                      남음
+                    </span>
                   )}
                 </div>
               </>
@@ -344,10 +388,13 @@ export default function GifticonCard({
 
           {/* 누가 썼는지 목록에서 바로 보이게 한다("이거 누가 썼어?"를 굳이 안 물어보게). */}
           {isUsed && (gifticon.used_at || gifticon.used_by_name) && (
-            <span className="truncate text-xs text-muted-foreground">
-              {[gifticon.used_at && `${formatDate(gifticon.used_at)} 사용`, gifticon.used_by_name && `${gifticon.used_by_name}님이 씀`]
+            <span className="truncate text-caption text-muted-foreground">
+              {[
+                gifticon.used_at && `${formatDate(gifticon.used_at)} 사용`,
+                gifticon.used_by_name && `${gifticon.used_by_name}님이 씀`,
+              ]
                 .filter(Boolean)
-                .join(' · ')}
+                .join(" · ")}
             </span>
           )}
         </div>
@@ -385,17 +432,25 @@ export default function GifticonCard({
              적이 없어서 되돌릴 것이 없고, 대신 반대쪽 길이 필요하다 — 실제로는 썼는데
              표시를 안 해둔 것. 결산에서 "이미 쓰셨다면 사용완료로 바꿔주세요"라고
              안내하는 그 동작이 여기다. */
-          <button type="button" onClick={() => onToggleUsed(gifticon)} className={cn(BAR_BUTTON, 'text-foreground')}>
+          <button
+            type="button"
+            onClick={() => onToggleUsed(gifticon)}
+            className={cn(BAR_BUTTON, "text-foreground")}
+          >
             {isUsed ? (
               <RotateCcw className="size-4 text-muted-foreground" />
             ) : (
               <CheckCircle2 className="size-4 text-muted-foreground" />
             )}
-            {isUsed ? '사용취소' : '이미 썼어요'}
+            {isUsed ? "사용취소" : "이미 썼어요"}
           </button>
         ) : (
           <>
-            <button type="button" onClick={() => onFindStores(gifticon)} className={cn(BAR_BUTTON, 'text-foreground')}>
+            <button
+              type="button"
+              onClick={() => onFindStores(gifticon)}
+              className={cn(BAR_BUTTON, "text-foreground")}
+            >
               <MapPin className="size-4 text-muted-foreground" />
               매장
             </button>
@@ -408,14 +463,25 @@ export default function GifticonCard({
               onClick={() => onToggleClaim(gifticon)}
               className={cn(
                 BAR_BUTTON,
-                'min-w-0 border-l border-border',
-                claimed ? 'font-bold text-primary' : 'text-foreground'
+                "min-w-0 border-l border-border",
+                claimed ? "font-bold text-primary" : "text-foreground",
               )}
             >
               {/* 찜한 것은 하트를 채운다. 색만 바꾸면 작은 아이콘에서 구분이 잘 안 된다. */}
-              <Heart className={cn('size-4 shrink-0', claimed ? 'fill-primary text-primary' : 'text-muted-foreground')} />
+              <Heart
+                className={cn(
+                  "size-4 shrink-0",
+                  claimed
+                    ? "fill-primary text-primary"
+                    : "text-muted-foreground",
+                )}
+              />
               <span className="truncate">
-                {claimedByMe ? '찜해제' : claimed ? `${gifticon.claimed_by_name} 찜` : '찜하기'}
+                {claimedByMe
+                  ? "찜해제"
+                  : claimed
+                    ? `${gifticon.claimed_by_name} 찜`
+                    : "찜하기"}
               </span>
             </button>
 
@@ -425,11 +491,16 @@ export default function GifticonCard({
                 금액을 적는 것이라, 그대로 적어야 누르기 전에 무슨 일이 일어날지 안다. */}
             <button
               type="button"
-              onClick={() => (isVoucher ? onSpend(gifticon) : onToggleUsed(gifticon))}
-              className={cn(BAR_BUTTON, 'border-l border-border text-foreground')}
+              onClick={() =>
+                isVoucher ? onSpend(gifticon) : onToggleUsed(gifticon)
+              }
+              className={cn(
+                BAR_BUTTON,
+                "border-l border-border text-foreground",
+              )}
             >
               <CheckCircle2 className="size-4 text-muted-foreground" />
-              {isVoucher ? '잔액입력' : '사용완료'}
+              {isVoucher ? "잔액입력" : "사용완료"}
             </button>
           </>
         )}

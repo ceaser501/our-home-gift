@@ -1,10 +1,15 @@
-import { useState } from 'react';
-import { Check, ChevronDown, Search, X } from 'lucide-react';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { CATEGORIES, STATUS_TABS } from '../constants';
-import { Input } from '@/components/ui/input';
-import { cn } from '@/lib/utils';
-import useBackClose from '../utils/useBackClose';
+import { useState } from "react";
+import { Check, ChevronDown, Search, X } from "lucide-react";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { CATEGORIES, STATUS_TABS } from "../constants";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
+import useBackClose from "../utils/useBackClose";
 
 // 분류 칩에 붙는 개수.
 //
@@ -17,16 +22,23 @@ function CountBadge({ count, selected }) {
   if (!count) return null;
 
   return (
-    <span className={cn('tabular-nums', selected ? 'opacity-70' : 'font-semibold text-muted-foreground')}>
+    <span
+      className={cn(
+        "tabular-nums",
+        selected ? "opacity-70" : "font-semibold text-muted-foreground",
+      )}
+    >
       {count}
     </span>
   );
 }
 
 // 분류 칩 하나. 고른 것과 아닌 것이 같은 모양을 쓰되 채움만 다르다.
-const CHIP = 'flex h-8 shrink-0 items-center gap-1 rounded-full border px-2.5 text-[13px] whitespace-nowrap transition-colors';
-const CHIP_ON = 'border-primary bg-primary font-semibold text-primary-foreground';
-const CHIP_OFF = 'border-input bg-card font-medium text-foreground';
+const CHIP =
+  "flex h-8 shrink-0 items-center gap-1 rounded-full border px-2.5 text-body whitespace-nowrap transition-colors";
+const CHIP_ON =
+  "border-primary bg-primary font-semibold text-primary-foreground";
+const CHIP_OFF = "border-input bg-card font-medium text-foreground";
 
 export default function FilterBar({
   search,
@@ -44,7 +56,8 @@ export default function FilterBar({
   useBackClose(statusOpen ? () => setStatusOpen(false) : null);
   // 사용여부는 한 번 정해두면 잘 안 바꾸는 값이라 한 줄을 통째로 내주지 않고 접어둔다.
   // 대신 지금 무엇으로 보고 있는지가 버튼에 그대로 적혀 있어야, 걸어둔 걸 잊지 않는다.
-  const currentStatus = STATUS_TABS.find((tab) => tab.key === statusTab) ?? STATUS_TABS[0];
+  const currentStatus =
+    STATUS_TABS.find((tab) => tab.key === statusTab) ?? STATUS_TABS[0];
   const statusIsDefault = statusTab === STATUS_TABS[0].key;
 
   // 목록과 맞닿는 경계에 가는 선을 둔다. 선이 없으면 필터와 첫 카드가 한 덩어리처럼 붙어 보이고,
@@ -53,7 +66,7 @@ export default function FilterBar({
     // 위쪽 여백 11px. 안내 띠가 전체 폭 배경이고 아래 테두리도 없어서, 여백이 없으면
     // 띠와 필터가 한 덩어리로 읽힌다. 띠가 없는 날에도 같은 값이라 헤더와의 간격이
     // 들쭉날쭉해지지 않는다.
-    <div className="sticky top-0 z-10 flex flex-col gap-2.5 border-b border-border bg-background pt-[11px] pb-2.5">
+    <div className="sticky top-0 z-10 flex flex-col gap-2.5 border-b border-border bg-background pt-3 pb-2.5">
       <div className="flex gap-2 px-4">
         {/* 검색 앞에 두어 "무엇 안에서 찾을지"를 먼저 정하는 순서로 읽히게 한다.
             알약이 아니라 각진 모서리를 쓴다 — 아래 카드와 각을 맞추기 위해서다.
@@ -65,12 +78,20 @@ export default function FilterBar({
           type="button"
           onClick={() => setStatusOpen(true)}
           className={cn(
-            'flex h-10 shrink-0 items-center gap-1 rounded-[11px] border px-3.5 text-sm font-semibold transition-colors',
-            statusIsDefault ? 'border-input bg-card text-foreground' : 'border-primary bg-primary text-primary-foreground'
+            "flex h-10 shrink-0 items-center gap-1 rounded-lg border px-3.5 text-body font-semibold transition-colors",
+            statusIsDefault
+              ? "border-input bg-card text-foreground"
+              : "border-primary bg-primary text-primary-foreground",
           )}
         >
           {currentStatus.label}
-          <ChevronDown className={cn('size-3.5', statusIsDefault && 'text-muted-foreground')} strokeWidth={2.5} />
+          <ChevronDown
+            className={cn(
+              "size-3.5",
+              statusIsDefault && "text-muted-foreground",
+            )}
+            strokeWidth={2.5}
+          />
         </button>
 
         <div className="relative flex-1">
@@ -80,13 +101,13 @@ export default function FilterBar({
             placeholder="이름, 브랜드로 검색"
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="h-10 rounded-[11px] border-input pr-9 pl-9 [&::-webkit-search-cancel-button]:hidden"
+            className="h-10 rounded-lg border-input pr-9 pl-9 [&::-webkit-search-cancel-button]:hidden"
           />
           {search && (
             <button
               type="button"
               className="absolute top-1/2 right-3 -translate-y-1/2 text-muted-foreground"
-              onClick={() => onSearchChange('')}
+              onClick={() => onSearchChange("")}
               aria-label="검색어 지우기"
             >
               <X className="size-4" />
@@ -100,11 +121,11 @@ export default function FilterBar({
       <div className="no-scrollbar flex gap-[5px] overflow-x-auto px-4 pb-1">
         <button
           type="button"
-          onClick={() => onCategoryChange('')}
-          className={cn(CHIP, category === '' ? CHIP_ON : CHIP_OFF)}
+          onClick={() => onCategoryChange("")}
+          className={cn(CHIP, category === "" ? CHIP_ON : CHIP_OFF)}
         >
           전체
-          <CountBadge count={totalCount} selected={category === ''} />
+          <CountBadge count={totalCount} selected={category === ""} />
         </button>
         {CATEGORIES.map((cat) => (
           <button
@@ -117,12 +138,18 @@ export default function FilterBar({
                 고른 칩에서는 currentColor를 따라 흰색이 된다. */}
             {cat.Icon && (
               <cat.Icon
-                className={cn('size-3.5 shrink-0', category !== cat.key && 'text-muted-foreground')}
+                className={cn(
+                  "size-3.5 shrink-0",
+                  category !== cat.key && "text-muted-foreground",
+                )}
                 strokeWidth={1.9}
               />
             )}
             {cat.label}
-            <CountBadge count={categoryCounts[cat.key]} selected={category === cat.key} />
+            <CountBadge
+              count={categoryCounts[cat.key]}
+              selected={category === cat.key}
+            />
           </button>
         ))}
       </div>
@@ -133,6 +160,12 @@ export default function FilterBar({
             <SheetHeader>
               <SheetTitle>어떤 기프티콘을 볼까요?</SheetTitle>
             </SheetHeader>
+            {/* 고르는 값이라 본문(14)이 아니라 callout(16)이다. 이 시트에는 이 셋
+                말고 아무것도 없다 — 제목이 「어떤 기프티콘을 볼까요?」이고 그 답이
+                이것인데, 답이 설명글과 같은 크기일 까닭이 없다.
+
+                글자를 키우면 줄이 48 로 늘어나서 여백을 12 에서 10 으로 줄였다.
+                누를 자리 44 는 그대로다. 카드 ⋮ 메뉴도 같은 값을 쓴다. */}
             <div className="flex flex-col px-5">
               {STATUS_TABS.map((tab) => (
                 <button
@@ -142,12 +175,21 @@ export default function FilterBar({
                     onStatusTabChange(tab.key);
                     setStatusOpen(false);
                   }}
-                  className="flex w-full items-center gap-3 px-1 py-3 text-left text-sm"
+                  className="flex w-full items-center gap-3 px-1 py-2.5 text-left text-callout"
                 >
-                  <span className={cn('flex-1', statusTab === tab.key ? 'font-semibold text-primary' : 'text-foreground')}>
+                  <span
+                    className={cn(
+                      "flex-1",
+                      statusTab === tab.key
+                        ? "font-semibold text-primary"
+                        : "text-foreground",
+                    )}
+                  >
                     {tab.label}
                   </span>
-                  {statusTab === tab.key && <Check className="size-4.5 text-primary" />}
+                  {statusTab === tab.key && (
+                    <Check className="size-4.5 text-primary" />
+                  )}
                 </button>
               ))}
             </div>
