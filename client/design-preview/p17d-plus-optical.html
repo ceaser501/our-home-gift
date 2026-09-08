@@ -1,0 +1,81 @@
+<!doctype html>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>+ 버튼의 광학 보정</title>
+<script type="module" src="/src/index.css"></script>
+<style>
+  body { margin:0; background:#3a3a44; font-family:Pretendard, system-ui, sans-serif;
+         -webkit-font-smoothing:antialiased; color:#fff; }
+  .wrap { max-width:420px; margin:0 auto; padding:20px 16px 80px; }
+  h1 { font-size:15px; font-weight:800; margin:0 0 4px; }
+  .lead { color:#b8b8c4; font-size:12px; line-height:1.6; margin:0 0 18px; }
+  .case { margin:0 0 18px; }
+  .case h2 { font-size:12px; font-weight:800; margin:0 0 3px; }
+  .case p { font-size:11px; line-height:1.5; color:#b8b8c4; margin:0 0 8px; }
+
+  .pair { display:flex; gap:8px; position:relative; background:var(--background);
+          border-radius:12px; padding:10px; }
+  /* 각 칸의 가운데선 — 실제 화면에는 없다 */
+  .pair.guide .card::before { content:''; position:absolute; left:50%; top:4px; bottom:4px;
+    width:1px; background:color-mix(in srgb, var(--destructive) 55%, transparent); }
+  .card { position:relative; flex:1; display:flex; align-items:center; justify-content:center;
+          gap:6px; border:1px solid var(--input); border-radius:14px; background:var(--card);
+          padding:14px; font-family:inherit; font-size:16px; font-weight:600;
+          color:var(--muted-foreground); }
+  .card .pl { display:flex; flex:0 0 auto; }
+  .card .pl svg { width:17px; height:17px; }
+  .n { color:#9d9daa; font-size:10px; font-weight:700; margin:6px 0 0;
+       font-variant-numeric:tabular-nums; }
+</style>
+
+<script>
+  const PL = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+    stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>`;
+
+  // 아이콘 17 + 간격 6 = 23. 글자를 칸 가운데에 놓으려면 11.5 를 당겨야 하는데,
+  // 그만큼 당기면 이번에는 왼쪽으로 쏠려 보인다. 그 사이를 견준다.
+  const V = [
+    [0, '가 · 지금', ''],
+    [-5, '나 · 5 당김', ''],
+    [-8, '다 · 8 당김', ''],
+    [-12, '라 · 12 당김', ''],
+  ];
+
+  addEventListener('DOMContentLoaded', () => {
+    const w = document.querySelector('.wrap');
+    V.forEach(([m, name, note]) => {
+      const el = document.createElement('div');
+      el.className = 'case';
+      el.innerHTML = `<h2>${name}</h2><p>${note}</p>
+        <div class="pair">
+          <button class="card"><span class="pl" style="margin-left:${m}px">${PL}</span>새로 만들기</button>
+          <button class="card"><span class="pl" style="margin-left:${m}px">${PL}</span>초대 코드로 참여</button>
+        </div>
+        <p class="n"></p>`;
+      w.appendChild(el);
+    });
+    const measure = () => {
+      document.querySelectorAll('.case').forEach((c) => {
+        const card = c.querySelector('.card');
+        const r = card.getBoundingClientRect();
+        // 글자만의 가운데가 칸 가운데에서 얼마나 벗어났나
+        const txt = [...card.childNodes].find((n) => n.nodeType === 3 && n.textContent.trim());
+        const rg = document.createRange(); rg.selectNode(txt);
+        const t = rg.getBoundingClientRect();
+        const off = (t.left + t.width / 2) - (r.left + r.width / 2);
+        c.querySelector('.n').textContent = `글자 가운데가 칸 가운데에서 ${off > 0 ? '오른쪽' : '왼쪽'}으로 ${Math.abs(off).toFixed(1)}px`;
+      });
+    };
+    new ResizeObserver(measure).observe(document.body);
+    document.fonts.ready.then(() => requestAnimationFrame(measure));
+    setTimeout(measure, 500); setTimeout(measure, 1400);
+  });
+</script>
+
+<div class="wrap">
+  <h1>+ 가 붙은 버튼의 광학 보정</h1>
+  <p class="lead">
+    선을 걷었다. 넷을 나란히 놓고 눈으로 고른다 — 어느 것이 가운데에 있어 보이는가.
+    아래 숫자는 고르고 나서 보면 된다.
+  </p>
+</div>

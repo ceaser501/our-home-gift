@@ -1,0 +1,101 @@
+<!doctype html>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>가족 바꾸기 — 추가하기를 같은 꼴로</title>
+<script type="module" src="/src/index.css"></script>
+<style>
+  body { margin:0; background:#3a3a44; font-family:Pretendard, system-ui, sans-serif;
+         -webkit-font-smoothing:antialiased; color:#fff; }
+  .page { display:flex; gap:20px; align-items:flex-start; justify-content:center;
+          padding:16px 14px 80px; flex-wrap:wrap; }
+  .col { width:375px; flex:0 0 auto; }
+  .cap { font-size:13px; font-weight:800; margin:0 0 3px; }
+  .sub { color:#b8b8c4; font-size:11px; line-height:1.5; margin:0 0 8px; min-height:90px; }
+  .st  { color:#9d9daa; font-size:10px; font-weight:700; margin:8px 0 0; }
+
+  .sheet { background:var(--background); color:var(--foreground);
+           border-radius:16px 16px 0 0; overflow:hidden; box-shadow:0 -2px 24px rgba(0,0,0,.28); }
+  .hd  { padding:20px 60px 20px 20px; position:relative; }
+  .ttl { font-size:20px; line-height:1.2; font-weight:700; letter-spacing:-.025em; margin:0; }
+  .dsc { margin:4px 0 0; font-size:14px; line-height:1.5; font-weight:500;
+         color:var(--muted-foreground); word-break:keep-all; }
+  .x   { position:absolute; top:10px; right:10px; width:44px; height:44px; display:flex;
+         align-items:center; justify-content:center; color:var(--muted-foreground); }
+  .x svg { width:24px; height:24px; }
+  .bd  { padding:0 20px 20px; display:flex; flex-direction:column; }
+
+  .card { display:flex; align-items:center; gap:10px; border:1px solid var(--input);
+          border-radius:14px; background:var(--card); padding:14px; width:100%;
+          font-family:inherit; text-align:left; font-size:16px; font-weight:600; }
+  .card + .card { margin-top:8px; }
+  .card.on { border-color:var(--primary); background:var(--accent); }
+  .card .nm { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .card .mk { flex:0 0 auto; color:var(--primary); display:flex; }
+  .card .mk svg { width:20px; height:20px; }
+
+  /* 추가하기 — 같은 카드 꼴이되 가족이 아니라는 것을 말해야 한다 */
+  .add { color:var(--muted-foreground); font-weight:600; }
+  .add .pl { flex:0 0 auto; display:flex; color:var(--muted-foreground); }
+  .add .pl svg { width:18px; height:18px; }
+  .add.dash { border-style:dashed; background:none; }
+  .add.gap { margin-top:16px; }
+  .hr { height:1px; background:var(--border); margin:16px 0; }
+</style>
+
+<script>
+  const X = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+    stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>`;
+  const CK = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"
+    stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>`;
+  const PL = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+    stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>`;
+  const NAMES = ['우리집', '시댁', '엄마아빠'];
+
+  const fams = NAMES.map((n, i) => `<button class="card${i === 0 ? ' on' : ''}">
+      <span class="nm">${n}</span>${i === 0 ? `<span class="mk">${CK}</span>` : ''}</button>`).join('');
+
+  const add = (cls) => `
+    <button class="card add ${cls}"><span class="pl">${PL}</span><span class="nm">새로 만들기</span></button>
+    <button class="card add"><span class="pl">${PL}</span><span class="nm">초대 코드로 참여</span></button>`;
+
+  const head = `
+    <div class="hd"><p class="ttl">어떤 가족을 볼까요?</p>
+      <p class="dsc">기프티콘은 가족마다 따로 모여요.</p><span class="x">${X}</span></div>`;
+
+  const V = {
+    '가': ['실선 · 여백만 벌려서',
+      '가족과 똑같은 카드에 + 를 달고 글자를 회색으로 낮춘다. 가족 셋과 추가하기 둘 사이만 8 에서 16 으로 벌려 덩어리를 가른다.',
+      head + `<div class="bd">${fams}${add('gap')}</div>`],
+
+    '나': ['점선으로',
+      '테두리를 점선으로 바꾼다. 「아직 없는 것」을 점선으로 말하는 것은 오래된 관용이라 읽는 데 배울 것이 없다. 다만 이 앱에 점선이 처음 나온다.',
+      head + `<div class="bd">${fams}<div style="height:16px"></div>
+        <button class="card add dash"><span class="pl">${PL}</span><span class="nm">새로 만들기</span></button>
+        <button class="card add dash"><span class="pl">${PL}</span><span class="nm">초대 코드로 참여</span></button></div>`],
+
+    '다': ['가는 선으로 갈라서',
+      '가족과 추가하기 사이에 선을 하나 긋는다. 갈리는 것이 제일 분명하지만 선이 하나 는다 — 오늘 다른 시트에서 걷어내던 것이다.',
+      head + `<div class="bd">${fams}<div class="hr"></div>${add('')}</div>`],
+  };
+
+  addEventListener('DOMContentLoaded', () => {
+    const page = document.querySelector('.page');
+    Object.entries(V).forEach(([k, [name, note, html]]) => {
+      const col = document.createElement('div');
+      col.className = 'col';
+      col.innerHTML = `<p class="cap">${k} · ${name}</p><p class="sub">${note}</p>`
+        + `<div class="sheet" id="s${k}">${html}</div><p class="st" id="n${k}"></p>`;
+      page.appendChild(col);
+    });
+    const measure = () => Object.keys(V).forEach((k) => {
+      const el = document.getElementById('s' + k);
+      document.getElementById('n' + k).textContent =
+        `시트 ${Math.round(el.getBoundingClientRect().height)}px · 카드 ${el.querySelectorAll('.card').length}개`;
+    });
+    new ResizeObserver(measure).observe(document.body);
+    document.fonts.ready.then(() => requestAnimationFrame(measure));
+    setTimeout(measure, 500); setTimeout(measure, 1400);
+  });
+</script>
+
+<div class="page"></div>

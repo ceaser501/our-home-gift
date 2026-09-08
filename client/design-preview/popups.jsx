@@ -27,6 +27,7 @@ const STAGES = {
   barcode: '⑥ - 2 바코드',
   t16: '⑤ 제목이 16px 인 넷 — 고르개 시트',
   t16b: '⑤ - 2 가족 바꾸기',
+  t16b2: '⑤ - 2b 가족 만들기 · 참여 (안쪽 화면)',
   t16c: '⑤ - 3 카드 ⋮ 메뉴',
   danger: '④ 삭제 다이얼로그',
   warn: '④ - 2 오류 다이얼로그',
@@ -35,7 +36,12 @@ const STAGES = {
 
 const FAMILY = {
   family: { id: 1, name: '우리집' },
-  families: [{ id: 1, name: '우리집' }],
+  // 가족이 여럿일 때가 이 시트의 제 모습이다 — 하나뿐이면 고를 것이 없다.
+  families: [
+    { id: 1, name: '우리집' },
+    { id: 2, name: '시댁' },
+    { id: 3, name: '엄마아빠' },
+  ],
   members: [
     { user_id: 'u1', display_name: '태수', tag_color: 0 },
     { user_id: 'u2', display_name: '클로이', tag_color: 1 },
@@ -254,6 +260,14 @@ function App() {
       {cur === 't16b' && (
         <FamilyContext.Provider value={FAMILY}>
           <FamilySwitcherSheet onClose={reopen} />
+        </FamilyContext.Provider>
+      )}
+
+      {/* 초대 코드를 들고 열면 곧장 참여 화면이다. 여기서 '뒤로'를 누르면 목록으로
+          가고, 목록에서 '새로 만들기'를 누르면 만들기 화면을 볼 수 있다. */}
+      {cur === 't16b2' && (
+        <FamilyContext.Provider value={FAMILY}>
+          <FamilySwitcherSheet initialCode="A1B2C3" onClose={reopen} />
         </FamilyContext.Provider>
       )}
 

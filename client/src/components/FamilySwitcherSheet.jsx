@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, ChevronRight, Clock, Home } from "lucide-react";
+import { Check, Clock, Plus } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -95,7 +95,7 @@ export default function FamilySwitcherSheet({ onClose, initialCode = "" }) {
       ? "새 가족 만들기"
       : mode === "join"
         ? "초대 코드로 참여"
-        : "가족 바꾸기";
+        : "어떤 가족을 볼까요?";
 
   return (
     <Sheet open onOpenChange={(open) => !open && onClose()}>
@@ -120,16 +120,20 @@ export default function FamilySwitcherSheet({ onClose, initialCode = "" }) {
           </div>
         ) : mode === "list" ? (
           <>
-            {/* 이 창을 처음 여는 사람에게는 이 한 줄이 창 전체의 설명이다. 다른 회색
-                글씨와 같은 크기로 두면 그냥 지나친다. 한 단 키워둔다. */}
+            {/* 「보고 싶은 가족을 고르세요」는 걷었다 — 제목이 이미 묻고 있다. */}
             <p className="m-0 px-5 pb-2 text-body break-keep text-muted-foreground">
-              기프티콘은 가족마다 따로 모여요. 보고 싶은 가족을 고르세요.
+              기프티콘은 가족마다 따로 모여요.
             </p>
 
             {/* 가족마다 눌리는 면을 준다. 예전에는 글자 색만 다른 두 줄이라 목록으로 안
                 보였다 — 이 창의 목적이 고르는 것인데, 무엇을 누르는지가 안 보였다.
-                적는 값은 이름과 상태뿐이다. families에는 id·name·invite_code밖에 없어서
-                구성원 수나 기프티콘 개수는 쓸 수가 없다(없는 데이터를 지어내지 않는다). */}
+
+                줄이 담던 것을 셋으로 줄였다. 걷어낸 것과 까닭은 이렇다.
+                — 집 아이콘: 셋이 다 같아서 구별에 도움이 안 되고 이름을 밀어냈다.
+                — '눌러서 바꾸기': 이 창은 고르는 창이라 모든 줄이 눌린다.
+                — '지금 보는 중': 보라 테두리와 ✓ 가 이미 말한다.
+                — › : 기호는 ✓ 하나로 모은다. 고른 것과 안 고른 것에 다른 기호를 쓰면
+                  둘이 다른 종류로 보인다. 필터바도 ✓ 만 쓴다. */}
             <ul className="m-0 flex list-none flex-col gap-2 p-0 px-5">
               {families.map((item) => {
                 const isCurrent = item.id === family.id;
@@ -139,45 +143,19 @@ export default function FamilySwitcherSheet({ onClose, initialCode = "" }) {
                       type="button"
                       onClick={() => pick(item.id)}
                       className={cn(
-                        "flex w-full items-center gap-3 rounded-2xl p-3.5 text-left transition-colors",
+                        "flex w-full items-center gap-2.5 rounded-2xl p-3.5 text-left transition-colors",
                         isCurrent
                           ? "border-[1.5px] border-primary bg-primary/4"
                           : "border border-border bg-card",
                       )}
                     >
-                      <span
-                        className={cn(
-                          "flex size-11 shrink-0 items-center justify-center rounded-lg",
-                          isCurrent ? "bg-primary" : "bg-secondary",
-                        )}
-                      >
-                        <Home
-                          className={cn(
-                            "size-5",
-                            isCurrent
-                              ? "text-primary-foreground"
-                              : "text-muted-foreground",
-                          )}
-                          strokeWidth={2.1}
-                        />
+                      <span className="min-w-0 flex-1 truncate text-callout font-semibold text-foreground">
+                        {item.name}
                       </span>
-                      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                        <span className="truncate text-callout font-semibold text-foreground">
-                          {item.name}
-                        </span>
-                        <span className="text-caption font-medium text-muted-foreground">
-                          {isCurrent ? "지금 보는 중" : "눌러서 바꾸기"}
-                        </span>
-                      </div>
-                      {isCurrent ? (
+                      {isCurrent && (
                         <Check
                           className="size-5 shrink-0 text-primary"
                           strokeWidth={2.6}
-                        />
-                      ) : (
-                        <ChevronRight
-                          className="size-4 shrink-0 text-muted-foreground/70"
-                          strokeWidth={2.2}
                         />
                       )}
                     </button>
@@ -186,44 +164,56 @@ export default function FamilySwitcherSheet({ onClose, initialCode = "" }) {
               })}
             </ul>
 
-            {/* 위 목록은 고르는 자리이고 여기는 만드는 자리다. 성격이 달라서 제목으로 가른다.
-                초대 코드는 뺐다 — 고르는 화면에 코드가 왜 있는지 알 수 없고, 코드를 전달하는
-                자리는 가족 관리다.
-                '이름 바꾸기'도 뺐다. 목록의 세 번째 항목처럼 보여서, 누르면 가족이 바뀔 것처럼
-                읽혔다. 이름 바꾸기는 가족 관리 안에 있다. */}
-            <div className="mt-4 flex flex-col gap-2 px-5">
-              <p className="m-0 px-0.5 text-body font-bold text-muted-foreground">
-                가족 추가하기
-              </p>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  className="h-12 flex-1 rounded-xl text-body font-semibold"
+            {/* 위 목록은 고르는 자리이고 여기는 만드는 자리다. 「가족 추가하기」라는
+                제목을 두었었는데 걷었다 — 버튼 둘이 「새로 만들기」·「초대 코드로 참여」라
+                무엇을 하는지 스스로 말한다.
+
+                가른 것은 여백이다. 가족끼리는 8, 추가하기 앞은 16. 선도 점선도 안 들인다.
+                가로로 놓는 것도 가르는 일을 한다 — 세로로 쌓으면 「가족 다섯 중 하나」처럼
+                읽히는데, 나란히 두면 「가족 셋」과 「추가하는 두 길」로 갈린다.
+
+                둘을 하나로 묶을까 보았는데 두었다. 만들기는 바로 들어가고 참여는 승인을
+                기다린다 — 결과가 다르다. 첫 칸도 다르다(내가 짓는 이름 / 남이 준 코드).
+                게다가 초대 링크를 타고 오면 목록을 건너뛰고 곧장 참여 화면이 열리는데,
+                묶으면 그 지름길이 한 걸음 는다.
+
+                가족과 같은 카드 꼴이되 + 를 달고 글자를 회색으로 낮춰 「가족이 아니라
+                만드는 것」이라고 말한다. */}
+            <div className="mt-4 flex gap-2 px-5">
+              {[
+                {
+                  label: "새로 만들기",
+                  to: "create",
+                },
+                {
+                  label: "초대 코드로 참여",
+                  to: "join",
+                },
+              ].map((it) => (
+                <button
+                  key={it.to}
+                  type="button"
                   onClick={() => {
                     setError("");
                     // 반대쪽에서 적다 만 값이 남아 있지 않게 한다.
                     setFamilyName("");
                     setCode("");
                     setMemberName("");
-                    setMode("create");
+                    setMode(it.to);
                   }}
+                  className="flex flex-1 items-center justify-center gap-1.5 rounded-2xl border border-border bg-card p-3.5 text-callout font-semibold text-muted-foreground transition-colors"
                 >
-                  새로 만들기
-                </Button>
-                <Button
-                  variant="outline"
-                  className="h-12 flex-1 rounded-xl text-body font-semibold"
-                  onClick={() => {
-                    setError("");
-                    setFamilyName("");
-                    setCode("");
-                    setMemberName("");
-                    setMode("join");
-                  }}
-                >
-                  초대 코드로 참여
-                </Button>
-              </div>
+                  {/* 아이콘까지 한 덩어리로 가운데를 맞추면 눈이 내용으로 읽는 글자가
+                      가운데선 오른쪽에 놓여 버튼이 쏠려 보인다. 아이콘을 5 당겨 글자를
+                      가운데 쪽으로 돌려준다 — 절반쯤은 justify-center 가 도로 밀어내므로
+                      11.5 를 당겨도 5.8 밖에 안 준다. 눈으로 견줘 고른 값이다. */}
+                  <Plus
+                    className="-ml-[5px] size-4.5 shrink-0"
+                    strokeWidth={2.2}
+                  />
+                  {it.label}
+                </button>
+              ))}
             </div>
           </>
         ) : (

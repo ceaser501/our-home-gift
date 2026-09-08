@@ -1,0 +1,135 @@
+<!doctype html>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>가족 바꾸기 — 걷어내기</title>
+<script type="module" src="/src/index.css"></script>
+<style>
+  body { margin:0; background:#3a3a44; font-family:Pretendard, system-ui, sans-serif;
+         -webkit-font-smoothing:antialiased; color:#fff; }
+  .page { display:flex; gap:20px; align-items:flex-start; justify-content:center;
+          padding:16px 14px 80px; flex-wrap:wrap; }
+  .col { width:375px; flex:0 0 auto; }
+  .cap { font-size:13px; font-weight:800; margin:0 0 3px; }
+  .sub { color:#b8b8c4; font-size:11px; line-height:1.5; margin:0 0 8px; min-height:96px; }
+  .st  { color:#9d9daa; font-size:10px; font-weight:700; margin:8px 0 0; }
+
+  .sheet { background:var(--background); color:var(--foreground);
+           border-radius:16px 16px 0 0; overflow:hidden; box-shadow:0 -2px 24px rgba(0,0,0,.28); }
+  .hd  { padding:20px 60px 20px 20px; position:relative; }
+  .ttl { font-size:20px; line-height:1.2; font-weight:700; letter-spacing:-.025em; margin:0; }
+  .dsc { margin:4px 0 0; font-size:14px; line-height:1.5; font-weight:500;
+         color:var(--muted-foreground); word-break:keep-all; }
+  .x   { position:absolute; top:10px; right:10px; width:44px; height:44px; display:flex;
+         align-items:center; justify-content:center; color:var(--muted-foreground); }
+  .x svg { width:24px; height:24px; }
+  .bd  { padding:0 20px 20px; display:flex; flex-direction:column; }
+
+  /* 카드 꼴 */
+  .card { display:flex; align-items:center; gap:12px; border:1px solid var(--input);
+          border-radius:14px; background:var(--card); padding:12px 14px; width:100%;
+          font-family:inherit; text-align:left; }
+  .card + .card { margin-top:8px; }
+  .card.on { border-color:var(--primary); background:var(--accent); }
+  .card .ic { width:44px; height:44px; flex:0 0 auto; border-radius:8px; background:var(--secondary);
+              display:flex; align-items:center; justify-content:center; color:var(--muted-foreground); }
+  .card.on .ic { background:var(--primary); color:#fff; }
+  .card .ic svg { width:20px; height:20px; }
+  .card .tx { flex:1; min-width:0; }
+  .card .nm { display:block; font-size:16px; font-weight:600; }
+  .card .su { display:block; font-size:12px; font-weight:500; color:var(--muted-foreground); margin-top:2px; }
+  .card .mk { flex:0 0 auto; color:var(--primary); }
+  .card .mk svg { width:20px; height:20px; }
+  .card .ch { flex:0 0 auto; color:color-mix(in srgb, var(--muted-foreground) 70%, transparent); }
+  .card .ch svg { width:16px; height:16px; }
+
+  /* 평평한 줄 꼴 — 필터바·카드 ⋮ 와 같은 것 */
+  .row { display:flex; align-items:center; gap:12px; width:100%; border:0; background:none;
+         font-family:inherit; text-align:left; padding:10px 4px; font-size:16px; }
+  .row span { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+              color:var(--foreground); }
+  .row.on span { font-weight:600; color:var(--primary); }
+  .row svg { width:18px; height:18px; flex:0 0 auto; color:var(--primary); }
+
+  .lab { margin:20px 0 8px; font-size:12px; font-weight:700; color:var(--muted-foreground); }
+  .btns { display:flex; gap:8px; }
+  .btns button { flex:1; height:48px; border-radius:12px; border:1px solid var(--input);
+                 background:var(--card); font-family:inherit; font-size:14px; font-weight:600;
+                 color:color-mix(in srgb, var(--foreground) 80%, transparent); }
+</style>
+
+<script>
+  const X = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+    stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>`;
+  const CK = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"
+    stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>`;
+  const CH = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+    stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>`;
+  const HOME = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1"
+    stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg>`;
+  const NAMES = ['우리집', '시댁', '엄마아빠'];
+
+  const head = (dsc) => `
+    <div class="hd"><p class="ttl">가족 바꾸기</p>
+      ${dsc ? `<p class="dsc">${dsc}</p>` : ''}<span class="x">${X}</span></div>`;
+
+  const V = {
+    '가': ['지금',
+      '줄 하나가 아홉 조각을 담는다 — 집 아이콘 상자, 이름, 상태말, 표. 같은 집 아이콘이 셋 반복되고, 고른 것은 ✓ 안 고른 것은 › 로 기호가 둘이다. 부제도 두 문장인데 뒷문장은 제목이 이미 한 말이다.',
+      head('기프티콘은 가족마다 따로 모여요. 보고 싶은 가족을 고르세요.')
+      + `<div class="bd">
+          ${NAMES.map((n, i) => `<button class="card${i === 0 ? ' on' : ''}">
+            <span class="ic">${HOME}</span>
+            <span class="tx"><span class="nm">${n}</span>
+              <span class="su">${i === 0 ? '지금 보는 중' : '눌러서 바꾸기'}</span></span>
+            ${i === 0 ? `<span class="mk">${CK}</span>` : `<span class="ch">${CH}</span>`}
+          </button>`).join('')}
+          <p class="lab">가족 추가하기</p>
+          <div class="btns"><button>새로 만들기</button><button>초대 코드로 참여</button></div>
+        </div>`],
+
+    '나': ['카드는 두되 걷어내기',
+      '집 아이콘과 「눌러서 바꾸기」를 걷고 기호를 ✓ 하나로 모은다. 카드 꼴은 남아서 「가족」이 덩어리로 보이고, 지금 보는 것은 보라 테두리가 말한다. 줄 하나가 담는 것이 아홉에서 셋으로 준다.',
+      head('기프티콘은 가족마다 따로 모여요.')
+      + `<div class="bd">
+          ${NAMES.map((n, i) => `<button class="card${i === 0 ? ' on' : ''}" style="padding:14px">
+            <span class="tx"><span class="nm">${n}</span></span>
+            ${i === 0 ? `<span class="mk">${CK}</span>` : ''}
+          </button>`).join('')}
+          <div class="btns" style="margin-top:20px"><button>새로 만들기</button><button>초대 코드로 참여</button></div>
+        </div>`],
+
+    '다': ['다른 고르개와 같은 꼴로',
+      '필터바·카드 ⋮ 와 같은 평평한 줄이다 — 16 글자, 여백 10, 고른 것에 ✓. 앱 안의 고르개가 한 꼴이 된다. 대신 「가족」이 덩어리로 안 보이고 목록으로만 보인다.',
+      head('기프티콘은 가족마다 따로 모여요.')
+      + `<div class="bd">
+          ${NAMES.map((n, i) => `<button class="row${i === 0 ? ' on' : ''}">
+            <span>${n}</span>${i === 0 ? CK : ''}</button>`).join('')}
+          <div class="btns" style="margin-top:20px"><button>새로 만들기</button><button>초대 코드로 참여</button></div>
+        </div>`],
+  };
+
+  addEventListener('DOMContentLoaded', () => {
+    const page = document.querySelector('.page');
+    Object.entries(V).forEach(([k, [name, note, html]]) => {
+      const col = document.createElement('div');
+      col.className = 'col';
+      col.innerHTML = `<p class="cap">${k} · ${name}</p><p class="sub">${note}</p>`
+        + `<div class="sheet" id="s${k}">${html}</div><p class="st" id="n${k}"></p>`;
+      page.appendChild(col);
+    });
+    const measure = () => Object.keys(V).forEach((k) => {
+      const el = document.getElementById('s' + k);
+      const first = el.querySelector('.card, .row');
+      document.getElementById('n' + k).textContent =
+        `시트 ${Math.round(el.getBoundingClientRect().height)}px`
+        + ` · 줄 ${Math.round(first.getBoundingClientRect().height)}px`
+        + ` · 줄이 담은 조각 ${first.querySelectorAll('*').length}개`
+        + ` · 아이콘 ${el.querySelectorAll('svg').length}개`;
+    });
+    new ResizeObserver(measure).observe(document.body);
+    document.fonts.ready.then(() => requestAnimationFrame(measure));
+    setTimeout(measure, 500); setTimeout(measure, 1400);
+  });
+</script>
+
+<div class="page"></div>
