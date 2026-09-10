@@ -263,11 +263,20 @@ begin
     set claimed_by = null, claimed_by_name = null, claimed_at = null
     where family_id = fid and claimed_by = auth.uid();
   else
+    -- 세 자리를 다 걷는다. 원본·바코드·썸네일이다.
+    --
+    -- 한동안 썸네일이 빠져 있었다. SQL은 파일을 못 지우고 여기서 돌려준 경로만 지워지는
+    -- 구조라(client/src/family.js:88), 목록에서 빠진 경로는 영영 안 지워진다. 주인 없는
+    -- 폴더 13개에 266장이 쌓인 뒤에 알았다 — 살아 있는 바코드가 찍힌 사진들이다.
+    --
+    -- 새 이미지 칸을 만들면 이 목록에도 넣는다. 안 넣으면 조용히 샌다.
     select coalesce(array_agg(p), '{}') into orphan_paths
     from (
       select unnest(image_paths) as p from public.gifticons where family_id = fid
       union all
       select barcode_image_path from public.gifticons where family_id = fid and barcode_image_path is not null
+      union all
+      select thumb_image_path from public.gifticons where family_id = fid and thumb_image_path is not null
     ) t;
 
     delete from public.gifticons where family_id = fid;
