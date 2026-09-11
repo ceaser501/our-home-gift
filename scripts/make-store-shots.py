@@ -40,7 +40,9 @@ RAW = os.path.join(ROOT, "assets/marketing/screenshots/raw")
 OUT = os.path.join(ROOT, "assets/marketing/screenshots")
 FONT_DIR = os.path.join(ROOT, "client/src/fonts")
 
-W, H = 1080, 2160
+# 아래 값은 모두 폭 1080을 기준으로 잰 것이다. 아이폰은 판이 더 크고 비율도 달라서,
+# 폭으로 배율을 내어 그만큼 늘린다(scaled 함수).
+BASE_W = 1080
 
 # 큰 글씨 / 작은 글씨
 TITLE = dict(weight="Bold", size=66, track=-2.0, top=101, fill=(23, 19, 65))
@@ -86,8 +88,15 @@ def load_font(weight, size):
     return ImageFont.truetype(buf, size)
 
 
-def background():
-    return Image.open(PLATE).convert("RGB").copy()
+def scaled(size):
+    """1080 기준으로 잰 값을 이 판 크기에 맞춰 늘린다."""
+    return size[0] / BASE_W
+
+
+def background(size):
+    """떠온 배경을 이 판 크기로 늘린다. 부드러운 그라데이션이라 늘려도 티가 안 난다."""
+    plate = Image.open(PLATE).convert("RGB")
+    return plate if plate.size == size else plate.resize(size, Image.LANCZOS)
 
 
 def draw_line(img, text, spec):
@@ -95,25 +104,29 @@ def draw_line(img, text, spec):
 
     자간을 주려면 한 글자씩 놓아야 해서 textlength로 직접 센다.
     """
-    font = load_font(spec["weight"], spec["size"])
+    k = scaled(img.size)
+    font = load_font(spec["weight"], round(spec["size"] * k))
+    track = spec["track"] * k
+    top = spec["top"] * k
+    W = img.width
     draw = ImageDraw.Draw(img)
     widths = [draw.textlength(ch, font=font) for ch in text]
-    total = sum(widths) + spec["track"] * (len(text) - 1)
+    total = sum(widths) + track * (len(text) - 1)
 
     # 한 번 그려보고 글자가 실제로 어디서 시작하는지 재서, 그만큼 올려 놓는다.
-    probe = Image.new("L", (W, 400), 0)
+    probe = Image.new("L", (W, round(400 * k)), 0)
     pd = ImageDraw.Draw(probe)
     x = 100.0
     for ch, w in zip(text, widths):
         pd.text((x, 100), ch, font=font, fill=255)
-        x += w + spec["track"]
+        x += w + track
     box = probe.getbbox()
     lift = box[1] - 100
 
     x = (W - total) / 2
     for ch, w in zip(text, widths):
-        draw.text((x, spec["top"] - lift), ch, font=font, fill=spec["fill"])
-        x += w + spec["track"]
+        draw.text((x, top - lift), ch, font=font, fill=spec["fill"])
+        x += w + track
 
 
 def rounded_mask(size, radius):
@@ -124,12 +137,13 @@ def rounded_mask(size, radius):
 
 def paste_phone(bg, shot):
     """폰 화면을 얹는다. 아래는 화면 밖으로 흘려보낸다 — 잘린 카드가 '더 있다'를 말한다."""
-    scale = CARD_W / shot.width
-    phone = shot.resize((CARD_W, round(shot.height * scale)), Image.LANCZOS)
+    k = scaled(bg.size)
+    card_w, card_x, card_top, card_r = (round(v * k) for v in (CARD_W, CARD_X, CARD_TOP, CARD_R))
+    phone = shot.resize((card_w, round(shot.height * card_w / shot.width)), Image.LANCZOS)
 
     # 모서리를 둥글린다. 아래는 화면 밖이라 둥글릴 필요가 없어서, 마스크를 아래로 늘려
     # 잡고 화면 높이만큼만 쓴다.
-    mask = rounded_mask((phone.width, phone.height + CARD_R), CARD_R).crop(
+    mask = rounded_mask((phone.width, phone.height + card_r), card_r).crop(
         (0, 0, phone.width, phone.height)
     )
 
@@ -139,43 +153,64 @@ def paste_phone(bg, shot):
     shadow = Image.new("RGBA", bg.size, (0, 0, 0, 0))
     sd = Image.new("L", (phone.width, phone.height), 0)
     ImageDraw.Draw(sd).rounded_rectangle(
-        [0, 0, phone.width - 1, phone.height - 1], CARD_R, fill=46
+        [0, 0, phone.width - 1, phone.height - 1], card_r, fill=46
     )
-    shadow.paste((60, 50, 120, 255), (CARD_X, CARD_TOP + 10), sd)
-    shadow = shadow.filter(ImageFilter.GaussianBlur(18))
+    shadow.paste((60, 50, 120, 255), (card_x, card_top + round(10 * k)), sd)
+    shadow = shadow.filter(ImageFilter.GaussianBlur(18 * k))
     bg.paste(Image.alpha_composite(bg.convert("RGBA"), shadow).convert("RGB"), (0, 0))
 
-    bg.paste(phone, (CARD_X, CARD_TOP), mask)
+    bg.paste(phone, (card_x, card_top), mask)
 
 
-def build(name):
-    src = os.path.join(RAW, f"{name}.png")
+def build(name, raw_dir, out_dir, canvas):
+    src = os.path.join(raw_dir, f"{name}.png")
     if not os.path.exists(src):
         return None
+    shot = Image.open(src).convert("RGB")
+
+    # 판 크기는 정해둔 값이지 찍어온 사진 크기가 아니다.
+    #
+    # 한 번 사진 크기를 그대로 따라가게 했다가 갤럭시 판이 2160에서 2093으로 줄었다.
+    # 폰이 내놓는 세로는 상태바를 어떻게 자르느냐에 따라 조금씩 다른데, 여덟 장이
+    # 제각각이면 스토어에서 크기가 섞인다. 넘치는 세로는 어차피 화면 밖으로 흘린다.
+    img = background(canvas)
+    paste_phone(img, shot)
     title, sub = SHOTS[name]
-    img = background()
-    paste_phone(img, Image.open(src).convert("RGB"))
     draw_line(img, title, TITLE)
     draw_line(img, sub, SUB)
-    dst = os.path.join(OUT, f"{name}.png")
+
+    os.makedirs(out_dir, exist_ok=True)
+    dst = os.path.join(out_dir, f"{name}.png")
     img.save(dst)
     return dst
+
+
+# 갤럭시는 raw/ 에, 아이폰은 raw/ios/ 에 넣는다. 나오는 자리도 그렇게 갈린다.
+#
+# 아이폰 판 크기는 App Store Connect가 업로드 칸에 적어주는 값을 그대로 넣는다.
+# 여기 적힌 것은 아직 확인 전의 자리다 — 콘솔을 보고 맞춘다.
+SETS = [
+    ("갤럭시", RAW, OUT, (1080, 2160)),
+    ("아이폰", os.path.join(RAW, "ios"), os.path.join(OUT, "ios"), (1290, 2796)),
+]
 
 
 def main():
     want = sys.argv[1:]
     names = [n for n in SHOTS if not want or any(n.startswith(w) for w in want)]
     made = []
-    for name in names:
-        dst = build(name)
-        if dst:
-            made.append(os.path.relpath(dst, ROOT))
+    for label, raw_dir, out_dir, canvas in SETS:
+        for name in names:
+            dst = build(name, raw_dir, out_dir, canvas)
+            if dst:
+                made.append((label, os.path.relpath(dst, ROOT)))
     if not made:
         print(f"raw 사진이 없습니다. {os.path.relpath(RAW, ROOT)}/ 에 넣어주세요.")
+        print("아이폰은 그 밑 ios/ 에 넣습니다.")
         print("이름은 " + ", ".join(f"{n}.png" for n in SHOTS))
         return 1
-    for m in made:
-        print("만들었습니다:", m)
+    for label, m in made:
+        print(f"만들었습니다 [{label}]", m)
     return 0
 
 
