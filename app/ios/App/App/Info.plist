@@ -9,7 +9,12 @@
 	<!-- 수출 규정 질문을 매번 안 받으려고 미리 답해둔다.
 	     이 앱이 쓰는 암호화는 HTTPS(TLS)뿐이고 그건 운영체제가 해주는 것이다.
 	     자체 암호화를 만들어 넣지 않았으므로 면제 대상이라 false가 맞다.
-	     이 줄이 없으면 빌드를 올릴 때마다 App Store Connect가 물어본다. -->
+
+	     이 줄이 없으면 빌드를 올릴 때마다 App Store Connect가 물어보고, 답하기
+	     전에는 TestFlight 배포가 멈춘다.
+
+	     한때 이 키가 파일 안에 두 번 들어가 있었다(2026-09-12에 합쳤다). 값이 둘 다
+	     false라 동작은 같았지만, 나중에 한쪽만 고치면 조용히 어긋난다. 하나만 둔다. -->
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>CFBundleDisplayName</key>
@@ -54,10 +59,6 @@
 			</array>
 		</dict>
 	</array>
-	<!-- 암호화를 따로 쓰지 않는다(HTTPS뿐). 이 줄이 없으면 TestFlight에 올릴 때마다
-	     수출 규정 질문에 답해야 하고, 답하기 전에는 배포가 멈춘다. -->
-	<key>ITSAppUsesNonExemptEncryption</key>
-	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<!-- 아래 세 줄은 "왜 필요한지"를 사용자에게 보여주는 문구다.
