@@ -109,13 +109,16 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
-	<key>UISupportedInterfaceOrientations~ipad</key>
-	<array>
-		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationPortraitUpsideDown</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
-	</array>
+	<!-- 아이패드 줄은 지웠다. 2026-09-12에 아이폰 전용으로 바꿨기 때문이다
+	     (project.pbxproj의 TARGETED_DEVICE_FAMILY = 1).
+
+	     그대로 두었을 때 App Store Connect가 "13 iPad 디스플레이 스크린샷을 업로드해야
+	     한다"며 제출을 막았다. Capacitor 기본값이 "1,2"(아이폰+아이패드)여서다.
+
+	     아이패드 스크린샷을 만들어 넣는 길도 있었지만 택하지 않았다. 이 앱은 매장에서
+	     바코드를 대고 GPS로 근처를 찾는 폰 앱이라, 아이패드 화면 폭에 맞춘 레이아웃이
+	     따로 없다. 지원한다고 적어두면 심사자가 아이패드에서도 열어보고, 거기서
+	     어긋난 화면이 반려 사유가 된다. 나중에 아이패드를 제대로 받을 때 되살린다. -->
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
 </dict>
