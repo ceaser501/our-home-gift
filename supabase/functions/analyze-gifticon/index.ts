@@ -386,6 +386,14 @@ Deno.serve(async (req) => {
         'verify',
         limitFromEnv('VERIFY_DAILY_LIMIT', 60),
         limitFromEnv('VERIFY_TOTAL_DAILY_LIMIT', 1000),
+        // 달 천장. analyze에는 있는데 여기만 없었다(2026-09-13에 넣었다).
+        //
+        // 하루 1,000이 30일이면 30,000건이고 한 건이 9원이라 27만원이다. 하루치만 보면
+        // analyze(500)보다 작아 보여서 이 구멍은 눈에 안 띈다.
+        //
+        // analyze와 같은 값으로 둔다. 이건 늘 analyze 뒤에 따라붙는 것이라 analyze보다
+        // 많이 불릴 일이 없다. 둘을 따로 정하면 어느 한쪽만 올렸을 때 조용히 어긋난다.
+        limitFromEnv('VERIFY_TOTAL_MONTHLY_LIMIT', 1200),
       );
       if (!verifyUsage.allowed) {
         return new Response(JSON.stringify({ error: tooManyMessage(verifyUsage) }), {
@@ -417,7 +425,15 @@ Deno.serve(async (req) => {
       // 2,000으로 잡은 근거는 ai_usage_log 를 뽑아본 실제 단가다 — 한 장에 약 $0.025
       // (analyze는 sonnet 5로 입력 5,081·출력 224, verify는 입력 2,048·출력 31).
       // 2,000장이면 $50 남짓이고, Anthropic 콘솔에 걸어둔 월 한도와 같은 자리에 선다.
-      limitFromEnv('ANALYZE_TOTAL_MONTHLY_LIMIT', 2000),
+      //
+      // 2026-09-13에 1,200으로 내렸다. 예산이 월 5~6만원인데 2,000이면 AI만 71,400원이라
+      // Apple 연회비(월 11,550원)까지 더하면 넘어선다. 그리고 실측 단가가 위 주석의
+      // $0.025보다 낮았다 — analyze $0.019 + verify $0.007이다(docs/running-cost.md).
+      //
+      // 이 수는 등록된 건수가 아니라 **부른 횟수**다. 바코드는 읽혔는데 기프티콘이
+      // 아니어서 헛방이 된 것도 여기 들어간다. 그래서 헛방이 많아도 요금이 예산을
+      // 넘지는 않고, 대신 그달에 등록할 수 있는 건수가 줄어든다.
+      limitFromEnv('ANALYZE_TOTAL_MONTHLY_LIMIT', 1200),
     );
     if (!usage.allowed) {
       return new Response(JSON.stringify({ error: tooManyMessage(usage) }), {
