@@ -394,3 +394,103 @@ iOS에서는 사진을 직접 골라 등록합니다.
 - 광고: **없음**
 
 Play에서는 같은 답으로 전체이용가가 나왔다.
+
+---
+
+# Guideline 2.1 회신 (2026-09-13)
+
+첫 제출이 "정보가 더 필요하다"로 돌아왔을 때 그대로 붙여넣을 글이다. 영어로 쓴다 —
+심사팀이 읽는 글이다. **App Store Connect의 「앱 심사에 회신」과 「앱 심사 정보」의 메모
+칸, 두 곳에 같은 내용을 넣으라**고 애플이 지정했다.
+
+```
+Thank you for the review. Here is the information you requested.
+
+2. PURPOSE AND TARGET AUDIENCE
+
+Moacon is a shared drawer for mobile gift vouchers ("gifticons"), which are
+widely used in Korea and arrive as images through messaging apps.
+
+Problem: people receive these vouchers, forget about them, and let them expire.
+When a family receives several, nobody knows who holds what, and two people can
+walk to the same store to use the same voucher.
+
+What the app does: the user uploads the voucher image, and the app reads the
+barcode and fills in the product name, brand, price and expiry date
+automatically. The list is sorted by how soon each one expires, and the app
+sends a notification before one expires. A family can share one list, so
+everyone sees what is available and who used what.
+
+Target audience: adults in Korea, especially families who receive gift vouchers
+often. The app is Korean-only.
+
+The app does not sell, buy or broker gift vouchers. It only organises vouchers
+the user already owns.
+
+3. HOW TO SET UP AND ACCESS THE MAIN FEATURES
+
+Sign in with the demo account provided in App Review Information, using the
+"구글로 로그인" (Sign in with Google) button on the first screen. "Apple로
+로그인" (Sign in with Apple) also works.
+
+The demo account already belongs to a family with three gifticons, so the main
+list is visible immediately after signing in.
+
+  - Add a gifticon: tap the "+" button, choose a photo of a voucher, and the
+    fields are filled in automatically. Correct anything wrong and save.
+  - Show the barcode: tap a card in the list.
+  - Find a store: tap "매장" on a card. Requires location permission.
+  - Family: tap the people icon in the header to see the invite code and
+    members.
+  - Usage history: open the profile menu (top right) and tap "사용 내역".
+  - Delete the account: profile menu, then "계정 삭제".
+
+4. EXTERNAL SERVICES USED FOR CORE FUNCTIONALITY
+
+  - Supabase - authentication, database, file storage, and serverless functions
+  - Anthropic (Claude API) - reads the uploaded voucher image and extracts the
+    product name, brand, price and expiry date. This is the AI service behind
+    the automatic fill. Images are sent only when the user uploads one.
+  - Kakao - Sign in with Kakao, Kakao Map (store search and map display),
+    Kakao Mobility (walking and driving routes), and Kakao share for invites
+  - TMAP (SK Open API) - alternative route lookup
+  - Naver - Sign in with Naver, and product price lookup
+  - Google Sign-In and Sign in with Apple - authentication
+  - Firebase Cloud Messaging - push notifications for expiring vouchers and
+    family join requests
+
+5. REGIONAL DIFFERENCES
+
+The app is available in Korea only and is not localised into other languages.
+It behaves the same for every user in that region. The store search uses Korean
+map data, so it is not useful outside Korea.
+
+6. REGULATED INDUSTRY AND THIRD-PARTY MATERIAL
+
+The app is not part of a regulated industry. It does not sell, buy, broker or
+exchange gift vouchers, and it handles no payments.
+
+Third-party material shown in the app is map data from Kakao Map and route data
+from Kakao Mobility and TMAP. These are used under registered developer keys
+issued to this app by each provider, under their published terms of service.
+
+Brand names that appear on screen come from the voucher images the user uploads.
+The app is not affiliated with, sponsored by, or endorsed by those brands, and
+this is stated at the end of the App Store description.
+
+USER-GENERATED CONTENT AND ITS CONTROLS
+
+Content in this app is shared only inside a closed family group. There is no
+public feed, no discovery, no comments, no messaging, and no way to encounter a
+stranger's content.
+
+  - Joining requires an invite code AND approval by the family owner.
+  - The owner can remove any member at any time.
+  - Any member can leave the family. When they do, the vouchers they added are
+    hidden from the remaining members.
+  - Members delete their own content at any time, and deleting the account
+    removes all of it.
+
+We are glad to add an explicit reporting control if you would like one; please
+let us know.
+```
