@@ -403,94 +403,100 @@ Play에서는 같은 답으로 전체이용가가 나왔다.
 심사팀이 읽는 글이다. **App Store Connect의 「앱 심사에 회신」과 「앱 심사 정보」의 메모
 칸, 두 곳에 같은 내용을 넣으라**고 애플이 지정했다.
 
+메모 칸은 4,000자까지다. 아래 글은 3,635자라 그대로 들어간다. 처음 쓴 글은 4,125자였고
+거절당했다 — 여섯 항목을 하나도 빼지 않고 문장만 줄여 맞췄다.
+
+메모 칸에 있던 한국어 안내는 지우고 이 글로 바꾼다. 담고 있던 내용(데모 계정 로그인,
+사진첩 훑기는 안드로이드 전용, 위치는 저장하지 않음)이 3번 항목에 다 들어 있어서 잃는
+것이 없고, 둘을 합치면 3,942자라 여유가 58자밖에 안 남는다. 심사팀이 읽는 글이니
+한 벌로 두는 편이 낫다.
+
+번호는 1부터 시작한다. 애플이 여섯 가지를 번호로 물었고 1번이 화면 녹화다.
+`(link)` 자리에 영상 링크를 넣는다 — **로그아웃한 브라우저에서 열리는지 확인하고**
+넣는다. 심사자가 못 여는 링크면 그대로 다시 돌아온다.
+
 ```
 Thank you for the review. Here is the information you requested.
+
+1. SCREEN RECORDING
+
+(link)
 
 2. PURPOSE AND TARGET AUDIENCE
 
 Moacon is a shared drawer for mobile gift vouchers ("gifticons"), which are
 widely used in Korea and arrive as images through messaging apps.
 
-Problem: people receive these vouchers, forget about them, and let them expire.
-When a family receives several, nobody knows who holds what, and two people can
-walk to the same store to use the same voucher.
+People receive these vouchers, forget them, and let them expire. When a family
+receives several, nobody knows who holds what, and two people can walk to the
+same store to use the same voucher.
 
-What the app does: the user uploads the voucher image, and the app reads the
-barcode and fills in the product name, brand, price and expiry date
-automatically. The list is sorted by how soon each one expires, and the app
-sends a notification before one expires. A family can share one list, so
-everyone sees what is available and who used what.
+The user uploads the voucher image; the app reads the barcode and fills in the
+product name, brand, price and expiry date automatically. The list is sorted by
+how soon each one expires, and a notification arrives before one does. A family
+shares one list, so everyone sees what is available and who used what.
 
 Target audience: adults in Korea, especially families who receive gift vouchers
 often. The app is Korean-only.
 
-The app does not sell, buy or broker gift vouchers. It only organises vouchers
-the user already owns.
+The app does not sell, buy or broker gift vouchers, and handles no payments. It
+only organises vouchers the user already owns.
 
-3. HOW TO SET UP AND ACCESS THE MAIN FEATURES
+3. HOW TO ACCESS THE MAIN FEATURES
 
-Sign in with the demo account provided in App Review Information, using the
-"구글로 로그인" (Sign in with Google) button on the first screen. "Apple로
-로그인" (Sign in with Apple) also works.
+Sign in with the demo account in App Review Information, using the "구글로
+로그인" (Google) button on the first screen. "Apple로 로그인" also works. The
+demo account already has a family with three gifticons, so the list is visible
+right after signing in.
 
-The demo account already belongs to a family with three gifticons, so the main
-list is visible immediately after signing in.
+- Add: tap "+", choose a voucher photo, fields fill in automatically, save.
+- Barcode: tap a card in the list.
+- Find a store: tap "매장" on a card (needs location permission).
+- Family: tap the people icon in the header.
+- Usage history: profile menu (top right), then "사용 내역".
+- Delete account: profile menu, then "계정 삭제".
 
-  - Add a gifticon: tap the "+" button, choose a photo of a voucher, and the
-    fields are filled in automatically. Correct anything wrong and save.
-  - Show the barcode: tap a card in the list.
-  - Find a store: tap "매장" on a card. Requires location permission.
-  - Family: tap the people icon in the header to see the invite code and
-    members.
-  - Usage history: open the profile menu (top right) and tap "사용 내역".
-  - Delete the account: profile menu, then "계정 삭제".
+Two notes. Scanning the photo library to find vouchers automatically is an
+Android-only feature; on iOS the user picks each photo. Location is used only at
+the moment a nearby store is searched, and is never stored.
 
-4. EXTERNAL SERVICES USED FOR CORE FUNCTIONALITY
+4. EXTERNAL SERVICES
 
-  - Supabase - authentication, database, file storage, and serverless functions
-  - Anthropic (Claude API) - reads the uploaded voucher image and extracts the
-    product name, brand, price and expiry date. This is the AI service behind
-    the automatic fill. Images are sent only when the user uploads one.
-  - Kakao - Sign in with Kakao, Kakao Map (store search and map display),
-    Kakao Mobility (walking and driving routes), and Kakao share for invites
-  - TMAP (SK Open API) - alternative route lookup
-  - Naver - Sign in with Naver, and product price lookup
-  - Google Sign-In and Sign in with Apple - authentication
-  - Firebase Cloud Messaging - push notifications for expiring vouchers and
-    family join requests
+- Supabase - authentication, database, storage, serverless functions
+- Anthropic (Claude API) - reads the uploaded voucher image and extracts the
+  product name, brand, price and expiry date. This is the AI service behind the
+  automatic fill. Images are sent only when the user uploads one.
+- Kakao - login, Kakao Map (store search and map), Kakao Mobility (routes),
+  and Kakao share for invites
+- TMAP (SK Open API) - alternative route lookup
+- Naver - login and product price lookup
+- Google Sign-In, Sign in with Apple - authentication
+- Firebase Cloud Messaging - push notifications
 
 5. REGIONAL DIFFERENCES
 
-The app is available in Korea only and is not localised into other languages.
-It behaves the same for every user in that region. The store search uses Korean
-map data, so it is not useful outside Korea.
+Available in Korea only, Korean-only, and identical for every user there. Store
+search uses Korean map data and is not useful elsewhere.
 
 6. REGULATED INDUSTRY AND THIRD-PARTY MATERIAL
 
-The app is not part of a regulated industry. It does not sell, buy, broker or
-exchange gift vouchers, and it handles no payments.
+Not a regulated industry. Third-party material is map data from Kakao Map and
+route data from Kakao Mobility and TMAP, used under registered developer keys
+issued to this app by each provider under their terms of service.
 
-Third-party material shown in the app is map data from Kakao Map and route data
-from Kakao Mobility and TMAP. These are used under registered developer keys
-issued to this app by each provider, under their published terms of service.
-
-Brand names that appear on screen come from the voucher images the user uploads.
-The app is not affiliated with, sponsored by, or endorsed by those brands, and
-this is stated at the end of the App Store description.
+Brand names on screen come from voucher images the user uploads. The app is not
+affiliated with or endorsed by those brands, as stated in the description.
 
 USER-GENERATED CONTENT AND ITS CONTROLS
 
-Content in this app is shared only inside a closed family group. There is no
-public feed, no discovery, no comments, no messaging, and no way to encounter a
-stranger's content.
+Content is shared only inside a closed family group. There is no public feed, no
+discovery, no comments, no messaging, and no way to encounter a stranger's
+content.
 
-  - Joining requires an invite code AND approval by the family owner.
-  - The owner can remove any member at any time.
-  - Any member can leave the family. When they do, the vouchers they added are
-    hidden from the remaining members.
-  - Members delete their own content at any time, and deleting the account
-    removes all of it.
+- Joining requires an invite code AND approval by the family owner.
+- The owner can remove any member at any time.
+- Any member can leave; the vouchers they added are then hidden from the rest.
+- Members delete their own content, and deleting the account removes all of it.
 
-We are glad to add an explicit reporting control if you would like one; please
-let us know.
+We are glad to add an explicit reporting control if you would like one.
 ```
