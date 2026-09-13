@@ -69,12 +69,11 @@ sonnet으로 돌리는 것은 정한 것이다. haiku면 인식이 7원으로 �
 | 환경변수 | 지금 | 바꿀 값 | 그 값이면 |
 |---|---|---|---|
 | `ANALYZE_TOTAL_MONTHLY_LIMIT` | 2,000 | **1,200** | 42,900원 |
-| `PRICE_TOTAL_MONTHLY_LIMIT` | 600 | **80** | 실제로는 0원 (버튼이 꺼져 있다) |
+| `PRICE_TOTAL_MONTHLY_LIMIT` | 600 | **80** (코드 기본값을 바꿨다) | 실제로는 0원 — 버튼이 꺼져 있다 |
 | | | 합 | **42,900원** (+Apple = 54,400원) |
 
 ```
 supabase secrets set ANALYZE_TOTAL_MONTHLY_LIMIT=1200
-supabase secrets set PRICE_TOTAL_MONTHLY_LIMIT=80
 ```
 
 **Anthropic 콘솔의 월 한도는 $35로 잡는다.** 코드 한도를 다 채워도 인식 $31 +

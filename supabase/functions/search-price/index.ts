@@ -69,7 +69,7 @@ Deno.serve(async (req) => {
       // 부를 수 있으므로, 예산을 축내지 않는 선에서 막아만 둔다.
       //
       // 버튼을 되살릴 때 이 값을 같이 올린다. 안 올리면 몇 번 만에 막힌다.
-      limitFromEnv('PRICE_TOTAL_MONTHLY_LIMIT', 600),
+      limitFromEnv('PRICE_TOTAL_MONTHLY_LIMIT', 80),
     );
     if (!usage.allowed) {
       return new Response(JSON.stringify({ error: tooManyMessage(usage) }), {
