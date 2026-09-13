@@ -806,8 +806,10 @@ Supabase가 기본으로 붙여주는 이메일 발송은 개발용이라 한도
 - [x] **하루 한도도 이미 있다.** 사람당 30건 · 전체 500건(analyze),
       60건 · 1000건(verify) — `supabase/functions/analyze-gifticon/index.ts:411`.
       환경변수로 바꾼다(`ANALYZE_DAILY_LIMIT` 등)
-- [ ] **달 단위는 없다.** 하루 500건이 30일이면 15,000건이라 요금이 그만큼 나간다.
-      앱에 달 한도를 더 만드는 것보다 **Anthropic 콘솔의 월 지출 한도**가 확실하다
+- [x] **달 한도도 넣었다.** `ANALYZE_TOTAL_MONTHLY_LIMIT` 2,000 (약 $51),
+      `PRICE_TOTAL_MONTHLY_LIMIT` 600 (약 $31). 가격 검색 쪽은 2026-09-13에 넣었다 —
+      하루 한도(800)만 있어서 다 채우면 한 달 $1,200가 넘었다. 웹 검색 결과가 통째로
+      입력 토큰이 되어 한 번에 $0.05로, analyze 한 건($0.019)보다 비싸다
 - [ ] Anthropic·카카오·TMAP·Supabase 각각 사용량 상한과 알림
 
 ### 6단계 — 제출

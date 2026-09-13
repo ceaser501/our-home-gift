@@ -56,6 +56,16 @@ Deno.serve(async (req) => {
       'price',
       limitFromEnv('PRICE_DAILY_LIMIT', 50),
       limitFromEnv('PRICE_TOTAL_DAILY_LIMIT', 800),
+      // 달 천장. analyze에는 있는데 여기만 없었다(2026-09-13에 넣었다).
+      //
+      // 하루 한도만 보면 늘 여유가 있어 보여서 이 구멍은 눈에 안 띈다. 800건이 30일이면
+      // 24,000건이고, ai_usage_log에서 뽑은 실제 단가가 한 번에 약 $0.05다 — 웹 검색
+      // 결과가 통째로 입력 토큰이 되어서 analyze 한 건($0.019)보다 비싸다. 다 채우면
+      // 한 달에 $1,200가 넘는다.
+      //
+      // 600으로 잡은 근거는 $30 남짓이라는 것과, 이 버튼이 자주 눌리지 않는다는 것이다
+      // (2026-08 한 달에 9번 불렸다). 사람이 늘어 막히기 시작하면 그때 올린다.
+      limitFromEnv('PRICE_TOTAL_MONTHLY_LIMIT', 600),
     );
     if (!usage.allowed) {
       return new Response(JSON.stringify({ error: tooManyMessage(usage) }), {
