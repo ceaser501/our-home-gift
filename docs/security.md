@@ -246,10 +246,13 @@ if (cronSecret && url.searchParams.get('token') !== cronSecret) { ... 401 }
 
 - [x] `supabase functions delete reset-all-data` (2026-09-02)
 - [x] `supabase/drop-sample-skip.sql` 실행 (2026-09-02)
-- [ ] Supabase 시크릿에서 `RESET_TOKEN` 제거 — 함수를 지워서 읽을 코드는 없지만,
-      쓰지 않는 비밀값을 남겨두면 다음에 이게 뭐였는지 아무도 모른다
-- [ ] `ANALYZE_DAILY_LIMIT` / `ANALYZE_TOTAL_DAILY_LIMIT`을 출시 값으로 정하기
-      (지금은 30 / 500. 둘은 성격이 달라서 나란히 놓고 한 번에 정하기로 했다)
+- [ ] Supabase 시크릿에서 `RESET_TOKEN` 제거 — **급하지 않다(2026-09-14 확인).**
+      `reset-all-data` 함수는 배포 목록에 없고, 이 값을 읽는 코드도 저장소 어디에도
+      없다. 열쇠만 남았고 그 열쇠로 열 문이 없다. 위험이 아니라 청소라, 손 가는 날
+      `supabase secrets unset RESET_TOKEN` 한 줄로 치운다
+- [ ] `ANALYZE_DAILY_LIMIT` / `ANALYZE_TOTAL_DAILY_LIMIT`을 출시 값으로 정하기 —
+      **한 달 쓰고 정한다**([after-launch.md](after-launch.md)의 2번). 달 한도가 이미
+      천장을 잡고 있어서 급하지 않다
 - [ ] 위 1~11번 조치 완료 확인
 - [ ] Anthropic·카카오·TMAP·Supabase 각각 **일일 사용량 상한과 알림** 설정
 - [ ] 개인정보처리방침·이용약관 URL이 앱과 스토어 양쪽에 연결돼 있는지 확인

@@ -719,7 +719,8 @@ developer.apple.com/account의 **Membership**만 열어본다.
 - [x] `client/src/utils/imageAnalyze.js`의 `meta` 진단값
 - [x] Supabase에서 `reset-all-data` 함수 삭제
 - [x] `supabase/drop-sample-skip.sql`
-- [ ] Supabase 시크릿에서 `RESET_TOKEN` 제거 (남은 하나)
+- [ ] Supabase 시크릿에서 `RESET_TOKEN` 제거 — 급하지 않다. 읽는 코드가 없다
+      ([security.md](security.md))
 
 ### 1-1단계 — ⚠️ 이메일 로그인이 지금 안 된다 (2026-09-02 발견)
 
