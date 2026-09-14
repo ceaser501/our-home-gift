@@ -154,16 +154,15 @@ supabase secrets set ANALYZE_DAILY_LIMIT=10 ANALYZE_TOTAL_DAILY_LIMIT=200
 
 ---
 
-## 5. iOS에 「설정 열기」 버튼
+## 5. 아이폰 사진첩 훑기 (「설정 열기」가 여기 딸려 온다)
 
-안드로이드에만 있다. `client/src/utils/gallery.js:449`의 `canOpenAppSettings()`가
-`isGalleryScanSupported()`를 그대로 돌려주는데, 그건 안드로이드에서만 참이다.
+안드로이드에만 있는 기능이다. 만드는 방향은 **[ios-gallery.md](ios-gallery.md)에 따로
+정리했다** — 플러그인 다섯 메서드, 폴더 대신 기간, 권한 두 갈래, 심사에서 고칠 것까지.
 
-권한을 거절한 사람에게 "설정에서 허용해주세요"라고만 적으면 그 설정을 스스로 찾아야
-한다. iOS는 사진·위치 권한을 쓰므로 같은 상황이 생긴다.
+「설정 열기」(`client/src/utils/gallery.js:449`의 `canOpenAppSettings()`)도 그 작업에
+딸려 온다. 같은 플러그인에 들어간다.
 
-- [ ] `canOpenAppSettings()`를 플랫폼별로 가르기
-- [ ] iOS 쪽 `openAppSettings` 구현 (`UIApplication.openSettingsURLString`)
+- [ ] [ios-gallery.md](ios-gallery.md)의 9번 순서대로
 
 ---
 
