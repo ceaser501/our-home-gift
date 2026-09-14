@@ -806,13 +806,13 @@ Supabase가 기본으로 붙여주는 이메일 발송은 개발용이라 한도
 - [x] **하루 한도도 이미 있다.** 사람당 30건 · 전체 500건(analyze),
       60건 · 1000건(verify) — `supabase/functions/analyze-gifticon/index.ts:411`.
       환경변수로 바꾼다(`ANALYZE_DAILY_LIMIT` 등)
-- [x] **달 한도를 예산에 맞췄다** (2026-09-14). `ANALYZE_TOTAL_MONTHLY_LIMIT` 1,900,
-      `VERIFY_TOTAL_MONTHLY_LIMIT` 1,900, `PRICE_TOTAL_MONTHLY_LIMIT` 80.
-      합쳐서 67,900원이고 예산이 7만원이다(애플 연회비는 이미 내서 그 밖이다).
+- [x] **달 한도를 기준에 맞췄다** (2026-09-14). `ANALYZE_TOTAL_MONTHLY_LIMIT` 2,000,
+      `VERIFY_TOTAL_MONTHLY_LIMIT` 2,000, `PRICE_TOTAL_MONTHLY_LIMIT` 80.
+      기준은 월 2,000건이고 요금으로 71,400원이다(애플 연회비는 이미 내서 그 밖이다).
       확인(verify)에는 달 한도가 아예 없었다 — 다 채우면 27만원이었다
 - [ ] **배포** — 세 한도 모두 코드 기본값을 바꿨다.
       `supabase functions deploy analyze-gifticon search-price`
-- [ ] **Anthropic 콘솔 월 한도 $55 · 알림 $35** — 기능별 건당 단가와 규모별 총액은
+- [ ] **Anthropic 콘솔 월 한도 $60 · 알림 $40** — 기능별 건당 단가와 규모별 총액은
       [running-cost.md](running-cost.md)에 있다
 - [ ] 카카오·TMAP는 무료 쿼터 안이고 코드가 그 앞에서 막는다. 알림만 걸어둔다
 
