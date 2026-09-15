@@ -177,7 +177,60 @@ supabase secrets set ANALYZE_DAILY_LIMIT=10 ANALYZE_TOTAL_DAILY_LIMIT=200
 
 ---
 
-## 7. 바깥 서비스 사용량 알림
+## 7. 초대 링크의 Play 주소 ⏰ 프로덕션 열리는 날
+
+`client/public/invite.html:136`이 비어 있다.
+
+```js
+var STORE_URL_ANDROID = '';
+```
+
+**지금 채우면 안 된다.** Play가 비공개 테스트라 테스트 참여자가 아닌 사람에게는
+「찾을 수 없는 페이지」가 뜬다. 지금은 웹으로 보내는 것이 맞다.
+
+프로덕션이 열리는 날 바로 윗줄의 주석을 푼다.
+
+```js
+var STORE_URL_ANDROID = 'https://play.google.com/store/apps/details?id=' + PACKAGE;
+```
+
+**웹이라 main에 밀어야 나간다**(`.github/workflows/deploy-pages.yml`). 태그만
+따서는 안 바뀐다.
+
+- [ ] Play 프로덕션 열린 뒤 한 줄 채우기
+- [ ] main에 밀기
+- [ ] 안드로이드 폰에서 앱을 지우고 초대 링크를 눌러 Play로 가는지 보기
+
+---
+
+## 8. 문자로 보낸 초대는 앱을 안 연다
+
+카톡 공유는 다리 페이지를 타는데(`client/public/kakao-share.html:89`) **문자·메일
+공유는 안 탄다.** `inviteUrl()`(`client/src/utils/inviteLink.js:38`)이 웹 주소를
+그대로 돌려준다.
+
+| 보내는 곳 | 링크 | 다리 |
+|---|---|---|
+| 앱에서 카톡 공유 | `invite.html?join=…` | ✅ |
+| 웹에서 카톡 공유 (`inviteLink.js:225`) | `/?join=…` | ❌ |
+| 문자·메일·기타 (`inviteLink.js:267`) | `/?join=…` | ❌ |
+
+받는 사람이 앱을 깔았어도 웹이 열린다. 앱이 있다는 것을 모르고 지나간다 — 다리
+페이지를 만든 이유가 그것이었다.
+
+`inviteUrl()`이 `invite.html?join=…`을 돌려주게 하면 셋이 하나가 된다. 다만
+`client/src/test/inviteLink.test.js:68`이 주소를 문자열로 박고 있어서 같이 고친다.
+
+`family`는 문자 쪽에 없다. 다리 페이지가 없으면 「가족 초대를 받았어요」로 뜨는데
+그것으로 충분하다.
+
+- [ ] `inviteUrl()`을 다리 페이지로 돌리기
+- [ ] 테스트 고치기
+- [ ] 문자로 보내 앱이 열리는지 보기
+
+---
+
+## 9. 바깥 서비스 사용량 알림
 
 카카오·TMAP는 무료 쿼터 안이고 코드가 그 앞에서 막는다
 (`supabase/functions/search-places/index.ts:240`). 요금이 나갈 일은 없지만, 쿼터에

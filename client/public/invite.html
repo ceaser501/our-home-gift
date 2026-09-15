@@ -35,20 +35,27 @@
       아이폰은 눌러야 연다. 페이지가 뜨자마자 스킴을 열면 사파리·카톡 웹뷰가 막는다.
 
       ── 앱이 없을 때 ─────────────────────────────────────────────────────────
-      아직 스토어에 올라가 있지 않다. 지금 스토어로 보내면 '찾을 수 없는 페이지'가 뜬다.
-      그래서 지금은 웹 화면으로 보낸다 — 웹에서도 참여는 그대로 된다.
+      스토어로 보낸다. 단, 그 스토어에 앱이 실제로 올라가 있어야 한다 — 없는데 보내면
+      '찾을 수 없는 페이지'가 뜬다. 그래서 스토어 주소가 비어 있으면 웹 화면으로 보낸다.
+      웹에서도 참여는 그대로 된다.
 
-      출시하면 아래 STORE_URL 한 줄만 채우면 된다.
+      ── 스토어 주소를 둘로 나눠 둔 이유 ──────────────────────────────────────
+      처음에는 STORE_URL 한 줄이었다. 두 스토어가 같은 날 열린다고 보고 쓴 것인데
+      실제로는 App Store 만 먼저 열렸다(2026-09-14). 한 줄을 애플 주소로 채우면 그 값이
+      안드로이드 intent 의 S.browser_fallback_url 로도 들어가서, 앱 없는 안드로이드
+      사용자가 App Store 페이지로 간다. 그래서 STORE_URL_IOS / STORE_URL_ANDROID 로
+      갈랐다. Play 가 프로덕션으로 열리면 안드로이드 쪽 한 줄을 채운다.
 
-      ── 아이폰은 STORE_URL 이 채워졌는지로 갈린다 ────────────────────────────
-      비어 있으면(지금) 웹이 주 버튼이다. 아이폰 앱은 스토어에 없어서 만든 사람 테스트
-      기기 말고는 깔 수가 없는데, 그때 '앱으로 열기'를 크게 세우면 대부분에게 눌러도
-      아무 일 안 일어나는 버튼이 제일 크게 서 있는 셈이 된다. 화면에서 제일 나쁜 자리다.
+      ── 아이폰은 STORE_URL_IOS 가 채워졌는지로 갈린다 ────────────────────────
+      비어 있으면 웹이 주 버튼이다. 스토어에 없는 앱의 '앱으로 열기'를 크게 세우면
+      대부분에게 눌러도 아무 일 안 일어나는 버튼이 제일 크게 서 있는 셈이 된다.
 
-      채워지면 앱이 주 버튼이 된다. 눌러서 앱이 뜨면 그대로 끝이고, 안 뜨면 스토어로
-      간다 — 앱이 없는 사람에게도 갈 곳이 생기므로 그때는 앱을 앞에 세워도 된다.
+      채워지면(지금) 앱이 주 버튼이 된다. 눌러서 앱이 뜨면 그대로 끝이고, 안 뜨면
+      스토어로 간다 — 앱이 없는 사람에게도 갈 곳이 생기므로 앱을 앞에 세워도 된다.
 
-      한 줄만 채우면 둘이 함께 바뀐다. 손댈 곳이 여러 군데면 반쯤만 바뀐 채로 나간다.
+      앱을 안 깐 아이폰에서는 스킴을 열어보는 순간 사파리가 '주소가 올바르지 않습니다'
+      알림을 한 번 띄울 수 있다. 확인을 누르면 1.4초 뒤 스토어로 간다. 커스텀 스킴을
+      쓰는 값이고, Universal Links 로 올리면 사라진다(docs/after-launch.md 4번).
     -->
     <style>
       :root { color-scheme: only light; }
@@ -119,8 +126,14 @@
         var SCHEME = 'io.github.ceaser501.moacon';
         // 안드로이드가 "이 앱이 깔렸나"를 판단할 때 쓴다. app/android/app/build.gradle.
         var PACKAGE = 'io.github.ceaser501.ourhomegift';
-        // 스토어에 올라가면 여기를 채운다. 비어 있으면 웹으로 보낸다(위 주석 참고).
-        var STORE_URL = '';
+        // 스토어 주소. 스토어마다 따로 둔다 — 하나로 묶으면 안드로이드 쪽 fallback 에
+        // 애플 주소가 들어가서, 앱 없는 안드로이드 사용자가 App Store 로 간다.
+        // 비어 있는 쪽은 웹으로 보낸다(위 주석 참고).
+        var STORE_URL_IOS = 'https://apps.apple.com/app/id6808555980';
+        // Play 는 아직 비공개 테스트다. 프로덕션이 열리기 전에 채우면 초대받은 사람이
+        // '찾을 수 없는 페이지'를 본다. 열리면 아랫줄로 바꾼다.
+        //   var STORE_URL_ANDROID = 'https://play.google.com/store/apps/details?id=' + PACKAGE;
+        var STORE_URL_ANDROID = '';
 
         var params = new URLSearchParams(location.search);
         var code = (params.get('join') || params.get('code') || '').trim().toUpperCase().slice(0, 12);
@@ -128,7 +141,8 @@
 
         var webUrl = location.origin + location.pathname.replace(/invite\.html$/, '') + (code ? '?join=' + encodeURIComponent(code) : '');
         var appUrl = SCHEME + '://invite?join=' + encodeURIComponent(code);
-        var fallback = STORE_URL || webUrl;
+        // 안드로이드 intent 가 '앱이 없을 때' 보내는 곳. 안드로이드 쪽 값만 쓴다.
+        var fallback = STORE_URL_ANDROID || webUrl;
 
         var title = document.getElementById('title');
         var note = document.getElementById('note');
@@ -202,7 +216,7 @@
           note.textContent = '이름만 적으면 참여 신청이 끝나요.';
           open.hidden = false;
 
-          if (STORE_URL) {
+          if (STORE_URL_IOS) {
             // 앱이 주 버튼이다. 눌러서 안 열리면 스토어로 보낸다.
             open.addEventListener('click', function () {
               open.textContent = '모아콘을 여는 중…';
@@ -210,7 +224,7 @@
               wentToApp(1400).then(function (opened) {
                 if (opened) return;
                 open.textContent = '모아콘 앱으로 열기';
-                location.href = STORE_URL;
+                location.href = STORE_URL_IOS;
               });
             });
           } else {
