@@ -106,6 +106,57 @@ export function forgetInviteCode() {
   }
 }
 
+/** 코드를 붙들어둔다. 클립보드에서 찾아낸 것을 위 pendingInviteCode와 같은 자리에 넣는다. */
+export function rememberInviteCode(code) {
+  const clean = String(code || '').trim().toUpperCase().slice(0, 12);
+  if (!clean) return '';
+  try {
+    sessionStorage.setItem(PENDING_KEY, clean);
+  } catch {
+    // 적어두지 못해도 이번 화면은 돈다. 새로고침하면 사라질 뿐이다.
+  }
+  return clean;
+}
+
+// ── 스토어를 다녀온 사람의 코드 ───────────────────────────────────────────────
+//
+// 아이폰은 "무엇을 눌러서 설치했는지"를 앱에 안 넘긴다(안드로이드는 Play Install
+// Referrer로 넘긴다). 그래서 카톡 초대 → App Store → 설치 → 열기로 들어온 사람은
+// 코드 없이 첫 화면에 선다. sessionStorage에 적어둔 코드는 방금 깔린 앱에 있을 리가
+// 없다.
+//
+// 애플이 남겨둔 길이 클립보드 하나다. 다리 페이지가 스토어로 보내기 직전에 적어두고
+// (client/public/invite.html), 여기서 꺼낸다.
+//
+// 코드만 적지 않고 말머리를 붙이는 이유는 남의 것을 초대 코드로 잘못 읽지 않기
+// 위해서다. 여섯 자리 영숫자는 세상에 널려 있다.
+
+/** 다리 페이지가 클립보드에 적는 말머리. client/public/invite.html도 같은 값을 쓴다. */
+export const CLIPBOARD_TAG = '모아콘 초대 코드';
+
+/** 클립보드에서 읽은 글에서 초대 코드를 꺼낸다. 말머리가 없으면 빈 문자열. */
+export function readInviteFromText(text) {
+  const found = String(text || '').match(new RegExp(CLIPBOARD_TAG + '\\s*([A-Za-z0-9]{4,12})'));
+  return found ? found[1].toUpperCase() : '';
+}
+
+/**
+ * 클립보드를 들춰 초대 코드를 찾는다. 없거나 못 읽으면 빈 문자열.
+ *
+ * ⚠️ 반드시 사람이 누른 자리에서 부른다. 아이폰은 붙여넣기를 한 번 물어보는데,
+ * 손짓 없이 부르면 물어보지도 않고 거절한다. 화면이 뜨자마자 부르면 초대받지 않은
+ * 사람에게도 영문 모를 물음창이 뜬다 — 그래서 버튼 뒤에 둔다.
+ */
+export async function readInviteFromClipboard() {
+  try {
+    if (!navigator.clipboard?.readText) return '';
+    return readInviteFromText(await navigator.clipboard.readText());
+  } catch {
+    // 거절했거나 읽을 수 없는 자리다. 직접 적는 길이 그대로 있다.
+    return '';
+  }
+}
+
 // ── 카카오 ────────────────────────────────────────────────────────────────────
 //
 // JS 키는 화면 코드에 그대로 박히는 공개 값이다. 감추는 값이 아니라 카카오 개발자센터에

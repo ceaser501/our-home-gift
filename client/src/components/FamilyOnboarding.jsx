@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Check, ChevronRight, Clock, Mail, Users } from 'lucide-react';
+import { Check, ChevronRight, Clock, ClipboardCheck, Mail, Users } from 'lucide-react';
 import { createFamily, peekFamilyByCode, requestJoinFamily } from '../family';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,13 +7,22 @@ import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import CopyButton from './CopyButton';
 import { signOut } from '../auth';
-import { forgetInviteCode, pendingInviteCode } from '../utils/inviteLink';
+import {
+  forgetInviteCode,
+  pendingInviteCode,
+  readInviteFromClipboard,
+  rememberInviteCode,
+} from '../utils/inviteLink';
 import Logo from './Logo';
 
 export default function FamilyOnboarding({ userEmail, onDone }) {
   // 초대 링크를 눌러 온 사람은 참여하러 온 것이다. 코드를 이미 들고 있는데 '가족
   // 만들기'가 먼저 열려 있으면, 링크로 줄여준 걸음을 도로 늘리는 셈이 된다.
-  const invited = pendingInviteCode();
+  //
+  // 상태로 두는 이유는 클립보드 때문이다. 스토어를 다녀온 사람은 코드 없이 여기
+  // 서는데, 아래 '초대 코드 찾기'로 찾아내면 그 순간 초대받은 사람의 화면으로
+  // 바뀌어야 한다.
+  const [invited, setInvited] = useState(() => pendingInviteCode());
   const [mode, setMode] = useState(invited ? 'join' : 'create');
   // 초대한 가족의 이름. 서버에 물어봐서 채운다 — 링크에 실어 보내면 보내는 사람이
   // 마음대로 적을 수 있어서, 화면이 거짓말을 하게 된다.
@@ -28,6 +37,27 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
   const [error, setError] = useState('');
   const [created, setCreated] = useState(null);
   const [pendingFor, setPendingFor] = useState(null);
+  // 클립보드를 들춰본 결과. 'idle' | 'looking' | 'empty'
+  const [clip, setClip] = useState('idle');
+
+  // 스토어를 다녀온 사람의 코드를 클립보드에서 꺼낸다.
+  //
+  // 화면이 뜨자마자 부르지 않는다. 아이폰은 붙여넣기를 한 번 물어보는데, 새로 가족을
+  // 만들러 온 사람에게까지 영문 모를 물음창이 뜨면 그게 더 나쁘다. 눌러야 뜬다.
+  async function findFromClipboard() {
+    setClip('looking');
+    const found = await readInviteFromClipboard();
+    if (!found) {
+      // 못 찾았으면 직접 적는 칸을 열어준다. 여기서 멈춰 세우지 않는다.
+      setClip('empty');
+      setMode('join');
+      return;
+    }
+    rememberInviteCode(found);
+    setCode(found);
+    setInvited(found);
+    setClip('idle');
+  }
 
   useEffect(() => {
     if (!invited) return undefined;
@@ -376,6 +406,38 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
           <ChevronRight className="size-3.5" />
         </Button>
       </div>
+
+      {/* ── 스토어를 다녀온 사람 ────────────────────────────────────────────
+          카톡 초대 → App Store → 설치 → '열기'로 들어오면 코드가 안 실려 온다.
+          아이폰이 설치 경로를 앱에 안 넘겨줘서다(docs/after-launch.md 9번).
+
+          그 사람에게 이 화면은 막다른 길처럼 보인다 — 초대받아 왔는데 '새로 만들기'가
+          먼저 열려 있다. 다리 페이지가 클립보드에 적어둔 코드를 여기서 꺼낸다.
+
+          탭 위에 두는 이유는, 이 사람이 탭을 고를 사람이 아니어서다. 고를 것 없이
+          갈 곳이 정해져 있다. */}
+      {clip === 'empty' ? (
+        <p className="m-0 rounded-[13px] bg-secondary/60 px-4 py-3 text-center text-[14px] leading-relaxed font-medium break-keep text-muted-foreground">
+          코드를 찾지 못했어요.
+          <br />
+          카톡에 온 여섯 자리를 적어주세요.
+        </p>
+      ) : (
+        <button
+          type="button"
+          onClick={findFromClipboard}
+          disabled={clip === 'looking'}
+          className="flex items-center gap-3 rounded-[13px] border border-primary/25 bg-accent px-4 py-3 text-left"
+        >
+          <ClipboardCheck className="size-[19px] shrink-0 text-primary" />
+          <span className="flex-1 text-[14.5px] font-semibold break-keep text-foreground">
+            초대받고 설치하셨나요?
+          </span>
+          <span className="shrink-0 text-[14px] font-bold text-primary">
+            {clip === 'looking' ? '찾는 중…' : '코드 찾기'}
+          </span>
+        </button>
+      )}
 
       {/* 보라로 채운 탭은 '눌러야 할 주 버튼'처럼 보였다. 실제로는 지금 어느 쪽인지
           알려주는 표시다. 흰 배경이 선택된 쪽을 가리키고 둘은 같은 무게로 남는다. */}
