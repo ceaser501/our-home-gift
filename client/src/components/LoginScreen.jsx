@@ -8,7 +8,7 @@ import {
   signInWithKakao,
   signInWithNaver,
 } from '../auth';
-import { isIosApp } from '../utils/browser';
+import { isIosApp, isNativeApp } from '../utils/browser';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -107,10 +107,12 @@ export default function LoginScreen() {
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState('');
-  const [googleLoading, setGoogleLoading] = useState(false);
-  const [naverLoading, setNaverLoading] = useState(false);
-  const [kakaoLoading, setKakaoLoading] = useState(false);
-  const [appleLoading, setAppleLoading] = useState(false);
+  // 지금 로그인 창을 띄운 곳. '' 이면 아무것도 안 띄운 상태다.
+  //
+  // 넷을 따로 두었던 것을 하나로 합쳤다. 끄는 자리가 넷이면 하나만 빠뜨려도 그 버튼이
+  // '연결 중…'에 갇힌다 — 실제로 그랬다. 그리고 카카오를 눌렀다 돌아와 네이버를 누르면
+  // 둘 다 '연결 중…'이 되기도 했다. 한 번에 한 곳만 띄우는 일이라 값도 하나면 된다.
+  const [busy, setBusy] = useState('');
   // 화면이 그려질 때 한 번만 읽는다. 이 화면에 머무는 동안 바뀔 값이 아니다.
   const [lastUsed] = useState(() => lastLoginMethod());
   // 애플 로그인은 아이폰 앱에서만 뜬다. 이것도 화면 도는 동안 바뀌지 않는다.
@@ -147,52 +149,76 @@ export default function LoginScreen() {
     }
   }
 
-  async function handleGoogleLogin() {
-    setGoogleLoading(true);
+  // 소셜 로그인 넷이 하는 일이 같다 — 켜고, 열고, 실패하면 끈다.
+  //
+  // 성공했을 때 여기서 끄지 않는 것은 그대로다. 로그인이 되면 세션이 생기고 AuthGate가
+  // 화면을 통째로 바꾸므로, 이 화면은 그 전에 사라진다. 끄려고 해봐야 없는 화면을
+  // 건드리는 셈이다.
+  async function startSocial(key, run, failMessage) {
+    setBusy(key);
     setError('');
     try {
-      await signInWithGoogle();
+      await run();
     } catch (err) {
-      setError(err.message || '구글 로그인에 실패했어요.');
-      setGoogleLoading(false);
-    }
-  }
-
-  async function handleNaverLogin() {
-    setNaverLoading(true);
-    setError('');
-    try {
-      await signInWithNaver();
-    } catch (err) {
-      setError(err.message || '네이버 로그인에 실패했어요.');
-      setNaverLoading(false);
-    }
-  }
-
-  async function handleKakaoLogin() {
-    setKakaoLoading(true);
-    setError('');
-    try {
-      await signInWithKakao();
-    } catch (err) {
-      setError(err.message || '카카오 로그인에 실패했어요.');
-      setKakaoLoading(false);
-    }
-  }
-
-  async function handleAppleLogin() {
-    setAppleLoading(true);
-    setError('');
-    try {
-      await signInWithApple();
-    } catch (err) {
-      // 사용자가 시스템 창을 그냥 닫은 것도 예외로 온다. 그때 빨간 글씨를 띄우면
-      // 취소한 사람에게 실패했다고 말하는 꼴이라, 취소는 조용히 넘긴다.
       const message = err?.message || '';
-      if (!/cancel|1001/i.test(message)) setError(message || '애플 로그인에 실패했어요.');
-      setAppleLoading(false);
+      // 사용자가 시스템 창을 그냥 닫은 것도 예외로 온다(애플). 그때 빨간 글씨를 띄우면
+      // 취소한 사람에게 실패했다고 말하는 꼴이라, 취소는 조용히 넘긴다.
+      if (!/cancel|1001/i.test(message)) setError(message || failMessage);
+      setBusy('');
     }
   }
+
+  // ── 로그인 창을 닫고 그냥 돌아왔을 때 ──────────────────────────────────────
+  //
+  // 카카오·네이버 화면에서 뒤로가기를 누르면 아무 일도 안 일어난 채 이 화면으로
+  // 돌아온다. 성공도 실패도 아니라 위의 catch가 안 돌고, '연결 중…'이 그대로 남아
+  // 버튼이 눌리지 않는 상태로 갇혔다. 앱을 껐다 켜는 것 말고는 길이 없었다.
+  //
+  // 돌아온 것을 어떻게 아나 — 로그인 창을 앱 위에 덮어서 여는데(커스텀 탭), 그게
+  // 닫히면 browserFinished가 온다. 웹에서는 페이지를 통째로 넘겼다가 돌아오는 것이라
+  // pageshow가 온다(뒤로가기로 되살아난 경우 persisted가 참이다).
+  //
+  // 로그인에 성공한 경우에도 이 둘이 오지만 그때는 이미 세션이 들어와 화면이 바뀌는
+  // 중이라(deepLink.js가 세션을 먼저 넣고 창을 닫는다) 여기서 꺼도 보이지 않는다.
+  useEffect(() => {
+    if (!busy) return undefined;
+
+    let cancelled = false;
+    const release = () => {
+      if (!cancelled) setBusy('');
+    };
+
+    function onPageShow(e) {
+      // 새로 그려진 페이지는 상태도 새것이라 풀 것이 없다. 되살아난 경우만 본다.
+      if (e.persisted) release();
+    }
+    window.addEventListener('pageshow', onPageShow);
+
+    let removeNative;
+    if (isNativeApp()) {
+      import('@capacitor/browser')
+        .then(({ Browser }) => Browser.addListener('browserFinished', release))
+        .then((handle) => {
+          // 기다리는 사이에 화면이 사라졌으면 붙자마자 뗀다.
+          if (cancelled) handle.remove();
+          else removeNative = () => handle.remove();
+        })
+        .catch(() => {
+          // 못 붙어도 화면은 돈다. 아래 안전망이 받는다.
+        });
+    }
+
+    // 안전망. 위 둘이 안 오는 자리가 있을 수 있는데(기기마다 다르다), 그때도 갇히지는
+    // 않아야 한다. 정상적인 로그인이 이보다 오래 걸리는 일은 없다.
+    const timer = setTimeout(release, 90_000);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+      window.removeEventListener('pageshow', onPageShow);
+      removeNative?.();
+    };
+  }, [busy]);
 
   // 로그인 수단을 한 줄씩. 지난번에 쓴 것과 나머지가 같은 모양을 쓰되 무게만 다르다.
   //
@@ -202,39 +228,35 @@ export default function LoginScreen() {
   const socials = [
     {
       key: 'kakao',
-      label: kakaoLoading ? '연결 중…' : '카카오로 로그인',
+      label: busy === 'kakao' ? '연결 중…' : '카카오로 로그인',
       // 노란 바탕 위 글자색(#191919)을 그대로 따라간다.
       icon: <MessageCircle className="size-[19px] fill-current" />,
-      onClick: handleKakaoLogin,
-      loading: kakaoLoading,
+      onClick: () => startSocial('kakao', signInWithKakao, '카카오 로그인에 실패했어요.'),
       brand: 'bg-[#FEE500] text-[#191919] hover:bg-[#FEE500]/90',
     },
     {
       key: 'naver',
-      label: naverLoading ? '연결 중…' : '네이버로 로그인',
+      label: busy === 'naver' ? '연결 중…' : '네이버로 로그인',
       // 마크가 꽉 찬 도형이라 옆의 둘(말풍선·G)보다 무겁게 읽힌다. 그만큼 작게 그린다.
       icon: <NaverIcon className="size-[14px]" />,
-      onClick: handleNaverLogin,
-      loading: naverLoading,
+      onClick: () => startSocial('naver', signInWithNaver, '네이버 로그인에 실패했어요.'),
       brand: 'bg-[#03C75A] text-white hover:bg-[#03C75A]/90',
     },
     {
       key: 'google',
-      label: googleLoading ? '연결 중…' : '구글로 로그인',
+      label: busy === 'google' ? '연결 중…' : '구글로 로그인',
       // 구글은 흰 버튼에 색 있는 G가 제 모양이다(구글이 정해둔 것). 그래서 brand가 없다.
       icon: <GoogleIcon className="size-[19px]" />,
-      onClick: handleGoogleLogin,
-      loading: googleLoading,
+      onClick: () => startSocial('google', signInWithGoogle, '구글 로그인에 실패했어요.'),
       brand: null,
     },
     ...(showApple
       ? [
           {
             key: 'apple',
-            label: appleLoading ? '연결 중…' : 'Apple로 로그인',
+            label: busy === 'apple' ? '연결 중…' : 'Apple로 로그인',
             icon: <AppleIcon className="size-[19px]" />,
-            onClick: handleAppleLogin,
-            loading: appleLoading,
+            onClick: () => startSocial('apple', signInWithApple, '애플 로그인에 실패했어요.'),
             // 애플이 정한 모양 그대로. 검은 바탕에 흰 마크와 흰 글씨다.
             brand: 'bg-black text-white hover:bg-black/90',
           },
@@ -255,10 +277,15 @@ export default function LoginScreen() {
     return (
       <Button
         key={method.key}
+        // 눌렀을 때 글자가 '연결 중…'으로 바뀌어서 이름으로는 같은 버튼을 다시 못 잡는다.
+        // 시험이 '카카오 버튼이 다시 눌리는가'를 보려면 변하지 않는 손잡이가 있어야 한다.
+        data-social={method.key}
         type="button"
         size="lg"
         onClick={method.onClick}
-        disabled={method.loading}
+        // 한 곳이 열려 있으면 나머지도 못 누르게 막는다. 예전에는 누른 것만 막혀서,
+        // 카카오를 눌렀다 돌아와 네이버를 누르면 둘 다 '연결 중…'으로 남았다.
+        disabled={!!busy}
         variant={method.brand ? 'default' : 'outline'}
         className={cn(
           'w-full rounded-[13px] font-semibold',
