@@ -1,5 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
-import { CheckCircle2, Heart, Info, MapPin, MoreVertical, Pencil, RotateCcw, Ticket, Trash2 } from 'lucide-react';
+import {
+  CheckCircle2,
+  Heart,
+  Info,
+  MapPin,
+  MoreVertical,
+  Pencil,
+  RotateCcw,
+  Share2,
+  Ticket,
+  Trash2,
+} from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { formatDday, formatDate, formatDateShortYear, ddayUrgency } from '../utils/date';
 import { nameTagColorClass, tagColorClass } from '../utils/tagColor';
@@ -28,6 +39,36 @@ const BAR_BUTTON = 'flex h-11 flex-1 items-center justify-center gap-1.5 text-[1
 function CardMenuSheet({ gifticon, onClose, onEdit, onDelete }) {
   useBackClose(onClose);
   const pendingRef = useRef(null);
+  // '' | 'busy' | 오류 한 줄
+  const [shareState, setShareState] = useState('');
+
+  // 보낼 원본이 있는 것만 이 줄을 보여준다.
+  //
+  // 없는 경우가 둘이다. 직접 등록으로 사진 없이 넣은 것, 그리고 오래 전에 써서 원본을
+  // 지운 것(docs/after-launch.md 1번). 둘 다 눌러봐야 보낼 것이 없다.
+  const sharable = (gifticon.image_urls || []).find(Boolean) || null;
+
+  // 이 창은 안 닫고 보낸다.
+  //
+  // 아래 choose()가 창을 먼저 닫는 것은 다음에 열 창이 우리 창이라서다 — 웹뷰에서 둘이
+  // 겹치면 닫히는 쪽이 화면 전체의 클릭을 막아둔 채로 남는다. 공유 창은 폰이 띄우는
+  // 것이라 그 문제가 없고, 오히려 준비하는 동안 이 창이 있어야 '누르긴 눌렸구나'가 된다.
+  async function handleShare() {
+    if (shareState === 'busy') return;
+    setShareState('busy');
+    try {
+      const { shareGifticonImage } = await import('../utils/shareGifticon');
+      const how = await shareGifticonImage({ url: sharable, name: gifticon.name });
+      if (how === 'unsupported') {
+        setShareState('이 기기에서는 보낼 수 없어요');
+        return;
+      }
+      // 보냈든 창을 닫았든 여기서 할 일은 끝났다.
+      onClose();
+    } catch (err) {
+      setShareState(err?.message || '보내지 못했어요');
+    }
+  }
 
   // 이 창이 화면에서 완전히 사라진 다음에 고른 일을 한다. 순서가 뒤집히면
   // 새 창이 먼저 뜨고 이 창이 나중에 정리되면서, 정리하는 쪽이 화면 전체의 클릭을
@@ -51,6 +92,26 @@ function CardMenuSheet({ gifticon, onClose, onEdit, onDelete }) {
           <SheetTitle className="truncate">{gifticon.name}</SheetTitle>
         </SheetHeader>
         <div className="flex flex-col px-5 pt-2">
+          {/* 모아콘을 안 쓰는 사람에게 넘겨줄 때. 지금은 그때 앱을 나가서 사진첩을
+              뒤지거나 바코드 창을 다시 캡처한다 — 원본을 우리가 들고 있는데도.
+
+              맨 위인 것은 이 셋 중에 제일 자주 쓸 일이기 때문이다. 수정·삭제는 어쩌다
+              한 번이고, 보내는 일은 기프티콘을 쓰는 일에 가깝다. */}
+          {sharable && (
+            <button
+              type="button"
+              onClick={handleShare}
+              className="flex w-full items-center gap-3 px-1 py-3 text-left text-sm text-foreground"
+            >
+              <Share2 className="size-4.5 text-muted-foreground" />
+              <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                {shareState === 'busy' ? '준비 중…' : '카톡·문자로 보내기'}
+                {shareState && shareState !== 'busy' && (
+                  <span className="text-[12.5px] break-keep text-destructive">{shareState}</span>
+                )}
+              </span>
+            </button>
+          )}
           <button
             type="button"
             onClick={() => choose(onEdit)}
