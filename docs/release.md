@@ -119,18 +119,37 @@ npm run sync:ios
 
 **안 보이면 안 깔린 것이다.** 그대로 빌드하면 오류 없이 그 기능만 조용히 안 된다.
 
-### 3. Xcode
+### 3. 버전을 올린다 — **Archive 하기 전에**
+
+`app/ios/App/App.xcodeproj/project.pbxproj`의 네 자리를 고친다(Debug·Release 두 벌씩).
+
+```
+MARKETING_VERSION = 1.0.1;     ← 사람이 보는 번호
+CURRENT_PROJECT_VERSION = 2;   ← 올릴 때마다 하나씩
+```
+
+**저장소에서 고친다.** Xcode에서 눌러 고쳐도 같은 파일에 적히지만, 그러면 커밋을
+잊어버려서 다음 판에 또 1.0에서 시작한다.
+
+⚠️ **순서를 뒤집으면 헛수고다.** Archive는 그때의 번호를 그대로 굽는다. 안 올린 채로
+구우면 Organizer에 `1.0 (1)`로 뜨고, Distribute에서 App Store Connect가 거절한다 —
+이미 올라간 번호라서다. 2026-09-17에 이렇게 한 번 다시 구웠다.
+
+**Organizer의 Version 칸을 보고 확인한다.** 거기 적힌 것이 실제로 올라갈 번호다.
+
+안드로이드 태그(`app-v0.0.NN`)와는 **따로 센다.** 둘은 상관이 없다.
+
+### 4. Xcode
 
 ```
 npx cap open ios
 ```
 
-- **버전을 올린다.** `MARKETING_VERSION`(1.0 → 1.0.1)과 `CURRENT_PROJECT_VERSION`(1 → 2).
-  같은 번호로는 App Store Connect가 안 받는다. 안드로이드 태그와 **따로 센다**
 - Product → Archive
+- Organizer에서 **Version이 올라갔는지 확인**
 - Distribute App → App Store Connect
 
-### 4. 심사
+### 5. 심사
 
 새 빌드는 예외 없이 심사를 탄다. 업데이트는 대개 하루 안팎이다.
 권한이 늘거나 하는 일이 바뀌면 **앱 심사 정보 메모도 고친다**(`docs/store-listing.md`).
