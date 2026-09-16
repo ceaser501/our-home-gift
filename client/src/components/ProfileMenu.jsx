@@ -3,6 +3,7 @@ import {
   DoorOpen,
   FileText,
   LogOut,
+  Mail,
   MapPin,
   Megaphone,
   Receipt,
@@ -28,6 +29,7 @@ import { OWNER_TAG_PALETTE, memberTagColorClass } from '../utils/tagColor';
 import useBackClose from '../utils/useBackClose';
 import { isGalleryScanSupported, isAutoScanOn, setAutoScanOn, countSkipped, forgetSkipped } from '../utils/gallery';
 import { isNearbyBannerOn, setNearbyBannerOn } from '../utils/geolocation';
+import { SUPPORT_EMAIL, openSupportMail } from '../utils/support';
 import { currentUiScale } from '../utils/uiScale';
 
 export default function ProfileMenu({ onClose }) {
@@ -41,6 +43,8 @@ export default function ProfileMenu({ onClose }) {
   const [renameOpen, setRenameOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [noticesOpen, setNoticesOpen] = useState(false);
+  // 문의 줄 밑에 적는 말. 평소에는 주소 그대로고, 메일 앱이 안 열렸을 때만 바뀐다.
+  const [supportNote, setSupportNote] = useState('');
   const [leaving, setLeaving] = useState(false);
   const [leaveAsking, setLeaveAsking] = useState(false);
   const [notice, setNotice] = useState(null);
@@ -276,6 +280,26 @@ export default function ProfileMenu({ onClose }) {
               label="오픈소스 및 기술 정보"
               href={`${import.meta.env.BASE_URL}licenses.html`}
               returnTo="profile"
+            />
+            {/* 문의 자리. 앱 안에 한 곳도 없어서, 불편을 겪은 사람이 갈 데가 없었다.
+                스토어의 '지원 URL'은 소개 페이지를 가리키고 있지만 그건 앱 밖이다.
+
+                주소를 밑줄(hint)에 그대로 적어둔다. 메일 앱이 안 열리는 폰이 있는데,
+                그때도 눈으로 읽어 옮겨 적을 수 있어야 한다.
+
+                여기가 맨 아래인 것은 일부러다. 불편이 없는 사람에게 '불편하면
+                말하세요'를 앞세우면 없던 불안이 생긴다. 찾는 사람만 찾으면 된다. */}
+            <SettingLinkRow
+              icon={Mail}
+              label="문의하기"
+              hint={supportNote || SUPPORT_EMAIL}
+              onClick={async () => {
+                const how = await openSupportMail();
+                if (how === 'opened') return;
+                setSupportNote(
+                  how === 'copied' ? '주소를 복사했어요' : SUPPORT_EMAIL
+                );
+              }}
             />
           </SettingSection>
 
