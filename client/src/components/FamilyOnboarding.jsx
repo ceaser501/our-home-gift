@@ -9,9 +9,11 @@ import CopyButton from './CopyButton';
 import { signOut } from '../auth';
 import {
   forgetInviteCode,
+  markClipboardPeeked,
   pendingInviteCode,
   readInviteFromClipboard,
   rememberInviteCode,
+  shouldPeekClipboard,
 } from '../utils/inviteLink';
 import Logo from './Logo';
 
@@ -37,20 +39,35 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
   const [error, setError] = useState('');
   const [created, setCreated] = useState(null);
   const [pendingFor, setPendingFor] = useState(null);
-  // 클립보드를 들춰본 결과. 'idle' | 'looking' | 'empty'
-  const [clip, setClip] = useState('idle');
+  // 클립보드를 들춰본 결과.
+  //
+  //   peeking  설치 직후 앱이 알아서 들춰보는 중. 이때는 탭 화면을 아예 안 그린다
+  //   looking  사람이 '코드 찾기'를 눌러 들춰보는 중
+  //   empty    들춰봤는데 없었다
+  //   idle     그 밖
+  //
+  // 'peeking'을 따로 둔 이유는 화면 때문이다. 찾는 사이에 '새로 만들기 / 초대 코드로
+  // 참여'가 한 번 번쩍 떴다가 초대 화면으로 바뀌면, 초대받아 온 사람이 제 갈 길이
+  // 아닌 화면을 먼저 보게 된다.
+  const [clip, setClip] = useState(() => (!pendingInviteCode() && shouldPeekClipboard() ? 'peeking' : 'idle'));
 
   // 스토어를 다녀온 사람의 코드를 클립보드에서 꺼낸다.
   //
-  // 화면이 뜨자마자 부르지 않는다. 아이폰은 붙여넣기를 한 번 물어보는데, 새로 가족을
-  // 만들러 온 사람에게까지 영문 모를 물음창이 뜨면 그게 더 나쁘다. 눌러야 뜬다.
-  async function findFromClipboard() {
-    setClip('looking');
+  // 아이폰은 설치 뒤에 "무엇을 눌러서 왔는지"를 앱에 안 넘긴다. 카톡 초대 → App Store
+  // → 설치 → '열기'로 들어온 사람은 코드 없이 여기 서는데, 초대받아 왔는데 '새로
+  // 만들기'가 먼저 열려 있는 화면을 보게 된다. 다리 페이지가 클립보드에 적어둔 코드를
+  // 여기서 꺼낸다(docs/after-launch.md 9번).
+  async function findFromClipboard({ auto = false } = {}) {
+    setClip(auto ? 'peeking' : 'looking');
+    markClipboardPeeked();
     const found = await readInviteFromClipboard();
     if (!found) {
       // 못 찾았으면 직접 적는 칸을 열어준다. 여기서 멈춰 세우지 않는다.
-      setClip('empty');
-      setMode('join');
+      //
+      // 앱이 알아서 들춰본 것이었다면 아무 말도 안 한다. 초대와 무관하게 온 사람에게
+      // '코드를 찾지 못했어요'는 묻지도 않은 말에 대한 대답이다.
+      setClip(auto ? 'idle' : 'empty');
+      if (!auto) setMode('join');
       return;
     }
     rememberInviteCode(found);
@@ -58,6 +75,20 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
     setInvited(found);
     setClip('idle');
   }
+
+  // 설치하고 처음 열었을 때는 눌러주지 않아도 알아서 들춰본다.
+  //
+  // 버튼 뒤에 두면 초대받아 온 사람이 그 버튼을 알아보고 눌러야 하는데, 그 사람은
+  // 지금 '내가 왜 새 가족을 만들고 있지' 하는 참이다. 찾는 일은 앱이 한다.
+  //
+  // 딱 한 번만이다(shouldPeekClipboard). 아이폰은 이때 붙여넣기를 물어보는데, 초대와
+  // 무관하게 온 사람에게도 뜨는 물음이라 거듭 뜨면 고장으로 읽힌다.
+  useEffect(() => {
+    if (clip !== 'peeking') return;
+    findFromClipboard({ auto: true });
+    // 첫 판에 한 번만 돈다. clip을 의존성에 넣으면 스스로를 다시 부른다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (!invited) return undefined;
@@ -173,6 +204,20 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
             </p>
           </div>
         </form>
+      </div>
+    );
+  }
+
+  // 앱이 클립보드를 들춰보는 동안.
+  //
+  // 여기서 탭 화면을 그리면 초대받아 온 사람이 '새로 만들기'를 먼저 보게 된다. 잠깐이라도
+  // 제 갈 길이 아닌 화면이 뜨면 그게 첫인상이 된다. 대신 아무 말도 안 하고 기다린다 —
+  // 무엇을 하고 있는지는 아이폰이 띄우는 붙여넣기 물음창이 말한다.
+  if (clip === 'peeking') {
+    return (
+      <div className="mx-auto flex min-h-[calc(100dvh/var(--ui-scale))] w-full max-w-[480px] flex-col items-center justify-center gap-4 bg-background px-6">
+        <Logo className="size-[68px] rounded-[18px]" />
+        <p className="m-0 text-[15px] font-medium text-muted-foreground">잠시만요…</p>
       </div>
     );
   }

@@ -143,17 +143,60 @@ export function readInviteFromText(text) {
 /**
  * 클립보드를 들춰 초대 코드를 찾는다. 없거나 못 읽으면 빈 문자열.
  *
- * ⚠️ 반드시 사람이 누른 자리에서 부른다. 아이폰은 붙여넣기를 한 번 물어보는데,
- * 손짓 없이 부르면 물어보지도 않고 거절한다. 화면이 뜨자마자 부르면 초대받지 않은
- * 사람에게도 영문 모를 물음창이 뜬다 — 그래서 버튼 뒤에 둔다.
+ * ── 왜 네이티브를 먼저 쓰나 ────────────────────────────────────────────────
+ * 웹의 navigator.clipboard.readText는 **누른 손짓이 살아 있을 때만** 읽어준다.
+ * 화면이 뜨자마자 부르면 물어보지도 않고 거절한다. 그래서 설치 직후에 알아서
+ * 찾아주려면 네이티브여야 한다 — 네이티브는 손짓 없이도 읽는다.
+ *
+ * 아이폰은 이때 붙여넣기를 한 번 물어본다(iOS 16+). 갤럭시는 안 묻고 조용히 읽는다.
+ * 물음창이 거듭 뜨지 않게 하는 일은 부르는 쪽이 한다(FamilyOnboarding).
  */
 export async function readInviteFromClipboard() {
+  if (isNativeApp()) {
+    try {
+      const { Clipboard } = await import('@capacitor/clipboard');
+      const { value } = await Clipboard.read();
+      return readInviteFromText(value);
+    } catch {
+      // 거절했거나 빈 클립보드다. 아래 웹 방식으로 한 번 더 해보지 않는다 —
+      // 네이티브가 거절한 자리에서 웹이 될 리가 없고, 물음창만 한 번 더 뜬다.
+      return '';
+    }
+  }
+
   try {
     if (!navigator.clipboard?.readText) return '';
     return readInviteFromText(await navigator.clipboard.readText());
   } catch {
     // 거절했거나 읽을 수 없는 자리다. 직접 적는 길이 그대로 있다.
     return '';
+  }
+}
+
+// 설치 직후 한 번만 알아서 들춰본다.
+//
+// 초대받지 않은 사람 — 새로 가족을 만들러 온 사람 — 에게도 아이폰은 물음창을 띄운다.
+// 한 번이면 지나가지만 앱을 열 때마다 뜨면 그건 고장으로 읽힌다. 그래서 들춰본
+// 사실을 적어두고 두 번은 안 한다. sessionStorage가 아니라 localStorage인 이유는
+// 앱을 껐다 켜도 남아야 해서다.
+const LOOKED_KEY = 'moacon:invite-clipboard-looked';
+
+/** 설치 뒤 아직 한 번도 클립보드를 안 들춰봤나. */
+export function shouldPeekClipboard() {
+  try {
+    return !localStorage.getItem(LOOKED_KEY);
+  } catch {
+    // 저장이 막혀 있으면 매번 묻게 되므로 아예 안 한다. 버튼은 그대로 있다.
+    return false;
+  }
+}
+
+/** 들춰봤다고 적어둔다. 찾았든 못 찾았든 한 번이면 된다. */
+export function markClipboardPeeked() {
+  try {
+    localStorage.setItem(LOOKED_KEY, '1');
+  } catch {
+    // 못 적어도 이번 판은 돈다.
   }
 }
 
