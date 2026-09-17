@@ -10,7 +10,7 @@
 
 ---
 
-## ⚠️ 먼저 — 세 번 밟은 함정
+## ⚠️ 먼저 — 네 번 밟은 함정
 
 ### 1. `npm install`을 맨 위에서 돌리면 아무것도 안 깔린다
 
@@ -49,6 +49,31 @@ npm run build:app   ← 앱용. VITE_BASE_PATH=/
 
 **`sync:ios` / `sync:android`가 이걸 알아서 해준다.** 손으로 풀어 치지 않는 이유가
 그것이다.
+
+### 4. `client/package-lock.json`은 **맥에서 고쳐진 것을 커밋하지 않는다**
+
+맥은 node 25 / npm 11이고 CI는 node 22 / npm 10이다. **npm 판이 다르면 lock 파일을
+다르게 쓴다.** 맥에서 다시 쓰인 것을 커밋하면 CI가 9초 만에 죽는다.
+
+```
+npm error `npm ci` can only install packages when your package.json and
+          package-lock.json are in sync.
+npm error Missing: @emnapi/runtime@1.11.3 from lock file
+```
+
+npm 11이 wasm 대체 패키지(`@tailwindcss/oxide-wasm32-wasi`) 항목들을 지우는데, npm 10은
+그게 있기를 기대한다. 어느 쪽이 맞고 틀린 것이 아니라 **둘이 다를 뿐**이다.
+
+`git status`에 lock 파일이 떠 있으면 **되돌린다.**
+
+```
+git checkout -- client/package-lock.json
+```
+
+**패키지를 정말로 더하거나 뺄 때만** lock이 바뀌어야 하고, 그때는 CI와 같은 판에서
+바꾸는 편이 낫다. 2026-09-17에 app-v0.0.171이 이걸로 죽었다.
+
+같은 이유로 `app/package-lock.json`도 조심한다.
 
 ---
 
