@@ -105,7 +105,20 @@ jobs:
           distribution: temurin
           java-version: '21'
 
+      # 받을 것을 손으로 적어준다.
+      #
+      # 안 적으면 이 액션이 기본값으로 'tools'를 받으려 하는데, 구글이 그 패키지를
+      # 없앴다. 2026-09-17에 그것으로 두 판이 죽었다 — 9월 8일(app-v0.0.170)까지는
+      # 멀쩡했으니 우리 코드가 아니라 바깥이 바뀐 것이다.
+      #
+      #   Warning: Failed to find package 'tools'
+      #   Error: sdkmanager failed with exit code 1
+      #
+      # platforms는 app/android/variables.gradle의 compileSdkVersion과 맞춘다.
+      # build-tools는 안 적는다 — AGP가 저 하나에 맞는 판을 알아서 받아온다.
       - uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools platforms;android-36'
 
       # 서명 키는 저장소에 없다. base64로 시크릿에 넣어둔 것을 여기서만 파일로 푼다.
       # 작업이 끝나면 실행 환경이 통째로 사라지므로 따로 지울 필요는 없다.
