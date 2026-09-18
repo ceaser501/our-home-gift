@@ -163,12 +163,25 @@ export function paintFrame(ctx, x, y, w, h, rgb) {
   var at = function (px, py) { return (py * w + px) * 4; };
 
   // 1. 네 모서리가 같은 색인가
+  //
+  // ⚠️ 맨 끝 픽셀에서 재지 않는다. 모서리는 둥글고, 안티앨리어싱과 jpeg 압축이 거기서
+  // 제일 심하게 섞인다. 실제 카톡 캡처를 재봤더니 맨 끝 넷은 (248,220,59)부터
+  // (117,100,134)까지 벌어졌는데, 3px만 안으로 들어가면 넷 다 (255,222,33) 언저리였다.
+  //
+  // 안쪽으로 들어가는 폭은 짧은 변의 1%다. 큰 사진일수록 섞이는 띠도 두꺼워서다.
   var TOL = 26;
-  var c0 = at(0, 0);
-  var r = d[c0], g = d[c0 + 1], b = d[c0 + 2];
-  var corners = [at(w - 1, 0), at(0, h - 1), at(w - 1, h - 1)];
-  for (var i = 0; i < corners.length; i++) {
-    var c = corners[i];
+  var pad = Math.max(2, Math.round(Math.min(w, h) * 0.01));
+  if (w <= pad * 2 || h <= pad * 2) return false;
+
+  var probes = [at(pad, pad), at(w - 1 - pad, pad), at(pad, h - 1 - pad), at(w - 1 - pad, h - 1 - pad)];
+  var r = 0, g = 0, b = 0;
+  for (var i = 0; i < probes.length; i++) {
+    r += d[probes[i]]; g += d[probes[i] + 1]; b += d[probes[i] + 2];
+  }
+  r = Math.round(r / 4); g = Math.round(g / 4); b = Math.round(b / 4);
+
+  for (var j = 0; j < probes.length; j++) {
+    var c = probes[j];
     if (Math.abs(d[c] - r) > TOL || Math.abs(d[c + 1] - g) > TOL || Math.abs(d[c + 2] - b) > TOL) {
       return false;
     }
@@ -180,29 +193,60 @@ export function paintFrame(ctx, x, y, w, h, rgb) {
   if (light || dark) return false;
 
   // 3~4. 가장자리에서 번져 들어간다
+  //
+  // ⚠️ 기준색이 아니라 **바로 옆 픽셀**과 견준다.
+  //
+  // 액자는 단색이 아니다. 실제 카톡 캡처를 재보니 카드 밑에 그림자가 깔려서, 같은
+  // 노랑이 아래로 갈수록 (255,222,33)에서 (195,185,96)까지 흘렀다. 기준색 하나에
+  // 매달리면 그 경사 중간에서 끊겨 노란 줄이 남는다 — 실제로 남았다.
+  //
+  // 옆 픽셀과 견주면 경사를 따라간다. 그러다 카드에 닿는 순간 색이 한 번에 99만큼
+  // 튀어서 거기서 멈춘다. 경사는 한 칸에 4쯤이고 경계는 99라 사이가 넉넉하다.
+  //
+  // FAR는 그래도 너무 멀리 흘러가지 않게 두는 울타리다. 옆끼리만 견주면 완만한
+  // 그라데이션을 타고 사진 속까지 걸어 들어갈 수 있다.
+  var STEP = 30;
+  var FAR = 90;
+
   var seen = new Uint8Array(w * h);
+  // 좌표와 '어디서 왔는지'의 색을 함께 담는다. [x, y, r, g, b] 다섯 칸씩.
   var stack = [];
-  for (var px = 0; px < w; px++) { stack.push(px, 0, px, h - 1); }
-  for (var py = 0; py < h; py++) { stack.push(0, py, w - 1, py); }
+  for (var px = 0; px < w; px++) {
+    stack.push(px, 0, r, g, b, px, h - 1, r, g, b);
+  }
+  for (var py = 0; py < h; py++) {
+    stack.push(0, py, r, g, b, w - 1, py, r, g, b);
+  }
 
   var hits = [];
   var limit = w * h * 0.5;
   var cx = (w / 2) | 0, cy = (h / 2) | 0;
 
   while (stack.length) {
+    var pb = stack.pop(), pg = stack.pop(), pr2 = stack.pop();
     var sy = stack.pop(), sx = stack.pop();
     if (sx < 0 || sy < 0 || sx >= w || sy >= h) continue;
     var key = sy * w + sx;
     if (seen[key]) continue;
+
     var o = key * 4;
-    if (Math.abs(d[o] - r) > TOL || Math.abs(d[o + 1] - g) > TOL || Math.abs(d[o + 2] - b) > TOL) continue;
+    var cr = d[o], cg = d[o + 1], cb = d[o + 2];
+    // 옆 픽셀과 견준다 — 경사를 따라가려고
+    if (Math.abs(cr - pr2) > STEP || Math.abs(cg - pg) > STEP || Math.abs(cb - pb) > STEP) continue;
+    // 울타리 — 너무 멀리까지 흘러가지 않게
+    if (Math.abs(cr - r) > FAR || Math.abs(cg - g) > FAR || Math.abs(cb - b) > FAR) continue;
 
     seen[key] = 1;
     hits.push(o);
     if (hits.length > limit) return false;            // 3. 너무 넓다
     if (sx === cx && sy === cy) return false;          // 4. 한가운데까지 왔다
 
-    stack.push(sx + 1, sy, sx - 1, sy, sx, sy + 1, sx, sy - 1);
+    stack.push(
+      sx + 1, sy, cr, cg, cb,
+      sx - 1, sy, cr, cg, cb,
+      sx, sy + 1, cr, cg, cb,
+      sx, sy - 1, cr, cg, cb
+    );
   }
 
   for (var k = 0; k < hits.length; k++) {

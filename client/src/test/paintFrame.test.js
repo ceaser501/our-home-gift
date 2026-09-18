@@ -79,13 +79,28 @@ describe('물러서는 경우 — 여기가 중요하다', () => {
   it('모서리 색이 제각각이면 안 칠한다', () => {
     // 액자가 아니라 그냥 사진이다.
     const img = makeImage({ w: 40, h: 60, border: KAKAO_YELLOW, inner: WHITE });
-    // 한 모서리만 다른 색으로 바꾼다
-    const o = ((59 * 40) + 39) * 4;
+    // 재는 자리(모서리에서 안쪽 pad만큼)를 다른 색으로 바꾼다.
+    // pad = max(2, round(min(40,60) * 0.01)) = 2
+    const o = ((57 * 40) + 37) * 4;
     img.data[o] = 10; img.data[o + 1] = 200; img.data[o + 2] = 90;
 
     const { ok, ctx } = run(img);
     expect(ok).toBe(false);
     expect(ctx.painted).toBe(false);
+  });
+
+  // 진짜 카톡 캡처에서 이것 때문에 한 번 물러섰다. 맨 끝 픽셀은 둥근 모서리와
+  // 압축으로 섞여서, 넷이 (248,220,59)부터 (117,100,134)까지 벌어져 있었다.
+  // 3px 안쪽은 넷 다 같은 노랑이었다.
+  it('⚠️ 맨 끝 픽셀이 섞여 있어도 액자로 알아본다', () => {
+    const img = makeImage({ w: 40, h: 60, border: KAKAO_YELLOW, inner: WHITE });
+    // 네 모서리의 맨 끝 픽셀만 엉뚱한 색으로 더럽힌다
+    [[0, 0], [39, 0], [0, 59], [39, 59]].forEach(([x, y]) => {
+      const o = (y * 40 + x) * 4;
+      img.data[o] = 117; img.data[o + 1] = 100; img.data[o + 2] = 134;
+    });
+
+    expect(run(img).ok).toBe(true);
   });
 
   it('흰 배경은 안 칠한다', () => {
@@ -119,6 +134,71 @@ describe('물러서는 경우 — 여기가 중요하다', () => {
       putImageData: () => { throw new Error('부르면 안 된다'); },
     };
     expect(paintFrame(ctx, 0, 0, 10, 10, VIOLET)).toBe(false);
+  });
+});
+
+// 액자는 단색이 아니다. 카톡 캡처는 카드 밑에 그림자가 깔려서 같은 노랑이
+// (255,222,33)에서 (195,185,96)까지 흐른다. 기준색 하나에 매달렸더니 그 경사
+// 중간에서 끊겨 맨 아래에 노란 줄이 남았다 — 2026-09-18에 실기에서 나왔다.
+describe('그림자가 깔린 액자', () => {
+  // 바깥에서 안으로 갈수록 어두워지는 테두리 + 한가운데 흰 카드
+  function shaded({ w, h, from, to, pad }) {
+    const data = new Uint8ClampedArray(w * h * 4);
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const o = (y * w + x) * 4;
+        const depth = Math.min(x, y, w - 1 - x, h - 1 - y);
+        let c;
+        if (depth >= pad) {
+          c = [255, 255, 255];                       // 카드
+        } else {
+          const t = depth / pad;                      // 0 바깥 → 1 안쪽
+          c = from.map((v, i) => Math.round(v + (to[i] - v) * t));
+        }
+        data[o] = c[0]; data[o + 1] = c[1]; data[o + 2] = c[2]; data[o + 3] = 255;
+      }
+    }
+    return { w, h, data };
+  }
+
+  // 액자가 그림의 3할쯤. 실제 카톡 캡처가 그 정도다(재보니 15%).
+  const SHADED = { w: 100, h: 150, from: [255, 222, 33], to: [195, 185, 96], pad: 10 };
+
+  it('⚠️ 경사를 끝까지 따라가 노란 줄을 안 남긴다', () => {
+    const img = shaded(SHADED);
+    const { ok } = run(img);
+    expect(ok).toBe(true);
+
+    // 카드 바로 바깥 한 줄(depth = pad-1)까지 보라가 됐는가 — 여기가 줄이 남던 자리다
+    const o = ((75 * 100) + 9) * 4;
+    expect([img.data[o], img.data[o + 1], img.data[o + 2]]).toEqual(VIOLET);
+  });
+
+  it('카드 안쪽은 여전히 그대로다', () => {
+    const img = shaded(SHADED);
+    run(img);
+    const o = ((75 * 100) + 50) * 4;
+    expect([img.data[o], img.data[o + 1], img.data[o + 2]]).toEqual(WHITE);
+  });
+
+  it('⚠️ 울타리 — 아주 완만한 경사를 타고 사진 속까지 걸어가지 않는다', () => {
+    // 한 칸에 1씩만 흐르면 옆끼리는 늘 비슷해서, 울타리가 없으면 끝까지 걸어간다.
+    const w = 200, h = 200;
+    const data = new Uint8ClampedArray(w * h * 4);
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const o = (y * w + x) * 4;
+        const depth = Math.min(x, y, w - 1 - x, h - 1 - y);
+        const v = Math.max(0, 200 - depth);          // 바깥 200 → 안쪽으로 1씩
+        data[o] = v; data[o + 1] = Math.round(v * 0.8); data[o + 2] = 40; data[o + 3] = 255;
+      }
+    }
+    const img = { w, h, data };
+    run(img);
+
+    // 한가운데는 기준색에서 90을 넘게 떨어져 있으니 안 칠해져야 한다
+    const o = ((100 * w) + 100) * 4;
+    expect([img.data[o], img.data[o + 1], img.data[o + 2]]).not.toEqual(VIOLET);
   });
 });
 
