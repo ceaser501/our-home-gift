@@ -105,7 +105,7 @@ function CardMenuSheet({ gifticon, onClose, onEdit, onDelete }) {
             >
               <Share2 className="size-4.5 text-muted-foreground" />
               <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                {shareState === 'busy' ? '준비 중…' : '카톡·문자로 보내기'}
+                {shareState === 'busy' ? '준비 중…' : '공유'}
                 {shareState && shareState !== 'busy' && (
                   <span className="text-[12.5px] break-keep text-destructive">{shareState}</span>
                 )}

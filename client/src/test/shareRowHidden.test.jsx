@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 
-// ⋮ 메뉴의 '카톡·문자로 보내기'는 보낼 원본이 있을 때만 뜬다.
+// ⋮ 메뉴의 '공유'는 보낼 원본이 있을 때만 뜬다.
 //
 // 보내는 것이 원본 사진이라, 원본이 없으면 눌러봐야 보낼 것이 없다. 눌리는데 아무
 // 일도 안 일어나는 버튼은 화면에서 제일 나쁜 것이다.
@@ -55,7 +55,7 @@ function openMenu(extra) {
   fireEvent.click(screen.getByRole('button', { name: '더 보기' }));
 }
 
-const shareRow = () => screen.queryByText('카톡·문자로 보내기');
+const shareRow = () => screen.queryByText('공유');
 
 describe('보내기 줄', () => {
   it('원본이 있으면 뜬다', () => {
