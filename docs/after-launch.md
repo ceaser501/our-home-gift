@@ -188,8 +188,9 @@ supabase secrets set ANALYZE_DAILY_LIMIT=10 ANALYZE_TOTAL_DAILY_LIMIT=200
 var STORE_URL_ANDROID = '';
 ```
 
-**지금 채우면 안 된다.** Play가 비공개 테스트라 테스트 참여자가 아닌 사람에게는
-「찾을 수 없는 페이지」가 뜬다. 지금은 웹으로 보내는 것이 맞다.
+**주소를 몰라서 비워둔 것이 아니다.** 패키지명이 처음부터 정해져 있어서 주소는 이미
+안다 — 출시 전에는 그 주소가 404일 뿐이다. 테스트 참여자가 아닌 사람에게 「찾을 수
+없는 페이지」가 뜨므로, 그때까지는 웹으로 보내는 것이 맞다.
 
 프로덕션이 열리는 날 바로 윗줄의 주석을 푼다.
 
@@ -197,8 +198,19 @@ var STORE_URL_ANDROID = '';
 var STORE_URL_ANDROID = 'https://play.google.com/store/apps/details?id=' + PACKAGE;
 ```
 
-**웹이라 main에 밀어야 나간다**(`.github/workflows/deploy-pages.yml`). 태그만
-따서는 안 바뀐다.
+### 앱 빌드도 재심사도 없다
+
+이 줄이 있는 곳은 `client/public/invite.html` — **웹이다.**
+
+| | |
+|---|---|
+| 나가는 법 | `git push origin HEAD:main` |
+| 걸리는 시간 | 40초 (`.github/workflows/deploy-pages.yml`) |
+| 앱 빌드 | **없음** |
+| 두 스토어 재심사 | **없음** |
+
+초대 링크는 웹 페이지라 앱과 따로 돈다. 태그만 따서는 안 바뀐다 — 반대로, 이걸
+고치자고 앱을 다시 낼 일도 없다.
 
 - [ ] Play 프로덕션 열린 뒤 한 줄 채우기
 - [ ] main에 밀기
