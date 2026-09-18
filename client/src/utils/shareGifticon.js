@@ -22,6 +22,10 @@ import { isNativeApp } from './browser';
 //
 // 테두리를 칠하는 이유는 카톡 선물함 캡처가 노란 액자를 달고 오기 때문이다. 그 노랑은
 // 카카오의 것이라, 우리가 보낸 선물에 남의 브랜드가 둘려 있는 꼴이 된다.
+//
+// 칠하기로 안 되는 사진도 있다 — 흰 테두리는 일부러 건너뛰고(흰 종이에 찍은 사진을
+// 덮을 수 있어서다), 테두리가 아예 없는 사진도 있다. 그래서 좌우·아래에 보라 여백을
+// 함께 두른다. 여백은 원본을 한 픽셀도 안 건드리므로 어떤 사진이든 액자를 갖는다.
 
 const BAND_TEXT = '모아콘에서 보낸 선물';
 const BAND_SUB = '가족 기프티콘 서랍';
@@ -94,23 +98,37 @@ export async function composeShareImage(blob) {
   const h = Math.max(1, Math.round(srcH * scale));
 
   const band = Math.round(w * 0.13);
-  canvas.width = w;
-  canvas.height = h + band;
 
-  // 띠가 위다.
+  // 좌우·아래에 보라 여백을 두른다.
   //
-  // 아래에 뒀더니 카톡 선물함 캡처의 '카카오톡 선물하기'와 바로 붙어서, 브랜드 이름이
-  // 아래쪽에 둘 겹쳐 보였다. 위로 올리면 테두리와 이어져 하나의 보라 액자가 되고,
-  // 대화방에서 미리보기가 위부터 잘리는 것에도 유리하다.
+  // ── 왜 칠하기만으로는 모자란가 ────────────────────────────────────────────
+  // 아래 paintFrame은 테두리가 있는 사진만 바꿀 수 있고, 게다가 흰 테두리는 일부러
+  // 건너뛴다(흰 종이에 찍은 사진을 통째로 덮을 수 있어서다). 문자로 받아 저장한
+  // 기프티콘이 딱 그렇다 — 테두리가 순백이라 위 띠만 보라고 나머지는 흰 채로 나갔다.
+  //
+  // 여백은 원본을 **한 픽셀도 안 건드린다.** 그냥 더 큰 보라 바탕에 얹을 뿐이라,
+  // 테두리가 있든 없든 어떤 사진이든 보라 액자를 갖는다.
+  //
+  // 둘을 같이 쓴다. 칠하기가 되는 사진은 여백과 이어져 하나로 보이고, 안 되는 사진도
+  // 액자는 갖는다.
+  const pad = Math.round(w * 0.035);
+  canvas.width = w + pad * 2;
+  canvas.height = band + h + pad;
+
+  // 바탕을 통째로 보라로 깔고 그 위에 사진을 얹는다. 위쪽 띠도 이걸로 함께 칠해진다.
+  //
+  // 띠가 위인 것은, 아래에 뒀더니 카톡 선물함 캡처의 '카카오톡 선물하기'와 바로 붙어서
+  // 브랜드 이름이 아래쪽에 둘 겹쳐 보였기 때문이다. 위로 올리면 테두리와 이어져 하나의
+  // 액자가 되고, 대화방에서 미리보기가 위부터 잘리는 것에도 유리하다.
+  ctx.fillStyle = VIOLET;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
-  ctx.drawImage(img, 0, band, w, h);
+  ctx.drawImage(img, pad, band, w, h);
 
-  // 사진 테두리를 띠와 같은 보라로. 못 칠하면 원본 그대로 둔다.
-  paintFrame(ctx, 0, band, w, h, VIOLET_RGB);
-
-  ctx.fillStyle = VIOLET;
-  ctx.fillRect(0, 0, w, band);
+  // 사진 자체의 테두리도 같은 보라로. 못 칠하면 원본 그대로 두고 여백만 남는다.
+  paintFrame(ctx, pad, band, w, h, VIOLET_RGB);
 
   // 글자는 '띠'가 아니라 '보라 덩어리'의 한가운데에 놓는다.
   //
@@ -119,7 +137,7 @@ export async function composeShareImage(blob) {
   // 글자는 87px 기준으로 놓여서 위에 붙어 보였다.
   //
   // 액자가 없는 사진(문자로 받은 것 등)은 두 값이 같아서 달라지는 것이 없다.
-  const headerH = violetHeader(ctx, w, band, h);
+  const headerH = violetHeader(ctx, w, band, h, pad);
   const midY = headerH / 2;
 
   // 글자 크기와 두 줄 사이는 띠를 따라간다 — 보라 머리가 두꺼워졌다고 글자까지
@@ -134,12 +152,12 @@ export async function composeShareImage(blob) {
 
   ctx.fillStyle = '#FFFFFF';
   ctx.font = `700 ${big}px ${family}`;
-  ctx.fillText(BAND_TEXT, w / 2, midY - band * 0.16);
+  ctx.fillText(BAND_TEXT, canvas.width / 2, midY - band * 0.16);
 
   // 아랫줄은 한 단 흐리게. 같은 흰색으로 두면 두 줄이 한 덩어리로 뭉쳐 읽힌다.
   ctx.fillStyle = 'rgba(255,255,255,0.78)';
   ctx.font = `500 ${small}px ${family}`;
-  ctx.fillText(BAND_SUB, w / 2, midY + band * 0.17);
+  ctx.fillText(BAND_SUB, canvas.width / 2, midY + band * 0.17);
 
   return new Promise((resolve) => canvas.toBlob((blob) => resolve(blob), 'image/jpeg', 0.92));
 }
@@ -151,11 +169,12 @@ export async function composeShareImage(blob) {
 //
 // 아무리 멀어도 띠의 두 배까지만 본다. 온통 보라에 가까운 사진에서 머리가 끝없이
 // 길어지면 글자가 사진 한복판에 떨어진다.
-export function violetHeader(ctx, w, band, imgH) {
+export function violetHeader(ctx, w, band, imgH, xFrom) {
   var max = Math.min(imgH, band);
   var strip;
   try {
-    strip = ctx.getImageData(0, band, w, max);
+    // 사진이 놓인 자리만 본다. 좌우 여백은 늘 보라라 같이 세면 머리가 끝없이 길어진다.
+    strip = ctx.getImageData(xFrom || 0, band, w, max);
   } catch {
     return band;
   }
