@@ -112,7 +112,18 @@ export async function composeShareImage(blob) {
   ctx.fillStyle = VIOLET;
   ctx.fillRect(0, 0, w, band);
 
-  // 글자 크기도 너비를 따라간다.
+  // 글자는 '띠'가 아니라 '보라 덩어리'의 한가운데에 놓는다.
+  //
+  // 액자를 칠하고 나면 띠와 사진 위쪽 테두리가 이어져서, 보이는 보라가 띠보다 두꺼워진다.
+  // 실측: 카톡 캡처는 띠가 87px인데 보라 머리가 128px이었다(액자가 41px 더). 그런데
+  // 글자는 87px 기준으로 놓여서 위에 붙어 보였다.
+  //
+  // 액자가 없는 사진(문자로 받은 것 등)은 두 값이 같아서 달라지는 것이 없다.
+  const headerH = violetHeader(ctx, w, band, h);
+  const midY = headerH / 2;
+
+  // 글자 크기와 두 줄 사이는 띠를 따라간다 — 보라 머리가 두꺼워졌다고 글자까지
+  // 커지면 액자 있는 사진만 글자가 커진다.
   const big = Math.round(band * 0.34);
   const small = Math.round(band * 0.23);
   const family =
@@ -123,14 +134,40 @@ export async function composeShareImage(blob) {
 
   ctx.fillStyle = '#FFFFFF';
   ctx.font = `700 ${big}px ${family}`;
-  ctx.fillText(BAND_TEXT, w / 2, band * 0.40);
+  ctx.fillText(BAND_TEXT, w / 2, midY - band * 0.16);
 
   // 아랫줄은 한 단 흐리게. 같은 흰색으로 두면 두 줄이 한 덩어리로 뭉쳐 읽힌다.
   ctx.fillStyle = 'rgba(255,255,255,0.78)';
   ctx.font = `500 ${small}px ${family}`;
-  ctx.fillText(BAND_SUB, w / 2, band * 0.73);
+  ctx.fillText(BAND_SUB, w / 2, midY + band * 0.17);
 
   return new Promise((resolve) => canvas.toBlob((blob) => resolve(blob), 'image/jpeg', 0.92));
+}
+
+// 위에서 보이는 보라가 어디까지인가. 띠 + 칠해진 사진 테두리.
+//
+// 띠 아래부터 한 줄씩 내려가며 보라가 아닌 픽셀이 처음 나오는 자리를 찾는다. 액자를
+// 칠했으면 그만큼 더 내려가고, 안 칠했으면 띠에서 바로 멈춘다.
+//
+// 아무리 멀어도 띠의 두 배까지만 본다. 온통 보라에 가까운 사진에서 머리가 끝없이
+// 길어지면 글자가 사진 한복판에 떨어진다.
+export function violetHeader(ctx, w, band, imgH) {
+  var max = Math.min(imgH, band);
+  var strip;
+  try {
+    strip = ctx.getImageData(0, band, w, max);
+  } catch {
+    return band;
+  }
+  var d = strip.data;
+  for (var y = 0; y < max; y++) {
+    for (var x = 0; x < w; x++) {
+      var o = (y * w + x) * 4;
+      // 칠한 자리는 정확히 이 값이다. 그 밖은 전부 '내용'으로 본다.
+      if (d[o] !== 0x5B || d[o + 1] !== 0x4F || d[o + 2] !== 0xE8) return band + y;
+    }
+  }
+  return band + max;
 }
 
 // 사진 바깥 테두리를 보라로 칠한다. 칠했으면 true.

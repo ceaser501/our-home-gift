@@ -38,7 +38,7 @@ function fakeCtx(img) {
   };
 }
 
-const { paintFrame } = await import('../utils/shareGifticon');
+const { paintFrame, violetHeader } = await import('../utils/shareGifticon');
 
 const VIOLET = [0x5B, 0x4F, 0xE8];
 const KAKAO_YELLOW = [0xFE, 0xE5, 0x00];
@@ -210,5 +210,63 @@ describe('색이 조금 흔들려도 같은 액자로 본다', () => {
     img.data[o] = 0xFE - 9; img.data[o + 1] = 0xE5 + 7; img.data[o + 2] = 12;
 
     expect(run(img).ok).toBe(true);
+  });
+});
+
+// 글자는 '띠'가 아니라 '보라 덩어리'의 한가운데에 놓여야 한다.
+//
+// 액자를 칠하고 나면 띠와 사진 위쪽 테두리가 이어져 보이는 보라가 두꺼워진다. 실측:
+// 카톡 캡처는 띠가 87px인데 보라 머리가 128px이었고(액자가 41px 더), 글자는 87px
+// 기준으로 놓여서 위에 붙어 보였다 — 2026-09-18에 실기에서 나왔다.
+describe('보라 머리 재기', () => {
+  const V = [0x5B, 0x4F, 0xE8];
+
+  // 위 band줄은 띠(보라), 그 아래 extra줄은 칠해진 액자(보라), 그다음이 내용.
+  function canvas({ w, band, extra, h }) {
+    const data = new Uint8ClampedArray(w * h * 4);
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const o = (y * w + x) * 4;
+        const violet = y < band + extra;
+        const c = violet ? V : [255, 255, 255];
+        data[o] = c[0]; data[o + 1] = c[1]; data[o + 2] = c[2]; data[o + 3] = 255;
+      }
+    }
+    return {
+      getImageData: (x, y, gw, gh) => {
+        const out = new Uint8ClampedArray(gw * gh * 4);
+        for (let yy = 0; yy < gh; yy++) {
+          for (let xx = 0; xx < gw; xx++) {
+            const from = ((y + yy) * w + (x + xx)) * 4;
+            const to = (yy * gw + xx) * 4;
+            out[to] = data[from]; out[to + 1] = data[from + 1];
+            out[to + 2] = data[from + 2]; out[to + 3] = 255;
+          }
+        }
+        return { data: out, width: gw, height: gh };
+      },
+    };
+  }
+
+  it('액자가 칠해졌으면 그만큼 더 내려간다', () => {
+    // 띠 40 + 액자 25 = 보라 머리 65
+    const ctx = canvas({ w: 30, band: 40, extra: 25, h: 200 });
+    expect(violetHeader(ctx, 30, 40, 160)).toBe(65);
+  });
+
+  it('액자가 없으면 띠에서 멈춘다', () => {
+    const ctx = canvas({ w: 30, band: 40, extra: 0, h: 200 });
+    expect(violetHeader(ctx, 30, 40, 160)).toBe(40);
+  });
+
+  it('⚠️ 온통 보라여도 띠의 두 배를 안 넘는다', () => {
+    // 이걸 안 막으면 글자가 사진 한복판에 떨어진다.
+    const ctx = canvas({ w: 30, band: 40, extra: 1000, h: 200 });
+    expect(violetHeader(ctx, 30, 40, 160)).toBe(80);
+  });
+
+  it('그림을 못 꺼내면 띠 그대로 쓴다', () => {
+    const ctx = { getImageData: () => { throw new Error('tainted'); } };
+    expect(violetHeader(ctx, 30, 40, 160)).toBe(40);
   });
 });
