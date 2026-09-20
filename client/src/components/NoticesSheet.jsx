@@ -40,16 +40,17 @@ export default function NoticesSheet({ onClose }) {
 
           {notices?.length === 0 && <p className="py-8 text-center text-body text-muted-foreground">아직 공지가 없어요.</p>}
 
-          {/* 진행 중인 공지. 지금 읽어야 하는 것이라 카드로 세워둔다.
-              뱃지는 '진행 중'이다. 카드가 이미 강조돼 있으니 뱃지가 할 일은 왜 강조됐는지를
-              말하는 것인데, '지난 공지'는 강조되지 않은 이유를 설명하는 말이라 여기서는 약하다.
+          {/* 진행 중인 공지. 보라 카드로 세워두던 것을 걷었다 — 테두리와 배경을 둘 다
+              쓰면서 '진행 중' 뱃지까지 얹어, 같은 말을 세 번 하고 있었다. 뱃지 하나면
+              무엇이 도는 공지인지 말할 수 있다. 지난 공지와 같은 줄 모양이 되어 목록
+              전체가 한 짜임으로 읽힌다.
 
               날짜를 본문 아래로 내렸다. 제목 바로 아래 있으면 눈이 본문에 닿기 전에 날짜를
               먼저 읽는다 — 공지에서 먼저 알아야 하는 것은 무슨 일인가다. */}
           {live.map((notice) => (
             <article
               key={notice.id}
-              className="rounded-lg border-[1.5px] border-primary bg-primary/4 p-3.5"
+              className="border-b border-border/50 pb-[13px] last:border-b-0"
             >
               <div className="flex items-center gap-2">
                 <span className="shrink-0 rounded-sm bg-primary px-[7px] py-0.5 text-caption font-bold text-primary-foreground">
