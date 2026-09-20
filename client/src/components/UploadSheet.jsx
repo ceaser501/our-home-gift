@@ -966,19 +966,12 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
                 하필 잘리는 것이 끝자리라, 11월 1일인지 10일인지 20일인지를 알 수 없다.
 
                 기한은 이 앱이 하는 일의 거의 전부다. 반대로 번호는 열몇 자리, 금액은
-                길어야 여섯 자리라 절반씩으로 충분하다. */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="flex flex-col gap-2.5">
-                <Label htmlFor="f-code">바코드 번호</Label>
-                <Input
-                  id="f-code"
-                  value={readableCode(form.code)}
-                  onChange={(e) => updateField('code', wrapCode(form.code, e.target.value))}
-                  placeholder="직접 입력"
-                  className="h-13 rounded-lg px-4 text-callout"
-                />
-              </div>
+                길어야 여섯 자리라 절반씩으로 충분하다.
 
+                금액을 왼쪽에 둔다. 바로 아래 금액권 체크가 이 칸에 딸린 설정인데,
+                금액이 오른쪽이면 체크가 바코드 번호 밑에 앉아 무엇에 대한 말인지
+                어긋난다. 딸린 것은 딸린 것 아래에 있어야 한다. */}
+            <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-2.5">
                 <Label htmlFor="f-amount">금액</Label>
                 {/* '원'을 예시 문구로 두면 한 글자만 적어도 사라져서, 무엇을 적는 칸인지가
@@ -999,6 +992,17 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
                     원
                   </span>
                 </div>
+              </div>
+
+              <div className="flex flex-col gap-2.5">
+                <Label htmlFor="f-code">바코드 번호</Label>
+                <Input
+                  id="f-code"
+                  value={readableCode(form.code)}
+                  onChange={(e) => updateField('code', wrapCode(form.code, e.target.value))}
+                  placeholder="직접 입력"
+                  className="h-13 rounded-lg px-4 text-callout"
+                />
               </div>
             </div>
 
