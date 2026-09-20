@@ -971,7 +971,9 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
                 금액을 왼쪽에 둔다. 바로 아래 금액권 체크가 이 칸에 딸린 설정인데,
                 금액이 오른쪽이면 체크가 바코드 번호 밑에 앉아 무엇에 대한 말인지
                 어긋난다. 딸린 것은 딸린 것 아래에 있어야 한다. */}
-            <div className="grid grid-cols-2 gap-3">
+            {/* 금액은 한 줄을 통째로 쓴다. 바로 아래 금액권 체크가 이 칸에 딸린
+                설정이라, 옆에 다른 칸이 있으면 체크가 무엇에 붙은 말인지 흐려진다.
+                금액과 체크가 한 덩어리로 읽히는 편이 낫다. */}
               <div className="flex flex-col gap-2.5">
                 <Label htmlFor="f-amount">금액</Label>
                 {/* '원'을 예시 문구로 두면 한 글자만 적어도 사라져서, 무엇을 적는 칸인지가
@@ -994,17 +996,6 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
                 </div>
               </div>
 
-              <div className="flex flex-col gap-2.5">
-                <Label htmlFor="f-code">바코드 번호</Label>
-                <Input
-                  id="f-code"
-                  value={readableCode(form.code)}
-                  onChange={(e) => updateField('code', wrapCode(form.code, e.target.value))}
-                  placeholder="직접 입력"
-                  className="h-13 rounded-lg px-4 text-callout"
-                />
-              </div>
-            </div>
 
             {/* 아래 셋은 전부 금액 칸에 딸린 것이라 금액 바로 밑에 둔다. 사용기한을
                 한 줄로 내리면서 이 자리를 놓치면 "금액권 — 쓴 만큼 깎여요"가 기한
@@ -1048,10 +1039,22 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
               <p className="m-0 text-body break-keep text-muted-foreground">금액권 같아 보여요. 맞으면 체크해주세요.</p>
             )}
 
-            {/* 사용기한과 받는 사람을 나란히 놓는다. 둘 다 고르는 칸이고 값이 짧아서
-                한 칸을 다 쓸 일이 없었다. 위의 상호/카테고리, 바코드/금액과 같은 짜임이다.
-                한 줄이 줄면서 접혀 있던 아래가 첫 화면으로 올라온다. */}
+
+            {/* 바코드 번호와 사용기한을 나란히. 번호는 열몇 자리, 날짜는 열 자리라
+                둘 다 절반으로 넉넉하다. 매장에서 쓰는 것은 이 칸이 아니라 바코드
+                창이고 여기서는 읽어온 값을 확인한다. */}
             <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-2.5">
+                <Label htmlFor="f-code">바코드 번호</Label>
+                <Input
+                  id="f-code"
+                  value={readableCode(form.code)}
+                  onChange={(e) => updateField('code', wrapCode(form.code, e.target.value))}
+                  placeholder="직접 입력"
+                  className="h-13 rounded-lg px-4 text-callout"
+                />
+              </div>
+
             <div className="flex flex-col gap-2.5">
               <Label htmlFor="f-expires">사용기한</Label>
               {/* 폰이 들고 있는 날짜 고르개를 그대로 쓴다. 직접 만든 달력으로 바꾸면
@@ -1089,6 +1092,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
                   className="absolute inset-0 opacity-0"
                 />
               </label>
+            </div>
             </div>
 
             {/* 다시 고르는 칸으로 돌아왔다. 단추를 늘어놓던 때는 가족이 서넛일 때를 보고
@@ -1142,7 +1146,6 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
                   ))}
                 </SelectContent>
               </Select>
-            </div>
             </div>
 
             <div className="flex flex-col gap-2.5">
