@@ -131,8 +131,13 @@ function NoticeRow({ notice }) {
           <span className="shrink-0 rounded-sm bg-accent px-1.5 py-0.5 text-caption font-bold text-primary">
             공지
           </span>
-          {/* 여기도 제목이라 break-keep을 안 건다(위 고정 공지 주석 참고). */}
-          <p className="m-0 min-w-0 flex-1 text-callout leading-snug font-semibold text-foreground/80">
+          {/* 여기도 제목이라 break-keep을 안 건다(위 고정 공지 주석 참고).
+
+              크기는 활동 줄과 같은 body(16 에서 내렸다). 이 줄은 활동과 같은 목록에
+              섞여 서는데 혼자 크면 공지만 도드라진다. 공지라는 것은 '공지' 배지와
+              확성기 아이콘이 이미 말한다. 위 고정 공지는 상자로 따로 묶여 있으니
+              거기는 16 을 남긴다. */}
+          <p className="m-0 min-w-0 flex-1 text-body leading-snug font-semibold text-foreground/80">
             {notice.title}
           </p>
         </div>
