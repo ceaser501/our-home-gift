@@ -24,7 +24,7 @@ function Pending() {
           <Clock className="size-7 text-warning" />
         </span>
         <h1 className="m-0 text-heading font-bold tracking-heading text-foreground">승인을 기다리는 중</h1>
-        <p className="m-0 text-center text-[15px] break-keep text-muted-foreground">
+        <p className="m-0 text-center text-body break-keep text-muted-foreground">
           {pendingFor}에 참여를 신청했어요.
         </p>
 
@@ -33,13 +33,13 @@ function Pending() {
             <span className="flex size-[26px] shrink-0 items-center justify-center rounded-full bg-success/15 text-success">
               <Check className="size-3.5" strokeWidth={3} />
             </span>
-            <p className="m-0 flex-1 text-[15px] text-foreground">신청을 보냈어요</p>
+            <p className="m-0 flex-1 text-body text-foreground">신청을 보냈어요</p>
           </div>
           <div className="flex items-start gap-3">
             <span className="size-[26px] shrink-0 rounded-full border-2 border-border bg-card" />
             <div className="flex flex-1 flex-col gap-0.5">
-              <p className="m-0 text-[15px] font-semibold text-foreground">가족 구성원이 승인하면 참여돼요</p>
-              <p className="m-0 text-[13.5px] text-muted-foreground">코드를 알려준 분에게 말씀해주세요</p>
+              <p className="m-0 text-body font-semibold text-foreground">가족 구성원이 승인하면 참여돼요</p>
+              <p className="m-0 text-footnote text-muted-foreground">코드를 알려준 분에게 말씀해주세요</p>
             </div>
           </div>
         </div>
@@ -65,15 +65,10 @@ function Created() {
         <h1 className="m-0 text-center text-heading font-bold tracking-heading break-keep text-foreground">
           {created.name}을 만들었어요
         </h1>
-        <p className="m-0 text-center text-[15px] leading-relaxed break-keep text-muted-foreground">
-          혼자 쓰셔도 되고,
-          <br />
-          가족에게 코드를 알려줘도 돼요.
-        </p>
         <div
           className="flex w-full flex-col gap-3 rounded-lg bg-accent px-5 py-5"
         >
-          <p className="m-0 text-center text-[13.5px] font-semibold text-primary/70">초대 코드</p>
+          <p className="m-0 text-center text-caption font-semibold text-primary/70">초대 코드</p>
           <p
             className="m-0 text-center font-bold tracking-heading text-foreground"
             style={{ fontSize: CODE_SIZE }}
@@ -83,7 +78,7 @@ function Created() {
           <CopyButton
             value={created.invite_code}
             label="코드 복사"
-            className="mx-auto h-11 justify-center rounded-lg bg-primary px-5 text-[15.5px] font-bold text-primary-foreground"
+            className="mx-auto h-11 justify-center rounded-lg bg-primary px-5 text-callout font-bold text-primary-foreground"
           />
         </div>
         <Button variant="outline" size="xl" className={PRIMARY_BUTTON}>시작하기</Button>

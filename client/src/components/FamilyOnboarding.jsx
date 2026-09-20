@@ -98,8 +98,8 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
           {/* 코드는 읽고 넘어가는 값이다. 맞게 들고 왔다는 표시(체크)까지 붙여서
               '이제 이름만 적으면 된다'가 눈에 들어오게 한다. */}
           <div className="flex items-center gap-2.5 rounded-lg border border-primary/25 bg-card px-3.5 py-2.5">
-            <span className="text-[13.5px] font-semibold text-primary/80">초대 코드</span>
-            <span className="font-mono text-[16px] font-bold tracking-code text-foreground">{code}</span>
+            <span className="text-caption font-semibold text-primary/80">초대 코드</span>
+            <span className="font-mono text-callout font-bold tracking-code text-foreground">{code}</span>
             <Check className="size-4 shrink-0 text-success" strokeWidth={2.4} />
           </div>
         </div>
@@ -108,7 +108,7 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
           <div className="flex flex-col gap-2">
             {/* 이 자리의 Label 은 칸 이름이 아니라 화면이 묻는 말이다. 부품이 정한
                 회색·14 를 물려받으면 물음이 라벨처럼 물러난다 — 검정 16 으로 붙든다. */}
-            <Label htmlFor="invited-name" className="text-base font-bold text-foreground">
+            <Label htmlFor="invited-name" className="text-callout font-bold text-foreground">
               가족에게 어떻게 보일 이름인가요?
             </Label>
             <Input
@@ -116,31 +116,31 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
               value={memberName}
               onChange={(e) => setMemberName(e.target.value)}
               placeholder="예) 아빠, 엄마, 아들, 딸"
-              className="h-14 rounded-lg text-[17px]"
+              className="h-14 rounded-lg text-callout"
               autoComplete="off"
               autoFocus
               required
             />
             {/* 어느 계정으로 들어와 있는지 짚어준다. 로그인 수단을 여럿 두고 있어서,
                 지난번과 다른 것으로 들어오면 같은 사람이 둘로 갈린다. */}
-            <p className="m-0 text-[13.5px] leading-relaxed font-medium break-keep text-muted-foreground">
+            <p className="m-0 text-footnote font-medium break-keep text-muted-foreground">
               {userEmail ? `${userEmail}으로 로그인했어요. ` : ''}이름은 나중에 바꿀 수 있어요.
             </p>
           </div>
 
-          {error && <p className="m-0 text-sm text-destructive">{error}</p>}
+          {error && <p className="m-0 text-body text-destructive">{error}</p>}
 
           <div className="mt-auto flex flex-col gap-3">
             <Button
               type="submit"
-              className="h-14 w-full rounded-lg text-[17px] font-bold"
+              className="h-14 w-full rounded-lg text-callout font-bold"
               disabled={submitting}
             >
               {submitting ? '신청하는 중…' : '참여 신청하기'}
             </Button>
             {/* 눌러도 바로 안 들어간다는 것을 미리 말해둔다. 안 말하면 신청하고 나서
                 "왜 아직 안 보이지" 하고 다시 누른다. */}
-            <p className="m-0 text-center text-[13.5px] leading-relaxed font-medium break-keep text-muted-foreground">
+            <p className="m-0 text-center text-footnote font-medium break-keep text-muted-foreground">
               {invitedFamily ? `'${invitedFamily}' 가족이` : '가족이'} 승인하면 함께 볼 수 있어요.
             </p>
           </div>
@@ -157,7 +157,7 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
           <Clock className="size-7 text-warning" />
         </span>
         <h1 className="m-0 text-heading font-bold tracking-heading text-foreground">승인을 기다리는 중</h1>
-        <p className="m-0 text-center text-[15px] break-keep text-muted-foreground">
+        <p className="m-0 text-center text-body break-keep text-muted-foreground">
           {pendingFor}에 참여를 신청했어요.
         </p>
 
@@ -168,13 +168,13 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
             <span className="flex size-[26px] shrink-0 items-center justify-center rounded-full bg-success/15 text-success">
               <Check className="size-3.5" strokeWidth={3} />
             </span>
-            <p className="m-0 flex-1 text-[15px] text-foreground">신청을 보냈어요</p>
+            <p className="m-0 flex-1 text-body text-foreground">신청을 보냈어요</p>
           </div>
           <div className="flex items-start gap-3">
             <span className="size-[26px] shrink-0 rounded-full border-2 border-border bg-card" />
             <div className="flex flex-1 flex-col gap-0.5">
-              <p className="m-0 text-[15px] font-semibold text-foreground">가족 구성원이 승인하면 참여돼요</p>
-              <p className="m-0 text-[13.5px] text-muted-foreground">코드를 알려준 분에게 말씀해주세요</p>
+              <p className="m-0 text-body font-semibold text-foreground">가족 구성원이 승인하면 참여돼요</p>
+              <p className="m-0 text-footnote text-muted-foreground">코드를 알려준 분에게 말씀해주세요</p>
             </div>
           </div>
         </div>
@@ -217,11 +217,9 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
         <h1 className="m-0 text-center text-heading font-bold tracking-heading break-keep text-foreground">
           {created.name}을 만들었어요
         </h1>
-        <p className="m-0 text-center text-[15px] leading-relaxed break-keep text-muted-foreground">
-          혼자 쓰셔도 되고,
-          <br />
-          가족에게 코드를 알려줘도 돼요.
-        </p>
+        {/* 부제를 걷었다. '가족에게 코드를 알려줘도 돼요'는 바로 아래 코드 상자와
+            복사 버튼이 이미 하고 있는 말이고, '혼자 쓰셔도 되고'는 앞 화면(가족 공간을
+            만들어요)에서 이미 했다. 같은 말을 두 화면 연달아 하게 된다. */}
         {/* 가족을 막 만든 이 순간이 코드를 실제로 보내는 순간이다. 여기서 복사가 안 되면
             사람은 여섯 자를 눈으로 외워 옮겨 적는다.
             그래서 주 버튼 자리를 복사에 내준다. 예전에는 보라 '시작하기'가 제일 세서,
@@ -232,14 +230,14 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
             테두리처럼 보인다. 글자만큼만 쓰게 줄인다(44 · 좌우 20) — 여전히 이
             화면의 유일한 보라색이라 먼저 눈에 든다. */}
         <div className="flex w-full flex-col gap-3 rounded-lg bg-accent px-5 py-5">
-          <p className="m-0 text-center text-[13.5px] font-semibold text-primary/70">초대 코드</p>
+          <p className="m-0 text-center text-caption font-semibold text-primary/70">초대 코드</p>
           <p className="m-0 text-center text-display font-bold tracking-heading text-foreground">
             {created.invite_code}
           </p>
           <CopyButton
             value={created.invite_code}
             label="코드 복사"
-            className="mx-auto h-11 justify-center rounded-lg bg-primary px-5 text-[15.5px] font-bold text-primary-foreground"
+            className="mx-auto h-11 justify-center rounded-lg bg-primary px-5 text-callout font-bold text-primary-foreground"
           />
         </div>
         <Button
@@ -276,7 +274,7 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
         <h1 className="m-0 text-center text-heading font-bold tracking-heading text-foreground">
           가족 공간을 만들어요
         </h1>
-        <p className="m-0 text-center text-[14.5px] leading-relaxed font-medium break-keep text-muted-foreground">
+        <p className="m-0 text-center text-body font-medium break-keep text-muted-foreground">
           혼자 써도 좋아요.
           <br />
           나중에 가족을 초대할 수 있어요.
@@ -288,13 +286,13 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
       <div className="flex h-12 items-center gap-3 rounded-lg border border-border bg-card pr-2.5 pl-3.5">
         <div className="flex min-w-0 flex-1 items-center gap-2">
           <Mail className="size-[17px] shrink-0 text-muted-foreground" />
-          <p className="m-0 truncate text-[14.5px] font-medium text-foreground">{userEmail}</p>
+          <p className="m-0 truncate text-body font-medium text-foreground">{userEmail}</p>
         </div>
         <Button
           type="button"
           variant="outline"
           size="sm"
-          className="h-9 shrink-0 rounded-md text-[13.5px] font-semibold text-foreground/70"
+          className="h-9 shrink-0 rounded-md text-body font-semibold text-foreground/70"
           onClick={() => signOut()}
         >
           계정 바꾸기
@@ -318,7 +316,7 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
             type="button"
             onClick={() => setMode(value)}
             className={cn(
-              'flex-1 rounded-md py-2 text-[15px] font-semibold transition-colors',
+              'flex-1 rounded-md py-2 text-body font-semibold transition-colors',
               mode === value ? 'bg-card text-foreground shadow-xs' : 'text-muted-foreground'
             )}
           >
@@ -344,7 +342,7 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
                 value={familyName}
                 onChange={(e) => setFamilyName(e.target.value)}
                 placeholder="우리집"
-                className="h-12 rounded-lg text-[15.5px]"
+                className="h-12 rounded-lg text-callout"
                 autoComplete="off"
                 required
               />
@@ -358,13 +356,13 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
                 value={memberName}
                 onChange={(e) => setMemberName(e.target.value)}
                 placeholder="아빠, 엄마, 아들, 딸"
-                className="h-12 rounded-lg text-[15.5px]"
+                className="h-12 rounded-lg text-callout"
                 autoComplete="off"
                 required
               />
             </div>
           </div>
-          {error && <p className="text-sm text-destructive">{error}</p>}
+          {error && <p className="text-body text-destructive">{error}</p>}
           {/* 폼 gap 은 16 이고 버튼 앞만 28 이다 — mt-3 이 그 차를 메운다.
               오류 문구는 칸 가까이 16 에 두고, 버튼만 떨어뜨린다. */}
           <Button
@@ -389,7 +387,7 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
                 /* 고정폭 글꼴과 넓은 자간은 값이 들어온 뒤에만 쓴다. 빈 칸에 미리 걸면
                    '6자리 코드'라는 예시 문구가 이미 적힌 코드처럼 보인다. */
                 className={cn(
-                  'h-12 rounded-lg text-[15.5px] uppercase',
+                  'h-12 rounded-lg text-callout uppercase',
                   code && 'font-mono tracking-code'
                 )}
                 maxLength={6}
@@ -404,13 +402,13 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
                 value={memberName}
                 onChange={(e) => setMemberName(e.target.value)}
                 placeholder="아빠, 엄마, 아들, 딸"
-                className="h-12 rounded-lg text-[15.5px]"
+                className="h-12 rounded-lg text-callout"
                 autoComplete="off"
                 required
               />
             </div>
           </div>
-          {error && <p className="text-sm text-destructive">{error}</p>}
+          {error && <p className="text-body text-destructive">{error}</p>}
           <Button
             type="submit"
             size="xl"
