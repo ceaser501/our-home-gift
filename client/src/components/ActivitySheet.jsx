@@ -46,14 +46,14 @@ function SectionTitle({ label, count, accent }) {
     <div className="flex items-center gap-2 pb-1.5">
       <span
         className={cn(
-          'text-[13.5px] font-bold',
+          'text-caption font-bold',
           accent ? 'text-primary' : 'text-muted-foreground'
         )}
       >
         {label}
       </span>
       {count > 0 && (
-        <span className="rounded-md bg-primary px-1.5 py-px text-[11.5px] font-bold tabular-nums text-primary-foreground">
+        <span className="rounded-md bg-primary px-1.5 py-px text-caption font-bold tabular-nums text-primary-foreground">
           {count}
         </span>
       )}
@@ -85,8 +85,8 @@ function PinnedNotice({ notice }) {
           상자 여백(px-3.5)만큼 폭이 더 좁아서 유독 잦았다.
 
           본문은 반대로 break-keep을 남긴다. 문단으로 읽는 글이라 어절이 갈리면 눈에 걸린다. */}
-      <p className="m-0 text-[15px] leading-snug font-bold text-foreground">
-        <span className="mr-[7px] inline-block rounded-sm bg-primary px-[7px] py-0.5 align-[1px] text-[11px] font-bold text-primary-foreground">
+      <p className="m-0 text-callout leading-snug font-bold text-foreground">
+        <span className="mr-[7px] inline-block rounded-sm bg-primary px-[7px] py-0.5 align-[1px] text-caption font-bold text-primary-foreground">
           공지
         </span>
         {notice.title}
@@ -128,11 +128,11 @@ function NoticeRow({ notice }) {
       </span>
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="flex items-center gap-1.5">
-          <span className="shrink-0 rounded-sm bg-accent px-1.5 py-0.5 text-[10.5px] font-bold text-primary">
+          <span className="shrink-0 rounded-sm bg-accent px-1.5 py-0.5 text-caption font-bold text-primary">
             공지
           </span>
           {/* 여기도 제목이라 break-keep을 안 건다(위 고정 공지 주석 참고). */}
-          <p className="m-0 min-w-0 flex-1 text-[15px] leading-snug font-semibold text-foreground/80">
+          <p className="m-0 min-w-0 flex-1 text-callout leading-snug font-semibold text-foreground/80">
             {notice.title}
           </p>
         </div>
@@ -163,7 +163,7 @@ function ActivityRow({ activity, isNew }) {
       <div className="min-w-0 flex-1">
         <p
           className={cn(
-            'm-0 truncate text-[15px] leading-snug font-semibold',
+            'm-0 truncate text-callout leading-snug font-semibold',
             isNew ? 'text-foreground' : 'text-foreground/80'
           )}
         >
@@ -251,8 +251,8 @@ export default function ActivitySheet({
                 <BellOff className="size-8 text-muted-foreground/70" strokeWidth={1.8} />
               </span>
               <div className="flex flex-col items-center gap-2">
-                <p className="m-0 text-[17px] font-bold text-foreground">아직 알림이 없어요</p>
-                <p className="m-0 text-center text-sm leading-relaxed font-medium break-keep text-muted-foreground">
+                <p className="m-0 text-subtitle font-bold text-foreground">아직 알림이 없어요</p>
+                <p className="m-0 text-center text-body leading-relaxed font-medium break-keep text-muted-foreground">
                   가족이 기프티콘을 올리거나 쓰면
                   <br />
                   여기에 쌓여요
