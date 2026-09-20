@@ -36,9 +36,9 @@ export default function NoticesSheet({ onClose }) {
         </SheetHeader>
 
         <div className="flex flex-col gap-3 px-5">
-          {notices === null && <p className="py-8 text-center text-sm text-muted-foreground">불러오는 중…</p>}
+          {notices === null && <p className="py-8 text-center text-body text-muted-foreground">불러오는 중…</p>}
 
-          {notices?.length === 0 && <p className="py-8 text-center text-sm text-muted-foreground">아직 공지가 없어요.</p>}
+          {notices?.length === 0 && <p className="py-8 text-center text-body text-muted-foreground">아직 공지가 없어요.</p>}
 
           {/* 진행 중인 공지. 지금 읽어야 하는 것이라 카드로 세워둔다.
               뱃지는 '진행 중'이다. 카드가 이미 강조돼 있으니 뱃지가 할 일은 왜 강조됐는지를
@@ -52,16 +52,16 @@ export default function NoticesSheet({ onClose }) {
               className="rounded-lg border-[1.5px] border-primary bg-primary/4 p-3.5"
             >
               <div className="flex items-center gap-2">
-                <span className="shrink-0 rounded-sm bg-primary px-[7px] py-0.5 text-[11px] font-bold text-primary-foreground">
+                <span className="shrink-0 rounded-sm bg-primary px-[7px] py-0.5 text-caption font-bold text-primary-foreground">
                   진행 중
                 </span>
-                <h3 className="m-0 min-w-0 flex-1 text-[15.5px] font-bold break-keep text-foreground">
+                <h3 className="m-0 min-w-0 flex-1 text-body font-bold break-keep text-foreground">
                   {notice.title}
                 </h3>
               </div>
               {/* 줄바꿈을 그대로 살린다. 공지는 문단으로 쓰는 글이라 한 덩어리로 뭉치면 읽기 어렵다. */}
               {notice.body && (
-                <p className="m-0 mt-2 text-sm leading-relaxed font-medium break-keep whitespace-pre-line text-foreground/80">
+                <p className="m-0 mt-2 text-footnote font-medium break-keep whitespace-pre-line text-foreground/80">
                   {notice.body}
                 </p>
               )}
@@ -75,18 +75,18 @@ export default function NoticesSheet({ onClose }) {
               '지난 공지'가 세 번 나오던 것을 구역 제목 한 번으로 줄였다. */}
           {past.length > 0 && (
             <div className="flex items-center gap-2 pt-[3px]">
-              <span className="text-[13.5px] font-bold text-muted-foreground">지난 공지</span>
+              <span className="text-caption font-bold text-muted-foreground">지난 공지</span>
               <span className="h-px flex-1 bg-border/60" />
             </div>
           )}
 
           {past.map((notice) => (
             <article key={notice.id} className="border-b border-border/50 pb-[13px] last:border-b-0">
-              <h3 className="m-0 text-[15.5px] font-semibold break-keep text-foreground/80">
+              <h3 className="m-0 text-body font-semibold break-keep text-foreground/80">
                 {notice.title}
               </h3>
               {notice.body && (
-                <p className="m-0 mt-1.5 text-sm leading-relaxed font-medium break-keep whitespace-pre-line text-muted-foreground">
+                <p className="m-0 mt-1.5 text-footnote font-medium break-keep whitespace-pre-line text-muted-foreground">
                   {notice.body}
                 </p>
               )}

@@ -138,12 +138,29 @@ const NOTICES_PINNED = [
   },
 ];
 
+// ends_at 을 안 적으면 '끝나지 않은 것'으로 본다(NoticesSheet 의 ended 판정).
+// 그래서 끝난 공지를 안 넣으면 전부 진행 중으로 서고, 보라 상자가 모든 줄에
+// 붙어 이 시트의 절반만 보게 된다.
 const NOTICES_LISTED = [
   {
     id: 102,
     title: '금액권 잔액 계산이 더 정확해졌어요',
     body: '쓴 만큼 깎이는 기프티콘의 잔액을 다시 세었어요.',
     starts_at: new Date(Date.now() - 2 * 86400e3).toISOString(),
+  },
+  {
+    id: 103,
+    title: '추석 연휴에도 그대로 써요',
+    body: '연휴 동안에도 등록과 바코드 보기가 모두 돼요.',
+    starts_at: new Date(Date.now() - 40 * 86400e3).toISOString(),
+    ends_at: new Date(Date.now() - 30 * 86400e3).toISOString(),
+  },
+  {
+    id: 104,
+    title: '매장 찾기가 빨라졌어요',
+    body: '가까운 매장을 찾는 데 걸리는 시간을 줄였어요.',
+    starts_at: new Date(Date.now() - 60 * 86400e3).toISOString(),
+    ends_at: new Date(Date.now() - 50 * 86400e3).toISOString(),
   },
 ];
 
