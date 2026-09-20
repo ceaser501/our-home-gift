@@ -765,6 +765,13 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
           </button>
         )}
 
+        {/* 폼이 859 라 시트 아래로 177 이 접힌다. 그대로 둔다.
+            접히는 것은 받는 사람 아래쪽과 메모, 저장 버튼이다 — 메모는 선택이고
+            버튼은 끝까지 읽고 누르는 것이라 아래 있는 편이 자연스럽다.
+
+            메모를 접어 한 화면에 넣는 길도 봤는데, 그러면 OCR 이 실패했거나
+            처음부터 수기로 넣을 때 손이 하나 더 간다. 여기서는 어느 칸이든
+            언제나 바로 고칠 수 있어야 한다는 쪽이 먼저다. */}
         <form className="flex flex-col gap-4 px-5" onSubmit={handleSubmit}>
           {/* 안내는 사진 상자 안으로 들어갔다. 상자 위에 따로 한 문단으로 두면 화면을
               여는 순간 읽어야 할 글부터 나오는데, 그 말이 가리키는 것은 바로 아래
