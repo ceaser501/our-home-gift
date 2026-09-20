@@ -1036,6 +1036,10 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
               <p className="m-0 text-body break-keep text-muted-foreground">금액권 같아 보여요. 맞으면 체크해주세요.</p>
             )}
 
+            {/* 사용기한과 받는 사람을 나란히 놓는다. 둘 다 고르는 칸이고 값이 짧아서
+                한 칸을 다 쓸 일이 없었다. 위의 상호/카테고리, 바코드/금액과 같은 짜임이다.
+                한 줄이 줄면서 접혀 있던 아래가 첫 화면으로 올라온다. */}
+            <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-2.5">
               <Label htmlFor="f-expires">사용기한</Label>
               {/* 폰이 들고 있는 날짜 고르개를 그대로 쓴다. 직접 만든 달력으로 바꾸면
@@ -1110,6 +1114,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
                   ))}
                 </SelectContent>
               </Select>
+            </div>
             </div>
 
             <div className="flex flex-col gap-2.5">
