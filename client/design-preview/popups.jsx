@@ -102,6 +102,51 @@ const ACTIVITIES = [
     created_at: new Date(Date.now() - 3 * 86400e3).toISOString() },
 ];
 
+// ── 서버를 가로챈다 ────────────────────────────────────────────────
+// 몇몇 시트는 프롭이 아니라 스스로 서버를 부른다(공지·사용 리포트·가족 구성원).
+// 여기서는 부를 곳이 없어서 늘 빈 화면으로 섰다 — '공지가 없어요'가 그것이다.
+//
+// supabase-js 는 REST 로 fetch 를 쓰므로, 그 요청만 가로채 가짜 줄을 돌려준다.
+// 표 이름은 주소의 /rest/v1/<표> 에서 집는다. 모르는 표는 빈 배열로 답한다 —
+// 못 부른 것과 아무것도 없는 것은 화면에서 같은 모습이어야 한다.
+const FAKE_ROWS = {
+  notices: () => [...NOTICES_PINNED, ...NOTICES_LISTED],
+  notice_reads: () => [],
+  activities: () => ACTIVITIES,
+  activity_reads: () => [],
+  gifticon_uses: () => [],
+};
+
+const realFetch = window.fetch.bind(window);
+window.fetch = async (input, init) => {
+  const url = typeof input === 'string' ? input : input?.url || '';
+  const m = /\/rest\/v1\/([a-z_]+)/.exec(url);
+  if (!m) return realFetch(input, init);
+  const rows = (FAKE_ROWS[m[1]] || (() => []))();
+  return new Response(JSON.stringify(rows), {
+    status: 200,
+    headers: { 'content-type': 'application/json' },
+  });
+};
+
+const NOTICES_PINNED = [
+  {
+    id: 101,
+    title: '기프티콘 등록이 잠시 멈춰요',
+    body: '모델 점검 중이에요. 바코드 보기와 목록·매장 찾기는 그대로 돼요.',
+    starts_at: new Date(Date.now() - 2 * 3600e3).toISOString(),
+  },
+];
+
+const NOTICES_LISTED = [
+  {
+    id: 102,
+    title: '금액권 잔액 계산이 더 정확해졌어요',
+    body: '쓴 만큼 깎이는 기프티콘의 잔액을 다시 세었어요.',
+    starts_at: new Date(Date.now() - 2 * 86400e3).toISOString(),
+  },
+];
+
 const STORE = {
   place: 'p1', name: '스타벅스 광화문점', category: '카페',
   address: '서울 종로구 세종대로 175', phone: '02-123-4567',
@@ -433,11 +478,13 @@ function App() {
       {cur === 'onboardCreate' && <FamilyOnboarding userEmail="taesu@example.com" onDone={reopen} />}
       {cur === 'onboardJoin' && <FamilyOnboarding userEmail="taesu@example.com" onDone={reopen} />}
 
+      {/* 공지를 빈 배열로 넘기면 이 시트의 절반이 안 보인다 — 고정 공지 상자와
+          목록에 섞이는 공지 줄이 둘 다 안 뜬다. 채워서 넘긴다. */}
       {cur === 'activity' && (
         <ActivitySheet
           activities={ACTIVITIES}
-          pinnedNotices={[]}
-          listedNotices={[]}
+          pinnedNotices={NOTICES_PINNED}
+          listedNotices={NOTICES_LISTED}
           lastReadAt={new Date(Date.now() - 2 * 86400e3).toISOString()}
           onClose={reopen}
         />
