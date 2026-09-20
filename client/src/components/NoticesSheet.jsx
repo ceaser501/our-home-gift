@@ -55,7 +55,7 @@ export default function NoticesSheet({ onClose }) {
                 <span className="shrink-0 rounded-sm bg-primary px-[7px] py-0.5 text-caption font-bold text-primary-foreground">
                   진행 중
                 </span>
-                <h3 className="m-0 min-w-0 flex-1 text-body font-bold break-keep text-foreground">
+                <h3 className="m-0 min-w-0 flex-1 text-callout font-bold break-keep text-foreground">
                   {notice.title}
                 </h3>
               </div>
@@ -82,7 +82,7 @@ export default function NoticesSheet({ onClose }) {
 
           {past.map((notice) => (
             <article key={notice.id} className="border-b border-border/50 pb-[13px] last:border-b-0">
-              <h3 className="m-0 text-body font-semibold break-keep text-foreground/80">
+              <h3 className="m-0 text-callout font-semibold break-keep text-foreground/80">
                 {notice.title}
               </h3>
               {notice.body && (
