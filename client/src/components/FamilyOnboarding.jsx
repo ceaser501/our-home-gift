@@ -116,7 +116,7 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
               value={memberName}
               onChange={(e) => setMemberName(e.target.value)}
               placeholder="예) 아빠, 엄마, 아들, 딸"
-              className="h-14 rounded-lg text-callout"
+              className="h-13 rounded-lg text-callout"
               autoComplete="off"
               autoFocus
               required
@@ -133,7 +133,7 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
           <div className="mt-auto flex flex-col gap-3">
             <Button
               type="submit"
-              className="h-14 w-full rounded-lg text-callout font-bold"
+              className="h-13 w-full rounded-lg text-callout font-bold"
               disabled={submitting}
             >
               {submitting ? '신청하는 중…' : '참여 신청하기'}
@@ -342,7 +342,7 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
                 value={familyName}
                 onChange={(e) => setFamilyName(e.target.value)}
                 placeholder="우리집"
-                className="h-12 rounded-lg text-callout"
+                className="h-13 rounded-lg text-callout"
                 autoComplete="off"
                 required
               />
@@ -356,7 +356,7 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
                 value={memberName}
                 onChange={(e) => setMemberName(e.target.value)}
                 placeholder="아빠, 엄마, 아들, 딸"
-                className="h-12 rounded-lg text-callout"
+                className="h-13 rounded-lg text-callout"
                 autoComplete="off"
                 required
               />
@@ -387,7 +387,7 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
                 /* 고정폭 글꼴과 넓은 자간은 값이 들어온 뒤에만 쓴다. 빈 칸에 미리 걸면
                    '6자리 코드'라는 예시 문구가 이미 적힌 코드처럼 보인다. */
                 className={cn(
-                  'h-12 rounded-lg text-callout uppercase',
+                  'h-13 rounded-lg text-callout uppercase',
                   code && 'font-mono tracking-code'
                 )}
                 maxLength={6}
@@ -402,7 +402,7 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
                 value={memberName}
                 onChange={(e) => setMemberName(e.target.value)}
                 placeholder="아빠, 엄마, 아들, 딸"
-                className="h-12 rounded-lg text-callout"
+                className="h-13 rounded-lg text-callout"
                 autoComplete="off"
                 required
               />
