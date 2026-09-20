@@ -787,7 +787,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
                 <Plus className="size-6 text-primary-foreground" strokeWidth={2.1} />
               </span>
               <span className="flex flex-col items-center gap-1">
-                <span className="text-base font-bold text-foreground">사진 고르기</span>
+                <span className="text-callout font-bold text-foreground">사진 고르기</span>
                 {/* 두 줄이 하는 말이 다르다. 앞은 사진을 올리면 무슨 일이 생기는지,
                     뒤는 여러 장을 골라도 된다는 것.
                     뒷줄을 고쳤다. 예전에는 '기프티콘별로 나눠 담아요'였는데, 지금은
@@ -820,7 +820,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="flex aspect-square flex-col items-center justify-center gap-0.5 rounded-xl border border-dashed border-border bg-background text-xs text-muted-foreground"
+              className="flex aspect-square flex-col items-center justify-center gap-0.5 rounded-xl border border-dashed border-border bg-background text-caption text-muted-foreground"
             >
               <Plus className="size-5" />
               <span>이미지 추가</span>
@@ -833,12 +833,12 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
             <div className="flex flex-col gap-2 rounded-xl border border-primary/30 bg-primary/5 px-3.5 py-3">
               <div className="flex items-center gap-2.5">
                 <Loader2 className="size-4 shrink-0 animate-spin text-primary" />
-                <span className="flex-1 text-sm font-semibold text-foreground">{progressLabel(progress)}</span>
+                <span className="flex-1 text-body font-semibold text-foreground">{progressLabel(progress)}</span>
               </div>
               <div className="h-1.5 w-full overflow-hidden rounded-full bg-primary/15">
                 <div className="animate-progress-indeterminate h-full w-2/5 rounded-full bg-primary" />
               </div>
-              <p className="m-0 text-xs text-muted-foreground">잠시만 기다려주세요. 몇 초 정도 걸려요.</p>
+              <p className="m-0 text-footnote text-muted-foreground">잠시만 기다려주세요. 몇 초 정도 걸려요.</p>
             </div>
           )}
 
@@ -849,30 +849,30 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
               값을 채우면 그 줄만 사라지고, 둘 다 채워지면 평소의 "다 채웠어요"로 돌아간다. */}
           {autoFilled && (missingCode || missingExpiry) ? (
             <div className="flex flex-col gap-1.5 rounded-xl border border-warning/40 bg-warning/10 px-3.5 py-3">
-              <p className="m-0 text-sm font-semibold text-foreground">못 읽은 게 있어요</p>
+              <p className="m-0 text-body font-semibold text-foreground">못 읽은 게 있어요</p>
               {/* 바코드를 먼저 적는다. 기한이 없으면 알림을 못 받을 뿐이지만, 바코드가
                   없으면 계산대에서 이 기프티콘을 아예 쓸 수 없다. */}
               {missingCode && (
-                <p className="m-0 text-xs leading-relaxed break-keep text-muted-foreground">
+                <p className="m-0 text-footnote break-keep text-muted-foreground">
 <b className="font-semibold text-foreground">바코드 번호</b>를 못 읽었어요. 계산대에서 쓰는 번호라 꼭 필요해요.
                 </p>
               )}
               {missingExpiry && (
-                <p className="m-0 text-sm leading-relaxed break-keep text-muted-foreground">
+                <p className="m-0 text-body leading-relaxed break-keep text-muted-foreground">
                   <b className="font-semibold text-foreground">사용기한</b>을 못 읽었어요. 넣어두시면 만료 전에 알려드려요. (안 넣어도
                   저장돼요)
                 </p>
               )}
             </div>
           ) : (
-            autoFilled && <p className="text-sm text-success">정보를 채웠어요. 확인하고 저장해주세요.</p>
+            autoFilled && <p className="text-body text-success">정보를 채웠어요. 확인하고 저장해주세요.</p>
           )}
           {smallBarcode && !analyzing && (
-            <p className="text-warning m-0 text-sm leading-relaxed break-keep">
+            <p className="text-warning m-0 text-body leading-relaxed break-keep">
               바코드가 사진에서 작게 찍혀 있어요. 다시 한번 확인해주세요.
             </p>
           )}
-          {error && <p className="text-sm text-destructive">{error}</p>}
+          {error && <p className="text-body text-destructive">{error}</p>}
 
           {/* 질문형 구역 제목 셋(무엇인가요 · 언제까지, 얼마인가요 · 누구 것인가요)을
               걷었다. 칸마다 라벨이 있어서 같은 말을 두 번 하고 있었다 — '무엇인가요'
@@ -894,7 +894,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
                 value={form.name}
                 onChange={(e) => updateField('name', e.target.value)}
                 required
-                className="h-[52px] rounded-lg text-callout"
+                className="h-13 rounded-lg text-callout"
               />
             </div>
 
@@ -905,7 +905,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
                   id="f-brand"
                   value={form.brand}
                   onChange={(e) => updateField('brand', e.target.value)}
-                  className="h-[52px] rounded-lg text-callout"
+                  className="h-13 rounded-lg text-callout"
                 />
               </div>
 
@@ -969,7 +969,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
                   value={readableCode(form.code)}
                   onChange={(e) => updateField('code', wrapCode(form.code, e.target.value))}
                   placeholder="직접 입력"
-                  className="h-[52px] rounded-lg text-callout"
+                  className="h-13 rounded-lg text-callout"
                 />
               </div>
 
@@ -987,7 +987,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
                       updateField('amount', onlyDigits(e.target.value));
                       setPriceSearchNote('');
                     }}
-                    className="h-[52px] rounded-lg pr-8 text-callout font-semibold tabular-nums"
+                    className="h-13 rounded-lg pr-8 text-callout font-semibold tabular-nums"
                   />
                   <span className="pointer-events-none absolute inset-y-0 right-[13px] flex items-center text-[15px] font-semibold text-muted-foreground">
                     원
@@ -1005,7 +1005,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
                 {searchingPrice ? '검색 중…' : '가격 검색'}
               </Button>
             )}
-            {priceSearchNote && <p className="m-0 text-xs text-muted-foreground">{priceSearchNote}</p>}
+            {priceSearchNote && <p className="m-0 text-footnote text-muted-foreground">{priceSearchNote}</p>}
 
             {/* 금액권은 한 번에 다 쓰지 않고 쓴 만큼 깎아 나간다. 켜두면 사용할 때
                 "얼마 썼어요?"를 묻고 잔액을 남긴다. 금액이 없으면 깎아 나갈 값이
@@ -1027,7 +1027,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
             {/* 켜주지 않고 물어만 본다. 잘못 켜두면 쓸 때마다 금액을 묻고 잔액이 남아
                 목록에서 사라지지 않아서, 사람이 확인하고 켜는 쪽이 안전하다. */}
             {voucherHint && !form.is_voucher && onlyDigits(form.amount) && (
-              <p className="m-0 text-sm break-keep text-muted-foreground">금액권 같아 보여요. 맞으면 체크해주세요.</p>
+              <p className="m-0 text-body break-keep text-muted-foreground">금액권 같아 보여요. 맞으면 체크해주세요.</p>
             )}
 
             <div className="flex flex-col gap-2.5">
@@ -1044,7 +1044,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
                   type="date"
                   value={form.expires_at}
                   onChange={(e) => updateField('expires_at', e.target.value)}
-                  className="moacon-date h-[52px] w-full rounded-lg bg-secondary/50 pr-9 text-callout"
+                  className="moacon-date h-13 w-full rounded-lg bg-secondary/50 pr-9 text-callout"
                 />
                 <ChevronDown
                   aria-hidden="true"
