@@ -1,0 +1,78 @@
+<!doctype html>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>등록 시트의 칸</title>
+<style>
+  :root {
+    --foreground: #1c1e27; --muted-foreground: #545461; --card: #fbfbfd;
+    --background: #ffffff; --border: #e7e7ec; --input: #e7e7ec;
+    --secondary: #f1f1f5; --primary: #5b4fe8;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body { background: #8a8a90; padding: 18px 0 40px;
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", sans-serif; }
+  h3 { color: #fff; font-size: 13px; font-weight: 800; padding: 0 20px 3px; }
+  p.why { color: #e4e4ea; font-size: 12px; line-height: 1.5; padding: 0 20px 10px; }
+  section { margin-bottom: 24px; }
+  .sheet { background: var(--card); border-radius: 20px; margin: 0 8px; padding: 20px; }
+  form { display: flex; flex-direction: column; gap: 20px; }
+  .grp { display: flex; flex-direction: column; gap: 10px; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  label { font-size: 14px; font-weight: 600; line-height: 1; color: rgba(28,30,39,.7); }
+  .f { height: 52px; border: 1px solid var(--input); border-radius: 8px;
+       display: flex; align-items: center; color: var(--foreground); }
+  .f.white { background: var(--card); }
+  .f.gray  { background: color-mix(in srgb, var(--secondary) 50%, transparent); }
+  .f.ta { height: 76px; align-items: flex-start; padding-top: 14px; }
+  .f .arrow { margin-left: auto; opacity: .5; }
+  .f .won { margin-left: auto; font-weight: 600; color: var(--muted-foreground); }
+</style>
+<div id="out"></div>
+<script>
+  var V = [
+    { t: '가 · 지금',
+      why: '칸 글자가 16 과 15.5 로 갈리고, 글자 시작이 13 과 16 으로 어긋난다. 고르개 바탕도 회색과 흰색이 섞여 있다.',
+      inSize: 16, selSize: 15.5, taSize: 15.5,
+      inPad: 12, selPad: 15, taPad: 12,
+      catBg: 'gray', dateBg: 'gray', whoBg: 'white' },
+    { t: '나 · 글자 16 통일 · 시작 13 (px-3)',
+      why: 'Input 기본값을 그대로 쓴다. 고치는 곳이 가장 적다.',
+      inSize: 16, selSize: 16, taSize: 16,
+      inPad: 12, selPad: 12, taPad: 12,
+      catBg: 'gray', dateBg: 'gray', whoBg: 'gray' },
+    { t: '다 · 글자 16 통일 · 시작 16 (px-[15px])',
+      why: '테두리를 포함해 보이는 들여쓰기가 16. 적은 값이 아니라 보이는 값이 눈금 위에 있다.',
+      inSize: 16, selSize: 16, taSize: 16,
+      inPad: 15, selPad: 15, taPad: 15,
+      catBg: 'gray', dateBg: 'gray', whoBg: 'gray' },
+    { t: '라 · 글자 16 통일 · 시작 17 (px-4)',
+      why: '패딩이 눈금 위에 있다. 금액 입력·가족 바꾸기가 쓰는 값이다.',
+      inSize: 16, selSize: 16, taSize: 16,
+      inPad: 16, selPad: 16, taPad: 16,
+      catBg: 'gray', dateBg: 'gray', whoBg: 'gray' }
+  ];
+
+  var AR = '<svg class="arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg>';
+
+  function fld(cls, pad, size, inner) {
+    return '<div class="f ' + cls + '" style="padding:0 ' + pad + 'px;font-size:' + size + 'px">' + inner + '</div>';
+  }
+
+  var pick = new URLSearchParams(location.search).get('v');
+  var LIST = pick ? [V[{ now: 0, p3: 1, p15: 2, p4: 3 }[pick] || 0]] : V;
+
+  out.innerHTML = LIST.map(function (v) {
+    return '<section><h3>' + v.t + '</h3><p class="why">' + v.why + '</p><div class="sheet"><form>' +
+      '<div class="grp"><label>상품명</label>' +
+        fld('white', v.inPad, v.inSize, '카페 아메리카노 T 2잔') + '</div>' +
+      '<div class="two">' +
+        '<div class="grp"><label>상호</label>' + fld('white', v.inPad, v.inSize, '스타벅스') + '</div>' +
+        '<div class="grp"><label>카테고리</label>' + fld(v.catBg, v.selPad, v.selSize, '기타' + AR) + '</div>' +
+      '</div>' +
+      '<div class="grp"><label>사용기한</label>' + fld(v.dateBg, v.selPad, v.selSize, '2026. 09. 03.' + AR) + '</div>' +
+      '<div class="grp"><label>받는 사람</label>' + fld(v.whoBg, v.selPad, v.selSize, '태수' + AR) + '</div>' +
+      '<div class="grp"><label>메모</label>' +
+        '<div class="f ta" style="background:var(--card);padding:14px ' + v.taPad + 'px 0;font-size:' + v.taSize + 'px">엄마가 준 것</div></div>' +
+      '</form></div></section>';
+  }).join('');
+</script>
