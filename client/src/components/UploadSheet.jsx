@@ -17,7 +17,7 @@ import { readableCode, wrapCode } from '../utils/code';
 import useBackClose from '../utils/useBackClose';
 import { groupImages } from '../utils/gallery';
 import { PhotoStrip } from './PhotoViewer';
-import { todayStr } from '../utils/date';
+import { formatDate, todayStr } from '../utils/date';
 import { PRIMARY_BUTTON } from '../utils/sheetUi';
 
 // 스토리지 버킷에 걸어둔 제한과 같은 값이어야 한다(supabase/schema.sql).
@@ -1017,9 +1017,17 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
                 "얼마 썼어요?"를 묻고 잔액을 남긴다. 금액이 없으면 깎아 나갈 값이
                 없으므로 이 스위치도 보이지 않는다.
                 무엇을 켜는 건지는 스위치 옆에 붙여 적는다 — 켠 뒤에 한 줄을 더
-                띄우면 같은 말을 두 번 하는 셈이고, 그만큼 화면이 길어진다. */}
+                띄우면 같은 말을 두 번 하는 셈이고, 그만큼 화면이 길어진다.
+
+                테두리를 걷었다. 이건 칸이 아니라 위 금액 칸에 딸린 설정이다 — 금액이
+                없으면 이 줄 자체가 안 뜬다. 다른 칸과 같은 테두리 상자로 두면 아홉 번째
+                칸처럼 보이고, 위아래가 다 테두리라 테두리가 '누를 수 있다'를 말해주지도
+                못한다. 그 일은 체크박스가 한다.
+
+                금액 쪽으로 한 단 붙인다(-mt-2, 20 에서 12 로). 무엇에 대한 말인지는
+                자리가 말해야 한다. 누를 자리는 줄 전체이고 높이 44 로 과녁을 남긴다. */}
             {onlyDigits(form.amount) && (
-              <label className="flex cursor-pointer items-center gap-2.5 rounded-xl border border-input bg-card px-3.5 py-3">
+              <label className="-mt-2 flex h-11 cursor-pointer items-center gap-2.5 px-0.5">
                 <input
                   type="checkbox"
                   checked={Boolean(form.is_voucher)}
@@ -1045,22 +1053,38 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
               {/* 폰이 들고 있는 날짜 고르개를 그대로 쓴다. 직접 만든 달력으로 바꾸면
                   폰마다 익숙한 조작을 버리게 되고, 60대에게는 그 손해가 크다.
 
-                  다만 웹뷰가 그려주는 달력 아이콘은 우리 화살표와 굵기도 색도 달라서
-                  다른 칸과 나란히 두면 깨져 보인다. 그것만 감추고 같은 화살표를
-                  직접 그린다. 누르는 자리는 칸 전체라 화살표는 그림일 뿐이다. */}
-              <div className="relative">
-                <Input
+                  다만 그리는 것까지 맡기면 '2026. 09. 03.' 처럼 제 마음대로 그린다.
+                  끝에 붙는 마침표가 그것인데 CSS 로도 props 로도 못 고친다 — 웹뷰가
+                  로케일을 보고 직접 그리는 글자다. 기한 연장 시트가 같은 문제를 푼
+                  방식을 가져온다: 네이티브 입력을 투명하게 깔아 누르는 일만 맡기고
+                  글자는 우리가 그린다. 앱의 다른 날짜와 같은 formatDate 를 쓴다.
+
+                  칸 어디를 눌러도 달력이 뜬다. 투명한 입력이 칸을 통째로 덮어 포커스는
+                  어디서나 가지만, 네이티브 날짜 입력은 제 달력 아이콘을 눌러야 열리고
+                  그 아이콘은 여기서 안 보인다. 눌린 김에 직접 연다. */}
+              {/* htmlFor 를 달지 않는다. 이 label 은 입력을 안에 품고 있어서 이미 묶여
+                  있고, 위의 '사용기한' Label 이 같은 id 를 가리키고 있다. 둘이 겹치면
+                  한 칸에 이름표가 둘이 된다. */}
+              <label className="relative flex h-13 items-center rounded-lg border border-input bg-card px-4 transition-colors focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/30">
+                <span
+                  className={cn(
+                    'min-w-0 flex-1 truncate text-callout tabular-nums',
+                    form.expires_at ? 'text-foreground' : 'text-muted-foreground'
+                  )}
+                >
+                  {form.expires_at ? formatDate(form.expires_at) : '골라주세요'}
+                </span>
+                <ChevronDown aria-hidden="true" className="ml-2 size-4 shrink-0 opacity-50" />
+                <input
                   id="f-expires"
                   type="date"
                   value={form.expires_at}
                   onChange={(e) => updateField('expires_at', e.target.value)}
-                  className="moacon-date h-13 w-full rounded-lg px-4 pr-9 text-callout"
+                  onClick={(e) => e.currentTarget.showPicker?.()}
+                  onFocus={(e) => e.currentTarget.showPicker?.()}
+                  className="absolute inset-0 opacity-0"
                 />
-                <ChevronDown
-                  aria-hidden="true"
-                  className="pointer-events-none absolute top-1/2 right-[15px] size-4 -translate-y-1/2 opacity-50"
-                />
-              </div>
+              </label>
             </div>
 
             {/* 다시 고르는 칸으로 돌아왔다. 단추를 늘어놓던 때는 가족이 서넛일 때를 보고
