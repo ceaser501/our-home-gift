@@ -225,16 +225,21 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
         {/* 가족을 막 만든 이 순간이 코드를 실제로 보내는 순간이다. 여기서 복사가 안 되면
             사람은 여섯 자를 눈으로 외워 옮겨 적는다.
             그래서 주 버튼 자리를 복사에 내준다. 예전에는 보라 '시작하기'가 제일 세서,
-            코드를 안 보내고 그냥 넘어가게 됐다 — 이 화면이 있는 이유가 그 코드다. */}
+            코드를 안 보내고 그냥 넘어가게 됐다 — 이 화면이 있는 이유가 그 코드다.
+
+            다만 복사가 상자 폭을 꽉 채우면 아래 '시작하기'와 높이도 모서리도 같아져
+            색만 뒤집힌 쌍둥이가 된다. 그러면 보라 상자도 묶음이 아니라 버튼을 감싼
+            테두리처럼 보인다. 글자만큼만 쓰게 줄인다(44 · 좌우 20) — 여전히 이
+            화면의 유일한 보라색이라 먼저 눈에 든다. */}
         <div className="flex w-full flex-col gap-3 rounded-lg bg-accent px-5 py-5">
           <p className="m-0 text-center text-[13.5px] font-semibold text-primary/70">초대 코드</p>
-          <p className="m-0 text-center text-[34px] font-bold tracking-heading text-foreground">
+          <p className="m-0 text-center text-display font-bold tracking-heading text-foreground">
             {created.invite_code}
           </p>
           <CopyButton
             value={created.invite_code}
             label="코드 복사"
-            className="h-[52px] w-full justify-center rounded-lg bg-primary text-[15.5px] font-bold text-primary-foreground"
+            className="mx-auto h-11 justify-center rounded-lg bg-primary px-5 text-[15.5px] font-bold text-primary-foreground"
           />
         </div>
         <Button

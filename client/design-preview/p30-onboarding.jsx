@@ -70,15 +70,20 @@ function Created() {
           <br />
           가족에게 코드를 알려줘도 돼요.
         </p>
-        <div className="flex w-full flex-col gap-3 rounded-lg bg-accent px-5 py-5">
+        <div
+          className="flex w-full flex-col gap-3 rounded-lg bg-accent px-5 py-5"
+        >
           <p className="m-0 text-center text-[13.5px] font-semibold text-primary/70">초대 코드</p>
-          <p className="m-0 text-center text-[34px] font-bold tracking-heading text-foreground">
+          <p
+            className="m-0 text-center font-bold tracking-heading text-foreground"
+            style={{ fontSize: CODE_SIZE }}
+          >
             {created.invite_code}
           </p>
           <CopyButton
             value={created.invite_code}
             label="코드 복사"
-            className="h-[52px] w-full justify-center rounded-lg bg-primary text-[15.5px] font-bold text-primary-foreground"
+            className="mx-auto h-11 justify-center rounded-lg bg-primary px-5 text-[15.5px] font-bold text-primary-foreground"
           />
         </div>
         <Button variant="outline" size="xl" className={PRIMARY_BUTTON}>시작하기</Button>
@@ -87,7 +92,11 @@ function Created() {
   );
 }
 
-const which = new URLSearchParams(location.search).get('v') || 'pending';
+const params = new URLSearchParams(location.search);
+const which = params.get('v') || 'pending';
+// 초대 코드 크기를 주소로 바꿔가며 본다. 34 는 지금 값, 28 은 display 눈금이다.
+const CODE_SIZE = (params.get('code') || '28') + 'px';
+
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>{which === 'created' ? <Created /> : <Pending />}</StrictMode>
