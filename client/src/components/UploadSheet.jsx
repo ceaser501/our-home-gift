@@ -1019,10 +1019,10 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
                 칸처럼 보이고, 위아래가 다 테두리라 테두리가 '누를 수 있다'를 말해주지도
                 못한다. 그 일은 체크박스가 한다.
 
-                금액 쪽으로 한 단 붙인다(-mt-2, 20 에서 12 로). 무엇에 대한 말인지는
+                금액 쪽으로 붙인다(-mt-3, 20 에서 8 로). 무엇에 대한 말인지는
                 자리가 말해야 한다. 누를 자리는 줄 전체이고 높이 44 로 과녁을 남긴다. */}
             {onlyDigits(form.amount) && (
-              <label className="-mt-2 flex h-11 cursor-pointer items-center gap-2.5 px-0.5">
+              <label className="-mt-3 flex h-11 cursor-pointer items-center gap-2.5 px-0.5">
                 <input
                   type="checkbox"
                   checked={Boolean(form.is_voucher)}
@@ -1040,22 +1040,11 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
             )}
 
 
-            {/* 바코드 번호와 사용기한을 나란히. 번호는 열몇 자리, 날짜는 열 자리라
-                둘 다 절반으로 넉넉하다. 매장에서 쓰는 것은 이 칸이 아니라 바코드
-                창이고 여기서는 읽어온 값을 확인한다. */}
+            {/* 사용기한과 바코드 번호를 나란히. 기한이 이 앱이 하는 일의 거의 전부라
+                먼저 읽히는 왼쪽에 둔다. 번호는 매장에서 바코드 창으로 쓰는 것이고
+                여기서는 읽어온 값을 확인하는 자리다. */}
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-2.5">
-                <Label htmlFor="f-code">바코드 번호</Label>
-                <Input
-                  id="f-code"
-                  value={readableCode(form.code)}
-                  onChange={(e) => updateField('code', wrapCode(form.code, e.target.value))}
-                  placeholder="직접 입력"
-                  className="h-13 rounded-lg px-4 text-callout"
-                />
-              </div>
-
-            <div className="flex flex-col gap-2.5">
               <Label htmlFor="f-expires">사용기한</Label>
               {/* 폰이 들고 있는 날짜 고르개를 그대로 쓴다. 직접 만든 달력으로 바꾸면
                   폰마다 익숙한 조작을 버리게 되고, 60대에게는 그 손해가 크다.
@@ -1092,7 +1081,18 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
                   className="absolute inset-0 opacity-0"
                 />
               </label>
-            </div>
+              </div>
+
+              <div className="flex flex-col gap-2.5">
+                <Label htmlFor="f-code">바코드 번호</Label>
+                <Input
+                  id="f-code"
+                  value={readableCode(form.code)}
+                  onChange={(e) => updateField('code', wrapCode(form.code, e.target.value))}
+                  placeholder="직접 입력"
+                  className="h-13 rounded-lg px-4 text-callout"
+                />
+              </div>
             </div>
 
             {/* 다시 고르는 칸으로 돌아왔다. 단추를 늘어놓던 때는 가족이 서넛일 때를 보고
