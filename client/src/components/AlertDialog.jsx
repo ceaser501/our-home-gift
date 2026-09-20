@@ -69,8 +69,16 @@ export default function AlertDialog({
       {/* 여백이 22/20/18 이었다. 위아래를 다르게 둘 까닭이 여기엔 없다 —
           시트가 사방 20 이므로 이 창도 20 으로 맞춘다. */}
       <div className="animate-splash-in relative w-full max-w-[322px] rounded-xl bg-card p-5 shadow-xl">
+        {/* 세 틈이 하는 일이 달라서 값도 다르다.
+            아이콘 → 제목 20, 제목 → 이름 6, 이름 → 경고 10.
+
+            묶음의 기본은 10 이고, 두 자리만 거기서 움직인다. */}
         <div className="flex flex-col items-center gap-2.5 text-center">
-          <span className={cn('flex size-12 items-center justify-center rounded-full', className)}>
+          {/* 아이콘은 글의 한 줄이 아니라 글 위에 찍는 표식이다. 10 으로 두면 제목·
+              이름·경고와 함께 네 줄로 쌓여 같은 무게가 된다. 10 을 더해 20 으로
+              띄운다 — 카드 위 여백과 같은 값이라 아이콘이 제 자리에 앉는다.
+              24 까지 가면 아래 틈이 위 여백보다 커져서 위로 밀린 것처럼 보인다. */}
+          <span className={cn('mb-2.5 flex size-12 items-center justify-center rounded-full', className)}>
             <Icon className="size-5" />
           </span>
           {/* 17.5 는 스케일에 없는 값이었다. title(20)로 올린다 — 시트 제목과 같은
@@ -78,7 +86,15 @@ export default function AlertDialog({
               16 으로 내리면 바로 아래 이름(14)과 2 차이라 제목으로 서지 못한다. */}
           <p className="m-0 text-title font-bold break-keep text-foreground">{title}</p>
           {subject && (
-            <p className="m-0 text-body leading-snug font-medium break-keep text-muted-foreground">{subject}</p>
+            // 제목이 「어느 것을?」 하고 묻고 이 줄이 답한다. 라벨과 칸처럼 한 짝이라
+            // 4 를 당겨 6 으로 붙인다. 둘이 한 덩어리가 되면 아래 붉은 한마디는
+            // 건드리지 않아도 저절로 떨어져 나온다.
+            //
+            // description 은 당기지 않는다. 이름은 제목의 답이지만 설명은 다른
+            // 호흡이라, 그 자리는 10 그대로다.
+            <p className="m-0 -mt-1 text-body leading-snug font-medium break-keep text-muted-foreground">
+              {subject}
+            </p>
           )}
           {description && (
             <p className="m-0 text-body leading-relaxed break-keep whitespace-pre-line text-muted-foreground">

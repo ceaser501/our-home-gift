@@ -1,0 +1,77 @@
+<!doctype html>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>아이콘 → 제목 간격</title>
+<style>
+  :root {
+    --foreground: #1c1e27; --muted-foreground: #545461; --card: #fbfbfd;
+    --border: #e7e7ec; --secondary: #f1f1f5; --destructive: #e0453f;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body { background: #8a8a90; padding: 20px 32px 40px;
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", sans-serif; }
+  h3 { color: #fff; font-size: 13px; font-weight: 800; margin-bottom: 4px; }
+  p.head { color: #fff; font-size: 12px; font-weight: 700; opacity: .75;
+           margin-bottom: 14px; letter-spacing: .02em; }
+  p.why { color: #e4e4ea; font-size: 12px; line-height: 1.5; margin-bottom: 10px; }
+  section { margin-bottom: 26px; }
+  .card { background: var(--card); border-radius: 16px; padding: 20px;
+          box-shadow: 0 20px 25px -5px rgba(0,0,0,.1), 0 8px 10px -6px rgba(0,0,0,.1); }
+  .head { display: flex; flex-direction: column; align-items: center; text-align: center; }
+  .ico { display: flex; width: 48px; height: 48px; align-items: center; justify-content: center;
+         border-radius: 999px; background: rgba(224,69,63,.1); color: var(--destructive); }
+  .ico svg { width: 20px; height: 20px; }
+  h2 { font-size: 20px; font-weight: 700; line-height: 1.2; color: var(--foreground); word-break: keep-all; }
+  .sub { font-size: 14px; font-weight: 500; line-height: 1.375; color: var(--muted-foreground); word-break: keep-all; }
+  .warn { font-size: 14px; font-weight: 700; color: var(--destructive); }
+  .row { display: flex; flex-direction: row-reverse; gap: 8px; margin-top: 28px; }
+  .row > button { flex: 1; height: 52px; font-size: 16px; letter-spacing: .02em;
+                  border: 0; border-radius: 14px; }
+  .go { background: var(--destructive); color: #fff; font-weight: 700; }
+  .no { background: var(--card); border: 1px solid var(--border) !important;
+        color: rgba(28,30,39,.8); font-weight: 600; }
+</style>
+<div id="out"></div>
+<script>
+  var TRASH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M10 11v6M14 11v6"/></svg>';
+
+  // 한 번에 한 자리만 움직인다. 둘을 같이 바꾸면 무엇 덕에 나아졌는지 못 가린다.
+  //
+  //   ?g=ico  (기본) 아이콘 → 제목 을 훑는다. 글자 쪽은 지금(10/10)에 묶는다.
+  //   ?g=text        제목 → 이름, 이름 → 경고 를 훑는다. 아이콘은 20 에 묶는다.
+  var g = new URLSearchParams(location.search).get('g') || 'ico';
+
+  var SETS = {
+    ico: {
+      head: '아이콘 → 제목 · 글자 쪽은 10 / 10 에 묶음',
+      rows: [
+        { t: '가 · 10 — 지금', ico: 0,  sub: 0, warn: 0 },
+        { t: '나 · 16',        ico: 6,  sub: 0, warn: 0 },
+        { t: '다 · 20',        ico: 10, sub: 0, warn: 0 },
+        { t: '라 · 24',        ico: 14, sub: 0, warn: 0 }
+      ]
+    },
+    text: {
+      head: '제목 → 이름 · 이름 → 경고 · 아이콘은 20 에 묶음',
+      rows: [
+        { t: '가 · 10 / 10 — 지금',           ico: 10, sub: 0,  warn: 0 },
+        { t: '나 · 6 / 10 — 이름만 붙인다',    ico: 10, sub: -4, warn: 0 },
+        { t: '다 · 10 / 14 — 경고만 뗀다',     ico: 10, sub: 0,  warn: 4 },
+        { t: '라 · 6 / 14 — 둘 다',           ico: 10, sub: -4, warn: 4 }
+      ]
+    }
+  }[g];
+
+  var V = SETS.rows;
+  out.innerHTML = '<p class="head">' + SETS.head + '</p>' + V.map(function (v) {
+    return '<section><h3>' + v.t + '</h3>' +
+      '<div class="card"><div class="head" style="gap:10px">' +
+        '<span class="ico" style="margin-bottom:' + v.ico + 'px">' + TRASH + '</span>' +
+        '<h2>이 기프티콘을 삭제할까요?</h2>' +
+        '<p class="sub" style="margin-top:' + v.sub + 'px">카페 아메리카노 T 2잔 + 딸기 생크림 케이크</p>' +
+        '<p class="warn" style="margin-top:' + v.warn + 'px">지금까지 쓴 내역도 함께 지워져요</p>' +
+      '</div>' +
+      '<div class="row"><button class="go">삭제</button><button class="no">취소</button></div>' +
+      '</div></section>';
+  }).join('');
+</script>
