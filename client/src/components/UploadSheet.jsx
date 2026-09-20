@@ -911,8 +911,14 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
 
               <div className="flex flex-col gap-2.5">
                 <Label>카테고리</Label>
-                {/* 고르는 칸은 배경을 채운다. 적는 칸(흰 배경)과 갈라 보이게 하려는 것이다 —
-                    테두리는 둘 다 갖는다. 둘 다 조작하는 자리라서.
+                {/* 고르는 칸의 배경을 걷었다. 앞서는 '적는 칸과 갈라 보이게' 채웠는데,
+                    테두리도 함께 갖고 있어서 두 신호를 겹쳐 쓰는 꼴이었다. 이 앱은
+                    테두리로 '누르는 것'을, 배경으로 '묶는 것'을 가리키기로 해뒀고,
+                    겹치면 그 갈림이 사라진다. 시트 전체가 무거워 보인 까닭이기도 하다.
+
+                    적는 것과 고르는 것은 오른쪽 화살표가 이미 가른다 — 배경까지
+                    쓸 일이 아니었다.
+
                     아이콘은 목록에서 쓰는 것과 같다(constants의 CATEGORIES). 같은 분류가
                     화면마다 다른 그림이면 그림이 이름을 대신하지 못한다. */}
                 <Select value={form.category} onValueChange={(v) => updateField('category', v)}>
@@ -924,7 +930,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
                   <SelectTrigger
                     size="lg"
                     aria-label="카테고리"
-                    className="w-full gap-2.5 rounded-lg border border-input bg-secondary/50 px-4 text-callout [&>span]:min-w-0 [&>span]:truncate [&>span]:whitespace-nowrap"
+                    className="w-full gap-2.5 rounded-lg border border-input bg-card px-4 text-callout [&>span]:min-w-0 [&>span]:truncate [&>span]:whitespace-nowrap"
                   >
                     <SelectValue />
                   </SelectTrigger>
@@ -1044,7 +1050,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
                   type="date"
                   value={form.expires_at}
                   onChange={(e) => updateField('expires_at', e.target.value)}
-                  className="moacon-date h-13 w-full rounded-lg bg-secondary/50 px-4 pr-9 text-callout"
+                  className="moacon-date h-13 w-full rounded-lg px-4 pr-9 text-callout"
                 />
                 <ChevronDown
                   aria-hidden="true"
@@ -1069,7 +1075,7 @@ export default function UploadSheet({ mode, initial, initialFiles, onClose, onSa
                 <SelectTrigger
                   size="lg"
                   aria-label="받는 사람"
-                  className="w-full gap-2.5 rounded-lg border border-input bg-secondary/50 px-4 text-callout"
+                  className="w-full gap-2.5 rounded-lg border border-input bg-card px-4 text-callout"
                 >
                   {/* pointer-events를 끈다. 안 끄면 이 span이 눌림을 먼저 받아서, 열려
                       있을 때 다시 눌러도 닫히지 않는다 — 라딕스는 밖을 눌러 닫고 트리거를
