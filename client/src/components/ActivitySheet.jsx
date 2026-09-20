@@ -163,13 +163,13 @@ function ActivityRow({ activity, isNew }) {
       <div className="min-w-0 flex-1">
         <p
           className={cn(
-            'm-0 truncate text-callout leading-snug font-semibold',
+            'm-0 truncate text-body leading-snug font-semibold',
             isNew ? 'text-foreground' : 'text-foreground/80'
           )}
         >
           {activity.gifticon_name}
         </p>
-        <p className="m-0 mt-0.5 text-body font-medium text-muted-foreground">
+        <p className="m-0 mt-0.5 text-caption font-medium text-muted-foreground">
           {activity.actor_name || '누군가'}님이{' '}
           {/* 금액은 굵게. 이 줄에서 실제로 확인하는 값이라, 문장에 섞여 있으면 다시 읽게 된다. */}
           {activity.amount ? (
