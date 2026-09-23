@@ -73,22 +73,6 @@ jobs:
           # 가리키는 아이콘이 배포에 없어서 설치 아이콘이 깨진다.
           cp admin/favicon.ico admin/icon.svg admin/icon*.png client/dist/admin/
 
-      # 원팀 행사 투표(oneteam/)도 admin/처럼 빌드 없는 파일 하나다. /oneteam/ 주소로 연다.
-      # 앱과 무관하고 행사가 끝나면 이 단계와 폴더를 지운다(표는 supabase/oneteam-survey.sql).
-      - name: Copy oneteam survey
-        env:
-          SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
-        run: |
-          mkdir -p client/dist/oneteam
-          python3 - <<'PY'
-          import os, pathlib
-          html = pathlib.Path('oneteam/index.html').read_text(encoding='utf-8')
-          html = html.replace('__SUPABASE_URL__', os.environ['SUPABASE_URL'].rstrip('/'))
-          html = html.replace('__SUPABASE_ANON_KEY__', os.environ['SUPABASE_ANON_KEY'])
-          pathlib.Path('client/dist/oneteam/index.html').write_text(html, encoding='utf-8')
-          PY
-
       - uses: actions/configure-pages@v5
 
       - uses: actions/upload-pages-artifact@v3
