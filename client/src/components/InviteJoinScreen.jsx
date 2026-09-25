@@ -193,10 +193,10 @@ export default function InviteJoinScreen({ code, userEmail, onSubmitted, escapeL
           슬로건은 카톡 초대 카드·Play 대표 이미지·소개 페이지와 같은 '우리 가족 기프티콘
           서랍'이다. 스토어 부제('가족이 함께 쓰는 기프티콘 서랍')와는 다른 말이다.
 
-          글자는 16px 언저리. 14px로 두었더니 띠에 비해 글자가 작아 띠만 커 보였다. */}
+          글자는 18~20px. 14px로 두었더니 띠에 비해 글자가 작아 띠만 커 보였다. */}
       <footer className="flex items-center justify-center gap-2 bg-accent px-6 py-[calc(var(--bar-bottom)/2+16px)]">
-        <span className="text-[16.5px] font-bold tracking-[-0.02em] text-primary">모아콘</span>
-        <span className="text-[15.5px] font-medium tracking-[-0.01em] text-foreground/70">우리 가족 기프티콘 서랍</span>
+        <span className="text-[20px] font-bold tracking-[-0.02em] text-primary">모아콘</span>
+        <span className="text-[18px] font-medium tracking-[-0.01em] text-foreground/70">우리 가족 기프티콘 서랍</span>
       </footer>
     </div>
   );
