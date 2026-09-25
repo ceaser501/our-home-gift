@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { forgetInviteCode, pendingInviteCode, INVITE_EVENT } from './utils/inviteLink';
-import FamilySwitcherSheet from './components/FamilySwitcherSheet';
+import { pendingInviteCode, INVITE_EVENT } from './utils/inviteLink';
+import { ExistingUserInvite } from './components/InviteJoinScreen';
 import { Plus, ScanSearch, Trash2 } from 'lucide-react';
 import Header from './components/Header';
 import FilterBar from './components/FilterBar';
@@ -112,7 +112,7 @@ export default function App() {
   // 빈 화면에는 종을 눌러볼 이유가 아직 없다.
   const [noticesOpen, setNoticesOpen] = useState(false);
   // 초대 링크를 눌러 왔는데 이미 가족이 있는 사람. 여기까지 왔다는 건 로그인도 되어
-  // 있다는 뜻이라, 참여 칸을 코드까지 채워서 바로 열어준다.
+  // 있다는 뜻이라, 처음 쓰는 사람과 같은 초대 화면을 코드까지 채워서 바로 연다.
   //
   // 가족이 없는 사람은 이 화면에 오지도 않는다 — 그쪽은 FamilyOnboarding이 받는다.
   const [invitedCode, setInvitedCode] = useState(() => pendingInviteCode());
@@ -596,16 +596,11 @@ export default function App() {
         />
       )}
 
-      {invitedCode && (
-        <FamilySwitcherSheet
-          initialCode={invitedCode}
-          onClose={() => {
-            // 닫으면 놓는다. 안 놓으면 앱을 열 때마다 다시 뜬다.
-            forgetInviteCode();
-            setInvitedCode('');
-          }}
-        />
-      )}
+      {/* 이미 가족이 있는 사람이 초대 링크를 눌렀다. 처음 쓰는 사람과 같은 화면을
+          전체로 덮는다(components/InviteJoinScreen.jsx). 예전에는 가족 바꾸기 창의
+          '초대 코드로 참여' 양식이 떴는데, 어느 가족이 불렀는지도 안 보이고 코드를 다시
+          적는 칸이 열려 있었다. */}
+      {invitedCode && <ExistingUserInvite code={invitedCode} onClose={() => setInvitedCode('')} />}
 
       {codeTarget && (
         <BarcodeModal

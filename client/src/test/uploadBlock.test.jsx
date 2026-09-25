@@ -61,6 +61,8 @@ vi.mock('../components/PullToRefresh', () => stub('pull'));
 vi.mock('../components/UploadSheet', () => stub('upload-sheet'));
 vi.mock('../components/GalleryScanSheet', () => stub('scan-sheet'));
 vi.mock('../components/FamilySwitcherSheet', () => stub('switcher'));
+// 초대 화면. 이미 가족이 있는 사람이 링크를 눌렀을 때 App이 띄운다.
+vi.mock('../components/InviteJoinScreen', () => ({ default: () => null, ExistingUserInvite: () => null }));
 
 const { default: App } = await import('../App');
 
