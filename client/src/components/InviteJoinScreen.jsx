@@ -173,21 +173,22 @@ export default function InviteJoinScreen({ code, userEmail, onSubmitted, escapeL
       </form>
 
       {/* ── 바닥 띠 ────────────────────────────────────────────────────────
-          카톡으로 날아간 초대 카드(public/kakao-share-800x400.png)와 같은 남색·같은
-          슬로건이다. 초대받은 사람은 그 카드를 보고 눌러서 여기 왔다 — 바닥에서 그
-          카드가 한 번 더 보이면 '방금 그 초대가 맞다'로 이어진다.
+          버튼 밑에 흰 자리만 남아 있으면 화면이 덜 끝난 것처럼 보였다. 위 머리와 같은
+          연보라로 바닥을 맺어, 화면이 위아래로 액자처럼 닫히게 한다. 남는 높이는 양식이
+          가져가고(flex-1) 띠는 바닥에 붙는다.
 
-          버튼 밑에 흰 자리만 남아 있으면 화면이 덜 끝난 것처럼 보였다. 남는 높이는
-          양식이 가져가고(flex-1) 띠는 바닥에 붙는다. 홈 바 자리(safe-bottom)도 띠가
-          채운다.
+          남색(카톡 초대 카드와 같은 색)도 그려봤는데, 밝은 화면 밑에 진한 덩어리가
+          얹혀서 무게가 아래로 쏠렸다. 연보라가 위 머리와 짝이 맞는다.
 
-          색은 그 카드에서 재 온 값이다 — 바탕 #2D2387→#21196A, 슬로건 #CDBFFF.
-          슬로건도 카드·소개 페이지와 같은 '우리 가족 기프티콘 서랍'이다(스토어 부제
-          '가족이 함께 쓰는 기프티콘 서랍'과는 다른 말이다). */}
-      <footer className="flex items-center justify-center gap-2.5 bg-[linear-gradient(120deg,#2D2387,#21196A)] px-6 pt-4 pb-[calc(var(--safe-bottom)+12px)]">
-        <Logo className="size-7" />
-        <span className="text-[15px] font-bold tracking-[-0.02em] text-white">모아콘</span>
-        <span className="text-[13.5px] font-semibold tracking-[-0.01em] text-[#CDBFFF]">우리 가족 기프티콘 서랍</span>
+          글자는 띠 한가운데에 둔다. 처음에는 홈 바 자리(safe-bottom)를 아래에 통째로
+          더 붙여서 위 16 · 아래 44로 기울었고, 글자가 위로 붙어 보였다. 홈 바 자리를
+          위아래로 반씩 나누면 한가운데가 되고, 그래도 글자는 홈 바보다 한참 위에 있다.
+
+          슬로건은 카톡 초대 카드·Play 대표 이미지·소개 페이지와 같은 '우리 가족 기프티콘
+          서랍'이다. 스토어 부제('가족이 함께 쓰는 기프티콘 서랍')와는 다른 말이다. */}
+      <footer className="flex items-center justify-center gap-2 bg-accent px-6 py-[calc(var(--safe-bottom)/2+16px)]">
+        <span className="text-[14px] font-bold tracking-[-0.02em] text-primary">모아콘</span>
+        <span className="text-[13.5px] font-medium tracking-[-0.01em] text-foreground/65">우리 가족 기프티콘 서랍</span>
       </footer>
     </div>
   );
