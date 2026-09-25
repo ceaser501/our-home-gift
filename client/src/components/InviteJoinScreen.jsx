@@ -169,6 +169,14 @@ export default function InviteJoinScreen({ code, userEmail, onSubmitted, escapeL
             </Button>
           )}
         </div>
+
+        {/* 바닥 한 줄. 남는 높이는 이 줄 위로 모이고(mt-auto) 이 줄은 바닥에 붙는다.
+
+            버튼 밑에 흰 자리만 남아 있으면 화면이 덜 끝난 것처럼 보였다. 그 자리를
+            슬로건이 맺는다. 스토어 부제와 같은 말이다(docs/store-listing.md). */}
+        <p className="m-0 mt-auto pt-8 text-center text-[12.5px] font-medium tracking-[-0.01em] break-keep text-muted-foreground/75">
+          <span className="font-bold text-primary/75">모아콘</span> · 가족이 함께 쓰는 기프티콘 서랍
+        </p>
       </form>
     </div>
   );
