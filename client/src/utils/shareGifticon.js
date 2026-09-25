@@ -43,7 +43,7 @@ const MAX_EDGE = 1400;
 // ⚠️ 여기에 시간 제한이 있는 이유.
 //
 // <img>는 주소가 잘못됐을 때 onload도 onerror도 안 오는 경우가 있다. 그러면 이 함수가
-// 영영 안 끝나고, 화면은 '준비 중…'에 갇힌다. 소셜 로그인에서 같은 모양으로 갇힌
+// 영영 안 끝나고, 화면은 '잠시만 기다려 주세요…'에 갇힌다. 소셜 로그인에서 같은 모양으로 갇힌
 // 적이 있다(LoginScreen). 돌아오지 않는 길은 만들지 않는다.
 async function decode(blob) {
   try {
@@ -94,10 +94,25 @@ export async function composeShareImage(blob) {
   if (!srcW || !srcH) return null;
 
   const scale = Math.min(1, MAX_EDGE / Math.max(srcW, srcH));
-  const w = Math.max(1, Math.round(srcW * scale));
-  const h = Math.max(1, Math.round(srcH * scale));
+  const fullW = Math.max(1, Math.round(srcW * scale));
+  const fullH = Math.max(1, Math.round(srcH * scale));
 
-  const band = Math.round(w * 0.13);
+  // 줄인 원본을 한 장 따로 그려 두고, 위아래·좌우의 검은 여백을 잘라낸다.
+  const src = document.createElement('canvas');
+  src.width = fullW;
+  src.height = fullH;
+  const sctx = src.getContext('2d');
+  if (!sctx) return null;
+  sctx.imageSmoothingEnabled = true;
+  sctx.imageSmoothingQuality = 'high';
+  sctx.drawImage(img, 0, 0, fullW, fullH);
+  const crop = trimLetterbox(sctx, fullW, fullH);
+  const w = crop.w;
+  const h = crop.h;
+
+  // 띠는 사진 너비의 2할. 처음엔 1할 3푼이었는데 글자가 위에 붙어 보였고, 폰에서
+  // 크게 열면 맨 윗줄이 카메라 구멍에 걸렸다.
+  const band = Math.round(w * 0.2);
 
   // 좌우·아래에 보라 여백을 두른다.
   //
@@ -122,28 +137,28 @@ export async function composeShareImage(blob) {
   // 액자가 되고, 대화방에서 미리보기가 위부터 잘리는 것에도 유리하다.
   ctx.fillStyle = VIOLET;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = 'high';
-  ctx.drawImage(img, pad, band, w, h);
+  ctx.drawImage(src, crop.x, crop.y, w, h, pad, band, w, h);
 
   // 사진 자체의 테두리도 같은 보라로. 못 칠하면 원본 그대로 두고 여백만 남는다.
   paintFrame(ctx, pad, band, w, h, VIOLET_RGB);
 
-  // 글자는 '띠'가 아니라 '보라 덩어리'의 한가운데에 놓는다.
+  // 글자는 '띠'가 아니라 '보라 덩어리'에 맞춰 놓는다.
   //
   // 액자를 칠하고 나면 띠와 사진 위쪽 테두리가 이어져서, 보이는 보라가 띠보다 두꺼워진다.
   // 실측: 카톡 캡처는 띠가 87px인데 보라 머리가 128px이었다(액자가 41px 더). 그런데
   // 글자는 87px 기준으로 놓여서 위에 붙어 보였다.
   //
+  // 한가운데보다 조금 아래(55%)다. 위쪽은 폰에서 카메라 구멍과 상태 바가 덮는 자리라,
+  // 딱 가운데여도 글자가 위로 붙어 보였다.
+  //
   // 액자가 없는 사진(문자로 받은 것 등)은 두 값이 같아서 달라지는 것이 없다.
   const headerH = violetHeader(ctx, w, band, h, pad);
-  const midY = headerH / 2;
+  const midY = headerH * 0.55;
 
-  // 글자 크기와 두 줄 사이는 띠를 따라간다 — 보라 머리가 두꺼워졌다고 글자까지
-  // 커지면 액자 있는 사진만 글자가 커진다.
-  const big = Math.round(band * 0.34);
-  const small = Math.round(band * 0.23);
+  // 글자 크기와 두 줄 사이는 사진 너비를 따라간다 — 보라 머리가 두꺼워졌다고 글자까지
+  // 커지면 액자 있는 사진만 글자가 커진다. 띠를 키울 때 글자는 그대로 두었다.
+  const big = Math.round(w * 0.044);
+  const small = Math.round(w * 0.03);
   const family =
     "'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', -apple-system, sans-serif";
 
@@ -152,14 +167,56 @@ export async function composeShareImage(blob) {
 
   ctx.fillStyle = '#FFFFFF';
   ctx.font = `700 ${big}px ${family}`;
-  ctx.fillText(BAND_TEXT, canvas.width / 2, midY - band * 0.16);
+  ctx.fillText(BAND_TEXT, canvas.width / 2, midY - w * 0.021);
 
   // 아랫줄은 한 단 흐리게. 같은 흰색으로 두면 두 줄이 한 덩어리로 뭉쳐 읽힌다.
   ctx.fillStyle = 'rgba(255,255,255,0.78)';
   ctx.font = `500 ${small}px ${family}`;
-  ctx.fillText(BAND_SUB, canvas.width / 2, midY + band * 0.17);
+  ctx.fillText(BAND_SUB, canvas.width / 2, midY + w * 0.022);
 
   return new Promise((resolve) => canvas.toBlob((blob) => resolve(blob), 'image/jpeg', 0.92));
+}
+
+// 사진 위아래(와 좌우)의 검은 여백을 잘라낸다. 자를 것이 없으면 사진 전체.
+//
+// 기프티콘을 폰 화면째로 캡처해 두면 세로로 긴 화면에 맞춰 위아래가 까맣게 채워진다.
+// 그 검은 덩어리가 보라 액자 안에 그대로 들어가서, 받는 사람에게는 사진이 덜 잘린
+// 것처럼 보였다 — 2026-09-25에 실기에서 나왔다.
+//
+// 거의 모든 칸이 까만 줄만 자른다(1%까지는 압축 잡음으로 본다). 글자가 한 줄이라도
+// 박힌 까만 머리는 내용이라 안 자른다. 다 자르고 3할도 안 남으면 까만 사진일 뿐이라
+// 손대지 않는다.
+export function trimLetterbox(ctx, w, h) {
+  var whole = { x: 0, y: 0, w: w, h: h };
+  var d;
+  try {
+    d = ctx.getImageData(0, 0, w, h).data;
+  } catch {
+    return whole;
+  }
+  var DARK = 40;
+  var lit = function (o) { return d[o] > DARK || d[o + 1] > DARK || d[o + 2] > DARK; };
+  var blackRow = function (y) {
+    var n = 0;
+    for (var x = 0; x < w; x++) if (lit((y * w + x) * 4) && ++n > w * 0.01) return false;
+    return true;
+  };
+  var blackCol = function (x, top, bottom) {
+    var n = 0, span = bottom - top + 1;
+    for (var y = top; y <= bottom; y++) if (lit((y * w + x) * 4) && ++n > span * 0.01) return false;
+    return true;
+  };
+
+  var top = 0, bottom = h - 1;
+  while (top < bottom && blackRow(top)) top++;
+  while (bottom > top && blackRow(bottom)) bottom--;
+  var left = 0, right = w - 1;
+  while (left < right && blackCol(left, top, bottom)) left++;
+  while (right > left && blackCol(right, top, bottom)) right--;
+
+  var cw = right - left + 1, ch = bottom - top + 1;
+  if (cw < w * 0.3 || ch < h * 0.3) return whole;
+  return { x: left, y: top, w: cw, h: ch };
 }
 
 // 위에서 보이는 보라가 어디까지인가. 띠 + 칠해진 사진 테두리.
@@ -205,6 +262,9 @@ export function violetHeader(ctx, w, band, imgH, xFrom) {
 //   2. 흰색·검정에 가까우면 안 한다           — 사진 배경일 뿐일 수 있다
 //   3. 번진 넓이가 절반을 넘으면 안 된다      — 액자는 테두리지 바탕이 아니다
 //   4. 한가운데까지 번지면 안 된다            — 거기까지 갔으면 액자가 아니다
+//
+// 번진 자리가 다 액자는 아니다. 카드 위 상품 칸이 액자와 같은 색이면 거기까지 번진다.
+// 그 칸은 남긴다(keepInside).
 //
 // 못 칠하면 그냥 원본 그대로 나간다. 띠는 위에 그대로 붙으므로 잃는 것이 없다.
 export function paintFrame(ctx, x, y, w, h, rgb) {
@@ -305,12 +365,116 @@ export function paintFrame(ctx, x, y, w, h, rgb) {
     );
   }
 
+  // 5. 액자 안쪽에 갇힌 넓은 자리는 남긴다
+  var keep = keepInside(seen, w, h);
+
   for (var k = 0; k < hits.length; k++) {
     var p = hits[k];
+    if (keep && keep[p >> 2]) continue;
     d[p] = rgb[0]; d[p + 1] = rgb[1]; d[p + 2] = rgb[2]; d[p + 3] = 255;
   }
   ctx.putImageData(img, x, y);
   return true;
+}
+
+// 번진 자리 가운데 '액자'가 아니라 '사진의 바탕'인 곳을 골라낸다. 남길 곳 표시를
+// 돌려주고, 남길 곳이 없으면 null.
+//
+// ── 왜 ──────────────────────────────────────────────────────────────────────
+// 카톡 선물함 캡처는 상품 사진을 액자와 **같은 노랑** 위에 얹는다(상품 그림이 투명
+// 배경이라서다). 번지기는 그 둘을 못 가른다 — 액자에서 시작해 상품 둘레를 다 돌아
+// 들어가서, 치킨만 보라 바탕에 오려 붙인 꼴이 됐고 그림자는 누런 얼룩으로 남았다.
+// 2026-09-25 실기(BBQ)에서 나왔다. 상품 바탕이 분홍이던 스타벅스는 괜찮았다.
+//
+// ── 어떻게 가르나 ───────────────────────────────────────────────────────────
+// 안 번진 것들(카드, 상품)을 모두 감싸는 네모를 잡는다. 액자는 그 네모 **바깥**이다.
+// 네모 안에서 번진 곳 중 넓은 덩어리는 사진의 바탕이라 남긴다.
+//
+// 좁은 덩어리는 칠한다. 카톡 카드 옆구리의 반달 홈이 그것이다 — 네모 안으로 파고든
+// 액자라서, 남기면 보라 액자에 노란 반달이 박힌다.
+//
+// 남기는 바탕은 네모에 딱 맞춰 자르지 않고 액자 두께만큼 위(아래)로 넉넉히 둔다.
+// 딱 맞추면 콜라 뚜껑이 노란 상자 윗변에 닿아 잘린 사진처럼 보인다.
+function keepInside(seen, w, h) {
+  // 네모는 안 번진 칸이 셋 이상인 줄과 칸으로만 잡는다. 액자에 박힌 압축 잡음 한두 점이
+  // 네모를 끌어당기면, 그 사이의 액자가 '안쪽'이 되어 노란 줄로 남는다.
+  var rows = new Uint32Array(h), cols = new Uint32Array(w);
+  for (var y = 0; y < h; y++) {
+    for (var x = 0; x < w; x++) {
+      if (seen[y * w + x]) continue;
+      rows[y]++;
+      cols[x]++;
+    }
+  }
+  var minX = 0, maxX = w - 1, minY = 0, maxY = h - 1;
+  while (minY < h && rows[minY] < 3) minY++;
+  while (maxY >= 0 && rows[maxY] < 3) maxY--;
+  while (minX < w && cols[minX] < 3) minX++;
+  while (maxX >= 0 && cols[maxX] < 3) maxX--;
+  if (minX > maxX || minY > maxY) return null;
+
+  var BIG = Math.pow(w * 0.08, 2);
+  var margin = Math.max(Math.min(minX, w - 1 - maxX), Math.round(w * 0.03));
+  var label = new Uint8Array(w * h);   // 1 = 이미 셈, 2 = 남긴다
+  var any = false;
+  var queue = [];
+
+  for (var sy = minY; sy <= maxY; sy++) {
+    for (var sx = minX; sx <= maxX; sx++) {
+      var start = sy * w + sx;
+      if (!seen[start] || label[start]) continue;
+
+      // 한 덩어리를 모은다(네모 안에서만)
+      var members = [start];
+      var lo = sx, hi = sx, top = sy, bottom = sy;
+      label[start] = 1;
+      queue.length = 0;
+      queue.push(start);
+      while (queue.length) {
+        var at = queue.pop();
+        var ax = at % w, ay = (at - ax) / w;
+        var next = [
+          ax > minX ? at - 1 : -1,
+          ax < maxX ? at + 1 : -1,
+          ay > minY ? at - w : -1,
+          ay < maxY ? at + w : -1,
+        ];
+        for (var n = 0; n < 4; n++) {
+          var q = next[n];
+          if (q < 0 || !seen[q] || label[q]) continue;
+          label[q] = 1;
+          queue.push(q);
+          members.push(q);
+          var qx = q % w, qy = (q - qx) / w;
+          if (qx < lo) lo = qx;
+          if (qx > hi) hi = qx;
+          if (qy < top) top = qy;
+          if (qy > bottom) bottom = qy;
+        }
+      }
+      if (members.length < BIG) continue;
+
+      any = true;
+      for (var m = 0; m < members.length; m++) label[members[m]] = 2;
+
+      // 네모 위(아래)로 넉넉히 — 덩어리가 네모의 그 변에 닿아 있을 때만
+      var bands = [];
+      if (top === minY) bands.push([Math.max(0, minY - margin), minY - 1]);
+      if (bottom === maxY) bands.push([maxY + 1, Math.min(h - 1, maxY + margin)]);
+      for (var b = 0; b < bands.length; b++) {
+        for (var yy = bands[b][0]; yy <= bands[b][1]; yy++) {
+          for (var xx = lo; xx <= hi; xx++) {
+            if (seen[yy * w + xx]) label[yy * w + xx] = 2;
+          }
+        }
+      }
+    }
+  }
+  if (!any) return null;
+
+  var keep = new Uint8Array(w * h);
+  for (var i = 0; i < keep.length; i++) if (label[i] === 2) keep[i] = 1;
+  return keep;
 }
 
 function blobToBase64(blob) {

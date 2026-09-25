@@ -38,7 +38,7 @@ function fakeCtx(img) {
   };
 }
 
-const { paintFrame, violetHeader } = await import('../utils/shareGifticon');
+const { paintFrame, violetHeader, trimLetterbox } = await import('../utils/shareGifticon');
 
 const VIOLET = [0x5B, 0x4F, 0xE8];
 const KAKAO_YELLOW = [0xFE, 0xE5, 0x00];
@@ -268,5 +268,113 @@ describe('보라 머리 재기', () => {
   it('그림을 못 꺼내면 띠 그대로 쓴다', () => {
     const ctx = { getImageData: () => { throw new Error('tainted'); } };
     expect(violetHeader(ctx, 30, 40, 160)).toBe(40);
+  });
+});
+
+// 카톡 선물함은 상품 사진을 액자와 **같은 노랑** 위에 얹는다(상품 그림이 투명 배경).
+// 번지기가 상품 둘레를 다 돌아 들어가서, 치킨만 보라 바탕에 오려 붙인 꼴이 됐다 —
+// 2026-09-25 실기(BBQ)에서 나왔다.
+describe('액자와 같은 색의 상품 칸', () => {
+  const Y = [255, 222, 33];
+  const RED = [200, 40, 30];
+  const W = 100, H = 160, F = 8;          // 액자 두께 8
+  const CARD_TOP = 60;                    // 카드는 60부터 아래 — 실제처럼 한가운데가 카드다
+  const NOTCH = { y: 120, r: 4 };         // 카드 옆구리 반달 홈
+
+  // 노란 바탕 + 위쪽에 빨간 상품 + 아래쪽 흰 카드(옆구리에 반달 홈)
+  function kakao() {
+    const data = new Uint8ClampedArray(W * H * 4);
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        let c = Y;
+        const inCard = y >= CARD_TOP && y < H - F && x >= F && x < W - F;
+        const inNotch = Math.hypot(x - F, y - NOTCH.y) < NOTCH.r || Math.hypot(x - (W - 1 - F), y - NOTCH.y) < NOTCH.r;
+        if (inCard && !inNotch) c = WHITE;
+        if (y >= 20 && y < 45 && x >= 30 && x < 70) c = RED;   // 상품
+        const o = (y * W + x) * 4;
+        data[o] = c[0]; data[o + 1] = c[1]; data[o + 2] = c[2]; data[o + 3] = 255;
+      }
+    }
+    return { w: W, h: H, data };
+  }
+  const px = (img, x, y) => { const o = (y * W + x) * 4; return [img.data[o], img.data[o + 1], img.data[o + 2]]; };
+
+  it('바깥 액자는 보라가 된다', () => {
+    const img = kakao();
+    expect(run(img).ok).toBe(true);
+    expect(px(img, 2, 2)).toEqual(VIOLET);
+    expect(px(img, 2, 100)).toEqual(VIOLET);
+    expect(px(img, 50, H - 2)).toEqual(VIOLET);
+  });
+
+  it('⚠️ 상품 칸의 노랑은 남긴다', () => {
+    const img = kakao();
+    run(img);
+    // 상품 바로 옆과 상품과 카드 사이 — 번지기가 돌아 들어가던 자리
+    expect(px(img, 20, 30)).toEqual(Y);
+    expect(px(img, 50, 52)).toEqual(Y);
+    expect(px(img, 50, 30)).toEqual(RED);
+  });
+
+  it('상품 위로는 액자 두께만큼 노랑을 남겨 상자처럼 보이게 한다', () => {
+    const img = kakao();
+    run(img);
+    // 상품 윗변(20)에서 조금 위는 노랑, 맨 위 액자는 보라
+    expect(px(img, 50, 16)).toEqual(Y);
+    expect(px(img, 50, 1)).toEqual(VIOLET);
+  });
+
+  it('⚠️ 카드 옆구리 반달 홈은 칠한다 — 남기면 보라 액자에 노란 반달이 박힌다', () => {
+    const img = kakao();
+    run(img);
+    expect(px(img, F + 1, NOTCH.y)).toEqual(VIOLET);
+    expect(px(img, W - 2 - F, NOTCH.y)).toEqual(VIOLET);
+  });
+
+  it('카드 안쪽은 그대로다', () => {
+    const img = kakao();
+    run(img);
+    expect(px(img, 50, 130)).toEqual(WHITE);
+  });
+});
+
+// 폰 화면째로 캡처한 기프티콘은 위아래가 까맣다. 그대로 넣으면 보라 액자 안에 검은
+// 덩어리가 들어간다 — 2026-09-25 실기에서 나왔다.
+describe('검은 여백 자르기', () => {
+
+  function letterbox({ w, h, top, bottom, content }) {
+    const data = new Uint8ClampedArray(w * h * 4);
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const c = y < top || y >= h - bottom ? [0, 0, 0] : content(x, y);
+        const o = (y * w + x) * 4;
+        data[o] = c[0]; data[o + 1] = c[1]; data[o + 2] = c[2]; data[o + 3] = 255;
+      }
+    }
+    return { getImageData: () => ({ data }) };
+  }
+
+  it('위아래 검은 띠를 잘라낸다', () => {
+    const ctx = letterbox({ w: 50, h: 100, top: 12, bottom: 9, content: () => [0, 80, 160] });
+    expect(trimLetterbox(ctx, 50, 100)).toEqual({ x: 0, y: 12, w: 50, h: 79 });
+  });
+
+  it('검은 머리에 글자가 박혀 있으면 내용이라 안 자른다', () => {
+    const ctx = letterbox({
+      w: 50, h: 100, top: 0, bottom: 0,
+      content: (x, y) => (y < 10 && x > 10 && x < 30 && y % 2 === 0 ? [255, 255, 255] : y < 10 ? [0, 0, 0] : [0, 80, 160]),
+    });
+    const r = trimLetterbox(ctx, 50, 100);
+    expect(r.y).toBeLessThan(2);
+  });
+
+  it('온통 까만 사진은 손대지 않는다', () => {
+    const ctx = letterbox({ w: 50, h: 100, top: 0, bottom: 0, content: (x, y) => (y === 50 ? [255, 255, 255] : [0, 0, 0]) });
+    expect(trimLetterbox(ctx, 50, 100)).toEqual({ x: 0, y: 0, w: 50, h: 100 });
+  });
+
+  it('그림을 못 꺼내면 사진 전체', () => {
+    const ctx = { getImageData: () => { throw new Error('tainted'); } };
+    expect(trimLetterbox(ctx, 50, 100)).toEqual({ x: 0, y: 0, w: 50, h: 100 });
   });
 });

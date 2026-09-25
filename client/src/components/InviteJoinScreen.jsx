@@ -136,8 +136,10 @@ export default function InviteJoinScreen({ code, userEmail, onSubmitted, escapeL
 
         {error && <p className="m-0 mt-4 text-sm break-keep text-destructive">{error}</p>}
 
-        {/* 이름 칸과 버튼 사이의 틈. 폰 키에 따라 28~72px 사이에서 늘고 준다. */}
-        <div aria-hidden="true" className="min-h-7 max-h-[72px] flex-1" />
+        {/* 이름 칸과 버튼 사이의 틈. 최소 28px이고 남는 높이는 여기로 온다 — 버튼 밑에
+            흰 자리가 남으면 화면이 덜 끝난 것처럼 보여서, 키 큰 폰(갤럭시)의 남는 높이를
+            버튼 위로 모은다. 위 머리도 flex-1이라 둘이 나눠 가진다. */}
+        <div aria-hidden="true" className="min-h-7 flex-1" />
 
         {/* 눌러도 바로 안 들어간다는 것을 미리 말해둔다. 안 말하면 신청하고 나서
             "왜 아직 안 보이지" 하고 다시 누른다.
@@ -184,9 +186,13 @@ export default function InviteJoinScreen({ code, userEmail, onSubmitted, escapeL
           더 붙여서 위 16 · 아래 44로 기울었고, 글자가 위로 붙어 보였다. 홈 바 자리를
           위아래로 반씩 나누면 한가운데가 되고, 그래도 글자는 홈 바보다 한참 위에 있다.
 
+          --safe-bottom이 아니라 --bar-bottom(index.css)으로 잰다. 갤럭시의 safe-bottom은
+          시트 버튼이 바에 안 물리게 여유를 얹은 값이라, 그걸로 재면 띠가 아이폰보다
+          훨씬 두꺼웠다. 두 폰의 띠 두께를 같게 두고, 남는 높이는 위 양식이 가져간다.
+
           슬로건은 카톡 초대 카드·Play 대표 이미지·소개 페이지와 같은 '우리 가족 기프티콘
           서랍'이다. 스토어 부제('가족이 함께 쓰는 기프티콘 서랍')와는 다른 말이다. */}
-      <footer className="flex items-center justify-center gap-2 bg-accent px-6 py-[calc(var(--safe-bottom)/2+16px)]">
+      <footer className="flex items-center justify-center gap-2 bg-accent px-6 py-[calc(var(--bar-bottom)/2+16px)]">
         <span className="text-[14px] font-bold tracking-[-0.02em] text-primary">모아콘</span>
         <span className="text-[13.5px] font-medium tracking-[-0.01em] text-foreground/65">우리 가족 기프티콘 서랍</span>
       </footer>

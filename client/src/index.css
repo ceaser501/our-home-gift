@@ -98,6 +98,11 @@
      미리 나눠 두면 곱해진 뒤에 원래 높이가 된다. */
   --safe-top: calc(max(16px, env(safe-area-inset-top)) / var(--ui-scale));
   --safe-bottom: calc(max(24px, env(safe-area-inset-bottom)) / var(--ui-scale));
+
+  /* 바닥에 깔리는 띠(초대 화면)의 두께를 재는 값. 시스템 바 높이 그대로이고, 최소는
+     아이폰 홈 바(34px)다. --safe-bottom과 달리 여유를 얹지 않는다 — 띠는 눌리는 것이
+     아니라 바 밑까지 이어져 보이면 되는 것이라서, 여유를 얹으면 띠만 두꺼워진다. */
+  --bar-bottom: calc(max(34px, env(safe-area-inset-bottom)) / var(--ui-scale));
 }
 
 /* 화면 전체를 한 번에 키우고 줄인다.
@@ -130,6 +135,9 @@ html {
 html.is-native-android {
   --safe-top: calc((8px + var(--android-inset-top, 32px)) / var(--ui-scale));
   --safe-bottom: calc((16px + var(--android-inset-bottom, 56px)) / var(--ui-scale));
+  /* 제스처 바(24dp)면 아이폰과 같은 34가 되고, 3버튼 바(48dp)면 그만큼 두꺼워진다.
+     3버튼일 때 얇게 두면 글자가 버튼 줄에 걸린다. */
+  --bar-bottom: calc(max(34px, var(--android-inset-bottom, 48px)) / var(--ui-scale));
 }
 
 /* 폰이 다크모드여도 앱은 항상 화이트가 기본이다. 헤더의 토글로 직접 다크를
