@@ -38,7 +38,7 @@ function fakeCtx(img) {
   };
 }
 
-const { paintFrame, violetHeader, trimLetterbox } = await import('../utils/shareGifticon');
+const { paintFrame, violetHeader } = await import('../utils/shareGifticon');
 
 const VIOLET = [0x5B, 0x4F, 0xE8];
 const KAKAO_YELLOW = [0xFE, 0xE5, 0x00];
@@ -335,46 +335,5 @@ describe('액자와 같은 색의 상품 칸', () => {
     const img = kakao();
     run(img);
     expect(px(img, 50, 130)).toEqual(WHITE);
-  });
-});
-
-// 폰 화면째로 캡처한 기프티콘은 위아래가 까맣다. 그대로 넣으면 보라 액자 안에 검은
-// 덩어리가 들어간다 — 2026-09-25 실기에서 나왔다.
-describe('검은 여백 자르기', () => {
-
-  function letterbox({ w, h, top, bottom, content }) {
-    const data = new Uint8ClampedArray(w * h * 4);
-    for (let y = 0; y < h; y++) {
-      for (let x = 0; x < w; x++) {
-        const c = y < top || y >= h - bottom ? [0, 0, 0] : content(x, y);
-        const o = (y * w + x) * 4;
-        data[o] = c[0]; data[o + 1] = c[1]; data[o + 2] = c[2]; data[o + 3] = 255;
-      }
-    }
-    return { getImageData: () => ({ data }) };
-  }
-
-  it('위아래 검은 띠를 잘라낸다', () => {
-    const ctx = letterbox({ w: 50, h: 100, top: 12, bottom: 9, content: () => [0, 80, 160] });
-    expect(trimLetterbox(ctx, 50, 100)).toEqual({ x: 0, y: 12, w: 50, h: 79 });
-  });
-
-  it('검은 머리에 글자가 박혀 있으면 내용이라 안 자른다', () => {
-    const ctx = letterbox({
-      w: 50, h: 100, top: 0, bottom: 0,
-      content: (x, y) => (y < 10 && x > 10 && x < 30 && y % 2 === 0 ? [255, 255, 255] : y < 10 ? [0, 0, 0] : [0, 80, 160]),
-    });
-    const r = trimLetterbox(ctx, 50, 100);
-    expect(r.y).toBeLessThan(2);
-  });
-
-  it('온통 까만 사진은 손대지 않는다', () => {
-    const ctx = letterbox({ w: 50, h: 100, top: 0, bottom: 0, content: (x, y) => (y === 50 ? [255, 255, 255] : [0, 0, 0]) });
-    expect(trimLetterbox(ctx, 50, 100)).toEqual({ x: 0, y: 0, w: 50, h: 100 });
-  });
-
-  it('그림을 못 꺼내면 사진 전체', () => {
-    const ctx = { getImageData: () => { throw new Error('tainted'); } };
-    expect(trimLetterbox(ctx, 50, 100)).toEqual({ x: 0, y: 0, w: 50, h: 100 });
   });
 });

@@ -23,6 +23,9 @@ import { isNativeApp } from './browser';
 // 테두리를 칠하는 이유는 카톡 선물함 캡처가 노란 액자를 달고 오기 때문이다. 그 노랑은
 // 카카오의 것이라, 우리가 보낸 선물에 남의 브랜드가 둘려 있는 꼴이 된다.
 //
+// 검은 여백(폰 화면째 캡처한 것의 위아래)은 자르지 않는다. 잘라봤는데, 원본에 손을
+// 대는 일이라 바코드가 뭉개질 여지를 만들 뿐 얻는 것이 적었다(2026-09-25에 되돌림).
+//
 // 칠하기로 안 되는 사진도 있다 — 흰 테두리는 일부러 건너뛰고(흰 종이에 찍은 사진을
 // 덮을 수 있어서다), 테두리가 아예 없는 사진도 있다. 그래서 좌우·아래에 보라 여백을
 // 함께 두른다. 여백은 원본을 한 픽셀도 안 건드리므로 어떤 사진이든 액자를 갖는다.
@@ -94,21 +97,8 @@ export async function composeShareImage(blob) {
   if (!srcW || !srcH) return null;
 
   const scale = Math.min(1, MAX_EDGE / Math.max(srcW, srcH));
-  const fullW = Math.max(1, Math.round(srcW * scale));
-  const fullH = Math.max(1, Math.round(srcH * scale));
-
-  // 줄인 원본을 한 장 따로 그려 두고, 위아래·좌우의 검은 여백을 잘라낸다.
-  const src = document.createElement('canvas');
-  src.width = fullW;
-  src.height = fullH;
-  const sctx = src.getContext('2d');
-  if (!sctx) return null;
-  sctx.imageSmoothingEnabled = true;
-  sctx.imageSmoothingQuality = 'high';
-  sctx.drawImage(img, 0, 0, fullW, fullH);
-  const crop = trimLetterbox(sctx, fullW, fullH);
-  const w = crop.w;
-  const h = crop.h;
+  const w = Math.max(1, Math.round(srcW * scale));
+  const h = Math.max(1, Math.round(srcH * scale));
 
   // 띠는 사진 너비의 2할. 처음엔 1할 3푼이었는데 글자가 위에 붙어 보였고, 폰에서
   // 크게 열면 맨 윗줄이 카메라 구멍에 걸렸다.
@@ -137,7 +127,10 @@ export async function composeShareImage(blob) {
   // 액자가 되고, 대화방에서 미리보기가 위부터 잘리는 것에도 유리하다.
   ctx.fillStyle = VIOLET;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.drawImage(src, crop.x, crop.y, w, h, pad, band, w, h);
+
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(img, pad, band, w, h);
 
   // 사진 자체의 테두리도 같은 보라로. 못 칠하면 원본 그대로 두고 여백만 남는다.
   paintFrame(ctx, pad, band, w, h, VIOLET_RGB);
@@ -175,48 +168,6 @@ export async function composeShareImage(blob) {
   ctx.fillText(BAND_SUB, canvas.width / 2, midY + w * 0.022);
 
   return new Promise((resolve) => canvas.toBlob((blob) => resolve(blob), 'image/jpeg', 0.92));
-}
-
-// 사진 위아래(와 좌우)의 검은 여백을 잘라낸다. 자를 것이 없으면 사진 전체.
-//
-// 기프티콘을 폰 화면째로 캡처해 두면 세로로 긴 화면에 맞춰 위아래가 까맣게 채워진다.
-// 그 검은 덩어리가 보라 액자 안에 그대로 들어가서, 받는 사람에게는 사진이 덜 잘린
-// 것처럼 보였다 — 2026-09-25에 실기에서 나왔다.
-//
-// 거의 모든 칸이 까만 줄만 자른다(1%까지는 압축 잡음으로 본다). 글자가 한 줄이라도
-// 박힌 까만 머리는 내용이라 안 자른다. 다 자르고 3할도 안 남으면 까만 사진일 뿐이라
-// 손대지 않는다.
-export function trimLetterbox(ctx, w, h) {
-  var whole = { x: 0, y: 0, w: w, h: h };
-  var d;
-  try {
-    d = ctx.getImageData(0, 0, w, h).data;
-  } catch {
-    return whole;
-  }
-  var DARK = 40;
-  var lit = function (o) { return d[o] > DARK || d[o + 1] > DARK || d[o + 2] > DARK; };
-  var blackRow = function (y) {
-    var n = 0;
-    for (var x = 0; x < w; x++) if (lit((y * w + x) * 4) && ++n > w * 0.01) return false;
-    return true;
-  };
-  var blackCol = function (x, top, bottom) {
-    var n = 0, span = bottom - top + 1;
-    for (var y = top; y <= bottom; y++) if (lit((y * w + x) * 4) && ++n > span * 0.01) return false;
-    return true;
-  };
-
-  var top = 0, bottom = h - 1;
-  while (top < bottom && blackRow(top)) top++;
-  while (bottom > top && blackRow(bottom)) bottom--;
-  var left = 0, right = w - 1;
-  while (left < right && blackCol(left, top, bottom)) left++;
-  while (right > left && blackCol(right, top, bottom)) right--;
-
-  var cw = right - left + 1, ch = bottom - top + 1;
-  if (cw < w * 0.3 || ch < h * 0.3) return whole;
-  return { x: left, y: top, w: cw, h: ch };
 }
 
 // 위에서 보이는 보라가 어디까지인가. 띠 + 칠해진 사진 테두리.
