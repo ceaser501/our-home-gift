@@ -196,6 +196,7 @@ export default function InviteJoinScreen({ code, userEmail, onSubmitted, escapeL
           글자는 18~20px. 14px로 두었더니 띠에 비해 글자가 작아 띠만 커 보였다. */}
       <footer className="flex items-center justify-center gap-2 bg-accent px-6 py-[calc(var(--bar-bottom)/2+16px)]">
         <span className="text-[20px] font-bold tracking-[-0.02em] text-primary">모아콘</span>
+        <span aria-hidden="true" className="text-[18px] font-bold text-primary/70">·</span>
         <span className="text-[18px] font-medium tracking-[-0.01em] text-foreground/70">우리 가족 기프티콘 서랍</span>
       </footer>
     </div>
