@@ -127,3 +127,14 @@ describe('파일 이름', () => {
     expect(got).toBe('가'.repeat(40) + '.jpg');
   });
 });
+
+describe('누른 직후가 아니면', () => {
+  it('브라우저가 막은 것은 expired로 돌려준다 — 다시 누르면 된다', async () => {
+    navigator.canShare = () => true;
+    const blocked = new Error('not allowed');
+    blocked.name = 'NotAllowedError';
+    navigator.share = vi.fn().mockRejectedValue(blocked);
+
+    await expect(shareGifticonImage({ url: 'https://x/a.jpg', name: '김' })).resolves.toBe('expired');
+  });
+});

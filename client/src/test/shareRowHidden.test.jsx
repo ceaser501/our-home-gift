@@ -21,6 +21,12 @@ vi.mock('../FamilyContext', () => ({
   }),
 }));
 
+// 메뉴가 열리면 보낼 파일을 미리 만든다. 여기서는 사진을 실제로 받으러 가지 않게 막는다.
+vi.mock('../utils/shareGifticon', () => ({
+  prepareShareImage: async () => ({}),
+  sharePrepared: async () => 'shared',
+}));
+
 const { default: GifticonCard } = await import('../components/GifticonCard');
 
 const GIFTICON = {

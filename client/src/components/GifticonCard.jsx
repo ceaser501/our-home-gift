@@ -48,6 +48,20 @@ function CardMenuSheet({ gifticon, onClose, onEdit, onDelete }) {
   // 지운 것(docs/after-launch.md 1번). 둘 다 눌러봐야 보낼 것이 없다.
   const sharable = (gifticon.image_urls || []).find(Boolean) || null;
 
+  // 보낼 파일은 이 창이 열릴 때 미리 만들어 둔다(prepareShareImage 주석). 누르고 나서
+  // 만들면 브라우저가 '누른 직후가 아니다'라며 공유 창을 막는다. 수정·삭제만 하고
+  // 닫아도 원본 한 장을 받아두는 것뿐이라 손해가 적다.
+  const preparedRef = useRef(null);
+  useEffect(() => {
+    if (!sharable) return;
+    const job = import('../utils/shareGifticon').then((m) =>
+      m.prepareShareImage({ url: sharable, name: gifticon.name })
+    );
+    // 실패는 눌렀을 때 알린다. 여기서 삼키지 않으면 '처리 안 된 거절'로 남는다.
+    job.catch(() => {});
+    preparedRef.current = job;
+  }, [sharable, gifticon.name]);
+
   // 이 창은 안 닫고 보낸다.
   //
   // 아래 choose()가 창을 먼저 닫는 것은 다음에 열 창이 우리 창이라서다 — 웹뷰에서 둘이
@@ -57,15 +71,27 @@ function CardMenuSheet({ gifticon, onClose, onEdit, onDelete }) {
     if (shareState === 'busy') return;
     setShareState('busy');
     try {
-      const { shareGifticonImage } = await import('../utils/shareGifticon');
-      const how = await shareGifticonImage({ url: sharable, name: gifticon.name });
+      const { sharePrepared } = await import('../utils/shareGifticon');
+      const prepared = await preparedRef.current;
+      const how = await sharePrepared(prepared);
       if (how === 'unsupported') {
         setShareState('이 기기에서는 보낼 수 없어요');
+        return;
+      }
+      if (how === 'expired') {
+        // 준비하는 사이에 브라우저가 기다려주는 시간이 지났다. 파일은 다 됐으니
+        // 한 번 더 누르면 바로 열린다.
+        setShareState('ready');
         return;
       }
       // 보냈든 창을 닫았든 여기서 할 일은 끝났다.
       onClose();
     } catch (err) {
+      // 준비가 실패했으면 다음 누름에 새로 만든다.
+      preparedRef.current = import('../utils/shareGifticon').then((m) =>
+        m.prepareShareImage({ url: sharable, name: gifticon.name })
+      );
+      preparedRef.current.catch(() => {});
       setShareState(err?.message || '보내지 못했어요');
     }
   }
@@ -106,7 +132,10 @@ function CardMenuSheet({ gifticon, onClose, onEdit, onDelete }) {
               <Share2 className="size-4.5 text-muted-foreground" />
               <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                 {shareState === 'busy' ? '잠시만 기다려 주세요…' : '공유'}
-                {shareState && shareState !== 'busy' && (
+                {shareState === 'ready' && (
+                  <span className="text-[12.5px] break-keep text-primary">준비됐어요. 한 번 더 눌러주세요.</span>
+                )}
+                {shareState && shareState !== 'busy' && shareState !== 'ready' && (
                   <span className="text-[12.5px] break-keep text-destructive">{shareState}</span>
                 )}
               </span>

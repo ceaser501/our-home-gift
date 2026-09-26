@@ -457,12 +457,17 @@ function fileNameFor(name) {
 }
 
 /**
- * 폰의 공유 창을 연다. 무엇을 했는지 돌려준다 —
- * 'shared' | 'cancelled' | 'unsupported'
+ * 보낼 파일을 미리 만든다. 사진 받기 + 액자 넣기 + (앱이면) 파일로 떨구기까지.
  *
- * 부르는 쪽이 화면에 무엇을 적을지 정한다.
+ * ── 왜 미리 만드나 ──────────────────────────────────────────────────────────
+ * 브라우저는 '누른 직후'에만 공유 창을 열어준다(사용자 활성화, 크롬은 5초쯤이고
+ * 사파리는 더 짧다). 누르고 나서 사진을 받고 액자를 그리다 보면 그 시간이 지나서
+ * 공유 창이 안 떴다. 다시 누르면 그때는 사진이 캐시에 있어 빨리 끝나니 창이 떴다 —
+ * 2026-09-26 실기에서 "한 번 더 누르니 된다"로 나왔다.
+ *
+ * 그래서 ⋯ 메뉴가 열릴 때 미리 만들어 두고, 누르는 순간에는 창만 연다.
  */
-export async function shareGifticonImage({ url, name }) {
+export async function prepareShareImage({ url, name }) {
   // 사진은 한 번만 받아온다. 서명된 주소라 두 번째가 만료됐을 수도 있고, 같은 것을
   // 두 번 내려받을 이유도 없다.
   const original = await fetch(url).then((r) => r.blob());
@@ -473,40 +478,56 @@ export async function shareGifticonImage({ url, name }) {
 
   if (isNativeApp()) {
     // 앱에서는 파일로 한 번 떨궈야 한다. 폰의 공유 창은 blob을 모르고 경로를 받는다.
-    const [{ Filesystem, Directory }, { Share }] = await Promise.all([
-      import('@capacitor/filesystem'),
-      import('@capacitor/share'),
-    ]);
-    const path = `share/${Date.now()}-${fileName}`;
+    // 떨군 파일은 지우지 않는다. Cache라 폰이 알아서 치우고, 지우려 들면 받는 앱이
+    // 아직 읽는 중일 때 빈 파일이 건너간다.
+    const { Filesystem, Directory } = await import('@capacitor/filesystem');
     const { uri } = await Filesystem.writeFile({
-      path,
+      path: `share/${Date.now()}-${fileName}`,
       data: await blobToBase64(blob),
       directory: Directory.Cache,
       recursive: true,
     });
+    return { uri };
+  }
+  return { file: new File([blob], fileName, { type: blob.type || 'image/jpeg' }) };
+}
+
+/**
+ * 미리 만든 파일로 폰의 공유 창을 연다. 무엇을 했는지 돌려준다 —
+ * 'shared' | 'cancelled' | 'unsupported' | 'expired'
+ *
+ * 'expired'는 브라우저가 '누른 직후가 아니다'라며 막은 것이다. 파일은 준비됐으니
+ * 한 번 더 누르면 바로 열린다. 부르는 쪽이 화면에 무엇을 적을지 정한다.
+ */
+export async function sharePrepared(prepared) {
+  if (prepared.uri) {
+    const { Share } = await import('@capacitor/share');
     try {
-      await Share.share({ files: [uri], dialogTitle: '기프티콘 보내기' });
+      await Share.share({ files: [prepared.uri], dialogTitle: '기프티콘 보내기' });
       return 'shared';
     } catch (err) {
       // 창을 닫은 것은 실패가 아니다.
       if (/cancel/i.test(err?.message || '')) return 'cancelled';
       throw err;
     }
-    // 떨군 파일은 지우지 않는다. Cache라 폰이 알아서 치우고, 지우려 들면 받는 앱이
-    // 아직 읽는 중일 때 빈 파일이 건너간다.
   }
 
   // 웹은 브라우저의 공유 창을 쓴다. 사진첩으로 바로 보내는 길이 이것뿐이다.
-  const file = new File([blob], fileName, { type: blob.type || 'image/jpeg' });
+  const { file } = prepared;
   if (navigator.canShare?.({ files: [file] })) {
     try {
       await navigator.share({ files: [file] });
       return 'shared';
     } catch (err) {
       if (err?.name === 'AbortError') return 'cancelled';
+      if (err?.name === 'NotAllowedError') return 'expired';
       throw err;
     }
   }
-
   return 'unsupported';
+}
+
+// 만들고 바로 보낸다. 미리 만들 틈이 없는 곳에서 쓴다.
+export async function shareGifticonImage({ url, name }) {
+  return sharePrepared(await prepareShareImage({ url, name }));
 }
