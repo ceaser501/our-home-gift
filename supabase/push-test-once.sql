@@ -3,9 +3,9 @@
 -- 정기 발송은 하루 두 번(오전 9시·오후 3시 한국시간, supabase/push-cron.sql)이라,
 -- 그걸 기다리면 반나절이 간다. 이 파일은 그 사이에 한 번을 더 끼워 넣는 것이다.
 --
--- ── 채울 곳 둘 ────────────────────────────────────────────────────────────────
---   <프로젝트ref>   Supabase 프로젝트 URL의 xxxxxxxx 부분
---   <CRON_SECRET>   supabase/push-cron.sql에 넣었던 것과 같은 값
+-- ── 채울 곳 ───────────────────────────────────────────────────────────────────
+-- 없다. 비밀값은 push-cron.sql과 같이 Vault('cron_secret')에서 꺼낸다 — 거기 적힌
+-- '먼저 한 번만'을 해뒀어야 한다. 고칠 곳은 아래 시각뿐이다.
 --
 -- ── 시각 ──────────────────────────────────────────────────────────────────────
 -- 아래 '0 12 27 8 *'는 8월 27일 12시 00분 UTC, 곧 한국시간 밤 9시다.
@@ -22,8 +22,11 @@ select cron.schedule(
   '0 12 27 8 *',
   $$
   select net.http_post(
-    url := 'https://<프로젝트ref>.supabase.co/functions/v1/send-expiry-notifications',
-    headers := '{"Content-Type": "application/json", "x-cron-secret": "<CRON_SECRET>"}'::jsonb
+    url := 'https://uxgaipzhlhyzwfegnrrj.supabase.co/functions/v1/send-expiry-notifications',
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'x-cron-secret', (select decrypted_secret from vault.decrypted_secrets where name = 'cron_secret')
+    )
   );
   $$
 );

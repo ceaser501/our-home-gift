@@ -230,8 +230,9 @@ Supabase가 기본 지원하는 제공자라 어렵지 않습니다.
    `CRON_SECRET`은 이 함수를 외부에서 아무나 못 부르게 막는 용도로, 원하는 문자열을 직접
    정해서 넣으면 됩니다(예: 긴 랜덤 문자열).
 3. Supabase 대시보드 **Database → Extensions**에서 **pg_cron**, **pg_net** 확장 켜기
-4. `supabase/push-cron.sql` 파일을 열어서 `<프로젝트ref>`와 `<CRON_SECRET>`을 위에서 정한
-   값으로 바꾼 뒤, 그 내용을 SQL Editor에서 실행 (하루 두 번 자동 호출되도록 예약됨)
+4. SQL Editor에서 `select vault.create_secret('위에서 정한 CRON_SECRET 값', 'cron_secret');`를
+   한 번 실행한 뒤, `supabase/push-cron.sql`을 **고치지 않고 그대로** 실행 (하루 두 번 자동
+   호출되도록 예약됨)
 5. `supabase/schema.sql`을 다시 실행 (`push_subscriptions` 테이블과
    `gifticons.expiry_notified` 컬럼이 이번에 추가됨)
 

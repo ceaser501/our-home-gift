@@ -180,7 +180,7 @@ SQL Editor에서 둘을 돌린다.
 
 | 파일 | 채울 것 |
 |---|---|
-| `supabase/push-cron.sql` | `<프로젝트ref>` → 새 ref, `<CRON_SECRET>` → 5번에서 정한 값 |
+| `supabase/push-cron.sql` | 주소의 ref → 새 ref. 비밀값은 먼저 `select vault.create_secret('5번에서 정한 값', 'cron_secret');` |
 | `supabase/purge-cron.sql` | 없다. 그대로 실행 |
 
 확인: `select jobname, schedule from cron.job;`
