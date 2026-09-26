@@ -103,7 +103,7 @@ export default function InviteJoinScreen({ code, userEmail, onSubmitted, escapeL
 
           다만 딱 붙이면 안내 두 줄·버튼·승인 안내·빠져나가는 길이 한 덩어리로 몰려
           답답하다. 이름 칸과 버튼 사이에 늘어나는 틈을 두되 끝을 정해둔다(spacer). */}
-      <form onSubmit={handleSubmit} className="flex flex-1 flex-col px-6 pt-7 pb-7">
+      <form onSubmit={handleSubmit} className="flex flex-1 flex-col px-6 pt-7 pb-[calc(var(--safe-bottom)+12px)]">
         <div className="flex flex-col gap-2">
           <Label htmlFor="invite-join-name" className="text-[16px] font-bold tracking-[-0.015em]">
             가족에게 어떻게 보일 이름인가요?
@@ -136,9 +136,12 @@ export default function InviteJoinScreen({ code, userEmail, onSubmitted, escapeL
 
         {error && <p className="m-0 mt-4 text-sm break-keep text-destructive">{error}</p>}
 
-        {/* 이름 칸과 버튼 사이의 틈. 최소 28px이고 남는 높이는 여기로 온다 — 버튼 밑에
-            흰 자리가 남으면 화면이 덜 끝난 것처럼 보여서, 키 큰 폰(갤럭시)의 남는 높이를
-            버튼 위로 모은다. 위 머리도 flex-1이라 둘이 나눠 가진다. */}
+        {/* 이름 칸과 버튼 사이의 틈. 최소 28px이고 남는 높이는 여기로 온다 — 버튼은
+            화면 맨 아래에 붙는다. 위 머리도 flex-1이라 둘이 나눠 가진다.
+
+            바닥에 '모아콘 · 우리 가족 기프티콘 서랍' 띠를 깔았던 적이 있다. 갤럭시에서
+            내비게이션 바가 그 띠를 덮어서 글자가 반쯤 가려졌고, 버튼만 위로 밀려
+            올라갔다. 띠를 빼고 그 높이를 버튼이 가져간다. */}
         <div aria-hidden="true" className="min-h-7 flex-1" />
 
         {/* 눌러도 바로 안 들어간다는 것을 미리 말해둔다. 안 말하면 신청하고 나서
@@ -174,31 +177,6 @@ export default function InviteJoinScreen({ code, userEmail, onSubmitted, escapeL
 
       </form>
 
-      {/* ── 바닥 띠 ────────────────────────────────────────────────────────
-          버튼 밑에 흰 자리만 남아 있으면 화면이 덜 끝난 것처럼 보였다. 위 머리와 같은
-          연보라로 바닥을 맺어, 화면이 위아래로 액자처럼 닫히게 한다. 남는 높이는 양식이
-          가져가고(flex-1) 띠는 바닥에 붙는다.
-
-          남색(카톡 초대 카드와 같은 색)도 그려봤는데, 밝은 화면 밑에 진한 덩어리가
-          얹혀서 무게가 아래로 쏠렸다. 연보라가 위 머리와 짝이 맞는다.
-
-          글자는 띠 한가운데에 둔다. 처음에는 홈 바 자리(safe-bottom)를 아래에 통째로
-          더 붙여서 위 16 · 아래 44로 기울었고, 글자가 위로 붙어 보였다. 홈 바 자리를
-          위아래로 반씩 나누면 한가운데가 되고, 그래도 글자는 홈 바보다 한참 위에 있다.
-
-          --safe-bottom이 아니라 --bar-bottom(index.css)으로 잰다. 갤럭시의 safe-bottom은
-          시트 버튼이 바에 안 물리게 여유를 얹은 값이라, 그걸로 재면 띠가 아이폰보다
-          훨씬 두꺼웠다. 두 폰의 띠 두께를 같게 두고, 남는 높이는 위 양식이 가져간다.
-
-          슬로건은 카톡 초대 카드·Play 대표 이미지·소개 페이지와 같은 '우리 가족 기프티콘
-          서랍'이다. 스토어 부제('가족이 함께 쓰는 기프티콘 서랍')와는 다른 말이다.
-
-          글자는 16.5~18.5px. 14px로 두었더니 띠에 비해 글자가 작아 띠만 커 보였다. */}
-      <footer className="flex items-center justify-center gap-2 bg-accent px-6 py-[calc(var(--bar-bottom)/2+16px)]">
-        <span className="text-[18.5px] font-bold tracking-[-0.02em] text-primary">모아콘</span>
-        <span aria-hidden="true" className="text-[16.5px] font-bold text-primary/70">·</span>
-        <span className="text-[16.5px] font-medium tracking-[-0.01em] text-foreground/70">우리 가족 기프티콘 서랍</span>
-      </footer>
     </div>
   );
 }
