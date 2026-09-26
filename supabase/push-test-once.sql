@@ -1,7 +1,8 @@
 -- 만료 알림을 정해둔 시각에 딱 한 번 보내본다. Supabase SQL Editor에서 실행하세요.
 --
--- 정기 발송은 하루 두 번(오전 9시·오후 3시 한국시간, supabase/push-cron.sql)이라,
--- 그걸 기다리면 반나절이 간다. 이 파일은 그 사이에 한 번을 더 끼워 넣는 것이다.
+-- 정기 발송은 매시 정각이지만(supabase/push-cron.sql), 그 사람이 고른 시각에만 간다.
+-- 이 파일은 원하는 때에 한 번을 더 끼워 넣는 것이다. 받을 사람의 알림 시각이 그
+-- 시(한국시간)와 같아야 하고, 그날 이미 받았으면 안 간다(expiry_push_log).
 --
 -- ── 채울 곳 ───────────────────────────────────────────────────────────────────
 -- 없다. 비밀값은 push-cron.sql과 같이 Vault('cron_secret')에서 꺼낸다 — 거기 적힌
@@ -35,8 +36,9 @@ select cron.schedule(
 --
 -- 세 가지를 다 만족해야 발송 대상이다(supabase/functions/send-expiry-notifications):
 --   · 아직 안 쓴 것(status = 'unused')
---   · 유효기한이 오늘부터 49일 안
---   · 아직 이 기프티콘으로 안 알린 것(expiry_notified = false)
+--   · 유효기한이 오늘부터 7일 안
+--   · 받을 사람이 오늘 아직 기한 알림을 안 받은 것(expiry_push_log에 오늘 줄이 없음)
+--   · 받을 사람의 알림 시각(notification_settings, 기본 9시)이 지금 시(한국시간)와 같은 것
 --
 --   select id, name, brand, expires_at, expiry_notified,
 --          (expires_at::date - current_date) as 남은일수

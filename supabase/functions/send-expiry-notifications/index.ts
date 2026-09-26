@@ -1,17 +1,27 @@
-// 유효기한이 7주(49일) 이내로 남은 미사용 기프티콘을 찾아서, 그 가족 구성원들이
-// 브라우저에서 알림을 켜뒀다면(push_subscriptions) 웹푸시를 보낸다.
-// pg_cron이 하루 두 번(오전 9시/오후 3시, KST) 이 함수를 호출한다.
-// 같은 기프티콘을 반복해서 알려주지 않도록 gifticons.expiry_notified 플래그로
-// 한 번만 보내고, expires_at이 바뀌면(DB 트리거로) 다시 알려줄 수 있게 초기화된다.
+// 사용기한이 7일 안으로 남은 미사용 기프티콘을 찾아서, 그 가족 구성원들에게 **하루
+// 한 번** 알린다. 사람마다 고른 시각(notification_settings.expiry_hour, 기본 오전 9시)에
+// 보낸다. pg_cron이 매시 정각에 부르고, 이 함수가 "지금이 이 사람의 시각인가"를 가린다.
+//
+// 같은 날 알릴 기프티콘이 여럿이면 한 알림으로 묶는다. 다섯 개라고 다섯 번 울리면 끈다.
+// 하루 한 번은 expiry_push_log(사람, 날짜)로 지킨다.
+//
+// 2026-09-27에 규칙을 바꿨다. 예전에는 49일 안으로 들어오면 기프티콘마다 딱 한 번이었다
+// (gifticons.expiry_notified). 정작 마감 직전에는 아무 말이 없었다.
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import webpush from 'npm:web-push@3';
 import { sendFcm, isFcmConfigured } from '../_shared/fcm.ts';
 
-const EXPIRY_WINDOW_DAYS = 49;
+// D-7부터 D-day까지. 오늘이 마지막 날이면 0.
+const EXPIRY_WINDOW_DAYS = 7;
+const DEFAULT_HOUR = 9;
+// 기록은 며칠만 들고 있으면 된다. 오늘 보냈는지만 보니까.
+const LOG_KEEP_DAYS = 14;
 
-function todayDateStr() {
-  return new Date().toISOString().slice(0, 10);
+// 한국시간 기준 오늘 날짜와 지금 시(정시). 기프티콘 기한은 한국 날짜로 적혀 있다.
+function nowKst() {
+  const kst = new Date(Date.now() + 9 * 60 * 60 * 1000);
+  return { today: kst.toISOString().slice(0, 10), hour: kst.getUTCHours() };
 }
 
 function addDays(dateStr, days) {
@@ -23,6 +33,38 @@ function addDays(dateStr, days) {
 function daysUntil(expiresAt, today) {
   const ms = new Date(`${expiresAt}T00:00:00Z`) - new Date(`${today}T00:00:00Z`);
   return Math.round(ms / (1000 * 60 * 60 * 24));
+}
+
+function remainingText(dday) {
+  return dday === 0 ? '오늘까지' : `${dday}일 남음`;
+}
+
+// 한 사람에게 갈 한 통. 기한이 가까운 것부터.
+//
+// 하나면 예전처럼 자세히, 여럿이면 앞의 셋만 줄로 적고 나머지는 개수로 접는다.
+// 알림 창은 몇 줄 안 보여준다.
+export function buildMessage(items) {
+  const sorted = [...items].sort((a, b) => a.dday - b.dday);
+  if (sorted.length === 1) {
+    const g = sorted[0];
+    const [, month, day] = g.expires_at.split('-');
+    const remaining = g.dday === 0 ? '오늘까지예요' : `${g.dday}일 남았어요`;
+    return {
+      title: `${g.familyName ? `${g.familyName} · ` : ''}유효기한이 곧 만료돼요`,
+      // 연장할 수 있다는 걸 여기서 알린다. 연장이 필요한 바로 그 순간에 도착하는 말이라,
+      // 앱 어딘가에 상시 안내를 두는 것보다 이 한 줄이 더 잘 가르쳐준다.
+      body:
+        `${g.brand ? `${g.brand} · ` : ''}${g.name}\n` +
+        `${Number(month)}월 ${Number(day)}일까지 · ${remaining}\n` +
+        `기한은 늘릴 수도 있어요. 카드의 남은 기간 표시를 눌러보세요.`,
+    };
+  }
+  const shown = sorted.slice(0, 3).map((g) => `${g.brand ? `${g.brand} · ` : ''}${g.name} · ${remainingText(g.dday)}`);
+  const rest = sorted.length - shown.length;
+  return {
+    title: `기프티콘 ${sorted.length}개가 곧 만료돼요`,
+    body: shown.join('\n') + (rest > 0 ? `\n외 ${rest}개` : ''),
+  };
 }
 
 Deno.serve(async (req) => {
@@ -60,22 +102,24 @@ Deno.serve(async (req) => {
 
   const admin = createClient(supabaseUrl, serviceRoleKey);
 
-  // 앱 안 알림(activities)에서 30일 지난 것을 지운다. 알림 발송과는 상관없는 일이지만,
-  // 하루 두 번 꼬박꼬박 도는 일정이 이것뿐이라 여기에 얹는다. 이걸 위해 크론을 하나 더
-  // 만들면 나중에 배포할 때 챙길 것만 늘어난다.
+  const { today, hour } = nowKst();
+
+  // 앱 안 알림(activities)에서 30일 지난 것을 지운다. 알림 발송과는 상관없는 일인데
+  // 여기 얹혀 있던 것이다. 이제 매시간 도니까 하루에 한 번(오전 9시)만 한다.
   //
   // 아래 발송 로직보다 먼저 부른다. 뒤에 두면 "알릴 기프티콘이 없어요"로 일찍 끝나는 날에는
   // 정리가 통째로 건너뛰어진다. 실패해도 발송은 그대로 진행한다.
-  await admin.rpc('purge_old_activities');
+  if (hour === DEFAULT_HOUR) {
+    await admin.rpc('purge_old_activities');
+    await admin.from('expiry_push_log').delete().lt('sent_on', addDays(today, -LOG_KEEP_DAYS));
+  }
 
-  const today = todayDateStr();
   const windowEnd = addDays(today, EXPIRY_WINDOW_DAYS);
 
   const { data: gifticons, error } = await admin
     .from('gifticons')
     .select('id, name, brand, expires_at, family_id')
     .eq('status', 'unused')
-    .eq('expiry_notified', false)
     .not('expires_at', 'is', null)
     .gte('expires_at', today)
     .lte('expires_at', windowEnd);
@@ -89,9 +133,6 @@ Deno.serve(async (req) => {
 
   const familyIds = [...new Set(gifticons.map((g) => g.family_id))];
 
-  // 한 사람이 여러 가족에 속할 수 있어서, 알림을 보낼 곳은 구독에 적힌 가족이 아니라
-  // "지금 이 가족에 누가 있는지"로 정한다. 구독은 기기 하나당 하나이고 사람에게 딸린 것이라,
-  // 그 사람이 속한 모든 가족의 알림이 그 기기로 간다.
   const [{ data: memberships, error: memberError }, { data: families, error: familyError }] = await Promise.all([
     admin.from('family_members').select('family_id, user_id').in('family_id', familyIds),
     admin.from('families').select('id, name').in('id', familyIds),
@@ -101,67 +142,63 @@ Deno.serve(async (req) => {
   }
 
   const familyNames = new Map((families || []).map((f) => [f.id, f.name]));
-  const userIds = [...new Set((memberships || []).map((m) => m.user_id))];
+  const allUserIds = [...new Set((memberships || []).map((m) => m.user_id))];
+
+  // 지금이 그 사람의 시각인가, 오늘 이미 받았나.
+  const [{ data: settings, error: settingError }, { data: sentToday, error: logError }] = await Promise.all([
+    admin.from('notification_settings').select('user_id, expiry_hour').in('user_id', allUserIds),
+    admin.from('expiry_push_log').select('user_id').eq('sent_on', today).in('user_id', allUserIds),
+  ]);
+  if (settingError || logError) {
+    return new Response(JSON.stringify({ error: (settingError || logError).message }), { status: 500 });
+  }
+  const hourOf = new Map((settings || []).map((row) => [row.user_id, row.expiry_hour]));
+  const already = new Set((sentToday || []).map((row) => row.user_id));
+  const userIds = allUserIds.filter((id) => (hourOf.get(id) ?? DEFAULT_HOUR) === hour && !already.has(id));
+  if (userIds.length === 0) {
+    return new Response(JSON.stringify({ sent: 0, message: '지금 시각에 받을 사람이 없어요.' }));
+  }
 
   const [{ data: subscriptions, error: subError }, { data: nativeTokens, error: tokenError }] = await Promise.all([
-    admin.from('push_subscriptions').select('id, user_id, endpoint, p256dh, auth').in('user_id', userIds),
+    webReady
+      ? admin.from('push_subscriptions').select('id, user_id, endpoint, p256dh, auth').in('user_id', userIds)
+      : Promise.resolve({ data: [], error: null }),
     admin.from('native_push_tokens').select('user_id, token').in('user_id', userIds),
   ]);
-
   if (subError || tokenError) {
     return new Response(JSON.stringify({ error: (subError || tokenError).message }), { status: 500 });
   }
 
-  // 사람 → 그 사람의 받을 곳, 그다음 가족 → 그 가족 사람들의 받을 곳.
-  // 웹 구독과 앱 토큰이 같은 모양으로 접힌다.
-  function groupByFamily(rows, pick) {
-    const byUser = new Map();
-    for (const row of rows || []) {
-      if (!byUser.has(row.user_id)) byUser.set(row.user_id, []);
-      byUser.get(row.user_id).push(pick(row));
-    }
-    const byFamily = new Map();
-    for (const membership of memberships || []) {
-      const mine = byUser.get(membership.user_id);
-      if (!mine) continue;
-      if (!byFamily.has(membership.family_id)) byFamily.set(membership.family_id, []);
-      byFamily.get(membership.family_id).push(...mine);
-    }
-    return byFamily;
+  // 사람 → 그 사람이 속한 가족들의 알릴 기프티콘. 한 사람이 여러 가족에 속할 수 있어서
+  // 가족마다가 아니라 사람마다 모은다 — 그래야 한 통으로 묶인다.
+  const familiesOf = new Map();
+  for (const m of memberships || []) {
+    if (!familiesOf.has(m.user_id)) familiesOf.set(m.user_id, new Set());
+    familiesOf.get(m.user_id).add(m.family_id);
   }
-
-  const subsByFamily = groupByFamily(webReady ? subscriptions : [], (row) => row);
-  const tokensByFamily = groupByFamily(nativeTokens, (row) => row.token);
+  const items = gifticons.map((g) => ({
+    ...g,
+    dday: daysUntil(g.expires_at, today),
+    familyName: familyNames.get(g.family_id),
+  }));
 
   let sentCount = 0;
-  const notifiedIds = [];
+  const reached = [];
   const deadSubscriptionIds = [];
   const deadTokens = [];
 
-  for (const gifticon of gifticons) {
-    const familySubs = subsByFamily.get(gifticon.family_id) || [];
-    const familyTokens = tokensByFamily.get(gifticon.family_id) || [];
-    // 아직 아무도 알림을 안 켜뒀으면 나중에 다시 시도
-    if (familySubs.length === 0 && familyTokens.length === 0) continue;
+  for (const userId of userIds) {
+    const mine = familiesOf.get(userId) || new Set();
+    const list = items.filter((g) => mine.has(g.family_id));
+    const subs = (subscriptions || []).filter((row) => row.user_id === userId);
+    const tokens = (nativeTokens || []).filter((row) => row.user_id === userId).map((row) => row.token);
+    // 알림을 안 켜둔 사람은 적지도 않는다. 나중에 켜면 그날 시각부터 받는다.
+    if (list.length === 0 || (subs.length === 0 && tokens.length === 0)) continue;
 
-    const dday = daysUntil(gifticon.expires_at, today);
-    const [, month, day] = gifticon.expires_at.split('-');
-    const remaining = dday === 0 ? '오늘까지예요' : `${dday}일 남았어요`;
-    // 여러 가족에 속해 있으면 어느 가족 기프티콘인지가 중요해서 제목에 가족 이름을 붙인다.
-    const familyName = familyNames.get(gifticon.family_id);
-    const message = {
-      title: `${familyName ? `${familyName} · ` : ''}유효기한이 곧 만료돼요`,
-      // 연장할 수 있다는 걸 여기서 알린다. 연장이 필요한 바로 그 순간에 도착하는 말이라,
-      // 앱 어딘가에 상시 안내를 두는 것보다 이 한 줄이 더 잘 가르쳐준다.
-      // 어디를 눌러야 하는지까지 적어야 앱을 열고 나서 헤매지 않는다.
-      body:
-        `${gifticon.brand ? `${gifticon.brand} · ` : ''}${gifticon.name}\n` +
-        `${Number(month)}월 ${Number(day)}일까지 · ${remaining}\n` +
-        `기한은 늘릴 수도 있어요. 카드의 남은 기간 표시를 눌러보세요.`,
-    };
+    const message = buildMessage(list);
     const payload = JSON.stringify(message);
 
-    for (const sub of familySubs) {
+    for (const sub of subs) {
       try {
         await webpush.sendNotification(
           { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
@@ -170,21 +207,22 @@ Deno.serve(async (req) => {
         sentCount++;
       } catch (err) {
         const statusCode = err?.statusCode;
-        if (statusCode === 404 || statusCode === 410) {
-          deadSubscriptionIds.push(sub.id);
-        }
+        if (statusCode === 404 || statusCode === 410) deadSubscriptionIds.push(sub.id);
       }
     }
 
-    const fcm = await sendFcm(familyTokens, message);
+    const fcm = await sendFcm(tokens, message);
     sentCount += fcm.sent;
     deadTokens.push(...fcm.dead);
 
-    notifiedIds.push(gifticon.id);
+    reached.push(userId);
   }
 
-  if (notifiedIds.length > 0) {
-    await admin.from('gifticons').update({ expiry_notified: true }).in('id', notifiedIds);
+  if (reached.length > 0) {
+    await admin.from('expiry_push_log').upsert(
+      reached.map((user_id) => ({ user_id, sent_on: today })),
+      { onConflict: 'user_id,sent_on', ignoreDuplicates: true }
+    );
   }
   if (deadSubscriptionIds.length > 0) {
     await admin.from('push_subscriptions').delete().in('id', deadSubscriptionIds);
@@ -193,5 +231,5 @@ Deno.serve(async (req) => {
     await admin.from('native_push_tokens').delete().in('token', deadTokens);
   }
 
-  return new Response(JSON.stringify({ sent: sentCount, notifiedGifticons: notifiedIds.length }));
+  return new Response(JSON.stringify({ sent: sentCount, people: reached.length, hour, today }));
 });

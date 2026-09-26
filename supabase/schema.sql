@@ -810,6 +810,54 @@ create trigger trg_reset_expiry_notified
   before update on public.gifticons
   for each row execute function public.reset_expiry_notified();
 
+-- ===================== 사용기한 알림 시간 =====================
+
+-- 2026-09-27에 규칙을 바꿨다.
+--   예전: 기한이 49일 안으로 들어오면 기프티콘마다 딱 한 번 (위 expiry_notified)
+--   지금: 기한이 7일 안으로 들어오면 **매일 한 번**, 사람마다 고른 시각에
+--
+-- 한 번만 보내면 정작 마감 직전에는 아무 말이 없었다. 49일 전에 받은 알림은 잊힌다.
+-- expiry_notified 칸과 트리거는 남겨둔다 — 지우면 예전 판 함수가 돌 때 깨진다.
+
+-- 알림 받을 시각. 한국시간 정시, 오전 7시~밤 10시. 줄이 없으면 오전 9시로 본다.
+create table if not exists public.notification_settings (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  expiry_hour smallint not null default 9 check (expiry_hour between 7 and 22),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.notification_settings enable row level security;
+
+drop policy if exists "notification_settings select own" on public.notification_settings;
+create policy "notification_settings select own" on public.notification_settings
+  for select to authenticated
+  using (user_id = auth.uid());
+
+drop policy if exists "notification_settings insert own" on public.notification_settings;
+create policy "notification_settings insert own" on public.notification_settings
+  for insert to authenticated
+  with check (user_id = auth.uid());
+
+drop policy if exists "notification_settings update own" on public.notification_settings;
+create policy "notification_settings update own" on public.notification_settings
+  for update to authenticated
+  using (user_id = auth.uid())
+  with check (user_id = auth.uid());
+
+-- 오늘 이 사람에게 기한 알림을 보냈는가. 하루 한 번을 지키는 자물쇠다.
+--
+-- 기프티콘마다가 아니라 사람마다 적는다. 같은 날 알릴 것이 여럿이면 한 알림으로
+-- 묶어 보내기 때문이다. 시각을 바꿔도 그날은 다시 안 간다(이미 받았으면).
+--
+-- 발송 함수(서비스 롤)만 쓰고 읽는다. 정책을 두지 않아 브라우저에서는 안 보인다.
+create table if not exists public.expiry_push_log (
+  user_id uuid not null references auth.users(id) on delete cascade,
+  sent_on date not null,
+  primary key (user_id, sent_on)
+);
+
+alter table public.expiry_push_log enable row level security;
+
 -- ===================== 가족 참여 신청 =====================
 
 -- 초대 코드만 알면 바로 들어올 수 있으면, 코드를 마구 넣어보다 우연히 맞힌 사람도 그 가족의

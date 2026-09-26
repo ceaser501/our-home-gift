@@ -1,6 +1,9 @@
--- 유효기한 임박 푸시 알림을 하루 두 번(오전 9시 / 오후 3시, 한국시간) 자동으로
--- 보내도록 예약하는 SQL입니다. Supabase SQL Editor에서 **그대로** 실행하세요 —
--- 고쳐 넣을 곳이 없습니다.
+-- 유효기한 임박 푸시 알림을 매시 정각에 부르도록 예약하는 SQL입니다.
+-- Supabase SQL Editor에서 **그대로** 실행하세요 — 고쳐 넣을 곳이 없습니다.
+--
+-- 매시간 부르는 것은 사람마다 알림 받을 시각(오전 7시~밤 10시, 기본 9시)을 고르기
+-- 때문이다. 함수가 "지금이 이 사람의 시각인가, 오늘 이미 받았나"를 가려서 하루 한 번만
+-- 보낸다. 받을 사람이 없는 시각에는 조회 몇 번 하고 끝난다.
 --
 -- ── ⚠️ 먼저 한 번만 — 비밀값을 Vault에 넣는다 ─────────────────────────────────
 -- 발송 함수(send-expiry-notifications)는 x-cron-secret 헤더가 Edge Function 비밀값
@@ -23,35 +26,21 @@
 -- 꺼내 쓴다. cron.job 테이블에는 비밀값이 아니라 '꺼내 오는 문장'만 남는다.
 --
 -- 실행 전에 Supabase 대시보드에서 pg_cron, pg_net 확장이 켜져 있어야 합니다.
--- 한국시간(KST, UTC+9) 오전 9시 = UTC 0시, 오후 3시 = UTC 6시라서 아래처럼 씁니다.
 -- 이미 예약돼 있으면 지우고 다시 만듭니다.
 
 select cron.unschedule(jobname)
 from cron.job
 where jobname in (
+  'send-expiry-notifications',
+  -- 하루 두 번(9시·15시) 돌던 예전 예약 둘과, push-test-once.sql로 끼워 넣었던 한 번짜리
   'send-expiry-notifications-morning',
   'send-expiry-notifications-afternoon',
-  -- push-test-once.sql로 끼워 넣었던 한 번짜리. 남아 있으면 지운다.
   'send-expiry-notifications-test'
 );
 
 select cron.schedule(
-  'send-expiry-notifications-morning',
-  '0 0 * * *',
-  $$
-  select net.http_post(
-    url := 'https://uxgaipzhlhyzwfegnrrj.supabase.co/functions/v1/send-expiry-notifications',
-    headers := jsonb_build_object(
-      'Content-Type', 'application/json',
-      'x-cron-secret', (select decrypted_secret from vault.decrypted_secrets where name = 'cron_secret')
-    )
-  );
-  $$
-);
-
-select cron.schedule(
-  'send-expiry-notifications-afternoon',
-  '0 6 * * *',
+  'send-expiry-notifications',
+  '0 * * * *',
   $$
   select net.http_post(
     url := 'https://uxgaipzhlhyzwfegnrrj.supabase.co/functions/v1/send-expiry-notifications',

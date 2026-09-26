@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { BellRing } from 'lucide-react';
+import { BellRing, Clock } from 'lucide-react';
 import { isPushSupported, isPushEnabled, subscribeToPush, unsubscribeFromPush } from '../push';
 import { isNativePushSupported, isNativePushEnabled, enableNativePush, disableNativePush } from '../nativePush';
 import { useFamily } from '../FamilyContext';
 import AlertDialog from './AlertDialog';
-import { SettingSwitchRow } from './SettingRow';
+import { SettingLinkRow, SettingSwitchRow } from './SettingRow';
+import ExpiryHourSheet, { DEFAULT_EXPIRY_HOUR, formatHour } from './ExpiryHourSheet';
 
 // onChange는 켜짐/꺼짐이 바뀐 걸 바깥에도 알려준다. 같은 창의 '알림 테스트' 줄이
 // 이 상태를 함께 보여주는데, 여기서만 알고 있으면 그쪽이 낡은 값을 계속 띄운다.
@@ -20,6 +21,9 @@ export default function NotificationToggle({ asRow = false, onChange }) {
   const [enabled, setEnabled] = useState(false);
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState(null);
+  // 알림 받을 시각. 설정 줄에서만 쓴다(헤더의 종 버튼에는 없다).
+  const [hour, setHour] = useState(DEFAULT_EXPIRY_HOUR);
+  const [picking, setPicking] = useState(false);
 
   useEffect(() => {
     // 가족 아이디까지 넘긴다. 토큰이 갈렸을 때 조용히 다시 적어두는 데 쓴다
@@ -27,6 +31,16 @@ export default function NotificationToggle({ asRow = false, onChange }) {
     (native ? isNativePushEnabled(user.id, family.id) : isPushEnabled())
       .then(apply)
       .catch(() => apply(false));
+    // 못 읽으면 기본값(9시)을 보여준다. 서버도 줄이 없으면 9시로 보낸다.
+    //
+    // api는 필요할 때 불러온다. 헤더의 종 버튼도 이 부품이라, 거기까지 DB 모듈을
+    // 끌고 다닐 이유가 없다.
+    if (asRow) {
+      import('../api')
+        .then((api) => api.getExpiryHour?.(user.id))
+        .then((value) => value && setHour(value))
+        .catch(() => {});
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -74,6 +88,27 @@ export default function NotificationToggle({ asRow = false, onChange }) {
           onToggle={handleToggle}
           disabled={loading}
         />
+        {/* 켜져 있을 때만 시각을 고르게 한다. 꺼진 채로 시각을 고르면 "골랐는데 왜 안
+            오지"가 된다. */}
+        {enabled && (
+          <SettingLinkRow
+            icon={Clock}
+            label="알림 시간"
+            hint={`매일 ${formatHour(hour)} · 기한 7일 전부터`}
+            onClick={() => setPicking(true)}
+          />
+        )}
+        {picking && (
+          <ExpiryHourSheet
+            value={hour}
+            onPick={async (next) => {
+              const api = await import('../api');
+              await api.setExpiryHour(user.id, next);
+              setHour(next);
+            }}
+            onClose={() => setPicking(false)}
+          />
+        )}
         {dialogs}
       </>
     );

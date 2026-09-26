@@ -775,3 +775,24 @@ export async function releaseGifticon(id) {
   const { error } = await supabase.rpc('release_gifticon', { gid: id });
   if (error) throw new Error(error.message || '찜을 풀지 못했어요.');
 }
+
+// 사용기한 알림을 받을 시각(한국시간 정시, 7~22). 고른 적이 없으면 오전 9시다.
+// 발송 함수(send-expiry-notifications)가 매시 정각에 이 값과 지금 시각을 견준다.
+const DEFAULT_EXPIRY_HOUR = 9;
+
+export async function getExpiryHour(userId) {
+  const { data, error } = await supabase
+    .from('notification_settings')
+    .select('expiry_hour')
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data?.expiry_hour ?? DEFAULT_EXPIRY_HOUR;
+}
+
+export async function setExpiryHour(userId, hour) {
+  const { error } = await supabase
+    .from('notification_settings')
+    .upsert({ user_id: userId, expiry_hour: hour, updated_at: new Date().toISOString() });
+  if (error) throw new Error(error.message);
+}
