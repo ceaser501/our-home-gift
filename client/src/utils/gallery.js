@@ -433,15 +433,45 @@ export function undismissImages(ids) {
   }
 }
 
-// 안드로이드 앱에서만 된다.
+// 앱에서만 된다. 브라우저에는 기기의 사진첩을 훑는 API가 없다.
 //
-// 브라우저에는 기기의 사진 폴더를 훑는 API가 없다. 아이폰은 앱이어도 안 된다 — iOS의
-// 사진은 파일 경로로 접근하는 폴더가 아니라 사진 라이브러리(PHPhotoLibrary) 안의
-// 자산이고, '스크린샷'도 폴더가 아니라 시스템이 자동으로 묶어주는 앨범이다. 읽으려면
-// 별도의 iOS 플러그인이 필요한데 아직 없다. 그래서 여기서 미리 잘라, 아이폰에서
-// 버튼만 보였다가 눌러야 안 된다는 걸 알게 되는 일이 없게 한다.
+// 아이폰은 2026-09-27에 붙었다(app/ios/App/App/GalleryPlugin.swift). 안드로이드와 같은
+// 이름·같은 메서드라 아래 코드는 폰을 가리지 않는다. 다른 점은 폴더가 없다는 것 하나 —
+// 아이폰은 카톡에서 저장한 것도 한 사진첩에 섞여서, 폴더 대신 기간으로만 자른다.
 export function isGalleryScanSupported() {
-  return isNativeApp() && window.Capacitor?.getPlatform?.() === 'android';
+  const platform = window.Capacitor?.getPlatform?.();
+  return isNativeApp() && (platform === 'android' || platform === 'ios');
+}
+
+// 훑는 기간. 기본은 설치한 날 0시부터이고, 더 예전 것을 찾고 싶을 때만 늘린다.
+//
+// 기본을 설치일로 두는 것은 안드로이드에서 쓰던 규칙 그대로다. 앱을 깔기 전에 쌓인
+// 사진은 대개 이미 쓴 것이고, 수천 장을 처음부터 훑으면 몇 분이 걸린다.
+// 늘리는 칸은 둘뿐이다(1개월·3개월). 칸이 많으면 고르는 일이 일이 된다.
+export const SCAN_RANGES = [
+  { key: '1m', label: '최근 1개월', days: 30 },
+  { key: '3m', label: '최근 3개월', days: 90 },
+];
+
+const DAY_SECONDS = 24 * 60 * 60;
+
+function rangeSince(range, installedAt) {
+  const option = SCAN_RANGES.find((item) => item.key === range);
+  if (!option) return 0; // 0이면 네이티브가 설치한 날 0시로 푼다
+  // 그날 0시로 내린다. 화면에 '9월 1일 0시 이후'로 적히고, 한나절 중간에서 잘리지 않는다.
+  const day = new Date(Date.now() - option.days * DAY_SECONDS * 1000);
+  day.setHours(0, 0, 0, 0);
+  const back = Math.floor(day.getTime() / 1000);
+  // 설치일보다 뒤로 좁아지는 일은 없게 한다. 석 달 전에 깐 사람의 '최근 1개월'은
+  // 기본보다 짧아서, 누르면 덜 보게 된다.
+  return installedAt > 0 ? Math.min(installedAt, back) : back;
+}
+
+// 지금 고를 수 있는 기간. 설치일보다 더 예전으로 가는 것만 보여준다 — 석 달 전에 깐
+// 사람에게 '최근 3개월'은 이미 보고 있는 범위라 눌러도 달라지는 것이 없다.
+export function scanRangeOptions(installedAt) {
+  const now = Math.floor(Date.now() / 1000);
+  return SCAN_RANGES.filter((item) => !installedAt || now - item.days * DAY_SECONDS < installedAt);
 }
 
 // 앱 설정 화면을 열 수 있는가. 앱이면 두 폰 다 된다.
@@ -1283,7 +1313,14 @@ async function collect({ images, read: readImage, pass, isRegistered, skipCodes,
  * 여기서는 '바코드 없음'을 적지 않는다. 아직 다 본 것이 아니라서, 지금 적으면 깊은 판이
  * 그 사진들을 영영 못 본다.
  */
-export async function scanGallery({ isRegistered, onProgress, onCandidate, signal } = {}) {
+// 네이티브에서 목록으로 받아오는 장수. 실제로 읽는 것은 이 중 새것 MAX_IMAGES장이다.
+//
+// 목록을 넉넉히 받는 이유: 최신 200장만 받으면, 그 200장을 이미 다 본 뒤에는 더 예전
+// 사진에 영영 닿지 못한다. 넉넉히 받아 본 것을 빼고 나서 200장을 고른다. 한 번에 다 못
+// 봤으면 남은 장수를 돌려주고, 다음에 이어서 본다.
+const LIST_LIMIT = 2000;
+
+export async function scanGallery({ isRegistered, onProgress, onCandidate, signal, range = 'install' } = {}) {
   const status = await getGalleryStatus();
   if (!status.supported) return { supported: false, candidates: [] };
   if (!status.granted && !status.partial) return { ...status, candidates: [], needsPermission: true };
@@ -1295,18 +1332,23 @@ export async function scanGallery({ isRegistered, onProgress, onCandidate, signa
   //
   // id는 문자열로 주고받는다. 숫자로 보내면 Capacitor가 32비트에 들어가는 값을 Integer로
   // 파싱하는데, 네이티브의 call.getLong()은 정확히 Long일 때만 값을 돌려준다.
+  //
+  // range를 늘리면(1개월·3개월) 그만큼 앞에서부터 본다. 아이폰은 buckets를 쓰지 않는다 —
+  // 폴더가 없어서 기간으로만 자른다(GalleryPlugin.swift).
   const { images = [], since = 0, folders = [] } = await MoaconGallery.listImages({
     buckets: BUCKETS,
-    limit: MAX_IMAGES,
-    since: '0',
+    limit: LIST_LIMIT,
+    since: String(rangeSince(range, status.installedAt || 0)),
   });
 
   // 아니라고 치운 것과, 바코드가 없다고 이미 확인된 것은 읽지 않는다.
   const dismissed = readIdSet(DISMISSED_KEY);
   const noBarcode = readIdSet(NO_BARCODE_KEY);
-  const fresh = images.filter(
+  const unseen = images.filter(
     (image) => !dismissed.has(String(image.id)) && !noBarcode.has(String(image.id))
   );
+  const fresh = unseen.slice(0, MAX_IMAGES);
+  const more = unseen.length - fresh.length;
 
   const { candidates, missed, knownCodes, readFailed } = await collect({
     images: fresh,
@@ -1333,7 +1375,7 @@ export async function scanGallery({ isRegistered, onProgress, onCandidate, signa
   // 안내에는 계속 나와야 한다(readBarsRemembered 주석 참고).
   const barsRemembered = readBarsRemembered().filter((entry) => !dismissed.has(String(entry.id)));
 
-  return { ...status, candidates, pending: missed, scanned: fresh.length, since, folders, tally, barsRemembered };
+  return { ...status, candidates, pending: missed, scanned: fresh.length, more, since, folders, tally, barsRemembered };
 }
 
 /**

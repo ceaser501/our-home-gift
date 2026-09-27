@@ -18,6 +18,9 @@ vi.mock('../utils/gallery', async () => {
     // 폴더 이름 정리처럼 사진첩을 안 건드리는 것은 진짜를 쓴다.
     FOLDERS: actual.FOLDERS,
     summarizeFolders: actual.summarizeFolders,
+    scanRangeOptions: actual.scanRangeOptions,
+    canOpenAppSettings: vi.fn(() => false),
+    openAppSettings: vi.fn(),
     getGalleryStatus: vi.fn(async () => ({ supported: true, granted: true, partial: false })),
     requestGalleryAccess: vi.fn(async () => ({ supported: true, granted: true, partial: false })),
     scanGallery: (...args) => scanGallery(...args),

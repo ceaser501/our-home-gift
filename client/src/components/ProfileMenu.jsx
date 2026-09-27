@@ -195,7 +195,7 @@ export default function ProfileMenu({ onClose }) {
             {/* 켜두면 앱을 열 때 바로 찾아준다. 받아둔 기프티콘을 넣는 게 이 앱에 들어오는
                 이유라, 그걸 매번 눌러서 시작하게 할 이유가 없다. 다만 사진을 보는 일이라
                 기본은 꺼두고 사용자가 켜게 한다.
-                (아이폰에는 이 줄이 없다. 사진첩을 훑는 길이 안드로이드에만 있다.) */}
+                (웹에는 이 줄이 없다. 사진첩을 훑는 길이 앱에만 있다.) */}
             {scanSupported && (
               <SettingSwitchRow
                 icon={ScanSearch}

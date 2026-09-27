@@ -30,6 +30,7 @@ import {
   openAppSettings,
   requestGalleryAccess,
   scanGallery,
+  scanRangeOptions,
   summarizeFolders,
   undismissImages,
 } from '../utils/gallery';
@@ -37,6 +38,7 @@ import { createGifticon, findGifticonByCode, removeImages, uploadGifticonImages 
 import { prepareImages, readGifticonInfo } from '../utils/imageAnalyze';
 import { useFamily } from '../FamilyContext';
 import useBackClose from '../utils/useBackClose';
+import { isIosApp } from '../utils/browser';
 import { todayStr } from '../utils/date';
 import { cn } from '@/lib/utils';
 
@@ -573,7 +575,7 @@ function formatWon(amount) {
 // files를 주면 사진첩을 훑는 대신 그 사진들을 묶는다. 그 뒤는 완전히 같은 길이다 —
 // 후보를 읽히고, 목록을 보여주고, 한꺼번에 넣는다.
 //
-// 화면을 둘로 나누지 않은 이유가 있다. 아이폰에서는 사진첩을 훑을 수 없어서
+// 화면을 둘로 나누지 않은 이유가 있다. 사진첩을 훑을 수 없는 곳(웹, 권한이 없는 폰)에서는
 // (isGalleryScanSupported) 직접 고르는 이 길이 유일한 다건 경로가 된다. 둘이 다른
 // 화면이면 안드로이드 사용자와 아이폰 사용자가 서로 다른 것을 배워야 하고, 우리도 같은
 // 것을 두 벌 고쳐야 한다.
@@ -621,6 +623,11 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
   const [scanned, setScanned] = useState(0);
   // 실제로 어느 시각 이후를 봤는지(초). 화면에 적어주기 위한 값이다.
   const [since, setSince] = useState(0);
+  // 훑은 기간('install' | '1m' | '3m')과 설치한 날(초). 더 예전 것을 찾는 버튼을 그린다.
+  const [range, setRange] = useState('install');
+  const [installedAt, setInstalledAt] = useState(0);
+  // 한 번에 다 못 보고 남은 장수. 다음 훑기가 이어서 본다.
+  const [more, setMore] = useState(0);
   // 기기에 실제로 있는 폴더 이름과 장수. 못 찾았을 때 이유를 짚어주기 위한 값이다.
   const [folders, setFolders] = useState([]);
   const [tally, setTally] = useState(null);
@@ -713,8 +720,12 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function start() {
+  // nextRange: 기간을 늘려 다시 훑을 때만 준다. 없으면 지난번 기간 그대로다
+  // ('이어서 찾기'가 그렇게 부른다).
+  async function start(nextRange) {
     setError('');
+    const scanRange = typeof nextRange === 'string' ? nextRange : range;
+    setRange(scanRange);
     if (!picked) {
       const status = await requestGalleryAccess();
       if (!status.granted && !status.partial) {
@@ -722,6 +733,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
         return;
       }
       setPartial(Boolean(status.partial));
+      setInstalledAt(status.installedAt || 0);
     }
     setStage('scanning');
     setComplete(false);
@@ -795,6 +807,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
             onProgress: setProgress,
             onCandidate,
             isRegistered,
+            range: scanRange,
           });
       if (controller.signal.aborted) return;
 
@@ -843,6 +856,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
       setMissedShots([...pending, ...remembered]);
       setScanned(scan.scanned ?? 0);
       setSince(scan.since ?? 0);
+      setMore(scan.more ?? 0);
       setFolders(scan.folders ?? []);
       setTally(scan.tally ?? null);
       setComplete(true);
@@ -1985,8 +1999,43 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                   겁주는 문장이 한 줄 더 붙어 있을 이유가 없다. */}
               <b className="font-semibold text-foreground">{formatDay(since)} 0시</b> 이후 사진만 봐요.
               <br />
-              이전 사진은 + 로 올려주세요.
+              {more > 0
+                ? `아직 못 본 사진이 ${more}장 남았어요.`
+                : scanRangeOptions(installedAt).length > 0
+                  ? '더 예전 사진도 찾을 수 있어요.'
+                  : '이전 사진은 + 로 올려주세요.'}
             </p>
+          </div>
+        )}
+
+        {/* 더 예전 것 찾기 / 이어서 찾기.
+            기본은 설치한 날부터라 그 전에 받아둔 기프티콘은 안 나온다. 그걸 찾는 길을
+            여기 둔다 — 설정 깊은 곳에 두면 "예전 건 왜 안 나오지"에서 멈춘다.
+            한 번에 200장까지만 보므로, 남은 것이 있으면 이어서 보는 버튼이 먼저다. */}
+        {!picked && complete && stage === 'done' && (more > 0 || scanRangeOptions(installedAt).length > 0) && (
+          <div className="mx-5 mt-2 flex flex-wrap gap-2">
+            {more > 0 ? (
+              <Button type="button" variant="outline" className="h-10 flex-1 rounded-[11px] text-[14px] font-semibold" onClick={() => start(range)}>
+                이어서 찾기
+              </Button>
+            ) : (
+              scanRangeOptions(installedAt).map((option) => (
+                <Button
+                  key={option.key}
+                  type="button"
+                  variant="outline"
+                  aria-pressed={range === option.key}
+                  className={
+                    range === option.key
+                      ? 'h-10 flex-1 rounded-[11px] border-primary text-[14px] font-semibold text-primary'
+                      : 'h-10 flex-1 rounded-[11px] text-[14px] font-semibold'
+                  }
+                  onClick={() => start(option.key)}
+                >
+                  {option.label}
+                </Button>
+              ))
+            )}
           </div>
         )}
 
@@ -2042,7 +2091,15 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
               {/* 버튼이 설정 화면까지 데려다주고, 그 위 한 줄이 거기서 무엇을 누를지
                   말해준다. 글만 두면 그 화면을 찾아가는 데서 헤맨다. */}
               <p className="m-0 text-sm leading-relaxed break-keep text-muted-foreground">
-                권한 → <b className="font-semibold text-foreground">사진</b>에서 허용할 수 있어요.
+                {isIosApp() ? (
+                  <>
+                    사진 → <b className="font-semibold text-foreground">전체 접근</b>으로 바꿀 수 있어요.
+                  </>
+                ) : (
+                  <>
+                    권한 → <b className="font-semibold text-foreground">사진</b>에서 허용할 수 있어요.
+                  </>
+                )}
               </p>
               {canOpenAppSettings() && (
                 <Button type="button" size="lg" className="w-full rounded-xl" onClick={openAppSettings}>
@@ -2357,13 +2414,28 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
 
           {isListing && (
             <>
-              {/* 안드로이드 14의 "선택한 사진만 허용"이면 사용자가 고른 몇 장만 보인다.
-                  폴더를 훑는다는 전제가 깨지므로, 못 찾았을 때 왜 그런지 알려줘야 한다. */}
+              {/* "선택한 사진만 허용"(안드로이드 14, 아이폰)이면 사용자가 고른 몇 장만
+                  보인다. 새로 저장한 기프티콘은 안 보여서 자동 찾기가 되지 않는다.
+
+                  「사진을 모두 볼 수 있게」라고 쓰지 않는다 — 개인정보를 통째로 내놓으라는
+                  말로 들린다. 무엇을 하려는지(자동 찾기)를 앞에 두고, 무엇만 가져가는지
+                  (바코드 있는 사진)를 뒤에 둔다. 이름은 설정 화면의 스위치와 같게 둬서
+                  같은 기능인 줄 알아보게 한다. 2026-09-27에 태수님과 정한 A안이다. */}
               {partial && (
-                <p className="m-0 rounded-xl bg-warning/10 px-3.5 py-3 text-sm leading-relaxed break-keep text-muted-foreground">
-                  <b className="font-semibold text-foreground">선택한 사진만 허용</b>이라 고르신 사진에서만
-                  찾았어요. 설정에서 &lsquo;모두 허용&rsquo;으로 바꿀 수 있어요.
-                </p>
+                <div className="flex flex-col gap-2.5 rounded-xl bg-accent px-3.5 py-3">
+                  <p className="m-0 text-sm leading-relaxed break-keep text-muted-foreground">
+                    <b className="font-semibold text-foreground">기프티콘 자동 찾기를 쓰려면</b>
+                    <br />
+                    설정에서 사진 접근을 &lsquo;{isIosApp() ? '전체 접근' : '모두 허용'}&rsquo;으로 바꿔주세요.
+                    <br />
+                    바코드 있는 사진만 골라 가져와요.
+                  </p>
+                  {canOpenAppSettings() && (
+                    <Button type="button" className="h-10 w-full rounded-[11px] text-[14px] font-semibold" onClick={openAppSettings}>
+                      설정 열기
+                    </Button>
+                  )}
+                </div>
               )}
 
               {error && <p className="m-0 text-sm text-destructive">{error}</p>}

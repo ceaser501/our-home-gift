@@ -76,7 +76,7 @@ export default function WelcomeSetupScreen({ familyId, userId, onDone }) {
     onDone();
   }
 
-  // 제목이 개수를 센다. 아이폰에는 사진첩 찾기가 없어서 하나가 빠진다.
+  // 제목이 개수를 센다. 웹에는 사진첩 찾기가 없어서 하나가 빠진다.
   const count = (scanAvailable ? 1 : 0) + (pushAvailable ? 1 : 0) + 1;
   const countWord = { 1: '한', 2: '두', 3: '세' }[count] || String(count);
 
