@@ -6,6 +6,7 @@ import StoreDetailSheet from './StoreDetailSheet';
 import { searchNearbyStores } from '../api';
 import { openTmapRoute } from '../utils/tmap';
 import { canOpenAppSettings, openAppSettings } from '../utils/gallery';
+import { isIosApp } from '../utils/browser';
 import {
   SIGNIFICANT_MOVE_M,
   distanceBetween,
@@ -194,7 +195,7 @@ export default function NearbyStoresSheet({ gifticon, onClose }) {
               <div className="flex w-full flex-col gap-1.5 rounded-[13px] bg-secondary px-[15px] py-[13px]">
                 <p className="m-0 text-[13px] font-bold tracking-[-0.01em] text-foreground/80">켜는 방법</p>
                 <p className="m-0 text-[13.5px] leading-relaxed font-medium break-keep text-foreground/70">
-                  위치 → <b className="font-bold text-foreground">앱 사용 중에만 허용</b>
+                  위치 → <b className="font-bold text-foreground">{isIosApp() ? '앱을 사용하는 동안' : '앱 사용 중에만 허용'}</b>
                 </p>
               </div>
             )}

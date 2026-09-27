@@ -11,7 +11,7 @@ vi.mock('../api', () => ({
   searchNearbyStores: (...args) => searchNearbyStores(...args),
 }));
 
-vi.mock('../utils/browser', () => ({ isNativeApp: () => true }));
+vi.mock('../utils/browser', () => ({ isNativeApp: () => true, isIosApp: () => false }));
 
 const canOpenAppSettings = vi.fn(() => true);
 const openAppSettings = vi.fn();

@@ -13,7 +13,7 @@ import {
   NEARBY_BANNER_EVENT,
 } from "../utils/geolocation";
 import { todayStr } from "../utils/date";
-import { isNativeApp } from "../utils/browser";
+import { isIosApp, isNativeApp } from "../utils/browser";
 import { canOpenAppSettings, openAppSettings } from "../utils/gallery";
 
 // "지금 이 근처에서 쓸 수 있는 게 있다"를 알려주는 상단 띠.
@@ -516,8 +516,9 @@ export default function NearbyBanner({ gifticons, onPick }) {
             아니다. 어디서 무엇을 켜면 되는지만 적는다. 설정 화면을 못 여는 브라우저
             에서는 어디로 가야 하는지가 이 한 줄뿐이라 조금 더 자세히 적는다. */}
         <span className="min-w-0 flex-1 text-[13.5px] leading-normal font-medium break-keep text-foreground/80">
+          {/* 켜는 자리의 이름이 두 폰에서 다르다. 아이폰 설정은 '앱을 사용하는 동안'이다. */}
           {canOpen
-            ? '설정에서 위치 권한을 켜주세요. 위치 → 앱 사용 중에만 허용.'
+            ? `설정에서 위치 권한을 켜주세요. 위치 → ${isIosApp() ? '앱을 사용하는 동안' : '앱 사용 중에만 허용'}.`
             : '브라우저 주소창의 자물쇠를 눌러 위치를 허용해주세요.'}
         </span>
         {canOpen && (

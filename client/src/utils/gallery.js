@@ -444,9 +444,13 @@ export function isGalleryScanSupported() {
   return isNativeApp() && window.Capacitor?.getPlatform?.() === 'android';
 }
 
-// 앱 설정 화면을 열 수 있는가. 안드로이드 앱에서만 된다.
+// 앱 설정 화면을 열 수 있는가. 앱이면 두 폰 다 된다.
+//
+// 같은 플러그인(MoaconGallery)에 들어 있다. 아이폰 쪽은 갤러리 훑기 1단계에서 먼저
+// 만들었다(app/ios/App/App/GalleryPlugin.swift) — 사진첩을 훑기 전에도 위치나 카메라를
+// 거절한 사람을 설정으로 보내는 데 쓸 수 있어서다.
 export function canOpenAppSettings() {
-  return isGalleryScanSupported();
+  return isNativeApp();
 }
 
 /**
