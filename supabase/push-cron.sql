@@ -47,7 +47,11 @@ select cron.schedule(
     headers := jsonb_build_object(
       'Content-Type', 'application/json',
       'x-cron-secret', (select decrypted_secret from vault.decrypted_secrets where name = 'cron_secret')
-    )
+    ),
+    -- 기본 5초로는 모자랐다. 처음 깨어나는 데만 몇 초가 걸려서, 함수는 200으로
+    -- 끝냈는데 기록에는 '시간 초과'로 남았다(2026-09-27 20시 첫 실행). 발송이 몰리는
+    -- 아침에는 더 걸린다.
+    timeout_milliseconds := 60000
   );
   $$
 );
