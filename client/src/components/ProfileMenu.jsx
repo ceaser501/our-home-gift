@@ -16,7 +16,7 @@ import {
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { SettingLinkRow, SettingSection, SettingSwitchRow } from './SettingRow';
-import ThemeToggle from './ThemeToggle';
+// import ThemeToggle from './ThemeToggle';  // 다크모드 줄을 되살릴 때 함께 푼다(아래 '설정' 구역)
 import NotificationToggle from './NotificationToggle';
 import UsageReportSheet from './UsageReportSheet';
 import NoticesSheet from './NoticesSheet';
@@ -209,26 +209,6 @@ export default function ProfileMenu({ onClose }) {
               />
             )}
 
-            <NotificationToggle asRow />
-
-            {/* 목록 위에 뜨는 '이 근처에 쓸 수 있는 게 있어요' 띠. 띠의 X는 그날 하루만
-                안 띄우는 것이라, 매일 닫는 사람에게는 매일 닫는 일이 남았다.
-
-                기본은 켜짐이다. 이미 준 위치만 쓰고, 앱을 여는 이유 자체가 '지금 쓸 게
-                있나'라서 위 자동 찾기(사진첩을 훑는 일)와는 무게가 다르다. */}
-            <SettingSwitchRow
-              icon={MapPin}
-              label="내 주변 안내"
-              hint="근처에서 쓸 수 있으면 알려드려요"
-              on={nearby}
-              onToggle={() => {
-                setNearby(!nearby);
-                setNearbyBannerOn(!nearby);
-              }}
-            />
-
-            <ThemeToggle asRow />
-
             {/* 찾기 결과 화면 아래에 있던 '전부 다시 찾기'를 여기로 옮겼다.
                 거기서는 등록 버튼 바로 밑이라, 넣으려고 연 사람 손에 128장을 다시 읽는
                 버튼이 닿았다. 실제로 쓰는 때는 '기프티콘 아님'을 잘못 눌렀을 때뿐이라
@@ -250,6 +230,31 @@ export default function ProfileMenu({ onClose }) {
                 onClick={() => setForgetAsking(true)}
               />
             )}
+
+            {/* 줄 차례: 찾기 둘 → 알림 둘 → 주변 안내. 같은 일끼리 붙여 둔다(2026-09-27).
+                '전부 다시 찾기'가 맨 아래에 따로 떨어져 있으면 무엇을 다시 찾는지 안 읽혔다. */}
+            <NotificationToggle asRow />
+
+            {/* 목록 위에 뜨는 '이 근처에 쓸 수 있는 게 있어요' 띠. 띠의 X는 그날 하루만
+                안 띄우는 것이라, 매일 닫는 사람에게는 매일 닫는 일이 남았다.
+
+                기본은 켜짐이다. 이미 준 위치만 쓰고, 앱을 여는 이유 자체가 '지금 쓸 게
+                있나'라서 위 자동 찾기(사진첩을 훑는 일)와는 무게가 다르다. */}
+            <SettingSwitchRow
+              icon={MapPin}
+              label="내 주변 안내"
+              hint="근처에서 쓸 수 있으면 알려드려요"
+              on={nearby}
+              onToggle={() => {
+                setNearby(!nearby);
+                setNearbyBannerOn(!nearby);
+              }}
+            />
+
+            {/* 다크모드는 잠시 가린다(2026-09-27). 설정 줄이 많아 보였고, 이 앱을 쓰는 일과
+                상관없는 취향이라 먼저 뺐다. 부품(ThemeToggle)과 저장된 값은 그대로라
+                이 줄만 되살리면 돌아온다.
+            <ThemeToggle asRow /> */}
           </SettingSection>
 
           {/* 배너를 닫아도 여기서는 늘 다시 볼 수 있어야 한다. 배너에만 있으면

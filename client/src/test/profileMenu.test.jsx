@@ -99,10 +99,24 @@ describe('내 메뉴', () => {
   it('켜고 끄는 줄은 모두 스위치다', () => {
     render(<ProfileMenu onClose={() => {}} />);
 
-    for (const label of ['다크 모드', '사용기한 알림', '기프티콘 자동 찾기']) {
+    for (const label of ['사용기한 알림', '기프티콘 자동 찾기', '내 주변 안내']) {
       expect(row(label).getAttribute('role')).toBe('switch');
       expect(row(label).getAttribute('aria-checked')).toBeTruthy();
     }
+  });
+
+  // 2026-09-27: 설정 줄이 많아 보여서 같은 일끼리 붙이고 다크모드는 잠시 가렸다.
+  it('설정 줄 차례: 찾기 둘 → 알림 → 주변 안내, 다크모드는 없다', () => {
+    render(<ProfileMenu onClose={() => {}} />);
+
+    const order = ['기프티콘 자동 찾기', '전부 다시 찾기', '사용기한 알림', '내 주변 안내']
+      .map((label) => screen.queryByText(label))
+      .filter(Boolean);
+    for (let i = 1; i < order.length; i++) {
+      // 앞 줄이 뒤 줄보다 문서에서 먼저 나온다
+      expect(order[i - 1].compareDocumentPosition(order[i]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    }
+    expect(screen.queryByText('다크 모드')).toBeNull();
   });
 
   // 이름이 카드에 크게 적혀 있는데 아래 줄에서 또 보여주고 있었다.
