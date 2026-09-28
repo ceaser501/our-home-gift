@@ -328,6 +328,15 @@ store-release.md 6장). 09류에 앱이 들어 있어 자리는 겹치는데, �
 지원 URL로 쓰는 intro.html에 문의 이메일을 넣었다 — `client/public/intro.html:576`.
 사용자가 도움을 받을 곳이 적혀 있어야 하는 칸이라 비워둘 수 없었다.
 
+## 이 버전의 새로운 기능 — 1.0.2
+
+```
+• 사진첩에서 기프티콘을 찾아 한 번에 등록할 수 있어요
+• 찾은 결과를 등록 · 등록불가 · 이미 등록 · 제외로 나눠 보여줘요
+• 기프티콘을 내 사진첩에 저장할 수 있어요
+• 앱을 켤 때마다 위치 허용 창이 뜨던 문제를 고쳤어요
+```
+
 ## 앱 심사 정보 — 메모
 
 ```
@@ -336,8 +345,11 @@ store-release.md 6장). 09류에 앱이 들어 있어 자리는 겹치는데, �
 
 로그인하면 「테스트 가족」과 등록된 기프티콘 3개가 바로 보입니다.
 
-사진첩을 훑어 기프티콘을 찾아주는 기능은 안드로이드 전용입니다.
-iOS에서는 사진을 직접 골라 등록합니다.
+사진첩 찾기: 목록 오른쪽 아래 + 위의 돋보기 버튼, 또는 내 메뉴 →
+「기프티콘 자동 찾기」. 사진 전체 접근을 주면 설치한 날 이후 사진을 폰 안에서 보고,
+바코드가 있는 사진만 골라 정보를 읽습니다. 나머지 사진은 폰 밖으로 나가지 않습니다.
+
+사진 저장: 기프티콘 카드 ⋮ → 「저장」. 사진 추가 권한만 씁니다.
 
 위치 권한은 주변 매장을 찾는 그 순간에만 쓰고 저장하지 않습니다.
 ```
@@ -411,6 +423,12 @@ Play에서는 같은 답으로 전체이용가가 나왔다.
 메모 칸은 4,000자까지다. 아래 글은 3,635자라 그대로 들어간다. 처음 쓴 글은 4,125자였고
 거절당했다 — 여섯 항목을 하나도 빼지 않고 문장만 줄여 맞췄다.
 
+**1.0.2(2026-09-28)에 3번과 4번을 고쳤다.** 영상 링크를 넣어도 4,000자 안에 들도록
+새 문장은 짧게 줄였다. 아이폰에도 사진첩 찾기와 저장이 들어가서,
+"사진첩 훑기는 안드로이드 전용"이던 문장을 빼고 두 기능을 어떻게 쓰는지 적었다.
+Anthropic 줄에도 사진첩 찾기로 보내는 경우를 더했다. 메모 칸의 글을 이 판으로 통째로
+바꾼다.
+
 메모 칸에 있던 한국어 안내는 지우고 이 글로 바꾼다. 담고 있던 내용(데모 계정 로그인,
 사진첩 훑기는 안드로이드 전용, 위치는 저장하지 않음)이 3번 항목에 다 들어 있어서 잃는
 것이 없고, 둘을 합치면 3,942자라 여유가 58자밖에 안 남는다. 심사팀이 읽는 글이니
@@ -461,16 +479,21 @@ right after signing in.
 - Usage history: profile menu (top right), then "사용 내역".
 - Delete account: profile menu, then "계정 삭제".
 
-Two notes. Scanning the photo library to find vouchers automatically is an
-Android-only feature; on iOS the user picks each photo. Location is used only at
-the moment a nearby store is searched, and is never stored.
+- Photo library scan: tap the magnifier button above "+". With full photo
+  access, photos added since install are checked on the device; only those with
+  a barcode are sent to read voucher details. Others never leave the device.
+- Save a voucher image: card menu, then "저장" (add-only photo permission).
+
+Location is used only at the moment a nearby store is searched, and is never
+stored.
 
 4. EXTERNAL SERVICES
 
 - Supabase - authentication, database, storage, serverless functions
 - Anthropic (Claude API) - reads the uploaded voucher image and extracts the
   product name, brand, price and expiry date. This is the AI service behind the
-  automatic fill. Images are sent only when the user uploads one.
+  automatic fill. Images are sent only when the user uploads one, or when the
+  photo-library scan finds a photo with a barcode.
 - Kakao - login, Kakao Map (store search and map), Kakao Mobility (routes),
   and Kakao share for invites
 - TMAP (SK Open API) - alternative route lookup
