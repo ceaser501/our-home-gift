@@ -154,7 +154,7 @@ export default function ProfileMenu({ onClose }) {
         {/* 이름은 여기 크게 적혀 있는데 아래 '내 정보 · 내 이름' 줄에서 또 보여주고 있었다.
             같은 값이 한 화면에 두 번 나온 셈이라, 그 줄을 걷고 바꾸는 길만 이 카드로 들인다.
             구역이 하나 줄었다. */}
-        <div className="mx-[18px] mb-3.5 flex items-center gap-3 rounded-[14px] bg-secondary/60 px-3.5 py-[13px]">
+        <div className="mx-[18px] mb-3.5 flex items-center gap-3 rounded-[14px] bg-secondary px-3.5 py-[13px]">
           <span
             className={`flex size-[46px] shrink-0 items-center justify-center rounded-full text-sm font-bold text-white ${
               memberTagColorClass(me) ?? OWNER_TAG_PALETTE[0]

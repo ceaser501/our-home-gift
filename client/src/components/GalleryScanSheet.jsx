@@ -721,11 +721,15 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
   //
   // 이미 목록에 있는 번호는 후보에서 뺀다. 기프티콘 사진은 지우지 않고 그대로
   // 두는 사람이 많아서, 이게 없으면 훑을 때마다 등록한 것들이 계속 다시 나온다.
-  async function checkRegistered(code) {
+  //
+  // image는 그 번호가 찍힌 사진(훑기가 읽은 그대로)이다. 다른 탭처럼 그림을 보여주려고
+  // 들고 있는다 — 등록된 쪽 사진을 서버에서 받아올 수도 있지만, 손에 있는 것을 쓰면
+  // 따로 다녀올 일이 없다.
+  async function checkRegistered(code, image) {
     try {
       const found = await findGifticonByCode(family.id, code);
       if (found && !knownRef.current.has(code)) {
-        knownRef.current.set(code, found);
+        knownRef.current.set(code, { ...found, image: image || null });
         setKnown([...knownRef.current.values()]);
       }
       return Boolean(found);
@@ -810,7 +814,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
 
     // 이미 목록에 있는 번호는 후보에서 뺀다. 기프티콘 사진은 지우지 않고 그대로
     // 두는 사람이 많아서, 이게 없으면 훑을 때마다 등록한 것들이 계속 다시 나온다.
-    const isRegistered = (code) => checkRegistered(code);
+    const isRegistered = (code, image) => checkRegistered(code, image);
 
     // 찾자마자 카드로 쌓는다. 한 장씩 차례로 도니 실제로 하나씩 늘어난다.
     const onCandidate = (candidate) => {
@@ -1819,7 +1823,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
             <button
               type="button"
               onClick={() => setEditingId(editing ? null : candidate.id)}
-              className="flex items-center justify-center gap-1.5 rounded-lg bg-muted px-2.5 py-2 text-sm font-semibold text-foreground"
+              className="flex items-center justify-center gap-1.5 rounded-lg bg-secondary px-2.5 py-2 text-sm font-semibold text-foreground"
             >
               <Pencil className="size-4" />
               {editing ? '접기' : '직접 채우기'}
@@ -1833,7 +1837,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
               type="button"
               disabled={retryingId === candidate.id}
               onClick={() => retryRead(candidate)}
-              className="flex items-center justify-center gap-1.5 rounded-lg bg-muted px-2.5 py-2 text-sm font-semibold text-foreground disabled:opacity-60"
+              className="flex items-center justify-center gap-1.5 rounded-lg bg-secondary px-2.5 py-2 text-sm font-semibold text-foreground disabled:opacity-60"
             >
               {retryingId === candidate.id ? (
                 <Loader2 className="size-4 animate-spin" />
@@ -1858,7 +1862,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
    */
   function renderFillForm(candidate) {
     return (
-      <div className="flex flex-col gap-2 rounded-lg bg-muted px-2.5 py-2.5">
+      <div className="flex flex-col gap-2 rounded-lg bg-secondary px-2.5 py-2.5">
         {candidate.missing?.map((field) => {
           const key = FIELD_KEYS[field];
           if (!key) return null;
@@ -1947,7 +1951,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                 <button
                   type="button"
                   onClick={() => setEditingId(editing ? null : candidate.id)}
-                  className="shrink-0 rounded-lg bg-muted px-2.5 py-1.5 text-sm font-semibold text-foreground"
+                  className="shrink-0 rounded-lg bg-secondary px-2.5 py-1.5 text-sm font-semibold text-foreground"
                 >
                   {editing ? '접기' : '채우기'}
                 </button>
@@ -1960,7 +1964,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                   disabled={retryingId === candidate.id}
                   onClick={() => retryRead(candidate)}
                   aria-label="다시 읽기"
-                  className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-foreground disabled:opacity-60"
+                  className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-secondary text-foreground disabled:opacity-60"
                 >
                   {retryingId === candidate.id ? (
                     <Loader2 className="size-4 animate-spin" />
@@ -2709,9 +2713,17 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                       <ul className="m-0 flex list-none flex-col rounded-[14px] border border-border px-3 py-0">
                         {known.map((gifticon) => (
                           <li key={gifticon.id} className="flex items-center gap-[11px] border-t border-border/40 py-2.5 first:border-t-0">
-                            <span className="flex size-9 shrink-0 items-center justify-center rounded-[9px] bg-success/12">
-                              <Check className="size-4 text-success" strokeWidth={2.6} />
-                            </span>
+                            {gifticon.image ? (
+                              <img
+                                src={`data:image/jpeg;base64,${gifticon.image}`}
+                                alt=""
+                                className="size-9 shrink-0 rounded-[9px] bg-secondary object-cover"
+                              />
+                            ) : (
+                              <span className="flex size-9 shrink-0 items-center justify-center rounded-[9px] bg-success/12">
+                                <Check className="size-4 text-success" strokeWidth={2.6} />
+                              </span>
+                            )}
                             <div className="flex min-w-0 flex-1 flex-col">
                               <span className="truncate text-sm text-muted-foreground">
                                 {[gifticon.brand, formatDate(gifticon.expires_at) && `${formatDate(gifticon.expires_at)}까지`]

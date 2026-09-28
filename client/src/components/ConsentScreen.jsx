@@ -147,7 +147,7 @@ export default function ConsentScreen({ userId, onDone }) {
         </div>
       </div>
 
-      <div className="flex flex-col gap-2 rounded-[13px] bg-secondary/60 px-4 py-3.5">
+      <div className="flex flex-col gap-2 rounded-[13px] bg-secondary px-4 py-3.5">
         <p className="m-0 text-[13px] font-bold text-foreground/70">미리 알려드려요</p>
         <ul className="m-0 flex list-none flex-col gap-1.5 p-0">
           {NOTICES.map((line) => (

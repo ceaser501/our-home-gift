@@ -203,7 +203,7 @@ export default function FamilyMembersSheet({ onClose }) {
             회색이다. 화면에 보라 카드는 하나만 — 위 승인 카드와 나란히 보라면 어느 쪽이
             급한지 알 수 없다. 테두리도 걷었다. 이 앱에서 테두리는 누르거나 입력하는
             것의 표시다. */}
-        <div className="mx-5 mb-3 flex flex-col gap-2.5 rounded-2xl bg-secondary/60 p-4">
+        <div className="mx-5 mb-3 flex flex-col gap-2.5 rounded-2xl bg-secondary p-4">
           <p className="m-0 text-[13px] font-bold tracking-[-0.01em] text-muted-foreground">초대 코드</p>
           {/* 복사 버튼을 코드 옆에 붙인다. 머리말 오른쪽에 떠 있던 때는 무엇을 복사하는
               버튼인지 눈으로 이어야 했다 — 복사할 것 바로 옆이 그 자리다. */}

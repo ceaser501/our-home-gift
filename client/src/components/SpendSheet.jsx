@@ -78,7 +78,7 @@ export default function SpendSheet({ gifticon, onSpend, onClose }) {
           {/* 얼마 쓸지 정하려면 남은 돈을 먼저 알아야 하는데, 그 값이 12px 회색 한 줄에
               묻혀 있었다. 이 화면에서 제일 큰 숫자가 되어야 하는 값이다.
               한 줄이던 설명을 왼쪽(남은 금액)·오른쪽(권종·쓴 금액)으로 갈랐다. */}
-          <div className="flex items-end justify-between gap-3 rounded-[14px] bg-secondary/60 px-[15px] py-[13px]">
+          <div className="flex items-end justify-between gap-3 rounded-[14px] bg-secondary px-[15px] py-[13px]">
             <div className="flex flex-col gap-0.5">
               <span className="text-[12.5px] font-semibold tracking-[-0.01em] text-muted-foreground">
                 지금 남은 금액

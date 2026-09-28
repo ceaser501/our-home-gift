@@ -183,7 +183,7 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
 
         {/* 세 줄 문단을 두 걸음으로 나눈다. 어디까지 왔고 무엇이 남았는지가 보인다 —
             줄글로 두면 셋 다 앞으로 할 일처럼 읽혔다. */}
-        <div className="flex w-full flex-col gap-3.5 rounded-[18px] bg-secondary/60 p-4">
+        <div className="flex w-full flex-col gap-3.5 rounded-[18px] bg-secondary p-4">
           <div className="flex items-start gap-3">
             <span className="flex size-[26px] shrink-0 items-center justify-center rounded-full bg-success/15 text-success">
               <Check className="size-3.5" strokeWidth={3} />
@@ -327,7 +327,7 @@ export default function FamilyOnboarding({ userEmail, onDone }) {
           탭 위에 두는 이유는, 이 사람이 탭을 고를 사람이 아니어서다. 고를 것 없이
           갈 곳이 정해져 있다. */}
       {clip === 'empty' ? (
-        <p className="m-0 rounded-[13px] bg-secondary/60 px-4 py-3 text-center text-[14px] leading-relaxed font-medium break-keep text-muted-foreground">
+        <p className="m-0 rounded-[13px] bg-secondary px-4 py-3 text-center text-[14px] leading-relaxed font-medium break-keep text-muted-foreground">
           코드를 찾지 못했어요.
           <br />
           카톡에 온 여섯 자리를 적어주세요.

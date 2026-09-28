@@ -1213,7 +1213,8 @@ async function collect({ images, read: readImage, pass, isRegistered, skipCodes,
     if (skipCodes?.has(found.code)) continue;
     // 같은 번호를 이미 등록된 것으로 판정했으면 다시 묻지 않는다.
     if (knownCodes.has(found.code)) continue;
-    if (isRegistered && (await isRegistered(found.code))) {
+    // 사진도 함께 넘긴다. 찾기 결과의 '이미 등록' 탭이 무엇인지 그림으로 보여준다.
+    if (isRegistered && (await isRegistered(found.code, read.data))) {
       knownCodes.add(found.code);
       continue;
     }

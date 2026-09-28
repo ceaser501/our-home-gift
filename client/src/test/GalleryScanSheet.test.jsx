@@ -206,7 +206,7 @@ describe('GalleryScanSheet', () => {
       code === '222' ? { id: 'g2', name: '이미 있는 커피', brand: '스타벅스', expires_at: '2026-12-01' } : null
     );
     scanGallery.mockImplementationOnce(async ({ isRegistered }) => {
-      await isRegistered('222');
+      await isRegistered('222', 'KNOWNIMG');
       return {
         candidates: [candidate('a', '111')],
         pending: [],
@@ -222,6 +222,8 @@ describe('GalleryScanSheet', () => {
 
     fireEvent.click(screen.getByRole('tab', { name: /이미 등록 1/ }));
     expect(screen.getByText('이미 있는 커피')).toBeTruthy();
+    // 다른 탭처럼 그 사진이 보인다.
+    expect(document.querySelector('img[src$="KNOWNIMG"]')).toBeTruthy();
   });
 
   // ✕로 뺀 것은 '제외' 탭으로 가고, 거기서 되돌린다.

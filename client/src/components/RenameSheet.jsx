@@ -88,7 +88,7 @@ export default function RenameSheet({ title, label, hint, description, initialVa
           {/* 이름을 바꾸면 다른 화면의 값까지 바뀐다는 것은 저장하기 전에 읽어야 하는 말이다.
               입력칸 아래 작은 회색 줄로 두면 저장을 누른 뒤에야 알게 된다. */}
           {description && (
-            <div className="flex gap-[9px] rounded-[13px] bg-secondary/60 px-3.5 py-3">
+            <div className="flex gap-[9px] rounded-[13px] bg-secondary px-3.5 py-3">
               <span className="mt-px flex size-[18px] shrink-0 items-center justify-center rounded-full bg-border text-[11px] font-bold text-muted-foreground">
                 i
               </span>
