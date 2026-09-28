@@ -468,20 +468,29 @@ export function isGalleryScanSupported() {
 // 기본을 설치일로 두는 것은 안드로이드에서 쓰던 규칙 그대로다. 앱을 깔기 전에 쌓인
 // 사진은 대개 이미 쓴 것이고, 수천 장을 처음부터 훑으면 몇 분이 걸린다.
 // 늘리는 칸은 둘뿐이다(1개월·3개월). 칸이 많으면 고르는 일이 일이 된다.
+//
+// '최근 1개월'은 오늘에서 달력으로 한 달 전 그날 0시부터다(9월 28일이면 8월 28일).
+// 메뉴에 그 날짜를 회색으로 함께 적는다 — 이름만으로는 어디부터인지 사람마다 달리 읽는다
+// (2026-09-28 태수님).
 export const SCAN_RANGES = [
-  { key: '1m', label: '최근 1개월', days: 30 },
-  { key: '3m', label: '최근 3개월', days: 90 },
+  { key: '1m', label: '최근 1개월', months: 1 },
+  { key: '3m', label: '최근 3개월', months: 3 },
 ];
 
-const DAY_SECONDS = 24 * 60 * 60;
+// 그 기간이 시작하는 날 0시(초). 달력으로 N달 전 오늘. 31일처럼 그달에 없는 날이면
+// 그달 마지막 날로 내린다(3월 31일의 한 달 전은 2월 28일).
+export function rangeStartOf(range, now = new Date()) {
+  const option = SCAN_RANGES.find((item) => item.key === range);
+  if (!option) return 0;
+  const day = new Date(now.getFullYear(), now.getMonth() - option.months, 1);
+  const last = new Date(day.getFullYear(), day.getMonth() + 1, 0).getDate();
+  day.setDate(Math.min(now.getDate(), last));
+  return Math.floor(day.getTime() / 1000);
+}
 
 function rangeSince(range, installedAt) {
-  const option = SCAN_RANGES.find((item) => item.key === range);
-  if (!option) return 0; // 0이면 네이티브가 설치한 날 0시로 푼다
-  // 그날 0시로 내린다. 화면에 '9월 1일 0시 이후'로 적히고, 한나절 중간에서 잘리지 않는다.
-  const day = new Date(Date.now() - option.days * DAY_SECONDS * 1000);
-  day.setHours(0, 0, 0, 0);
-  const back = Math.floor(day.getTime() / 1000);
+  const back = rangeStartOf(range);
+  if (!back) return 0; // 0이면 네이티브가 설치한 날 0시로 푼다
   // 설치일보다 뒤로 좁아지는 일은 없게 한다. 석 달 전에 깐 사람의 '최근 1개월'은
   // 기본보다 짧아서, 누르면 덜 보게 된다.
   return installedAt > 0 ? Math.min(installedAt, back) : back;
@@ -490,8 +499,7 @@ function rangeSince(range, installedAt) {
 // 지금 고를 수 있는 기간. 설치일보다 더 예전으로 가는 것만 보여준다 — 석 달 전에 깐
 // 사람에게 '최근 3개월'은 이미 보고 있는 범위라 눌러도 달라지는 것이 없다.
 export function scanRangeOptions(installedAt) {
-  const now = Math.floor(Date.now() / 1000);
-  return SCAN_RANGES.filter((item) => !installedAt || now - item.days * DAY_SECONDS < installedAt);
+  return SCAN_RANGES.filter((item) => !installedAt || rangeStartOf(item.key) < installedAt);
 }
 
 // 앱 설정 화면을 열 수 있는가. 앱이면 두 폰 다 된다.
@@ -1198,6 +1206,7 @@ async function collect({ images, read: readImage, pass, isRegistered, skipCodes,
       if (already.shots.length < COLLECT_PER_CODE) {
         already.shots.push({ data: read.data, bucket: image.bucket, coverage: found.coverage, rich: found.rich });
       }
+      already.imageIds?.push(String(image.id));
       continue;
     }
     // 얕은 판에서 이미 후보로 잡은 번호는 깊은 판에서 다시 만들지 않는다.
@@ -1211,6 +1220,8 @@ async function collect({ images, read: readImage, pass, isRegistered, skipCodes,
 
     const candidate = {
       id: image.id,
+      // 이 후보로 묶인 사진들. 이어서 찾을 때 다시 읽지 않으려고 적어둔다.
+      imageIds: [String(image.id)],
       name: image.name,
       bucket: image.bucket,
       addedAt: image.addedAt,
@@ -1340,7 +1351,9 @@ async function collect({ images, read: readImage, pass, isRegistered, skipCodes,
 // 봤으면 남은 장수를 돌려주고, 다음에 이어서 본다.
 const LIST_LIMIT = 2000;
 
-export async function scanGallery({ isRegistered, onProgress, onCandidate, signal, range = 'install' } = {}) {
+// skipIds · skipCodes: 이어서 찾거나 기간을 넓혀 다시 찾을 때, 이 창에 이미 올라와 있는
+// 후보의 사진과 번호. 다시 읽지 않고 건너뛰어, 찾은 것 위에 새것만 더해진다.
+export async function scanGallery({ isRegistered, onProgress, onCandidate, signal, range = 'install', skipIds, skipCodes } = {}) {
   const status = await getGalleryStatus();
   if (!status.supported) return { supported: false, candidates: [] };
   if (!status.granted && !status.partial) return { ...status, candidates: [], needsPermission: true };
@@ -1365,7 +1378,10 @@ export async function scanGallery({ isRegistered, onProgress, onCandidate, signa
   const dismissed = readIdSet(DISMISSED_KEY);
   const noBarcode = readIdSet(NO_BARCODE_KEY);
   const unseen = images.filter(
-    (image) => !dismissed.has(String(image.id)) && !noBarcode.has(String(image.id))
+    (image) =>
+      !dismissed.has(String(image.id)) &&
+      !noBarcode.has(String(image.id)) &&
+      !skipIds?.has(String(image.id))
   );
   const fresh = unseen.slice(0, MAX_IMAGES);
   const more = unseen.length - fresh.length;
@@ -1375,6 +1391,7 @@ export async function scanGallery({ isRegistered, onProgress, onCandidate, signa
     read: readFromGallery,
     pass: SHALLOW,
     isRegistered,
+    skipCodes,
     onProgress,
     onCandidate,
     signal,

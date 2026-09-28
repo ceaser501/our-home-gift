@@ -28,6 +28,7 @@ import {
   getGalleryStatus,
   groupImages,
   openAppSettings,
+  rangeStartOf,
   requestGalleryAccess,
   scanGallery,
   scanRangeOptions,
@@ -323,39 +324,6 @@ const BLOCK_TONES = {
   missing: { Icon: Info, bg: 'bg-destructive/12', fg: 'text-destructive' },
 };
 
-/**
- * 접히는 상자.
- *
- * 회색 접힘 줄이던 것을 테두리 상자로 바꿨다. 펼쳤을 때 내용이 테두리 안에 남아야 위
- * 후보 카드와 섞이지 않는다 — 예전에는 펼치면 줄들이 목록에 그냥 풀려서 흐림(60%)만으로
- * 구분해야 했다.
- */
-function FoldBox({ tone, title, open, onToggle, children }) {
-  const { Icon, bg, fg } = tone;
-  return (
-    <div className="overflow-hidden rounded-[14px] border border-border">
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-expanded={open}
-        className="flex w-full items-center gap-2.5 bg-muted/40 px-3 py-2.5"
-      >
-        <span className={cn('flex size-6 shrink-0 items-center justify-center rounded-full', bg)}>
-          <Icon className={cn('size-[13px]', fg)} strokeWidth={2.2} />
-        </span>
-        <span className="min-w-0 flex-1 text-left text-[13.5px] font-bold tracking-[-0.015em] break-keep text-foreground">
-          {title}
-        </span>
-        <ChevronDown
-          className={cn('size-4 shrink-0 text-muted-foreground transition-transform', open && 'rotate-180')}
-          strokeWidth={2.2}
-        />
-      </button>
-      {open && <div className="px-3 pb-2.5">{children}</div>}
-    </div>
-  );
-}
-
 function blockKind(candidate, isDismissed) {
   if (isDismissed) return 'dismissed';
   if (candidate.readError) return 'error';
@@ -540,16 +508,17 @@ function missingFields(info, fallbackCode) {
 
 // 네이티브가 주는 시각은 초 단위다(MediaStore가 그렇게 쓴다). 자바스크립트의 Date는
 // 밀리초라 천 배를 곱해야 한다.
-function formatDay(seconds) {
+// 기간 설정 줄과 메뉴에 쓰는 날짜. 연도는 뺀다 — 길어도 석 달 전이라 헷갈릴 일이 없고,
+// 한 줄에 버튼과 나란히 들어가야 한다.
+function formatMonthDay(seconds) {
   if (!seconds) return null;
   const at = new Date(seconds * 1000);
-  const day = at.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
-  // 그날 0시가 기준이면 날짜만 적는다(설치한 날 전체를 봤다는 뜻이라 그게 정확하다).
-  // 한나절 중간이 기준이면 시각까지 적어야 한다 — 날짜만 적으면 그날 아침에 받아둔
-  // 사진이 왜 빠졌는지 알 길이 없다.
-  if (at.getHours() === 0 && at.getMinutes() === 0) return day;
-  return `${day} ${at.toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit' })}`;
+  return `${at.getMonth() + 1}월 ${at.getDate()}일`;
 }
+
+// 기간이 넓은 차례. 이어서 찾을 때 좁은 쪽을 골라도 화면의 기간은 넓은 쪽에 남긴다 —
+// 이미 그만큼 본 것이 목록에 있다.
+const RANGE_RANK = { install: 0, '1m': 1, '3m': 2 };
 
 function formatDate(iso) {
   if (!iso) return null;
@@ -627,6 +596,19 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
   const [since, setSince] = useState(0);
   // 훑은 기간('install' | '1m' | '3m')과 설치한 날(초). 더 예전 것을 찾는 버튼을 그린다.
   const [range, setRange] = useState('install');
+  // 결과 목록의 탭. 'ok' 등록 · 'blocked' 등록불가 · 'known' 이미 등록 · 'excluded' 제외.
+  const [tab, setTab] = useState('ok');
+  // 기간 설정 메뉴, 어디서 몇 장 봤는지 말풍선(갤럭시만)이 열려 있는지.
+  const [rangeOpen, setRangeOpen] = useState(false);
+  const [folderTipOpen, setFolderTipOpen] = useState(false);
+  // 이 창에서 지금까지 본 사진 수. 이어서 찾거나 기간을 넓히면 더해진다.
+  const [scannedTotal, setScannedTotal] = useState(0);
+  // 이미 목록에 있어서 후보가 안 된 기프티콘. '이미 등록' 탭에 보여준다.
+  // 훑는 동안 isRegistered가 물어본 답을 번호별로 모은다.
+  const knownRef = useRef(new Map());
+  const [known, setKnown] = useState([]);
+  // 이번 창을 열기 전에 이미 제외해 둔 사진 수. '제외' 탭에서 모두 되돌리기로 쓴다.
+  const [prevDismissed, setPrevDismissed] = useState(0);
   // 이 창에서 AI로 읽은 결과. 바코드 번호 → 읽은 값.
   //
   // '최근 1개월'로 다시 찾으면 지금 찾은 것도 다시 나온다(넓힌 기간이 지금 기간을 품는다).
@@ -665,10 +647,15 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
   const [failOpen, setFailOpen] = useState(false);
   // 기한이 빈 채로 들어간 것들. 어느 기프티콘인지 이름을 보여준다.
   const [noExpiryOpen, setNoExpiryOpen] = useState(false);
-  // 목록 화면의 두 상자. 기본값은 상황이 정하고(넣을 것이 하나도 없으면 펼친 채로
-  // 시작한다), 사람이 한 번 누르면 그 뒤로는 누른 대로 둔다.
-  const [blockedOpen, setBlockedOpen] = useState(null);
-  const [panelOpen, setPanelOpen] = useState(false);
+  // 기간 설정 메뉴와 ⓘ 말풍선. 바깥을 누르면 닫는다 — 그걸 가리려고 이 둘과 여는
+  // 버튼을 들고 있는다.
+  const rangeBoxRef = useRef(null);
+  const tipBoxRef = useRef(null);
+  const tipButtonRef = useRef(null);
+  // 말풍선 꼭지를 ⓘ 바로 아래에 두기 위한 자리(px). 제목 길이에 따라 ⓘ가 움직인다.
+  const [tipX, setTipX] = useState(0);
+  // 이어서 찾기 전에 이미 목록에 있던 후보. 도는 동안에는 새로 들어오는 것만 쌓아 보여준다.
+  const priorIdsRef = useRef(new Set());
   const abortRef = useRef(null);
   // 얕은 판에서 잡은 후보. 깊은 판이 같은 번호를 또 만들지 않게 넘겨준다.
   const found0Ref = useRef([]);
@@ -730,12 +717,34 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // nextRange: 기간을 늘려 다시 훑을 때만 준다. 없으면 지난번 기간 그대로다
+  // 이미 목록에 있는 번호인가. 있으면 '이미 등록' 탭에 보여주려고 그 기프티콘을 적어둔다.
+  //
+  // 이미 목록에 있는 번호는 후보에서 뺀다. 기프티콘 사진은 지우지 않고 그대로
+  // 두는 사람이 많아서, 이게 없으면 훑을 때마다 등록한 것들이 계속 다시 나온다.
+  async function checkRegistered(code) {
+    try {
+      const found = await findGifticonByCode(family.id, code);
+      if (found && !knownRef.current.has(code)) {
+        knownRef.current.set(code, found);
+        setKnown([...knownRef.current.values()]);
+      }
+      return Boolean(found);
+    } catch {
+      // 물어보지 못했으면 보여주는 쪽을 고른다. 중복은 저장할 때 한 번 더 걸러진다.
+      return false;
+    }
+  }
+
+  // nextRange: 기간을 바꿔 다시 훑을 때만 준다. 없으면 지난번 기간 그대로다
   // ('이어서 찾기'가 그렇게 부른다).
-  async function start(nextRange) {
+  //
+  // append: 지금 목록을 비우지 않고 새로 찾은 것만 더한다. 기간을 넓히거나 이어서 찾을
+  // 때다. 이 창에 이미 올라온 사진과 번호는 건너뛰어서, 먼저 찾은 카드가 하나씩 다시
+  // 쌓이는 일이 없다(2026-09-28 태수님). 읽은 정보도 그대로다(readCacheRef).
+  async function start(nextRange, { append = false } = {}) {
     setError('');
     const scanRange = typeof nextRange === 'string' ? nextRange : range;
-    setRange(scanRange);
+    setRange((current) => (append && RANGE_RANK[current] > RANGE_RANK[scanRange] ? current : scanRange));
     if (!picked) {
       const status = await requestGalleryAccess();
       if (!status.granted && !status.partial) {
@@ -745,21 +754,38 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
       setPartial(Boolean(status.partial));
       setInstalledAt(status.installedAt || 0);
     }
+    // 이어서 찾을 때 건너뛸 것. 비우기 전에 떠둔다.
+    const prior = append ? candidates : [];
+    const skipIds = new Set(prior.flatMap((c) => c.imageIds || [String(c.id)]));
+    const skipCodes = new Set([...prior.map((c) => c.code), ...knownRef.current.keys()].filter(Boolean));
+    priorIdsRef.current = new Set(prior.map((c) => c.id));
+
     setStage('scanning');
     setComplete(false);
-    setCandidates([]);
-    setDismissedIds([]);
+    setRangeOpen(false);
+    setFolderTipOpen(false);
+    if (!append) {
+      setCandidates([]);
+      setDismissedIds([]);
+      setVoucherIds([]);
+      setVoucherLooks([]);
+      setTab('ok');
+      knownRef.current = new Map();
+      setKnown([]);
+      setScannedTotal(0);
+      setPrevDismissed(picked ? 0 : countDismissed());
+    }
     setMissedShots([]);
     setLeftovers([]);
-    setVoucherIds([]);
-    setVoucherLooks([]);
     setResult(null);
     setDigging(false);
     setReadBar(0);
     setReadBarMs(0);
-    found0Ref.current = [];
+    if (!append) {
+      found0Ref.current = [];
+      readSeqRef.current = 0;
+    }
     readTallyRef.current = { done: 0, total: 0 };
-    readSeqRef.current = 0;
     setHint(0);
     // 새로 훑을 때는 다시 따라간다. 지난번에 위를 보러 올라가 꺼둔 채로 남아 있으면
     // 이번에는 카드가 화면 밖에 쌓인다.
@@ -775,23 +801,22 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
     poolRef.current = pool;
     // 지난번에 미리 올려두고 안 쓴 것이 있으면 지금 치운다. 새로 훑으면 그 후보들은
     // 화면에서 사라지므로, 여기서 놓치면 아무도 지울 수 없는 파일이 된다.
-    sweepUploads();
-    uploadRef.current = makePool(SAVE_CONCURRENCY);
-    spentRef.current = new Set();
+    // 이어서 찾을 때는 후보가 그대로 남으니 치우지 않는다.
+    if (!append) {
+      sweepUploads();
+      uploadRef.current = makePool(SAVE_CONCURRENCY);
+      spentRef.current = new Set();
+    }
 
     // 이미 목록에 있는 번호는 후보에서 뺀다. 기프티콘 사진은 지우지 않고 그대로
     // 두는 사람이 많아서, 이게 없으면 훑을 때마다 등록한 것들이 계속 다시 나온다.
-    const isRegistered = async (code) => {
-      try {
-        return Boolean(await findGifticonByCode(family.id, code));
-      } catch {
-        // 물어보지 못했으면 보여주는 쪽을 고른다. 중복은 저장할 때 한 번 더 걸러진다.
-        return false;
-      }
-    };
+    const isRegistered = (code) => checkRegistered(code);
 
     // 찾자마자 카드로 쌓는다. 한 장씩 차례로 도니 실제로 하나씩 늘어난다.
     const onCandidate = (candidate) => {
+      // 이어서 찾을 때 이미 목록에 있는 사진이면 두 번 쌓지 않는다. 훑기가 skipIds로
+      // 먼저 거르지만, 같은 카드가 둘이 되면 등록도 두 번 나가서 여기서 한 번 더 막는다.
+      if (priorIdsRef.current.has(candidate.id)) return;
       setCandidates((prev) => [...prev, candidate]);
       // 원본 폴더에서 나온 것은 더 나은 사진이 뒤에 올 수 없다. 다 훑기를 기다리지
       // 않고 지금 보낸다 — 첫 카드가 여기서 2초 당겨진다.
@@ -818,6 +843,8 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
             onCandidate,
             isRegistered,
             range: scanRange,
+            skipIds,
+            skipCodes,
           });
       if (controller.signal.aborted) return;
 
@@ -833,7 +860,9 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
       //
       // 카드는 훑는 동안 이미 하나씩 쌓였으므로 여기서 걷어낸다. 무엇을 왜 뺐는지는
       // 아래 안내로 말해준다.
-      found = scan.candidates.filter((candidate) => !candidate.tooSmall);
+      found = scan.candidates.filter(
+        (candidate) => !candidate.tooSmall && !priorIdsRef.current.has(candidate.id)
+      );
 
       // 바코드를 못 읽은 사진은 여기서 끝난다.
       //
@@ -852,7 +881,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
         setLeftovers((scan.missed ?? []).map((image) => image.file).filter(Boolean));
       }
 
-      const keep = new Set(found.map((candidate) => candidate.id));
+      const keep = new Set([...prior, ...found].map((candidate) => candidate.id));
       setCandidates((prev) => prev.filter((candidate) => keep.has(candidate.id)));
       pending = scan.pending ?? [];
       // 지난 훑기에서 "막대로 보이는데 못 읽음"으로 적혀 이번에는 건너뛴 사진들.
@@ -865,7 +894,9 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
       }));
       setMissedShots([...pending, ...remembered]);
       setScanned(scan.scanned ?? 0);
-      setSince(scan.since ?? 0);
+      setScannedTotal((total) => (append ? total : 0) + (scan.scanned ?? 0));
+      // 이어서 찾았으면 둘 중 더 예전 날을 적는다. 목록에는 그때부터의 것이 다 있다.
+      setSince((prev) => (append && prev && scan.since ? Math.min(prev, scan.since) : scan.since ?? 0));
       setMore(scan.more ?? 0);
       setFolders(scan.folders ?? []);
       setTally(scan.tally ?? null);
@@ -879,7 +910,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
       return;
     }
 
-    await readAll(found, controller);
+    await readAll(found, controller, { prior });
 
     // 여기서부터는 사용자가 이미 목록을 보고 있다. 못 찾은 사진을 정밀 탐색으로 한 번 더
     // 뒤진다 — 무거운 일이지만 기다리게 하지는 않는다.
@@ -905,13 +936,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
         // 얕은 판에서 이미 잡은 번호는 또 만들지 않는다.
         skipCodes: new Set(found0Ref.current.map((c) => c.code)),
         onCandidate: (candidate) => setCandidates((prev) => [...prev, candidate]),
-        isRegistered: async (code) => {
-          try {
-            return Boolean(await findGifticonByCode(family.id, code));
-          } catch {
-            return false;
-          }
-        },
+        isRegistered: checkRegistered,
       });
       if (controller.signal.aborted) return;
       // 정밀 탐색으로 건진 것에도 같은 기준을 건다. 여기서 살아난 사진일수록 작게 찍혀
@@ -1013,27 +1038,34 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
    * 훑는 동안 이미 보낸 것들이 있다(readyNow). 여기서는 남은 것만 집어 들고, 먼저
    * 보낸 것들이 돌아올 때까지 함께 기다린다.
    */
-  async function readAll(found, controller, { append = false } = {}) {
+  async function readAll(found, controller, { append = false, prior = [] } = {}) {
     const pool = poolRef.current;
     if (!append) {
       setStage('reading');
       // 훑는 동안 이미 카드가 쌓였고 그중 일부는 읽기까지 끝났다. 여기서는 등록에
       // 넘길 사진을 고른 결과로 갈아끼우되, 먼저 읽어둔 값은 그대로 얹는다.
       // id가 같으니 화면에서는 자리가 그대로다.
-      const merged = found.map((item) => {
+      //
+      // prior는 이어서 찾기 전에 이미 있던 후보다. 앞에 그대로 두고 새것만 읽는다.
+      const fresh = found.map((item) => {
         const read = pool.results.get(item.id);
         return read ? { ...item, ...read } : item;
       });
-      setCandidates(merged);
+      const merged = [...prior, ...fresh];
+      setCandidates((prev) => {
+        // 이어서 찾는 동안 사람이 ✕를 누르거나 칸을 채웠을 수 있다. 앞의 것은 화면 쪽 값을 쓴다.
+        const current = new Map(prev.map((item) => [item.id, item]));
+        return merged.map((item) => current.get(item.id) || item);
+      });
       found0Ref.current = merged;
-      readTallyRef.current = { done: pool.results.size, total: merged.length };
-      setProgress({ scanned: pool.results.size, total: merged.length, found: merged.length });
+      readTallyRef.current = { done: pool.results.size, total: fresh.length };
+      setProgress({ scanned: pool.results.size, total: fresh.length, found: fresh.length });
 
       // 실제로 재보니 한 물결에 5.5초 안팎이었다. 눈금은 그보다 조금 넉넉하게 잡는다 —
       // 짧게 잡으면 막대가 끝에 닿아 멈춰 선 채로 기다리게 되는데, 그건 고치려던 것과
       // 같은 그림이다. 넉넉하면 아직 움직이는 중에 끝나서 마지막이 자연스럽다.
       // 정확할 필요는 없다. 실제로 끝나는 순간 100%로 채우므로, 이건 그 사이를 메우는 눈금이다.
-      const left = merged.length - pool.results.size;
+      const left = fresh.length - pool.results.size;
       const waves = Math.max(1, Math.ceil(left / READ_CONCURRENCY));
       setReadBar(SCAN_SHARE);
       setReadBarMs(waves * 6500);
@@ -1315,6 +1347,46 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
     setDismissedIds((prev) => prev.filter((id) => id !== candidate.id));
   }
 
+  // 이 창을 열기 전에 제외해 둔 사진을 모두 되살려 다시 찾는다. 설정에 있던 '전부 다시
+  // 찾기'가 옮겨 온 자리다 — 잘못 누른 것은 이 화면에서 알게 되니 되돌리는 길도 여기 둔다.
+  //
+  // 저장소를 통째로 비우므로, 이 창에서 방금 제외한 것은 다시 적어둔다. 안 그러면
+  // 목록에는 '제외'로 남아 있는데 다음 찾기에서 도로 올라온다.
+  // 목록은 그대로 두고 되살아난 것만 더한다(이어서 찾기와 같은 길).
+  function restoreAllDismissed() {
+    forgetDismissed();
+    if (dismissedIds.length > 0) dismissImages(dismissedIds);
+    setPrevDismissed(0);
+    start(range, { append: true });
+  }
+
+  // 기간 설정 메뉴와 ⓘ 말풍선은 바깥을 누르면 닫는다. 여는 버튼은 바깥으로 치지 않는다 —
+  // 거기서 닫으면 버튼이 곧바로 다시 열어버린다.
+  useEffect(() => {
+    if (!rangeOpen && !folderTipOpen) return;
+    const onDown = (event) => {
+      const inside = [rangeBoxRef, tipBoxRef, tipButtonRef].some((ref) => ref.current?.contains(event.target));
+      if (inside) return;
+      setRangeOpen(false);
+      setFolderTipOpen(false);
+    };
+    document.addEventListener('pointerdown', onDown);
+    return () => document.removeEventListener('pointerdown', onDown);
+  }, [rangeOpen, folderTipOpen]);
+
+  // ⓘ를 누르면 꼭지 자리를 잰다. 말풍선은 제목 줄 왼쪽에 붙어 있고, 꼭지만 ⓘ 아래로 간다.
+  function toggleFolderTip() {
+    const button = tipButtonRef.current;
+    const row = button?.parentElement;
+    if (button && row) {
+      const a = button.getBoundingClientRect();
+      const b = row.getBoundingClientRect();
+      setTipX(a.left + a.width / 2 - b.left);
+    }
+    setRangeOpen(false);
+    setFolderTipOpen((open) => !open);
+  }
+
   function toggleVoucher(candidate) {
     setVoucherIds((prev) =>
       prev.includes(candidate.id) ? prev.filter((id) => id !== candidate.id) : [...prev, candidate.id]
@@ -1500,8 +1572,9 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
   // 넣지 않는다는 점에서 하는 일이 같으니 한자리에 접어둔다.
   const blocked = candidates.filter((c) => !isPickable(c));
   // 읽기가 끝난 순서대로. 훑는 중에는 이 차례로 카드가 한 장씩 쌓인다.
+  // 이어서 찾는 중이면 원래 있던 것은 빼고 새로 들어온 것만 쌓는다.
   const arrived = alive
-    .filter((c) => c.info || c.readError)
+    .filter((c) => (c.info || c.readError) && !priorIdsRef.current.has(c.id))
     .sort((a, b) => (a.readOrder || 0) - (b.readOrder || 0));
 
 
@@ -1518,18 +1591,44 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
   }, [isWorking, arrived.length]);
 
   const keptCount = alive.filter(isPickable).length;
+  // '등록불가' 탭에 드는 것. 치운 것은 '제외' 탭으로 따로 간다.
+  const unfit = blocked.filter((c) => !dismissedIds.includes(c.id));
+  const dismissedHere = candidates.filter((c) => dismissedIds.includes(c.id));
   // 못 읽은 것들이 같은 이유로 막혔으면 한 번만 적는다. 하루 한도를 다 썼을 때가
   // 그런데, 그 긴 문장을 카드마다 되풀이하면 읽지 않게 된다.
-  const blockedReasons = [...new Set(blocked.map((c) => c.readError).filter(Boolean))];
-  const commonBlock = blocked.length > 0 && blockedReasons.length === 1 && blocked.every((c) => c.readError)
+  const blockedReasons = [...new Set(unfit.map((c) => c.readError).filter(Boolean))];
+  const commonBlock = unfit.length > 0 && blockedReasons.length === 1 && unfit.every((c) => c.readError)
     ? blockedReasons[0]
     : null;
-  // 접어둔 채로도 무슨 일인지는 알아야 한다. 갈래가 하나면 그 이유를 그대로 적고,
-  // 섞여 있을 때만 '등록할 수 없어요'로 뭉친다.
-  const blockKinds = [...new Set(blocked.map((c) => blockKind(c, dismissedIds.includes(c.id))))];
-  const blockedTitle = blockKinds.length === 1 ? BLOCK_TITLES[blockKinds[0]] : '등록할 수 없어요';
-  // 섞여 있으면 가장 급한 쪽 색으로 둔다. 갈래가 하나면 그 갈래의 색이다.
-  const blockedTone = blockKinds.length === 1 ? BLOCK_TONES[blockKinds[0]] : BLOCK_TONES.error;
+  // '등록불가' 탭 안을 갈래별로 나눈다. 갈래마다 할 일이 다르다(BLOCK_TITLES 주석).
+  const unfitGroups = ['missing', 'error', 'expired']
+    .map((kind) => ({ kind, items: unfit.filter((c) => blockKind(c, false) === kind) }))
+    .filter((group) => group.items.length > 0);
+
+  // 결과 목록의 탭 넷. 개수가 0이어도 늘 같은 자리에 둔다 — 탭이 들락날락하면
+  // 어디를 눌러야 하는지 매번 다시 찾게 된다.
+  const tabs = [
+    { key: 'ok', label: '등록', count: keptCount },
+    { key: 'blocked', label: '등록불가', count: unfit.length },
+    { key: 'known', label: '이미 등록', count: known.length },
+    { key: 'excluded', label: '제외', count: dismissedHere.length + prevDismissed },
+  ];
+
+  // 찾기가 끝났는데 바로 넣을 것이 없고 못 넣는 것만 있으면 '등록불가' 탭을 먼저 연다.
+  // 빈 '등록' 탭부터 보여주면 "아무것도 못 찾았나" 하고 닫아버린다.
+  // 끝나는 순간 한 번만 정한다 — 그 뒤에 ✕로 마지막 하나를 빼도 탭이 저절로 옮겨 가지 않는다.
+  const autoTabRef = useRef(false);
+  useEffect(() => {
+    if (stage !== 'done') {
+      autoTabRef.current = true;
+      return;
+    }
+    if (!autoTabRef.current) return;
+    autoTabRef.current = false;
+    if (keptCount === 0 && unfit.length > 0) setTab('blocked');
+    // 끝나는 순간의 값만 본다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stage]);
 
   // 결과 화면에서 못 넣은 것을 이유별로 묶는다.
   //
@@ -1548,135 +1647,22 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
       .sort((a, b) => b.items.length - a.items.length);
   }, [result]);
 
-  // 훑기 결과. 접어둔다 — 찾은 것이 여러 개면 위쪽 목록만으로 화면이 꽉 차는데, 그 아래
-  // 표까지 펼쳐져 있으면 정작 눌러야 할 등록 버튼이 밀린다. 궁금할 때 여는 자리다.
+  // ── 기간 설정 ────────────────────────────────────────────────────────────
+  // 결과 위 한 줄에 '어느 날 이후 몇 장을 봤는지'와 '기간 설정' 버튼을 둔다. 목록 아래
+  // 버튼 두 칸으로 뒀다가 옮겼다 — 아래에서는 결과를 다 내려야 보였고, 버튼이 늘어나
+  // 무엇을 누를지 흐려졌다(2026-09-28 태수님과 다시 잡은 C안).
   //
-  // 세는 단위를 섞지 않는다. 사진 수는 사진첩 줄에서만 말하고, 그 아래는 기프티콘 수만
-  // 말한다. '확인한 사진 4장 / 이미 등록됨 3장'을 나란히 뒀더니 아래 숫자가 기프티콘
-  // 세 개로 읽혔다.
-  //
-  // 이름이 '상세내역'이던 자리다. 안에 든 것은 사진 목록이 아니라 개수 표이고, 명사
-  // 하나만으로는 열어볼 이유가 생기지 않는다. 무엇을 알려주는지를 그대로 적는다.
-  // 고를 수 있는 기간. 한 번 찾은 뒤에도 늘 같은 두 칸이다 — '1개월로 찾은 뒤엔 3개월만'
-  // 식으로 칸이 들락날락하면 헷갈린다(2026-09-28 태수님). 1개월을 또 눌러도 괜찮다.
-  // 이미 읽은 것은 아래 readCacheRef가 다시 안 읽는다.
+  // 메뉴의 칸은 늘 같다. '1개월로 찾은 뒤엔 3개월만' 식으로 들락날락하면 헷갈린다.
   // 설치일보다 예전으로 못 가는 칸(석 달 전에 깐 사람의 '최근 1개월')만 뺀다.
-  const widerRanges = scanRangeOptions(installedAt);
-  const dismissedCount = !picked && complete ? countDismissed() : 0;
+  // 고르면 바로 찾고, 지금 목록에 더한다. 이미 읽은 번호는 AI에 다시 안 보낸다
+  // (readCacheRef, skipCodes).
+  const rangeMenu = [
+    { key: 'install', label: '설치한 날부터', from: installedAt },
+    ...scanRangeOptions(installedAt).map((option) => ({ ...option, from: rangeStartOf(option.key) })),
+  ];
 
-  // 결과 화면 맨 아래, 주 버튼(등록하기 / 목록으로 가기) 밑에 두는 둘째 줄.
-  //
-  // 위에 두었더니 결과보다 먼저 눈에 걸렸다. 찾은 것을 먼저 보고, 그다음에 "더 찾을까"다.
-  // 찾은 게 있어도 둔다 — 등록하기 전에 더 예전 것까지 한꺼번에 보고 싶을 수 있다.
-  // 다시 찾으면 지금 찾은 것도 다시 나온다(넓힌 기간이 지금 기간을 품는다).
-  //
-  // '아니라고 한 사진 다시 보기'도 여기다. 설정에 있던 '전부 다시 찾기'를 옮겼다 —
-  // 치우기를 잘못 누른 것은 이 화면에서 알게 되니 되돌리는 길도 여기 있어야 한다.
-  const rangeRow =
-    !picked && complete && (more > 0 || widerRanges.length > 0 || dismissedCount > 0) ? (
-      <div className="flex flex-col gap-2 pt-1">
-        {more > 0 ? (
-          <Button type="button" variant="outline" className="h-11 w-full rounded-[12px] text-[14.5px] font-semibold" onClick={() => start(range)}>
-            남은 사진 {more}장 이어서 찾기
-          </Button>
-        ) : (
-          widerRanges.length > 0 && (
-            <>
-              <p className="m-0 text-center text-[13px] font-medium text-muted-foreground">더 예전 사진 찾기</p>
-              <div className="flex gap-2">
-                {widerRanges.map((option) => (
-                  <Button
-                    key={option.key}
-                    type="button"
-                    variant="outline"
-                    className="h-11 flex-1 rounded-[12px] text-[14.5px] font-semibold"
-                    onClick={() => start(option.key)}
-                  >
-                    {option.label}
-                  </Button>
-                ))}
-              </div>
-            </>
-          )
-        )}
-        {dismissedCount > 0 && (
-          <button
-            type="button"
-            className="py-1.5 text-center text-[13px] font-medium text-muted-foreground underline underline-offset-2"
-            onClick={() => {
-              forgetDismissed();
-              start(range);
-            }}
-          >
-            아니라고 한 사진 {dismissedCount}장 다시 보기
-          </button>
-        )}
-      </div>
-    ) : null;
-
-  const panelBody = tally ? (
-    <FoldBox
-      tone={BLOCK_TONES.dismissed}
-      title={isIosApp() && !picked ? '몇 장을 봤는지 알려드려요' : '어디서 몇 장을 봤는지 알려드려요'}
-      open={panelOpen}
-      onToggle={() => setPanelOpen((open) => !open)}
-    >
-      <div className="flex flex-col gap-2.5 pt-2.5">
-        {/* 사진첩 이름과 장수를 한 칸에 위아래로 둔다 — 한 문장으로 이으면
-            '다운로드 1 카카오톡 1'에서 1이 어디에 붙는지 한 번 더 읽어야 한다.
-            이름 위·숫자 아래로 두면 숫자끼리 세로로 줄이 맞는다.
-            사진이 없어도 0으로 남긴다. 목록에서 빠지면 "걸러진 건가" 하고 의심하게
-            되는데, 실제로는 볼 게 없었던 것이다. 기기에 있는 다른 사진첩은 적지 않는다 —
-            안 보는 것을 늘어놓으면 그걸 뒤진다는 뜻으로 읽힌다. */}
-        {/* 받아 온 사진은 어느 폴더에서 왔는지 모른다. 그 줄 대신 몇 장을 봤는지만 적는다. */}
-        {/* 아이폰은 사진첩에 폴더가 없어서 폴더 칸이 늘 0이었다. 본 장수 한 칸만 둔다. */}
-        {picked || isIosApp() ? (
-          <div className="flex flex-col gap-0.5 rounded-[10px] bg-muted/50 px-2.5 py-2.5">
-            <span className="text-xs font-medium text-muted-foreground">{picked ? '고른 사진' : '본 사진'}</span>
-            <span className="text-base font-bold tracking-[-0.02em] tabular-nums text-foreground">{scanned}</span>
-          </div>
-        ) : (
-          <div className="flex gap-[7px]">
-            {summary.watched.map((folder) => (
-              <div
-                key={folder.label}
-                className="flex flex-1 flex-col gap-0.5 rounded-[10px] bg-muted/50 px-2.5 py-2.5"
-              >
-                <span className="truncate text-xs font-medium text-muted-foreground">{folder.label}</span>
-                <span className="text-base font-bold tracking-[-0.02em] tabular-nums text-foreground">
-                  {folder.count}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* 세는 단위를 섞지 않는다. 위 칸은 사진 수, 아래 줄은 기프티콘 수다.
-            나란히 뒀더니 아래 숫자가 사진 장수로 읽혔다. */}
-        <dl className="m-0 grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 border-t border-border/60 pt-2.5 text-sm">
-          <dt className="text-muted-foreground">찾은 기프티콘</dt>
-          <dd className="m-0 font-semibold tabular-nums text-foreground">{tally.found}개</dd>
-          <dt className="text-muted-foreground">이미 등록된 기프티콘</dt>
-          <dd className="m-0 tabular-nums text-foreground">{tally.alreadyHave}개</dd>
-          {/* 오류일 때만 나온다. 평소에는 자리를 차지하지 않는다. */}
-          {tally.readFailed > 0 && (
-            <>
-              <dt className="text-muted-foreground">열지 못한 사진</dt>
-              <dd className="m-0 tabular-nums text-foreground">{tally.readFailed}장</dd>
-            </>
-          )}
-        </dl>
-
-        {/* 셋 다 0장이면 사진첩 이름이 우리 목록과 다를 수 있다. 그때만 기기에 있는
-            이름을 보여준다 — 그게 유일한 단서다. */}
-        {!picked && !isIosApp() && summary.watched.every((folder) => folder.count === 0) && summary.others.length > 0 && (
-          <p className="m-0 border-t border-border/60 pt-2.5 text-sm break-keep text-muted-foreground">
-            폰에 있는 사진첩: {summary.others.map((f) => `${f.name} ${f.count}`).join(' · ')}
-          </p>
-        )}
-      </div>
-    </FoldBox>
-  ) : null;
+  // ⓘ 말풍선의 폴더별 장수. 갤럭시만 — 아이폰 사진첩에는 폴더가 없어서 늘 0이었다.
+  const showFolderTip = !picked && !isIosApp() && Boolean(tally);
 
   /**
    * 후보 한 줄.
@@ -2045,13 +2031,75 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                 </p>
               </div>
             </div>
-          ) : stage === 'done' && !picked && keptCount > 0 ? (
+          ) : stage === 'done' && !picked ? (
             /* 부제로 '사진 N장에서 · 빼려면 ✕'를 달아뒀다가 걷었다. 몇 장을 봤는지는
-               상세내역이 이미 말하고, ✕는 눌러보면 아는 것이라 굳이 설명할 자리가
-               아니었다. 제목 한 줄이면 된다. */
-            <SheetTitle className="text-[19px] font-bold tracking-[-0.026em] break-keep">
-              기프티콘 {keptCount}개를 찾았어요
-            </SheetTitle>
+               아래 기간 줄이 말하고, ✕는 눌러보면 아는 것이라 굳이 설명할 자리가
+               아니었다. 제목 한 줄이면 된다.
+
+               ⓘ는 제목 바로 옆이다. '어디서 몇 장'은 궁금한 사람만 여는 것이라 따로
+               한 줄을 차지할 일이 아니고, 기간 줄 끝에 두면 좁은 폰에서 기간 설정
+               버튼과 부딪힌다. */
+            <div className="relative flex items-center gap-1.5">
+              <SheetTitle className="min-w-0 text-[19px] font-bold tracking-[-0.026em] break-keep">
+                {keptCount > 0 ? `기프티콘 ${keptCount}개를 찾았어요` : '기프티콘 찾기'}
+              </SheetTitle>
+              {showFolderTip && (
+                <button
+                  ref={tipButtonRef}
+                  type="button"
+                  onClick={toggleFolderTip}
+                  aria-label="어디서 몇 장을 봤는지"
+                  aria-expanded={folderTipOpen}
+                  className={cn(
+                    'flex size-6 flex-none items-center justify-center rounded-full border-[1.5px] text-xs font-bold',
+                    folderTipOpen
+                      ? 'border-primary bg-primary/8 text-primary'
+                      : 'border-muted-foreground/45 text-muted-foreground'
+                  )}
+                >
+                  i
+                </button>
+              )}
+              {showFolderTip && folderTipOpen && (
+                <div
+                  ref={tipBoxRef}
+                  className="absolute top-full left-0 z-30 mt-2.5 w-[min(300px,calc(100vw-40px))] rounded-[14px] border border-border bg-card p-2.5 shadow-[0_10px_28px_rgba(0,0,0,0.16)]"
+                >
+                  {/* 꼭지. ⓘ 바로 아래로 온다(toggleFolderTip이 잰 자리). */}
+                  <span
+                    aria-hidden="true"
+                    className="absolute -top-[7px] size-3 rotate-45 border-t border-l border-border bg-card"
+                    style={{ left: Math.max(12, tipX - 6) }}
+                  />
+                  <p className="m-0 px-0.5 pb-2 text-[12.5px] font-medium text-muted-foreground">
+                    어디서 몇 장을 봤는지
+                  </p>
+                  {/* 사진이 없어도 0으로 남긴다. 빠져 있으면 "걸러진 건가" 하고 의심하게
+                      되는데, 실제로는 볼 게 없었던 것이다. */}
+                  <div className="flex gap-1.5">
+                    {summary.watched.map((folder) => (
+                      <div key={folder.label} className="flex min-w-0 flex-1 flex-col gap-0.5 rounded-[10px] bg-muted/60 px-2.5 py-2">
+                        <span className="truncate text-xs font-medium text-muted-foreground">{folder.label}</span>
+                        <span className="text-base font-bold tabular-nums text-foreground">{folder.count}</span>
+                      </div>
+                    ))}
+                  </div>
+                  {/* 오류일 때만 나온다. 평소에는 자리를 차지하지 않는다. */}
+                  {tally.readFailed > 0 && (
+                    <p className="m-0 px-0.5 pt-2 text-[13px] text-muted-foreground">
+                      열지 못한 사진 <b className="font-semibold tabular-nums text-foreground">{tally.readFailed}장</b>
+                    </p>
+                  )}
+                  {/* 셋 다 0장이면 사진첩 이름이 우리 목록과 다를 수 있다. 그때만 기기에
+                      있는 이름을 보여준다 — 그게 유일한 단서다. */}
+                  {summary.watched.every((folder) => folder.count === 0) && summary.others.length > 0 && (
+                    <p className="m-0 px-0.5 pt-2 text-[13px] break-keep text-muted-foreground">
+                      폰에 있는 사진첩: {summary.others.map((f) => `${f.name} ${f.count}`).join(' · ')}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
           ) : (
             <SheetTitle className="text-[19px] font-bold tracking-[-0.026em]">
               {picked ? '기프티콘 등록' : '기프티콘 찾기'}
@@ -2059,25 +2107,83 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
           )}
         </SheetHeader>
 
-        {/* 어디까지 보는지는 결과보다 먼저 알아야 한다. 아래에 뒀을 때는 "왜 예전 사진이
+        {/* 어디까지 봤는지는 결과보다 먼저 알아야 한다. 아래에 뒀을 때는 "왜 예전 사진이
             안 나오지"를 다 훑고 나서야 알게 됐고, 찾은 것이 많으면 목록에 밀려 화면 밖으로
             나갔다. 제목 바로 아래가 그 자리다.
-            기준 시각은 훑기가 끝나야 알 수 있어서, 그 전에는 이 줄이 없다. */}
-        {!picked && complete && formatDay(since) && stage === 'done' && (
-          <div className="mx-5 mt-2 flex gap-2 rounded-xl bg-muted/60 px-3.5 py-2.5">
-            <Info className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-            <p className="m-0 flex-1 text-sm leading-relaxed break-keep text-muted-foreground">
-              {/* 기한 이야기는 여기서 하지 않는다. 지난 것이 있으면 아래 접힌 줄이
-                  '3개는 사용기한이 지났어요'라고 그 자리에서 말한다 — 없는 날에도 미리
-                  겁주는 문장이 한 줄 더 붙어 있을 이유가 없다. */}
-              <b className="font-semibold text-foreground">{formatDay(since)} 0시</b> 이후 사진만 봐요.
-              <br />
-              {more > 0
-                ? `아직 못 본 사진이 ${more}장 남았어요.`
-                : widerRanges.length > 0
-                  ? '더 예전 사진은 아래에서 찾을 수 있어요.'
-                  : '이전 사진은 + 로 올려주세요.'}
-            </p>
+            기준 날짜는 훑기가 끝나야 알 수 있어서, 그 전에는 이 줄이 없다.
+
+            글이 길어져도 버튼은 제자리에 둔다(flex-none). 글은 두 줄로 접힌다. */}
+        {!picked && complete && since > 0 && stage === 'done' && (
+          <div ref={rangeBoxRef} className="relative mx-5 mt-2 flex flex-col gap-1.5 rounded-xl bg-muted/60 py-2.5 pr-3 pl-3.5">
+            <div className="flex items-center gap-2">
+              <p className="m-0 min-w-0 flex-1 text-[13.5px] leading-snug break-keep text-muted-foreground">
+                <b className="font-semibold text-foreground">{formatMonthDay(since)}</b> 이후{' '}
+                <span className="tabular-nums">{scannedTotal}</span>장을 봤어요.
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setFolderTipOpen(false);
+                  setRangeOpen((open) => !open);
+                }}
+                aria-expanded={rangeOpen}
+                className={cn(
+                  'flex flex-none items-center gap-0.5 rounded-full border bg-card py-[5px] pr-2 pl-2.5 text-[13px] font-semibold text-primary',
+                  rangeOpen ? 'border-primary bg-primary/8' : 'border-border'
+                )}
+              >
+                기간 설정
+                <ChevronDown className={cn('size-3.5 transition-transform', rangeOpen && 'rotate-180')} strokeWidth={2.4} />
+              </button>
+            </div>
+
+            {/* 한 번에 다 못 본 사진이 남았을 때만. 누르면 지금 기간 그대로 이어서 본다. */}
+            {more > 0 && (
+              <button
+                type="button"
+                onClick={() => start(range, { append: true })}
+                className="self-start p-0 text-left text-[13.5px] font-semibold text-primary"
+              >
+                아직 못 본 사진 <span className="tabular-nums">{more}</span>장 · 이어서 찾기
+              </button>
+            )}
+
+            {/* 메뉴는 버튼 바로 아래, 오른쪽 끝을 맞춘다. 멀리 떨어져 뜨면 무엇을 눌러
+                나온 것인지 잇지 못한다. */}
+            {rangeOpen && (
+              <div className="absolute top-[calc(100%-4px)] right-2 z-30 w-[min(262px,calc(100vw-56px))] rounded-[14px] border border-border bg-card p-1.5 shadow-[0_10px_28px_rgba(0,0,0,0.18)]">
+                {rangeMenu.map((option) => {
+                  const on = option.key === range;
+                  return (
+                    <button
+                      key={option.key}
+                      type="button"
+                      onClick={() => {
+                        setRangeOpen(false);
+                        start(option.key, { append: true });
+                      }}
+                      className={cn(
+                        'flex w-full items-center justify-between gap-2 rounded-[10px] px-3 py-[11px] text-left text-[14.5px] font-bold',
+                        on ? 'bg-primary/8 text-primary' : 'text-foreground'
+                      )}
+                    >
+                      <span className="flex items-center gap-1">
+                        {option.label}
+                        {on && <Check className="size-4" strokeWidth={2.8} />}
+                      </span>
+                      {option.from > 0 && (
+                        <span className={cn('text-[12.5px] font-medium tabular-nums', on ? 'text-primary/70' : 'text-muted-foreground')}>
+                          {formatMonthDay(option.from)}~
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+                <p className="m-0 mt-1 border-t border-border px-3 pt-2 pb-1.5 text-[12.5px] leading-normal break-keep text-muted-foreground">
+                  누르면 바로 찾아요. 이미 찾은 것에 더해져요.
+                </p>
+              </div>
+            )}
           </div>
         )}
 
@@ -2450,8 +2556,6 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                 <Button type="button" className="h-[52px] w-full rounded-[14px] text-[15.5px]" onClick={onClose}>
                   목록으로 가기
                 </Button>
-                {/* 등록을 마친 뒤에도 더 예전 것을 찾으러 갈 수 있다. */}
-                {rangeRow}
               </div>
             </>
           )}
@@ -2484,17 +2588,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
 
               {error && <p className="m-0 text-sm text-destructive">{error}</p>}
 
-              {alive.length === 0 && !isWorking ? (
-                <div className="flex flex-col items-center gap-2 py-8 text-center">
-                  <ImageOff className="size-8 text-muted-foreground" />
-                  <p className="m-0 text-base font-semibold text-foreground">
-                    {scanned === 0 ? '새로 담긴 사진이 없어요' : '등록할 기프티콘이 없어요'}
-                  </p>
-                  <p className="m-0 text-base leading-relaxed break-keep text-muted-foreground">
-                    {scanned === 0 ? '+ 로 직접 올려주세요.' : `사진 ${scanned}장을 봤어요. + 로 직접 올려주세요.`}
-                  </p>
-                </div>
-              ) : isWorking ? (
+              {isWorking ? (
                 /* 도는 동안에는 한 줄로만 쌓는다. 읽기가 끝난 차례대로 한 장씩 밀려
                    들어온다.
                    성격별로 나누는 건 다 끝난 뒤의 일이다 — 도는 중에 나눠두면 방금
@@ -2504,15 +2598,52 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                   {arrived.map((candidate) => renderCandidate(candidate, { entering: true }))}
                   {arrived.length === 0 && <CandidateSlot at={hint} hints={picked ? PICKED_HINTS : HINTS} />}
                 </ul>
+              ) : tabs.every((item) => item.count === 0) ? (
+                <div className="flex flex-col items-center gap-2 py-8 text-center">
+                  <ImageOff className="size-8 text-muted-foreground" />
+                  <p className="m-0 text-base font-semibold text-foreground">
+                    {(picked ? scanned : scannedTotal) === 0 ? '새로 담긴 사진이 없어요' : '등록할 기프티콘이 없어요'}
+                  </p>
+                  <p className="m-0 text-base leading-relaxed break-keep text-muted-foreground">+ 로 직접 올려주세요.</p>
+                </div>
               ) : (
                 <>
-                  {plains.length > 0 && (
+                  {/* 결과를 넷으로 나눈다 — 등록할 것 · 못 넣는 것 · 이미 있는 것 · 뺀 것.
+                      한 목록에 접힘 상자로 이어 붙였더니 무엇이 어디 있는지 내려가며 찾아야
+                      했다(2026-09-28 태수님과 다시 잡은 C안). 개수가 0인 탭도 자리를 지킨다. */}
+                  <div role="tablist" className="-mx-5 flex gap-1.5 overflow-x-auto px-5 [scrollbar-width:none]">
+                    {tabs.map((item) => (
+                      <button
+                        key={item.key}
+                        type="button"
+                        role="tab"
+                        aria-selected={tab === item.key}
+                        onClick={() => setTab(item.key)}
+                        className={cn(
+                          'flex-none rounded-full px-[11px] py-[7px] text-[13.5px] font-semibold whitespace-nowrap',
+                          tab === item.key ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+                        )}
+                      >
+                        {item.label} <span className="tabular-nums">{item.count}</span>
+                      </button>
+                    ))}
+                  </div>
+
+                  {tab === 'ok' && keptCount === 0 && (
+                    <p className="m-0 py-6 text-center text-[14.5px] leading-relaxed break-keep text-muted-foreground">
+                      바로 등록할 기프티콘이 없어요.
+                      <br />
+                      {unfitGroups.some((group) => group.kind === 'missing')
+                        ? '등록불가에서 빈 칸을 채울 수 있어요.'
+                        : '+ 로 직접 올려주세요.'}
+                    </p>
+                  )}
+
+                  {tab === 'ok' && plains.length > 0 && (
                     <>
                       {/* 아래 금액권 무리에는 제목이 있는데 이 무리에만 없으면, 위쪽
-                          카드들이 무엇인지 말해주는 자리가 사라진다. 한 줄로 붙여둔다.
-                          제목('기프티콘 N개를 찾았어요')과 숫자가 갈릴 수 있다 — 제목은
-                          넣을 수 있는 것 전부를 세고, 이 줄은 금액권을 뺀 나머지다. */}
-                      <p className="m-0 pt-[7px] pb-px text-[14.5px] font-bold tracking-[-0.015em] break-keep text-foreground">
+                          카드들이 무엇인지 말해주는 자리가 사라진다. 한 줄로 붙여둔다. */}
+                      <p className="m-0 pb-px text-[14.5px] font-bold tracking-[-0.015em] break-keep text-foreground">
                         <span className="tabular-nums">{plains.length}개</span>는 바로 등록할 수 있어요.
                       </p>
                       <ul className="m-0 flex list-none flex-col gap-2 p-0">
@@ -2522,11 +2653,8 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                   )}
 
                   {/* 금액권은 아래에 따로 묶는다. 확인할 것이 하나 더 있는 무리라, 위에
-                      섞여 있으면 그 하나를 매번 찾아내야 한다. 나눠 두면 위는 그냥 넘기고
-                      아래만 보면 된다. */}
-                  {/* 구분선은 붙이지 않는다. 문장형 제목에 선을 두르면 제목이 잘린
-                      것처럼 보인다. 무리를 가르는 일은 제목 한 줄이 이미 한다. */}
-                  {vouchers.length > 0 && (
+                      섞여 있으면 그 하나를 매번 찾아내야 한다. */}
+                  {tab === 'ok' && vouchers.length > 0 && (
                     <div className="flex flex-col gap-2">
                       <p className="m-0 pt-[7px] pb-px text-[14.5px] font-bold tracking-[-0.015em] break-keep text-foreground">
                         <span className="tabular-nums">{vouchers.length}개</span>는 금액권 같아요. 맞는지
@@ -2538,31 +2666,95 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                     </div>
                   )}
 
-                  {/* 넣을 수 없는 것. 접어둔다.
-                      등록을 눌러봐야 아는 것보다는 미리 보이는 편이 낫지만, 이것들이
-                      화면을 차지할 이유는 없다 — 대개는 손댈 데가 없고, 손댈 데가 있어도
-                      지금 할 일은 아니다. 제목 한 줄로 무슨 일인지 말하고, 궁금하면 연다.
-                      넣을 것이 하나도 없을 때만 펼친 채로 시작한다. 그때는 이 목록이
-                      화면에서 볼 수 있는 전부다. */}
-                  {blocked.length > 0 && (
-                    <FoldBox
-                      tone={blockedTone}
-                      title={`${blocked.length}개는 ${blockedTitle}`}
-                      open={blockedOpen ?? keptCount === 0}
-                      onToggle={() => setBlockedOpen((open) => !(open ?? keptCount === 0))}
-                    >
-                      {/* 하루 한도처럼 다 같은 이유로 막혔을 때만. 그 사연은 줄마다
-                          되풀이하기에는 길어서 위에 한 번만 적는다. */}
-                      {commonBlock && (
-                        <p className="m-0 mt-2.5 rounded-xl bg-warning/10 px-3.5 py-3 text-sm leading-relaxed break-keep text-foreground">
-                          {commonBlock}
-                        </p>
-                      )}
-                      <ul className="m-0 flex list-none flex-col p-0">
-                        {blocked.map((candidate) => renderBlockedRow(candidate))}
+                  {/* 못 넣는 것. 갈래마다 할 일이 달라서(채우기 · 다시 읽기 · 없음) 나눠 둔다. */}
+                  {tab === 'blocked' &&
+                    (unfit.length === 0 ? (
+                      <p className="m-0 py-6 text-center text-[14.5px] text-muted-foreground">등록 못 한 것이 없어요.</p>
+                    ) : (
+                      <>
+                        {/* 하루 한도처럼 다 같은 이유로 막혔을 때만. 그 사연은 줄마다
+                            되풀이하기에는 길어서 위에 한 번만 적는다. */}
+                        {commonBlock && (
+                          <p className="m-0 rounded-xl bg-warning/10 px-3.5 py-3 text-sm leading-relaxed break-keep text-foreground">
+                            {commonBlock}
+                          </p>
+                        )}
+                        {unfitGroups.map((group) => {
+                          const { Icon, bg, fg } = BLOCK_TONES[group.kind];
+                          return (
+                            <div key={group.kind} className="flex flex-col gap-1.5">
+                              <p className="m-0 flex items-center gap-2 text-[14.5px] font-bold tracking-[-0.015em] break-keep text-foreground">
+                                <span className={cn('flex size-6 shrink-0 items-center justify-center rounded-full', bg)}>
+                                  <Icon className={cn('size-[13px]', fg)} strokeWidth={2.2} />
+                                </span>
+                                <span>
+                                  <span className="tabular-nums">{group.items.length}개</span>는 {BLOCK_TITLES[group.kind]}
+                                </span>
+                              </p>
+                              <ul className="m-0 flex list-none flex-col rounded-[14px] border border-border px-3 py-0">
+                                {group.items.map((candidate) => renderBlockedRow(candidate))}
+                              </ul>
+                            </div>
+                          );
+                        })}
+                      </>
+                    ))}
+
+                  {/* 이미 목록에 있어서 뺀 것. 사진을 지우지 않고 두는 사람이 많아서 훑을
+                      때마다 나온다 — 말없이 빼면 "왜 이건 안 찾지"가 된다. */}
+                  {tab === 'known' &&
+                    (known.length === 0 ? (
+                      <p className="m-0 py-6 text-center text-[14.5px] text-muted-foreground">이미 등록된 것이 없어요.</p>
+                    ) : (
+                      <ul className="m-0 flex list-none flex-col rounded-[14px] border border-border px-3 py-0">
+                        {known.map((gifticon) => (
+                          <li key={gifticon.id} className="flex items-center gap-[11px] border-t border-border/40 py-2.5 first:border-t-0">
+                            <span className="flex size-9 shrink-0 items-center justify-center rounded-[9px] bg-success/12">
+                              <Check className="size-4 text-success" strokeWidth={2.6} />
+                            </span>
+                            <div className="flex min-w-0 flex-1 flex-col">
+                              <span className="truncate text-sm text-muted-foreground">
+                                {[gifticon.brand, formatDate(gifticon.expires_at) && `${formatDate(gifticon.expires_at)}까지`]
+                                  .filter(Boolean)
+                                  .join(' · ') || '이미 목록에 있어요'}
+                              </span>
+                              <span className="truncate text-[13px] font-semibold text-foreground">
+                                {gifticon.name || '상품명 없음'}
+                              </span>
+                            </div>
+                          </li>
+                        ))}
                       </ul>
-                    </FoldBox>
-                  )}
+                    ))}
+
+                  {/* 기프티콘이 아니라고 뺀 것. 이 창에서 뺀 것은 한 줄씩 되돌리고, 예전에
+                      뺀 것은 사진이 여기 없어서 한꺼번에 되돌린다. */}
+                  {tab === 'excluded' &&
+                    (dismissedHere.length === 0 && prevDismissed === 0 ? (
+                      <p className="m-0 py-6 text-center text-[14.5px] text-muted-foreground">제외한 사진이 없어요.</p>
+                    ) : (
+                      <>
+                        {dismissedHere.length > 0 && (
+                          <ul className="m-0 flex list-none flex-col rounded-[14px] border border-border px-3 py-0">
+                            {dismissedHere.map((candidate) => renderBlockedRow(candidate))}
+                          </ul>
+                        )}
+                        {prevDismissed > 0 && !picked && (
+                          <div className="flex items-center gap-2 rounded-[14px] border border-border py-2.5 pr-2 pl-3.5">
+                            <span className="min-w-0 flex-1 text-sm break-keep text-muted-foreground">
+                              이전에 제외한 사진 <b className="font-semibold tabular-nums text-foreground">{prevDismissed}장</b>
+                            </span>
+                            <button
+                              type="button"
+                              onClick={restoreAllDismissed}
+                              className="shrink-0 px-1.5 py-1 text-sm font-semibold text-primary underline"
+                            >
+                              모두 되돌리기
+                            </button>
+                          </div>
+                        )}
+                      </>
+                    ))}
                 </>
               )}
 
@@ -2655,15 +2847,8 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                 </div>
               )}
 
-              {stage === 'done' && panelBody}
-
-              {/* 두 버튼의 차이를 이름에 담는다. 둘 다 설치일 0시부터 보되, 위는 아직
-                  확인하지 않은 것만, 아래는 아니라고 봤던 것까지 전부 본다.
-                  '새 기프티콘' ↔ '전부'가 나란히 놓여 설명 없이 갈린다.
-
-                  예전 이름은 '건너뛴 사진 …'이었는데, 앱이 스스로 무언가를 건너뛰었다고
-                  말하는 셈이라 "뭘 놓친 거지" 하는 의심을 만들었다. 이 앱의 약속은
-                  놓치지 않는 것이고, 실제로 놓친 게 아니라 아니라고 판단한 것이다. */}
+              {/* 맨 아래는 주 버튼 하나다 — 멈추거나, 넣거나, 나가거나. 기간을 바꾸는 일은
+                  결과 위 '기간 설정'으로 옮겼다. */}
               <div className="flex flex-col gap-2">
                 {/* 도는 중에는 멈추는 것 말고 할 일이 없다. 등록 버튼을 미리 띄워두면
                     아직 다 안 들어온 것을 넣게 된다. */}
@@ -2695,20 +2880,11 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                   </Button>
                 )}
 
-                {/* 버튼이 셋이던 자리다.
-                    '새 기프티콘 찾기'는 방금 훑고 나온 자리라 누를 이유가 없었다 —
-                    그 사이에 새로 담긴 사진이 있을 리 없다.
-                    '전부 다시 찾기'는 설정으로 옮겼다(ProfileMenu). 한 번 아니라고
-                    해둔 것을 되살리는 일이라 자주 쓸 것이 아니고, 여기 두면 등록
-                    버튼 바로 밑에서 128장을 다시 읽는 버튼이 손에 닿는다.
-                    넣거나, 나가거나. 둘이면 된다. */}
                 {stage === 'done' && keptCount === 0 && (
                   <Button type="button" className="h-[52px] w-full rounded-[14px] text-[15.5px]" onClick={onClose}>
                     목록으로 가기
                   </Button>
                 )}
-
-                {stage === 'done' && rangeRow}
               </div>
             </>
           )}

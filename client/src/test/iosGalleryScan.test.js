@@ -11,7 +11,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 const nativeGallery = vi.hoisted(() => ({}));
 vi.mock('@capacitor/core', () => ({ registerPlugin: () => nativeGallery }));
 
-const { isGalleryScanSupported, scanGallery, scanRangeOptions } = await import('../utils/gallery');
+const { isGalleryScanSupported, scanGallery, scanRangeOptions, rangeStartOf } = await import('../utils/gallery');
 
 const DAY = 24 * 60 * 60;
 const now = () => Math.floor(Date.now() / 1000);
@@ -46,12 +46,23 @@ describe('훑는 기간', () => {
     expect(nativeGallery.listImages).toHaveBeenCalledWith(expect.objectContaining({ since: '0' }));
   });
 
-  it('최근 1개월이면 30일 전 0시부터 본다', async () => {
+  it('최근 1개월이면 달력으로 한 달 전 그날 0시부터 본다', async () => {
     await scanGallery({ range: '1m' });
     const since = Number(nativeGallery.listImages.mock.calls[0][0].since);
-    const expected = new Date(Date.now() - 30 * DAY * 1000);
-    expected.setHours(0, 0, 0, 0);
+    const today = new Date();
+    const expected = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+    expected.setDate(Math.min(today.getDate(), new Date(expected.getFullYear(), expected.getMonth() + 1, 0).getDate()));
     expect(since).toBe(Math.floor(expected.getTime() / 1000));
+  });
+
+  it('9월 28일의 최근 1개월은 8월 28일, 최근 3개월은 6월 28일', () => {
+    const today = new Date(2026, 8, 28, 14, 0);
+    expect(new Date(rangeStartOf('1m', today) * 1000)).toEqual(new Date(2026, 7, 28));
+    expect(new Date(rangeStartOf('3m', today) * 1000)).toEqual(new Date(2026, 5, 28));
+  });
+
+  it('그달에 없는 날이면 마지막 날로 — 3월 31일의 한 달 전은 2월 28일', () => {
+    expect(new Date(rangeStartOf('1m', new Date(2027, 2, 31)) * 1000)).toEqual(new Date(2027, 1, 28));
   });
 
   it('⚠️ 설치일보다 좁아지지 않는다 — 석 달 전에 깐 사람의 1개월은 설치일부터', async () => {
@@ -63,8 +74,8 @@ describe('훑는 기간', () => {
 
   it('고를 수 있는 기간은 설치일보다 예전으로 가는 것만', () => {
     expect(scanRangeOptions(now() - 2 * DAY).map((o) => o.key)).toEqual(['1m', '3m']);
-    expect(scanRangeOptions(now() - 60 * DAY).map((o) => o.key)).toEqual(['3m']);
-    expect(scanRangeOptions(now() - 120 * DAY)).toEqual([]);
+    expect(scanRangeOptions(now() - 50 * DAY).map((o) => o.key)).toEqual(['3m']);
+    expect(scanRangeOptions(now() - 100 * DAY)).toEqual([]);
   });
 });
 
@@ -85,5 +96,16 @@ describe('한 번에 다 못 보면', () => {
     expect(nativeGallery.listImages.mock.calls[0][0].limit).toBeGreaterThanOrEqual(1000);
     expect(scan.scanned).toBe(200);
     expect(scan.more).toBe(100);
+  });
+});
+
+describe('이어서 찾기', () => {
+  it('⚠️ 이 창에 이미 올라온 사진은 건너뛴다 — 찾은 것 위에 새것만 더해진다', async () => {
+    const images = Array.from({ length: 5 }, (_, i) => ({ id: `p${i}`, name: '', addedAt: now() - i, bucket: '' }));
+    nativeGallery.listImages = vi.fn(async () => ({ images, since: 0, folders: [] }));
+    const stop = new AbortController();
+    stop.abort();
+    const scan = await scanGallery({ signal: stop.signal, skipIds: new Set(['p0', 'p1']) });
+    expect(scan.scanned).toBe(3);
   });
 });

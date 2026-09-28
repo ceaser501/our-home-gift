@@ -19,6 +19,7 @@ vi.mock('../utils/gallery', async () => {
     FOLDERS: actual.FOLDERS,
     summarizeFolders: actual.summarizeFolders,
     scanRangeOptions: actual.scanRangeOptions,
+    rangeStartOf: actual.rangeStartOf,
     countDismissed: vi.fn(() => 0),
     forgetDismissed: vi.fn(),
     canOpenAppSettings: vi.fn(() => false),
@@ -147,34 +148,93 @@ describe('GalleryScanSheet', () => {
     expect(await screen.findByText('기프티콘 2개를 찾았어요')).toBeTruthy();
   });
 
-  // 2026-09-28: 더 예전 사진 찾기를 결과 아래 둘째 줄로 옮겼다. 찾은 게 있어도 둔다 —
-  // 등록하기 전에 더 예전 것까지 한꺼번에 보고 싶을 수 있다.
-  it('찾은 게 있어도 등록 버튼 아래에서 더 예전 사진을 찾을 수 있다', async () => {
+  // 2026-09-28 C안: 기간은 결과 위 '기간 설정' 메뉴에서 고른다. 고르면 바로 찾고,
+  // 지금 목록에 더한다 — 먼저 찾은 것이 사라지거나 두 번 쌓이지 않는다.
+  it('기간 설정에서 최근 1개월을 고르면 바로 찾고, 지금 목록에 더한다', async () => {
     render(<GalleryScanSheet onRegistered={() => {}} onClose={() => {}} />);
     (await screen.findByRole('button', { name: /사진 허용하고 찾기/ })).click();
     await screen.findByRole('button', { name: /2개 등록/ }, { timeout: 3000 });
 
-    expect(screen.getByText('더 예전 사진 찾기')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: '최근 1개월' }));
+    fireEvent.click(screen.getByRole('button', { name: /기간 설정/ }));
+    expect(screen.getByText('누르면 바로 찾아요. 이미 찾은 것에 더해져요.')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /최근 1개월/ }));
+
     await waitFor(() =>
       expect(scanGallery).toHaveBeenLastCalledWith(expect.objectContaining({ range: '1m' }))
     );
+    // 이미 올라온 사진과 번호는 건너뛰라고 넘긴다.
+    const { skipIds, skipCodes } = scanGallery.mock.calls.at(-1)[0];
+    expect([...skipIds].sort()).toEqual(['a', 'b']);
+    expect([...skipCodes].sort()).toEqual(['111', '222']);
+    // 같은 사진이 또 와도 카드는 하나다.
+    await screen.findByRole('button', { name: /2개 등록/ }, { timeout: 3000 });
+    expect(screen.getAllByText('상품 111')).toHaveLength(1);
   });
 
-  // 1개월로 찾은 뒤에도 두 칸이 그대로다. 칸이 들락날락하면 헷갈린다.
-  // 그리고 다시 찾아도 이미 AI로 읽은 번호는 다시 안 읽는다 — 한 건마다 돈이 든다.
-  it('다시 찾아도 버튼은 그대로이고, 이미 읽은 것은 AI에 다시 안 보낸다', async () => {
+  // 메뉴 칸은 늘 같다. 칸이 들락날락하면 헷갈린다.
+  // 그리고 이어서 찾으면 새로 찾은 것만 AI에 보낸다 — 한 건마다 돈이 든다.
+  it('다시 찾아도 메뉴 칸은 그대로이고, 새로 찾은 것만 AI로 읽는다', async () => {
     render(<GalleryScanSheet onRegistered={() => {}} onClose={() => {}} />);
     (await screen.findByRole('button', { name: /사진 허용하고 찾기/ })).click();
     await screen.findByRole('button', { name: /2개 등록/ }, { timeout: 3000 });
     const readsAfterFirst = readGifticonInfo.mock.calls.length;
 
-    fireEvent.click(screen.getByRole('button', { name: '최근 1개월' }));
+    scanGallery.mockResolvedValueOnce({
+      candidates: [candidate('a', '111'), candidate('c', '333')],
+      pending: [],
+      scanned: 5,
+      since: 1_760_000_000,
+      folders: [],
+      tally: { readFailed: 0, found: 1, alreadyHave: 0 },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /기간 설정/ }));
+    fireEvent.click(screen.getByRole('button', { name: /최근 1개월/ }));
+    await screen.findByRole('button', { name: /3개 등록/ }, { timeout: 3000 });
+
+    expect(readGifticonInfo.mock.calls.length).toBe(readsAfterFirst + 1);
+    // 본 장수는 더해진다(12 + 5).
+    expect(screen.getByText('17')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /기간 설정/ }));
+    expect(screen.getByRole('button', { name: /설치한 날부터/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /최근 1개월/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /최근 3개월/ })).toBeTruthy();
+  });
+
+  // 결과는 탭 넷으로 나뉜다. 이미 목록에 있는 것은 '이미 등록'에서 보인다.
+  it('이미 등록된 것은 이미 등록 탭에서 보인다', async () => {
+    findGifticonByCode.mockImplementation(async (_family, code) =>
+      code === '222' ? { id: 'g2', name: '이미 있는 커피', brand: '스타벅스', expires_at: '2026-12-01' } : null
+    );
+    scanGallery.mockImplementationOnce(async ({ isRegistered }) => {
+      await isRegistered('222');
+      return {
+        candidates: [candidate('a', '111')],
+        pending: [],
+        scanned: 12,
+        since: 1_770_000_000,
+        folders: [],
+        tally: { readFailed: 0, found: 1, alreadyHave: 1 },
+      };
+    });
+    render(<GalleryScanSheet onRegistered={() => {}} onClose={() => {}} />);
+    (await screen.findByRole('button', { name: /사진 허용하고 찾기/ })).click();
+    await screen.findByRole('button', { name: /1개 등록/ }, { timeout: 3000 });
+
+    fireEvent.click(screen.getByRole('tab', { name: /이미 등록 1/ }));
+    expect(screen.getByText('이미 있는 커피')).toBeTruthy();
+  });
+
+  // ✕로 뺀 것은 '제외' 탭으로 가고, 거기서 되돌린다.
+  it('뺀 것은 제외 탭에서 되돌릴 수 있다', async () => {
+    render(<GalleryScanSheet onRegistered={() => {}} onClose={() => {}} />);
+    (await screen.findByRole('button', { name: /사진 허용하고 찾기/ })).click();
     await screen.findByRole('button', { name: /2개 등록/ }, { timeout: 3000 });
 
-    expect(readGifticonInfo.mock.calls.length).toBe(readsAfterFirst);
-    expect(screen.getByRole('button', { name: '최근 1개월' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: '최근 3개월' })).toBeTruthy();
+    fireEvent.click(screen.getAllByRole('button', { name: '기프티콘 아님' })[0]);
+    await screen.findByRole('button', { name: /1개 등록/ });
+    fireEvent.click(screen.getByRole('tab', { name: /제외 1/ }));
+    fireEvent.click(screen.getByRole('button', { name: '되돌리기' }));
+    await screen.findByRole('button', { name: /2개 등록/ });
   });
 
   // 기한이 비었다고만 적으면 어느 것인지 알 수가 없다. 여럿일 수 있어 특정 화면으로
@@ -260,8 +320,9 @@ describe('GalleryScanSheet', () => {
     // 못 읽은 카드는 처음에는 등록에서 빠져 있다.
     expect(await screen.findByRole('button', { name: /1개 등록/ }, { timeout: 3000 })).toBeTruthy();
 
-    // 넣을 수 없는 것은 접혀 있다. 펼쳐야 채우는 자리가 나온다.
-    fireEvent.click(await screen.findByText(/정보를 못 읽었어요/));
+    // 넣을 수 없는 것은 '등록불가' 탭에 있다. 거기서 채운다.
+    fireEvent.click(await screen.findByRole('tab', { name: /등록불가 1/ }));
+    expect(await screen.findByText(/정보를 못 읽었어요/)).toBeTruthy();
     (await screen.findByRole('button', { name: /채우기/ })).click();
     fireEvent.change(await screen.findByPlaceholderText('예: 아이스 아메리카노 T'), {
       target: { value: '손으로 적은 상품' },
@@ -286,7 +347,8 @@ describe('GalleryScanSheet', () => {
     render(<GalleryScanSheet onRegistered={() => {}} onClose={() => {}} />);
     (await screen.findByRole('button', { name: /사진 허용하고 찾기/ })).click();
 
-    // 사연은 상자 제목이 한 번만 말한다. 줄마다 되풀이하면 읽어도 새로 아는 것이 없다.
+    // 바로 넣을 것이 없으면 '등록불가' 탭이 먼저 열린다.
+    // 사연은 무리 제목이 한 번만 말한다. 줄마다 되풀이하면 읽어도 새로 아는 것이 없다.
     expect(await screen.findAllByText(/사용기한이 지났어요/, {}, { timeout: 3000 })).toHaveLength(1);
     // 대신 줄에는 며칠 지났는지가 적힌다 — 어제 지난 것과 반년 전 것은 다른 이야기다.
     expect(screen.getAllByText(/일 지남/)).toHaveLength(2);
@@ -310,14 +372,17 @@ describe('GalleryScanSheet', () => {
     render(<GalleryScanSheet onRegistered={() => {}} onClose={() => {}} />);
     (await screen.findByRole('button', { name: /사진 허용하고 찾기/ })).click();
 
-    // 넣을 수 없는 것은 접혀 있다. 제목이 무슨 일인지 말하고, 펼치면 서버가 보낸 말이
+    // 넣을 수 없는 것은 '등록불가' 탭에 있다. 제목이 무슨 일인지 말하고, 서버가 보낸 말이
     // 그대로 남아 있다.
-    fireEvent.click(await screen.findByText(/읽다가 막혔어요/, {}, { timeout: 3000 }));
+    fireEvent.click(await screen.findByRole('tab', { name: /등록불가 1/ }, { timeout: 3000 }));
+    expect(await screen.findByText(/읽다가 막혔어요/)).toBeTruthy();
     expect((await screen.findAllByText('오늘은 여기까지예요')).length).toBeGreaterThan(0);
 
     (await screen.findByRole('button', { name: /다시 읽기/ })).click();
-    expect(await screen.findByText('상품 111', {}, { timeout: 3000 })).toBeTruthy();
-    expect(await screen.findByRole('button', { name: /2개 등록/ })).toBeTruthy();
+    // 다시 읽히면 '등록' 탭으로 옮겨 간다.
+    expect(await screen.findByRole('button', { name: /2개 등록/ }, { timeout: 3000 })).toBeTruthy();
+    fireEvent.click(screen.getByRole('tab', { name: '등록 2' }));
+    expect(screen.getByText('상품 111')).toBeTruthy();
   });
 
   // 사진을 받아 온 판. 훑기와 같은 화면을 쓰지만 사진첩을 훑지는 않아야 하고,

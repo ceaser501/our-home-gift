@@ -323,7 +323,8 @@ export async function findGifticonByCode(familyId, code, excludeId) {
   if (!code) return null;
   let query = supabase
     .from(GIFTICON_TABLE)
-    .select('id, name')
+    // 상호·기한까지 가져온다. 사진첩 찾기의 '이미 등록' 탭이 무엇인지 보여준다.
+    .select('id, name, brand, expires_at')
     .eq('family_id', familyId)
     .eq('code', code)
     .is('hidden_at', null)
