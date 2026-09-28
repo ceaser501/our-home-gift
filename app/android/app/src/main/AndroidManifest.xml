@@ -104,4 +104,9 @@
     <uses-permission
         android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
+    <!-- 기프티콘을 사진첩에 저장할 때(카드 ⋮ → 저장). 안드로이드 9 이하에서만 필요하다.
+         10부터는 권한 없이 사진 폴더에 넣을 수 있어서 거기서는 묻지도 않는다. -->
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
 </manifest>

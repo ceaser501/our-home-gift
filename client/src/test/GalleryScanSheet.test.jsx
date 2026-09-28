@@ -372,6 +372,10 @@ describe('GalleryScanSheet', () => {
       target: { value: '손으로 적은 상품' },
     });
 
+    // 한 글자만 넣어도 칸이 닫히던 것(2026-09-28 실기). 다 채워질 때까지 그대로 있어야 한다.
+    expect(screen.getByPlaceholderText('예: 아이스 아메리카노 T').value).toBe('손으로 적은 상품');
+    fireEvent.click(screen.getByRole('button', { name: '완료' }));
+
     // 채우고 나면 둘 다 들어간다.
     (await screen.findByRole('button', { name: /2개 등록/ })).click();
     await waitFor(() => expect(createGifticon).toHaveBeenCalledTimes(2), { timeout: 3000 });

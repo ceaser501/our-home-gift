@@ -19,12 +19,14 @@ vi.mock('../utils/browser', async (importOriginal) => ({
 }));
 
 vi.mock('@capacitor/share', () => ({ Share: { share: (...a) => share(...a) } }));
+const saveImage = vi.fn();
+vi.mock('@capacitor/core', () => ({ registerPlugin: () => ({ saveImage: (...a) => saveImage(...a) }) }));
 vi.mock('@capacitor/filesystem', () => ({
   Filesystem: { writeFile: (...a) => writeFile(...a) },
   Directory: { Cache: 'CACHE' },
 }));
 
-const { shareGifticonImage } = await import('../utils/shareGifticon');
+const { shareGifticonImage, saveGifticonImage } = await import('../utils/shareGifticon');
 
 const JPEG = new Blob([new Uint8Array([1, 2, 3])], { type: 'image/jpeg' });
 
@@ -136,5 +138,31 @@ describe('누른 직후가 아니면', () => {
     navigator.share = vi.fn().mockRejectedValue(blocked);
 
     await expect(shareGifticonImage({ url: 'https://x/a.jpg', name: '김' })).resolves.toBe('expired');
+  });
+});
+
+// 카드 ⋮ → 저장. 공유와 같은 그림을 내 사진첩에 넣는다(2026-09-28).
+describe('저장', () => {
+  it('앱은 사진첩에 바로 넣는다 — 파일 이름은 상품명', async () => {
+    native = true;
+    saveImage.mockResolvedValue(undefined);
+    await expect(saveGifticonImage({ url: 'https://x/a.jpg', name: '스타벅스' })).resolves.toBe('saved');
+    expect(saveImage).toHaveBeenCalledWith(expect.objectContaining({ name: '스타벅스.jpg' }));
+    expect(share).not.toHaveBeenCalled();
+  });
+
+  it('사진 권한을 안 준 것은 오류가 아니라 denied로 돌려준다', async () => {
+    native = true;
+    saveImage.mockRejectedValue(new Error('permission denied'));
+    await expect(saveGifticonImage({ url: 'https://x/a.jpg', name: '김' })).resolves.toBe('denied');
+  });
+
+  it('웹은 파일로 내려받는다', async () => {
+    URL.createObjectURL = vi.fn(() => 'blob:x');
+    URL.revokeObjectURL = vi.fn();
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+    await expect(saveGifticonImage({ url: 'https://x/a.jpg', name: '김' })).resolves.toBe('downloaded');
+    expect(click).toHaveBeenCalled();
+    click.mockRestore();
   });
 });

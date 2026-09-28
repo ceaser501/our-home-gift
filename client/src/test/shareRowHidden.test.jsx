@@ -72,6 +72,8 @@ describe('보내기 줄', () => {
   it('원본이 없으면 감춘다 — 사진 없이 등록한 것', () => {
     openMenu({ image_urls: [] });
     expect(shareRow()).toBeNull();
+    // 저장도 같은 원본을 쓴다. 없으면 같이 감춘다.
+    expect(screen.queryByText('저장')).toBeNull();
   });
 
   it('원본이 없으면 감춘다 — 오래돼서 지운 것', () => {

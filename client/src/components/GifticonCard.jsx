@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   CheckCircle2,
+  Download,
   Heart,
   Info,
   MapPin,
@@ -41,6 +42,8 @@ function CardMenuSheet({ gifticon, onClose, onEdit, onDelete }) {
   const pendingRef = useRef(null);
   // '' | 'busy' | 오류 한 줄
   const [shareState, setShareState] = useState('');
+  // 저장: '' | 'busy' | 'saved' | 'downloaded' | 'denied' | 오류 한 줄
+  const [saveState, setSaveState] = useState('');
 
   // 보낼 원본이 있는 것만 이 줄을 보여준다.
   //
@@ -96,6 +99,31 @@ function CardMenuSheet({ gifticon, onClose, onEdit, onDelete }) {
     }
   }
 
+  // 공유와 같은 그림을 내 사진첩에 넣는다(saveGifticonImage 주석).
+  //
+  // 저장은 폰이 따로 창을 띄우지 않아서, 됐는지를 이 창이 말해줘야 한다. 그래서 공유와
+  // 달리 창을 닫지 않고 '사진첩에 저장했어요'를 보여준다.
+  async function handleSave() {
+    if (saveState === 'busy') return;
+    setSaveState('busy');
+    try {
+      const { saveGifticonImage } = await import('../utils/shareGifticon');
+      setSaveState(await saveGifticonImage({ url: sharable, name: gifticon.name }));
+    } catch (err) {
+      setSaveState(err?.message || '저장하지 못했어요');
+    }
+  }
+
+  const SAVE_NOTES = {
+    saved: { tone: 'text-primary', text: '사진첩에 저장했어요.' },
+    downloaded: { tone: 'text-primary', text: '내려받았어요.' },
+    denied: { tone: 'text-destructive', text: '설정에서 사진 권한을 허용해주세요.' },
+  };
+  const saveNote =
+    saveState && saveState !== 'busy'
+      ? SAVE_NOTES[saveState] || { tone: 'text-destructive', text: saveState }
+      : null;
+
   // 이 창이 화면에서 완전히 사라진 다음에 고른 일을 한다. 순서가 뒤집히면
   // 새 창이 먼저 뜨고 이 창이 나중에 정리되면서, 정리하는 쪽이 화면 전체의 클릭을
   // 막아둔 상태를 그대로 남긴다.
@@ -138,6 +166,21 @@ function CardMenuSheet({ gifticon, onClose, onEdit, onDelete }) {
                 {shareState && shareState !== 'busy' && shareState !== 'ready' && (
                   <span className="text-[12.5px] break-keep text-destructive">{shareState}</span>
                 )}
+              </span>
+            </button>
+          )}
+          {/* 공유 바로 밑. 같은 그림을 남에게 보내는 대신 내 사진첩에 둔다. 매장에서
+              앱을 열기 번거로울 때, 모아콘을 안 쓰는 가족 폰으로 옮길 때 쓴다. */}
+          {sharable && (
+            <button
+              type="button"
+              onClick={handleSave}
+              className="flex w-full items-center gap-3 px-1 py-3 text-left text-sm text-foreground"
+            >
+              <Download className="size-4.5 text-muted-foreground" />
+              <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                {saveState === 'busy' ? '잠시만 기다려 주세요…' : '저장'}
+                {saveNote && <span className={cn('text-[12.5px] break-keep', saveNote.tone)}>{saveNote.text}</span>}
               </span>
             </button>
           )}

@@ -11,6 +11,7 @@ import UIKit
 //   listImages(...)    {images:[{id, name, addedAt, bucket}], partial, since, folders, total}
 //   readImage(...)     {data(base64 jpeg), width, height}
 //   openAppSettings()  이 앱의 설정 화면
+//   saveImage(...)     {data(base64 jpeg), name} → 사진 보관함에 넣는다(카드 ⋮ → 저장)
 //
 // 만드는 방향은 docs/ios-gallery.md에 있다.
 @objc(MoaconGalleryPlugin)
@@ -22,7 +23,8 @@ public class MoaconGalleryPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "requestAccess", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "listImages", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "readImage", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "openAppSettings", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "openAppSettings", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "saveImage", returnType: CAPPluginReturnPromise)
     ]
 
     // 안드로이드와 같은 값. 목록 상한과 사진을 넘길 때의 크기·화질.
@@ -198,6 +200,53 @@ public class MoaconGalleryPlugin: CAPPlugin, CAPBridgedPlugin {
                 "width": pixelWidth,
                 "height": pixelHeight
             ])
+        }
+    }
+
+    // ── 사진 저장 ──────────────────────────────────────────────────────────────
+    //
+    // 공유와 같은 그림(연보라 액자)을 사진 보관함에 넣는다. 그림은 화면 쪽이 만든다
+    // (client/src/utils/shareGifticon.js의 saveGifticonImage).
+    //
+    // 권한은 '추가만'(.addOnly)으로 묻는다. 사진첩 훑기(.readWrite)를 안 쓰는 사람에게
+    // 저장 하나 때문에 사진 전체를 보여달라고 할 이유가 없다. 이미 전체 접근을 준
+    // 사람은 다시 묻지 않고 그대로 저장된다. 문구는 Info.plist의
+    // NSPhotoLibraryAddUsageDescription이다 — 없으면 앱이 그 자리에서 꺼진다.
+    @objc func saveImage(_ call: CAPPluginCall) {
+        guard
+            let base64 = call.getString("data"),
+            let data = Data(base64Encoded: base64, options: .ignoreUnknownCharacters),
+            UIImage(data: data) != nil
+        else {
+            call.reject("저장할 사진이 없어요.", "no_data")
+            return
+        }
+        let write = {
+            PHPhotoLibrary.shared().performChanges({
+                // 원본 바이트를 그대로 넣는다. UIImage로 다시 굽지 않는다 — 바코드가 흐려진다.
+                PHAssetCreationRequest.forAsset().addResource(with: .photo, data: data, options: nil)
+            }) { ok, _ in
+                if ok {
+                    call.resolve()
+                } else {
+                    call.reject("사진첩에 저장하지 못했어요.", "save_failed")
+                }
+            }
+        }
+        let status = PHPhotoLibrary.authorizationStatus(for: .addOnly)
+        switch status {
+        case .authorized, .limited:
+            write()
+        case .notDetermined:
+            PHPhotoLibrary.requestAuthorization(for: .addOnly) { next in
+                if next == .authorized || next == .limited {
+                    write()
+                } else {
+                    call.reject("permission denied", "denied")
+                }
+            }
+        default:
+            call.reject("permission denied", "denied")
         }
     }
 

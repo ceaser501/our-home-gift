@@ -574,6 +574,12 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
   // 지금 펼쳐서 고치는 중인 후보. 한 번에 하나만 연다 — 여럿을 펼쳐두면 어느 칸이
   // 어느 기프티콘 것인지 헷갈린다.
   const [editingId, setEditingId] = useState(null);
+  // 펼칠 때 비어 있던 칸들. 칸 목록을 여는 순간에 붙들어 둔다.
+  //
+  // 예전에는 지금 비어 있는 칸(candidate.missing)을 그때그때 그렸다. 그러면 '아이스'를
+  // 치려고 'ㅇ' 한 글자만 넣어도 그 칸이 '빈 칸'에서 빠져 입력창이 통째로 사라졌다
+  // (2026-09-28 태수님 실기). 한 번 연 칸은 접을 때까지 그대로 둔다.
+  const [editingFields, setEditingFields] = useState([]);
   // 다시 읽는 중인 후보.
   const [retryingId, setRetryingId] = useState(null);
   // 이번 창에서 치운 후보. 목록에 흐리게 남겨두고 되돌릴 수 있게 한다.
@@ -1411,6 +1417,16 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
     setFolderTipOpen((open) => !open);
   }
 
+  // 채우기 칸을 열고 닫는다. 열 때 비어 있던 칸을 붙들어 둔다(editingFields 주석).
+  function toggleEditor(candidate) {
+    if (editingId === candidate.id) {
+      setEditingId(null);
+      return;
+    }
+    setEditingFields(candidate.missing || []);
+    setEditingId(candidate.id);
+  }
+
   function toggleVoucher(candidate) {
     setVoucherIds((prev) =>
       prev.includes(candidate.id) ? prev.filter((id) => id !== candidate.id) : [...prev, candidate.id]
@@ -1589,12 +1605,6 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
   // 매번 찾아내야 한다. 나눠 두면 위는 그냥 넘기고 아래만 보면 된다.
   const vouchers = alive.filter((c) => isPickable(c) && voucherLooks.includes(c.id));
   const plains = alive.filter((c) => isPickable(c) && !voucherLooks.includes(c.id));
-  // 넣을 수 없는 것. 빠진 칸이 있거나, 기한이 지났거나, 읽다가 막혔거나, 치운 것이다.
-  //
-  // 치운 것까지 여기 함께 담는다. 예전에는 목록 맨 아래에 따로 큰 카드로 세워뒀는데,
-  // 그러면 X를 누른 순간 한 줄이던 것이 카드로 부풀어 화면이 도로 길어졌다.
-  // 넣지 않는다는 점에서 하는 일이 같으니 한자리에 접어둔다.
-  const blocked = candidates.filter((c) => !isPickable(c));
   // 읽기가 끝난 순서대로. 훑는 중에는 이 차례로 카드가 한 장씩 쌓인다.
   // 이어서 찾는 중이면 원래 있던 것은 빼고 새로 들어온 것만 쌓는다.
   const arrived = alive
@@ -1616,7 +1626,12 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
 
   const keptCount = alive.filter(isPickable).length;
   // '등록불가' 탭에 드는 것. 치운 것은 '제외' 탭으로 따로 간다.
-  const unfit = blocked.filter((c) => !dismissedIds.includes(c.id));
+  //
+  // 채우는 중인 것은 다 채워져도 접을 때까지 여기 남긴다. 한 글자 넣자마자 등록 탭으로
+  // 옮겨가 버리면 나머지를 마저 칠 수가 없다.
+  const unfit = candidates.filter(
+    (c) => !dismissedIds.includes(c.id) && (!isPickable(c) || c.id === editingId)
+  );
   const dismissedHere = candidates.filter((c) => dismissedIds.includes(c.id));
   // 못 읽은 것들이 같은 이유로 막혔으면 한 번만 적는다. 하루 한도를 다 썼을 때가
   // 그런데, 그 긴 문장을 카드마다 되풀이하면 읽지 않게 된다.
@@ -1863,7 +1878,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
           {broken && !isDismissed && candidate.prepared && candidate.missing?.length > 0 && (
             <button
               type="button"
-              onClick={() => setEditingId(editing ? null : candidate.id)}
+              onClick={() => toggleEditor(candidate)}
               className="flex items-center justify-center gap-1.5 rounded-lg bg-secondary px-2.5 py-2 text-sm font-semibold text-foreground"
             >
               <Pencil className="size-4" />
@@ -1902,9 +1917,10 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
    * 모르는 것만 물어보는 쪽이 손도 덜 가고 안전하다.
    */
   function renderFillForm(candidate) {
+    const fields = editingId === candidate.id ? editingFields : candidate.missing || [];
     return (
       <div className="flex flex-col gap-2 rounded-lg bg-secondary px-2.5 py-2.5">
-        {candidate.missing?.map((field) => {
+        {fields.map((field) => {
           const key = FIELD_KEYS[field];
           if (!key) return null;
           return (
@@ -1921,7 +1937,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
           );
         })}
         <p className="m-0 text-xs break-keep text-muted-foreground">
-          채우면 아래 등록에 함께 들어가요.
+          다 채우고 완료를 누르면 등록 탭으로 옮겨가요.
         </p>
       </div>
     );
@@ -1969,7 +1985,9 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
             <span className="truncate text-sm tabular-nums text-muted-foreground">
               {isDismissed
                 ? '기프티콘이 아니라고 하셨어요'
-                : kind === 'expired'
+                : isPickable(candidate)
+                  ? '다 채웠어요'
+                  : kind === 'expired'
                   ? expiredLabel(candidate.info?.expiresAt)
                   : reasonOf(candidate)}
             </span>
@@ -1991,10 +2009,10 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
               {fillable && (
                 <button
                   type="button"
-                  onClick={() => setEditingId(editing ? null : candidate.id)}
+                  onClick={() => toggleEditor(candidate)}
                   className="shrink-0 rounded-lg bg-secondary px-2.5 py-1.5 text-sm font-semibold text-foreground"
                 >
-                  {editing ? '접기' : '채우기'}
+                  {editing ? (isPickable(candidate) ? '완료' : '접기') : '채우기'}
                 </button>
               )}
               {/* 읽다가 막힌 것은 채울 일이 아니라 다시 해볼 일이다. 하루 한도를 다
@@ -2654,7 +2672,11 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                         type="button"
                         role="tab"
                         aria-selected={tab === item.key}
-                        onClick={() => setTab(item.key)}
+                        onClick={() => {
+                          // 다른 탭으로 가면 채우던 칸은 접는다. 다 채운 것은 이제 제자리로 간다.
+                          setEditingId(null);
+                          setTab(item.key);
+                        }}
                         className={cn(
                           'flex-none rounded-full px-[11px] py-[7px] text-[13.5px] font-semibold whitespace-nowrap',
                           tab === item.key ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'
@@ -2892,8 +2914,10 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
               )}
 
               {/* 맨 아래는 주 버튼 하나다 — 멈추거나, 넣거나, 나가거나. 기간을 바꾸는 일은
-                  결과 위 '기간 설정'으로 옮겼다. */}
-              <div className="flex flex-col gap-2">
+                  결과 위 '기간 설정'으로 옮겼다.
+                  이어서 찾기 버튼이 있을 때는 위를 조금 더 띄운다. 테두리 버튼이 바로 위
+                  카드와 붙어 있으면 목록의 한 줄처럼 보인다(2026-09-28 태수님). */}
+              <div className={cn('flex flex-col gap-2', stage === 'done' && !picked && more > 0 && 'pt-3')}>
                 {/* 도는 중에는 멈추는 것 말고 할 일이 없다. 등록 버튼을 미리 띄워두면
                     아직 다 안 들어온 것을 넣게 된다. */}
                 {isWorking && (

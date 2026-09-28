@@ -1,3 +1,4 @@
+import { registerPlugin } from '@capacitor/core';
 import { isNativeApp } from './browser';
 
 // 기프티콘을 앱 밖으로 보낸다. 카톡이든 문자든, 폰의 공유 창이 받아준다.
@@ -32,6 +33,9 @@ import { isNativeApp } from './browser';
 // 자르는 자리는 카드 바깥뿐이다. 카드 안쪽 — 바코드가 있는 자리 — 은 한 획도 안 건드린다.
 
 const BAND_TEXT = '모아콘에서 보낸 선물';
+// 내 사진첩에 저장할 때는 보낸 것이 아니라서 한 마디만 바꾼다(2026-09-28 태수님).
+// 모양은 공유와 똑같다.
+const SAVE_TEXT = '모아콘에서 저장한 선물';
 const BAND_SUB = '가족 기프티콘 서랍';
 
 // 초대 화면 머리와 같은 연보라(index.css --accent)와 글자색.
@@ -96,7 +100,7 @@ function loadLogo() {
  * 받은 blob으로 그린다 — 주소로 한 번 더 받아오지 않는다. 같은 사진을 두 번 내려받는
  * 셈이고, 서명된 주소라 두 번째가 만료됐을 수도 있다.
  */
-export async function composeShareImage(blob) {
+export async function composeShareImage(blob, { title = BAND_TEXT } = {}) {
   // 그릴 자리부터 본다. 못 그리는 환경(시험의 jsdom, 아주 오래된 웹뷰)에서 사진을
   // 먼저 펼치면, 어차피 버릴 것을 펼치느라 시간만 쓴다.
   const canvas = document.createElement('canvas');
@@ -155,7 +159,7 @@ export async function composeShareImage(blob) {
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.drawImage(src, box.x, box.y, w, h, pad, band, w, h);
 
-  drawHeader(ctx, canvas.width, band, unit, logo);
+  drawHeader(ctx, canvas.width, band, unit, logo, title);
 
   return new Promise((resolve) => canvas.toBlob((out) => resolve(out), 'image/jpeg', 0.92));
 }
@@ -167,7 +171,7 @@ export async function composeShareImage(blob) {
 //
 // 세로로는 띠의 한가운데보다 조금 아래(55%)다. 위쪽은 폰에서 카메라 구멍과 상태 바가
 // 덮는 자리라, 딱 가운데여도 글자가 위로 붙어 보였다.
-function drawHeader(ctx, width, band, unit, logo) {
+function drawHeader(ctx, width, band, unit, logo, title = BAND_TEXT) {
   const family =
     "'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', -apple-system, sans-serif";
   let big = unit * 0.05;
@@ -175,7 +179,7 @@ function drawHeader(ctx, width, band, unit, logo) {
 
   const measure = () => {
     ctx.font = `700 ${big}px ${family}`;
-    const t1 = ctx.measureText(BAND_TEXT).width;
+    const t1 = ctx.measureText(title).width;
     ctx.font = `500 ${small}px ${family}`;
     const t2 = ctx.measureText(BAND_SUB).width;
     const lineGap = big * 0.3;
@@ -205,7 +209,7 @@ function drawHeader(ctx, width, band, unit, logo) {
 
   ctx.fillStyle = INK;
   ctx.font = `700 ${big}px ${family}`;
-  ctx.fillText(BAND_TEXT, textX, top - big * 0.05);
+  ctx.fillText(title, textX, top - big * 0.05);
 
   // 아랫줄은 한 단 흐리게. 같은 색으로 두면 두 줄이 한 덩어리로 뭉쳐 읽힌다.
   ctx.fillStyle = INK_SOFT;
@@ -530,4 +534,47 @@ export async function sharePrepared(prepared) {
 // 만들고 바로 보낸다. 미리 만들 틈이 없는 곳에서 쓴다.
 export async function shareGifticonImage({ url, name }) {
   return sharePrepared(await prepareShareImage({ url, name }));
+}
+
+// 사진첩 훑기와 같은 네이티브 플러그인(GalleryPlugin). 저장도 거기서 한다.
+const MoaconGallery = registerPlugin('MoaconGallery');
+
+/**
+ * 공유와 같은 그림을 내 사진첩에 저장한다. 무엇을 했는지 돌려준다 —
+ * 'saved' | 'downloaded' | 'denied'
+ *
+ * 공유 창을 거치면 '이미지 저장'을 한 번 더 찾아 눌러야 하고, 그 이름이 폰마다 다르다.
+ * 저장은 저장 버튼 하나로 끝나야 한다.
+ *
+ * 앱은 사진첩에 바로 넣는다 — 안드로이드는 사진/모아콘 폴더, 아이폰은 사진 보관함.
+ * 웹에는 사진첩에 넣는 길이 없어서 파일로 내려받는다.
+ *
+ * 공유와 달리 미리 만들어 두지 않는다. 저장은 브라우저의 '누른 직후' 제한을 받지 않는다.
+ */
+export async function saveGifticonImage({ url, name }) {
+  const original = await fetch(url).then((r) => r.blob());
+  const blob = (await composeShareImage(original, { title: SAVE_TEXT })) || original;
+  const fileName = fileNameFor(name);
+
+  if (isNativeApp()) {
+    try {
+      await MoaconGallery.saveImage({ data: await blobToBase64(blob), name: fileName });
+      return 'saved';
+    } catch (err) {
+      // 사진 권한을 안 준 것은 오류가 아니라 사람이 고른 것이다. 화면이 안내한다.
+      if (/denied|permission/i.test(err?.message || '')) return 'denied';
+      throw err;
+    }
+  }
+
+  const href = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = href;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  // 바로 치우면 내려받기가 시작되기 전에 주소가 사라지는 브라우저가 있다.
+  setTimeout(() => URL.revokeObjectURL(href), 10_000);
+  return 'downloaded';
 }

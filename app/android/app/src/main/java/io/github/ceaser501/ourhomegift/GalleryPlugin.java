@@ -3,13 +3,16 @@ package io.github.ceaser501.ourhomegift;
 import android.Manifest;
 import android.content.ContentResolver;
 import android.content.ContentUris;
+import android.content.ContentValues;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
+import android.media.MediaScannerConnection;
 import android.os.Build;
+import android.os.Environment;
 import android.provider.MediaStore;
 import android.provider.Settings;
 import android.util.Base64;
@@ -24,7 +27,10 @@ import com.getcapacitor.annotation.Permission;
 import com.getcapacitor.annotation.PermissionCallback;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashSet;
@@ -56,7 +62,9 @@ import java.util.Set;
         // 안드로이드 13(API 33)부터는 사진 전용 권한을 따로 받는다.
         @Permission(alias = "media", strings = { Manifest.permission.READ_MEDIA_IMAGES }),
         // 12 이하에서는 저장소 읽기 권한 하나로 사진까지 함께 열린다.
-        @Permission(alias = "storage", strings = { Manifest.permission.READ_EXTERNAL_STORAGE })
+        @Permission(alias = "storage", strings = { Manifest.permission.READ_EXTERNAL_STORAGE }),
+        // 사진 저장(saveImage). 9 이하에서만 쓴다 — 10부터는 권한 없이 사진 폴더에 넣을 수 있다.
+        @Permission(alias = "write", strings = { Manifest.permission.WRITE_EXTERNAL_STORAGE })
     }
 )
 public class GalleryPlugin extends Plugin {
@@ -399,6 +407,87 @@ public class GalleryPlugin extends Plugin {
      * 권한 화면으로 곧장 여는 인텐트는 없다. 제조사가 만든 것이 있기는 한데 폰마다
      * 다르고, 없는 폰에서는 앱이 그대로 죽는다 — 표준 하나만 쓴다.
      */
+    // ── 사진 저장 ──────────────────────────────────────────────────────────────
+    //
+    // 카드 ⋮ 메뉴의 '저장'. 공유와 같은 그림(연보라 액자)을 받아 사진첩에 넣는다.
+    // 그림은 화면 쪽이 만든다(client/src/utils/shareGifticon.js의 saveGifticonImage).
+    //
+    //   data  base64 jpeg
+    //   name  파일 이름(상품명.jpg)
+    //
+    // 사진/모아콘 폴더에 넣는다. 갤러리 앱에서 '모아콘' 앨범으로 모여 보인다.
+    private static final String SAVE_FOLDER = "모아콘";
+
+    @PluginMethod
+    public void saveImage(PluginCall call) {
+        // 9 이하는 사진 폴더에 쓰려면 저장소 쓰기 권한이 있어야 한다.
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q
+            && getContext().checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                != PackageManager.PERMISSION_GRANTED) {
+            requestPermissionForAlias("write", call, "saveAfterPermission");
+            return;
+        }
+        writeImage(call);
+    }
+
+    @PermissionCallback
+    private void saveAfterPermission(PluginCall call) {
+        if (getContext().checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+            != PackageManager.PERMISSION_GRANTED) {
+            call.reject("permission denied", "denied");
+            return;
+        }
+        writeImage(call);
+    }
+
+    private void writeImage(PluginCall call) {
+        String data = call.getString("data");
+        if (data == null || data.isEmpty()) {
+            call.reject("저장할 사진이 없어요.", "no_data");
+            return;
+        }
+        String name = call.getString("name", "기프티콘.jpg");
+        try {
+            byte[] bytes = Base64.decode(data, Base64.DEFAULT);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                // 다 쓰기 전에는 다른 앱에 안 보이게(IS_PENDING) 넣었다가, 다 쓰면 푼다.
+                // 반쯤 쓴 파일이 갤러리에 깨진 사진으로 뜨지 않는다.
+                ContentResolver resolver = getContext().getContentResolver();
+                ContentValues values = new ContentValues();
+                values.put(MediaStore.Images.Media.DISPLAY_NAME, name);
+                values.put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg");
+                values.put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/" + SAVE_FOLDER);
+                values.put(MediaStore.Images.Media.IS_PENDING, 1);
+                Uri uri = resolver.insert(MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY), values);
+                if (uri == null) throw new IllegalStateException("insert failed");
+                try (OutputStream out = resolver.openOutputStream(uri)) {
+                    if (out == null) throw new IllegalStateException("no stream");
+                    out.write(bytes);
+                } catch (Exception e) {
+                    resolver.delete(uri, null, null);
+                    throw e;
+                }
+                values.clear();
+                values.put(MediaStore.Images.Media.IS_PENDING, 0);
+                resolver.update(uri, values, null, null);
+            } else {
+                File dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), SAVE_FOLDER);
+                if (!dir.exists() && !dir.mkdirs()) throw new IllegalStateException("mkdirs failed");
+                File file = new File(dir, name);
+                // 같은 이름이 있으면 덮지 않는다. 같은 기프티콘을 두 번 저장할 수 있다.
+                if (file.exists()) file = new File(dir, System.currentTimeMillis() + "-" + name);
+                try (FileOutputStream out = new FileOutputStream(file)) {
+                    out.write(bytes);
+                }
+                // 갤러리 앱이 바로 보도록 알린다. 안 하면 폰을 껐다 켜야 보이기도 한다.
+                MediaScannerConnection.scanFile(getContext(), new String[] { file.getAbsolutePath() }, new String[] { "image/jpeg" }, null);
+            }
+            call.resolve();
+        } catch (Exception e) {
+            call.reject("사진첩에 저장하지 못했어요.", "save_failed");
+        }
+    }
+
     @PluginMethod
     public void openAppSettings(PluginCall call) {
         try {

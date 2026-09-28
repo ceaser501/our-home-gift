@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 // ⋯ 메뉴의 '공유'를 눌렀을 때.
 //
@@ -13,10 +13,12 @@ import { act, fireEvent, render, screen } from '@testing-library/react';
 
 const prepareShareImage = vi.fn();
 const sharePrepared = vi.fn();
+const saveGifticonImage = vi.fn();
 
 vi.mock('../utils/shareGifticon', () => ({
   prepareShareImage: (...a) => prepareShareImage(...a),
   sharePrepared: (...a) => sharePrepared(...a),
+  saveGifticonImage: (...a) => saveGifticonImage(...a),
 }));
 vi.mock('../FamilyContext', () => ({
   useFamily: () => ({ members: [{ user_id: 'me', display_name: '태수', tag_color: 0 }], user: { id: 'me' } }),
@@ -82,5 +84,29 @@ describe('공유 누르기', () => {
     await act(async () => { fireEvent.click(screen.getByText('공유')); });
     expect(screen.getByText('사진을 받지 못했어요')).toBeTruthy();
     expect(prepareShareImage).toHaveBeenCalledTimes(2);
+  });
+});
+
+// 공유 밑의 '저장'. 폰이 따로 창을 띄우지 않으니 됐는지를 이 창이 말한다.
+describe('저장 누르기', () => {
+  it('누르면 사진첩에 넣고, 저장했다고 말한다', async () => {
+    saveGifticonImage.mockResolvedValue('saved');
+    openMenu();
+    // 메뉴가 열리며 시작한 준비(모듈 불러오기)가 끝난 뒤에 누른다. 공유 시험과 같다 —
+    // 시험에서는 둘이 겹치면 가짜 대신 진짜 모듈이 잡혔다.
+    await flush();
+    fireEvent.click(screen.getByText('저장'));
+    expect(await screen.findByText('사진첩에 저장했어요.')).toBeTruthy();
+    expect(saveGifticonImage).toHaveBeenCalledWith({ url: 'https://x/a.jpg', name: '아메리카노' });
+  });
+
+  it('사진 권한이 없으면 설정에서 허용하라고 한다', async () => {
+    saveGifticonImage.mockResolvedValue('denied');
+    openMenu();
+    // 메뉴가 열리며 시작한 준비(모듈 불러오기)가 끝난 뒤에 누른다. 공유 시험과 같다 —
+    // 시험에서는 둘이 겹치면 가짜 대신 진짜 모듈이 잡혔다.
+    await flush();
+    fireEvent.click(screen.getByText('저장'));
+    expect(await screen.findByText('설정에서 사진 권한을 허용해주세요.')).toBeTruthy();
   });
 });
