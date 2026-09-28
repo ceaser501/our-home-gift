@@ -12,10 +12,15 @@ import {
 // 알고 있었다. 여기서 지키는 것은 하나다: 오래된 좌표를 현재 위치라고 하지 않는다.
 
 const getCurrentPosition = vi.fn();
+const nativeGetCurrentPosition = vi.fn();
+vi.mock('@capacitor/geolocation', () => ({
+  Geolocation: { getCurrentPosition: (...a) => nativeGetCurrentPosition(...a) },
+}));
 
 beforeEach(() => {
   vi.clearAllMocks();
   localStorage.clear();
+  delete window.Capacitor;
   Object.defineProperty(navigator, 'geolocation', {
     configurable: true,
     value: { getCurrentPosition: (...args) => getCurrentPosition(...args) },
@@ -111,5 +116,44 @@ describe('권한이 없다는 걸 알게 되면', () => {
 
     expect(hasSavedPosition()).toBe(false);
     expect(readCachedPosition()).toBeNull();
+  });
+});
+
+// 앱스토어 1.0.1 제보(2026-09-28): 아이폰 앱을 켤 때마다 「"localhost" would like to use
+// your current location」 창이 떴다. 앱 안의 웹 화면은 웹 쪽 위치 허락을 기억하지 않는다.
+// 아이폰 앱은 웹 위치 요청을 아예 안 쓰고 앱의 위치 기능으로 받는다.
+describe('아이폰 앱', () => {
+  beforeEach(() => {
+    window.Capacitor = { isNativePlatform: () => true, getPlatform: () => 'ios' };
+  });
+
+  it('⚠️ 웹 위치 요청을 쓰지 않는다 — 켤 때마다 뜨던 창', async () => {
+    nativeGetCurrentPosition.mockResolvedValue({ coords: { latitude: 37.52, longitude: 126.92 } });
+    await expect(getFreshPosition()).resolves.toEqual({ lat: 37.52, lng: 126.92 });
+    expect(getCurrentPosition).not.toHaveBeenCalled();
+    expect(nativeGetCurrentPosition.mock.calls[0][0].enableHighAccuracy).toBe(true);
+  });
+
+  it('권한 거부는 웹과 같은 code 1로 돌려준다 — 다시 묻지 않는다', async () => {
+    nativeGetCurrentPosition.mockRejectedValue(Object.assign(new Error('denied'), { code: 'OS-PLUG-GLOC-0003' }));
+    await expect(getFreshPosition()).rejects.toMatchObject({ code: 1 });
+    expect(nativeGetCurrentPosition).toHaveBeenCalledTimes(1);
+  });
+
+  it('시간 안에 못 잡으면 대충이라도 한 번 더 잡는다', async () => {
+    nativeGetCurrentPosition
+      .mockRejectedValueOnce(Object.assign(new Error('timeout'), { code: 'OS-PLUG-GLOC-0010' }))
+      .mockResolvedValueOnce({ coords: { latitude: 37.5, longitude: 126.9 } });
+    await expect(getFreshPosition()).resolves.toEqual({ lat: 37.5, lng: 126.9 });
+    expect(nativeGetCurrentPosition.mock.calls[1][0].enableHighAccuracy).toBe(false);
+  });
+});
+
+describe('갤럭시 앱', () => {
+  it('웹 위치 요청 그대로 — 앱 권한을 따라가서 창이 안 뜬다', async () => {
+    window.Capacitor = { isNativePlatform: () => true, getPlatform: () => 'android' };
+    await getFreshPosition();
+    expect(getCurrentPosition).toHaveBeenCalled();
+    expect(nativeGetCurrentPosition).not.toHaveBeenCalled();
   });
 });

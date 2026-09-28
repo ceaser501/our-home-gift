@@ -4,7 +4,7 @@
 // 보이면 앱이 멈춘 것처럼 느껴진다. 그래서 지난번 위치를 적어뒀다가 곧바로 그걸로
 // 검색을 시작하고, 새 위치는 뒤에서 받아 크게 달라졌을 때만 다시 검색한다.
 
-import { isNativeApp } from './browser';
+import { isIosApp, isNativeApp } from './browser';
 
 const STORE_KEY = 'moacon:last-position';
 // 이보다 오래된 위치는 쓰지 않는다. 하루가 지나면 다른 도시에 있을 수도 있다.
@@ -37,9 +37,41 @@ export const SIGNIFICANT_MOVE_M = 300;
 // 아니라 사실상 권한 문제라서다 — 부르는 쪽이 그렇게 다루도록 갈라 둔다.
 const NO_ANSWER_GRACE_MS = 2000;
 
+// 아이폰 앱에서는 웹의 위치 요청(navigator.geolocation)을 쓰지 않는다.
+//
+// 앱 안의 웹 화면(WKWebView)은 웹 쪽 위치 허락을 기억하지 않는다. 앱에 위치 권한을
+// 줬는데도 앱을 켤 때마다 「"localhost" would like to use your current location」 창을
+// 한 번 더 띄웠다 — 앱스토어 1.0.1을 깐 분의 제보다(2026-09-28). 「허용」을 눌러도
+// 다음에 켜면 또 떴다.
+//
+// 그래서 아이폰은 앱의 위치 기능(Capacitor Geolocation)으로 받는다. 권한 확인·요청은
+// 이미 그쪽을 쓰고 있었고(checkLocationPermission), 좌표를 받는 이 한 곳만 웹으로
+// 남아 있었다. 갤럭시 웹뷰는 앱 권한을 그대로 따라가서 이 창이 없다 — 그대로 둔다.
+//
+// 오류는 웹과 같은 번호로 바꿔 돌려준다. 부르는 쪽은 code 1(권한) · 3(시간 초과)을 보고
+// 안내를 가른다. 위치 서비스를 통째로 꺼둔 것(0007)도 설정에서 켜야 하는 일이라 1로 본다.
+const NATIVE_ERROR_CODES = {
+  'OS-PLUG-GLOC-0003': 1,
+  'OS-PLUG-GLOC-0007': 1,
+  'OS-PLUG-GLOC-0008': 1,
+  'OS-PLUG-GLOC-0010': 3,
+};
+
+function locateNative(options) {
+  return import('@capacitor/geolocation')
+    .then(({ Geolocation }) => Geolocation.getCurrentPosition(options))
+    .then((pos) => ({ lat: pos.coords.latitude, lng: pos.coords.longitude }))
+    .catch((err) => {
+      throw Object.assign(new Error(err?.message || '위치를 확인할 수 없어요.'), {
+        code: NATIVE_ERROR_CODES[err?.code] ?? 2,
+      });
+    });
+}
+
 export function locate(options) {
   return new Promise((resolve, reject) => {
-    if (!navigator.geolocation) {
+    const native = isIosApp();
+    if (!native && !navigator.geolocation) {
       reject(Object.assign(new Error('이 기기에서는 위치를 확인할 수 없어요.'), { code: 'unsupported' }));
       return;
     }
@@ -59,6 +91,11 @@ export function locate(options) {
         ),
       (options?.timeout ?? 8000) + NO_ANSWER_GRACE_MS
     );
+
+    if (native) {
+      locateNative(options).then(done(resolve), done(reject));
+      return;
+    }
 
     navigator.geolocation.getCurrentPosition(
       done((pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude })),
