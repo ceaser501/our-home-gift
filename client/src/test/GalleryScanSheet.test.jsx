@@ -161,6 +161,22 @@ describe('GalleryScanSheet', () => {
     );
   });
 
+  // 1개월로 찾은 뒤에도 두 칸이 그대로다. 칸이 들락날락하면 헷갈린다.
+  // 그리고 다시 찾아도 이미 AI로 읽은 번호는 다시 안 읽는다 — 한 건마다 돈이 든다.
+  it('다시 찾아도 버튼은 그대로이고, 이미 읽은 것은 AI에 다시 안 보낸다', async () => {
+    render(<GalleryScanSheet onRegistered={() => {}} onClose={() => {}} />);
+    (await screen.findByRole('button', { name: /사진 허용하고 찾기/ })).click();
+    await screen.findByRole('button', { name: /2개 등록/ }, { timeout: 3000 });
+    const readsAfterFirst = readGifticonInfo.mock.calls.length;
+
+    fireEvent.click(screen.getByRole('button', { name: '최근 1개월' }));
+    await screen.findByRole('button', { name: /2개 등록/ }, { timeout: 3000 });
+
+    expect(readGifticonInfo.mock.calls.length).toBe(readsAfterFirst);
+    expect(screen.getByRole('button', { name: '최근 1개월' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: '최근 3개월' })).toBeTruthy();
+  });
+
   // 기한이 비었다고만 적으면 어느 것인지 알 수가 없다. 여럿일 수 있어 특정 화면으로
   // 보낼 수도 없어서, 이름을 보여주고 목록에서 그것만 찾아 고치게 한다.
   it('기한이 빈 채로 들어간 것은 이름을 보여준다', async () => {

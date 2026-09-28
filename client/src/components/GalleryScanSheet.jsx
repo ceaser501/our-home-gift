@@ -627,6 +627,14 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
   const [since, setSince] = useState(0);
   // 훑은 기간('install' | '1m' | '3m')과 설치한 날(초). 더 예전 것을 찾는 버튼을 그린다.
   const [range, setRange] = useState('install');
+  // 이 창에서 AI로 읽은 결과. 바코드 번호 → 읽은 값.
+  //
+  // '최근 1개월'로 다시 찾으면 지금 찾은 것도 다시 나온다(넓힌 기간이 지금 기간을 품는다).
+  // 그때 같은 번호를 AI에 또 보내면 한 건마다 돈이 한 번 더 든다. 읽은 것을 들고 있다가
+  // 같은 번호면 그대로 쓰고, 새로 찾은 것만 읽는다.
+  // 창을 닫으면 버린다 — 등록하지 않은 것은 버리는 값이다(2026-09-28 태수님).
+  // 읽다가 막힌 것(readError)은 담지 않는다. 다시 찾으면 다시 읽어봐야 한다.
+  const readCacheRef = useRef(new Map());
   const [installedAt, setInstalledAt] = useState(0);
   // 한 번에 다 못 보고 남은 장수. 다음 훑기가 이어서 본다.
   const [more, setMore] = useState(0);
@@ -967,7 +975,12 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
     // 그만 찾기를 눌렀으면 줄에 서 있던 것은 보내지 않는다. 창을 닫은 뒤에도 계속
     // 읽으면 폰이 더워지고 하루 한도만 닳는다.
     if (controller.signal.aborted) return null;
-    const read = await readOne(candidate, files);
+    // 이 창에서 이미 AI로 읽은 번호면 다시 안 읽는다(readCacheRef 주석).
+    const remembered = candidate.code ? readCacheRef.current.get(candidate.code) : null;
+    const read = remembered ? { ...remembered } : await readOne(candidate, files);
+    if (!remembered && candidate.code && read && !read.readError) {
+      readCacheRef.current.set(candidate.code, read);
+    }
     if (controller.signal.aborted) return read;
 
     // 목록에 쌓이는 차례. 찾은 순서가 아니라 읽기가 끝난 순서다 — 찾은 순서로 두면
@@ -1544,9 +1557,11 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
   //
   // 이름이 '상세내역'이던 자리다. 안에 든 것은 사진 목록이 아니라 개수 표이고, 명사
   // 하나만으로는 열어볼 이유가 생기지 않는다. 무엇을 알려주는지를 그대로 적는다.
-  // 지금보다 더 예전으로 가는 기간만. '최근 1개월'로 찾은 뒤에는 '최근 3개월'만 남는다.
-  const rangeDays = { install: 0, '1m': 30, '3m': 90 }[range] ?? 0;
-  const widerRanges = scanRangeOptions(installedAt).filter((option) => option.days > rangeDays);
+  // 고를 수 있는 기간. 한 번 찾은 뒤에도 늘 같은 두 칸이다 — '1개월로 찾은 뒤엔 3개월만'
+  // 식으로 칸이 들락날락하면 헷갈린다(2026-09-28 태수님). 1개월을 또 눌러도 괜찮다.
+  // 이미 읽은 것은 아래 readCacheRef가 다시 안 읽는다.
+  // 설치일보다 예전으로 못 가는 칸(석 달 전에 깐 사람의 '최근 1개월')만 뺀다.
+  const widerRanges = scanRangeOptions(installedAt);
   const dismissedCount = !picked && complete ? countDismissed() : 0;
 
   // 결과 화면 맨 아래, 주 버튼(등록하기 / 목록으로 가기) 밑에 두는 둘째 줄.
