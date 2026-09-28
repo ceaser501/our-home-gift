@@ -2078,7 +2078,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                       되는데, 실제로는 볼 게 없었던 것이다. */}
                   <div className="flex gap-1.5">
                     {summary.watched.map((folder) => (
-                      <div key={folder.label} className="flex min-w-0 flex-1 flex-col gap-0.5 rounded-[10px] bg-muted/60 px-2.5 py-2">
+                      <div key={folder.label} className="flex min-w-0 flex-1 flex-col gap-0.5 rounded-[10px] bg-secondary px-2.5 py-2">
                         <span className="truncate text-xs font-medium text-muted-foreground">{folder.label}</span>
                         <span className="text-base font-bold tabular-nums text-foreground">{folder.count}</span>
                       </div>
@@ -2114,7 +2114,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
 
             글이 길어져도 버튼은 제자리에 둔다(flex-none). 글은 두 줄로 접힌다. */}
         {!picked && complete && since > 0 && stage === 'done' && (
-          <div ref={rangeBoxRef} className="relative mx-5 mt-2 flex flex-col gap-1.5 rounded-xl bg-muted/60 py-2.5 pr-3 pl-3.5">
+          <div ref={rangeBoxRef} className="relative mx-5 mt-2 flex flex-col gap-1.5 rounded-xl bg-secondary py-2.5 pr-3 pl-3.5">
             <div className="flex items-center gap-2">
               <p className="m-0 min-w-0 flex-1 text-[13.5px] leading-snug break-keep text-muted-foreground">
                 <b className="font-semibold text-foreground">{formatMonthDay(since)}</b> 이후{' '}
@@ -2621,7 +2621,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                         onClick={() => setTab(item.key)}
                         className={cn(
                           'flex-none rounded-full px-[11px] py-[7px] text-[13.5px] font-semibold whitespace-nowrap',
-                          tab === item.key ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+                          tab === item.key ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'
                         )}
                       >
                         {item.label} <span className="tabular-nums">{item.count}</span>
