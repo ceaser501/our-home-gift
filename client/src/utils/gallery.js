@@ -1161,6 +1161,23 @@ async function collect({ images, read: readImage, pass, isRegistered, skipCodes,
   // 전부 들고 가지 않는 이유는 아래 push 자리에 적어뒀다.
   let diagShots = 0;
 
+  // 다음 사진은 미리 받아둔다.
+  //
+  // 한 장에 드는 시간이 둘로 나뉜다 — 폰이 사진을 꺼내 줄여 넘겨주는 시간(네이티브)과,
+  // 받은 사진에서 바코드를 찾는 시간(여기, 자바스크립트). 예전에는 하나가 끝나야 다른
+  // 하나가 시작돼서 둘이 그대로 더해졌다. 지금 사진을 읽는 동안 폰은 다음 사진을
+  // 준비하게 하면 둘이 겹친다(2026-09-28 태수님과 정한 B안).
+  //
+  // 한 장만 앞서 받는다. 더 받아두면 빨라지지 않고 — 판독이 한 줄로 도니 기다리는 쪽이
+  // 늘 판독이다 — 받아둔 사진만큼 메모리를 쥐고 있게 된다.
+  const startRead = (image) => {
+    const job = Promise.resolve().then(() => readImage(image, pass));
+    // 기다리기 전에 실패해도 '처리 안 된 거절'로 남지 않게 한다. 기다리는 쪽은 그대로 받는다.
+    job.catch(() => {});
+    return job;
+  };
+  let nextRead = images.length > 0 ? startRead(images[0]) : null;
+
   for (const [index, image] of images.entries()) {
     if (signal?.aborted) break;
     onProgress?.({ scanned: index, total: images.length, found: candidates.length });
@@ -1168,9 +1185,12 @@ async function collect({ images, read: readImage, pass, isRegistered, skipCodes,
     // 그릴 틈이 없어서, 막대가 뚝뚝 끊겨 멈춘 것처럼 보인다.
     await new Promise((resolve) => setTimeout(resolve, 0));
 
+    const thisRead = nextRead;
+    nextRead = index + 1 < images.length ? startRead(images[index + 1]) : null;
+
     let read;
     try {
-      read = await readImage(image, pass);
+      read = await thisRead;
     } catch {
       // 한 장을 못 읽는다고 전체가 멈추면 안 된다. 너무 큰 사진이거나 지워진 것이다.
       readFailed += 1;
@@ -1263,6 +1283,9 @@ async function collect({ images, read: readImage, pass, isRegistered, skipCodes,
     // 일어나는 것처럼 보인다.
     onCandidate?.(candidate);
   }
+
+  // 중간에 멈췄으면 미리 받아둔 한 장이 남아 있다. 펼쳐둔 것을 놓는다.
+  nextRead?.then((read) => read?.release?.()).catch(() => {});
 
   // 바코드가 없는 사진은 여기서 아무 데도 붙이지 않는다.
   //
@@ -1444,8 +1467,31 @@ export async function scanGallery({ isRegistered, onProgress, onCandidate, signa
  * 화면이 이미 결과를 보여준 뒤에 조용히 돈다. 여기서 나오는 것은 목록에 얹힌다.
  * 끝까지 돌았을 때만 '바코드 없음'을 적는다 — 중간에 그만두면 다음에 다시 본다.
  */
+// 카카오톡 사진은 막대가 보인 것만 정밀 탐색한다.
+//
+// 카카오톡 폴더의 대부분은 대화방에서 받은 가족 사진·밥 사진이다. 정밀 탐색은 얕은 판이
+// 못 읽은 사진을 전부 크게 키워 다시 보는 일이라, 그 시간의 대부분이 거기서 나왔다.
+// 선물함에서 저장한 기프티콘은 발행사가 만든 선명한 그림이라 얕은 판에서 읽힌다.
+//
+// 다만 대화방에 '사진'으로 보낸 기프티콘은 카톡이 압축해서 흐릴 수 있다. 그런 것은
+// 얕은 판이 막대 모양은 봤을 것이라(looksLikeBarcode) 그것만 남긴다. 막대 모양은 얕은
+// 판에서 이미 재둔 값이라 더 드는 것이 없다. 다운로드·스크린샷은 지금처럼 다 본다
+// (2026-09-28 태수님과 정한 것). 돈은 원래 안 든다 — 폰 안에서 바코드만 다시 보는 일이다.
+const KAKAO_NAMES = FOLDERS.find((folder) => folder.key === 'kakaotalk').names;
+
+function skipDeep(image) {
+  return !image.bars && KAKAO_NAMES.some((name) => matchesName(image.bucket, name));
+}
+
 export async function deepScan({ pending, isRegistered, skipCodes, onProgress, onCandidate, signal } = {}) {
   if (!pending?.length) return { candidates: [] };
+
+  // 건너뛴 사진은 여기서 '바코드 없음'으로 적는다. 안 적으면 다음 훑기에서 또 얕은 판부터
+  // 다시 본다.
+  const passed = pending.filter(skipDeep);
+  if (passed.length > 0) rememberNoBarcode(passed);
+  pending = pending.filter((image) => !skipDeep(image));
+  if (pending.length === 0) return { candidates: [] };
 
   // 막대처럼 보이는 사진을 앞에 세운다.
   //
