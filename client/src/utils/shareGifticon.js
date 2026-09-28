@@ -396,12 +396,23 @@ export function cropFrame(ctx, x, y, w, h, rgb) {
   // ── 안 번진 것들을 감싸는 네모 ─────────────────────────────────────────────
   // 안 번진 칸이 셋 이상인 줄과 칸으로만 잡는다. 액자에 박힌 압축 잡음 한두 점이
   // 네모를 끌어당기면 그 사이 액자가 '안쪽'이 되어 노란 줄로 남는다.
+  //
+  // 맨 가장자리 몇 줄은 세지 않는다. 폰 화면째 찍은 캡처는 위아래 검은 띠를 먼저
+  // 잘라내는데(trimLetterbox), 검정과 노랑이 맞닿은 줄은 압축으로 색이 번져
+  // ((246,219,93)처럼) 옆 노랑과 견주면 튀어서 번지기가 안 들어간다. 그 한 줄이 가로
+  // 전체에 걸쳐 '안 번진 것'으로 남으면 네모가 맨 위·맨 아래까지 늘어나서, 위아래
+  // 노랑이 통째로 남았다(2026-09-28 투썸 캡처, 아이폰). 액자가 둘린 사진이면 카드는
+  // 가장자리에 닿지 않으니(1번 검사가 네 모서리를 이미 봤다) 몇 줄 비켜 세도 된다.
+  const EDGE = 3;
   const rows = new Uint32Array(h);
   const cols = new Uint32Array(w);
   for (let i = 0; i < n; i++) {
     if (seen[i]) continue;
-    rows[(i / w) | 0]++;
-    cols[i % w]++;
+    const ix = i % w;
+    const iy = (i / w) | 0;
+    if (ix < EDGE || ix >= w - EDGE || iy < EDGE || iy >= h - EDGE) continue;
+    rows[iy]++;
+    cols[ix]++;
   }
   let minX = 0, maxX = w - 1, minY = 0, maxY = h - 1;
   while (minY < h && rows[minY] < 3) minY++;
