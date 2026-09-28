@@ -1,5 +1,6 @@
-import { registerPlugin } from '@capacitor/core';
 import { isNativeApp } from './browser';
+// 사진첩 훑기와 같은 네이티브 플러그인. 저장도 거기서 한다.
+import { MoaconGallery } from './moaconGallery';
 
 // 기프티콘을 앱 밖으로 보낸다. 카톡이든 문자든, 폰의 공유 창이 받아준다.
 //
@@ -151,7 +152,12 @@ export async function composeShareImage(blob, { title = BAND_TEXT } = {}) {
   const unit = Math.min(w * 1.6, Math.max(w, h / 1.6));
 
   const pad = Math.round(unit * 0.035);
-  const band = Math.round(unit * 0.2);
+  // 머리 띠. 0.2였다가 0.26으로 늘렸다(2026-09-28).
+  //
+  // 아이폰 사진 앱은 세로로 긴 그림을 화면에 꽉 채워 보여줘서, 맨 위 글자가 카메라 홈
+  // 밑으로 들어갔다(저장한 그림을 태수님이 아이폰으로 봄). 띠를 늘리고 글자를 아래로
+  // 내려(drawHeader의 BAND_TEXT_AT) 위쪽에 가려져도 되는 빈자리를 둔다.
+  const band = Math.round(unit * 0.26);
   canvas.width = w + pad * 2;
   canvas.height = band + h + pad;
 
@@ -169,8 +175,10 @@ export async function composeShareImage(blob, { title = BAND_TEXT } = {}) {
 // 로고는 두 줄을 합친 높이로 왼쪽에 서고, 글자는 그 오른쪽에 왼쪽 맞춤으로 선다.
 // 묶음 전체를 가운데에 놓는다. 글자가 폭을 넘치면 묶음째 줄인다.
 //
-// 세로로는 띠의 한가운데보다 조금 아래(55%)다. 위쪽은 폰에서 카메라 구멍과 상태 바가
-// 덮는 자리라, 딱 가운데여도 글자가 위로 붙어 보였다.
+// 세로로는 띠의 한가운데보다 아래(62%)다. 위쪽은 폰에서 카메라 구멍·아이폰 카메라 홈과
+// 상태 바가 덮는 자리라, 가운데에 두면 글자 윗부분이 가려졌다. 처음 55%였다가, 아이폰에서
+// 가려져서 띠를 늘리면서 더 내렸다.
+const BAND_TEXT_AT = 0.62;
 function drawHeader(ctx, width, band, unit, logo, title = BAND_TEXT) {
   const family =
     "'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', -apple-system, sans-serif";
@@ -198,7 +206,7 @@ function drawHeader(ctx, width, band, unit, logo, title = BAND_TEXT) {
   }
 
   const blockH = big + m.lineGap + small;
-  const top = band * 0.55 - blockH / 2;
+  const top = band * BAND_TEXT_AT - blockH / 2;
   const left = (width - m.total) / 2;
 
   if (logo) ctx.drawImage(logo, left, top, m.logoSize, m.logoSize);
@@ -561,8 +569,6 @@ export async function shareGifticonImage({ url, name }) {
   return sharePrepared(await prepareShareImage({ url, name }));
 }
 
-// 사진첩 훑기와 같은 네이티브 플러그인(GalleryPlugin). 저장도 거기서 한다.
-const MoaconGallery = registerPlugin('MoaconGallery');
 
 /**
  * 공유와 같은 그림을 내 사진첩에 저장한다. 무엇을 했는지 돌려준다 —

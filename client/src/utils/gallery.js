@@ -1,4 +1,4 @@
-import { registerPlugin } from '@capacitor/core';
+import { MoaconGallery } from './moaconGallery';
 import { BrowserMultiFormatReader } from '@zxing/browser';
 import { BarcodeFormat, DecodeHintType } from '@zxing/library';
 import { isNativeApp } from './browser';
@@ -21,7 +21,6 @@ import { isNativeApp } from './browser';
 // 바코드를 못 읽는 기프티콘(QR만 있는 앱 전용, 화질이 나쁜 캡처)은 이 방식으로 못 잡는다.
 // 그건 지금처럼 직접 올리면 된다 — 이 기능은 처음부터 거들기 위한 것이다.
 
-const MoaconGallery = registerPlugin('MoaconGallery');
 
 // 훑을 폴더.
 //
