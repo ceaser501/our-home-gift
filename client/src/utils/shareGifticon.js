@@ -249,6 +249,31 @@ export function trimLetterbox(ctx, w, h) {
   while (top < bottom && blackRow(top)) top++;
   while (bottom > top && blackRow(bottom)) bottom--;
 
+  // 검정과 내용 사이의 경계 몇 줄도 걷는다.
+  //
+  // 사진은 JPEG라 까만 띠와 밝은 화면이 맞닿은 자리가 칼같이 갈리지 않는다. 한두 줄이
+  // 회색으로 번져 있는데, 까맣지는 않아서 위 검사를 통과해 남았다. 그게 액자 안에서
+  // 위아래 가는 실선으로 보였다(2026-09-28 태수님 실기, 저장·공유 둘 다).
+  //
+  // 까만 띠를 실제로 잘랐을 때만, 몇 줄 안쪽의 내용보다 확연히 어두운 줄을 네 줄까지만
+  // 더 걷는다. 원래 어두운 화면(검은 머리의 앱)이면 안쪽도 어두워서 걷지 않는다.
+  const SEAM_ROWS = 4;
+  const rowLight = (y) => {
+    let sum = 0;
+    for (let o = y * w * 4, end = o + w * 4; o < end; o += 4) sum += d[o] + d[o + 1] + d[o + 2];
+    return sum / (w * 3);
+  };
+  const seam = (y, inward) => {
+    const ref = rowLight(y + inward * SEAM_ROWS);
+    return rowLight(y) < ref * 0.85;
+  };
+  if (top > 0) {
+    for (let k = 0; k < SEAM_ROWS && top + SEAM_ROWS < bottom && seam(top, 1); k++) top++;
+  }
+  if (bottom < h - 1) {
+    for (let k = 0; k < SEAM_ROWS && bottom - SEAM_ROWS > top && seam(bottom, -1); k++) bottom--;
+  }
+
   const ch = bottom - top + 1;
   if (ch < h * 0.3) return whole;
   return { x: 0, y: top, w, h: ch };

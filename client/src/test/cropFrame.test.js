@@ -298,6 +298,20 @@ describe('검은 여백 자르기', () => {
     expect(trimLetterbox(ctx, 50, 100)).toEqual({ x: 0, y: 12, w: 50, h: 79 });
   });
 
+  // 까만 띠와 화면 사이 JPEG 번짐 줄이 액자 안에서 가는 실선으로 보였다(2026-09-28).
+  it('검정과 내용 사이 회색으로 번진 줄까지 걷는다', () => {
+    const ctx = letterbox({
+      w: 50, h: 100, top: 10, bottom: 10,
+      content: (x, y) => (y === 10 || y === 89 ? [60, 60, 70] : y === 11 || y === 88 ? [150, 150, 150] : [250, 250, 250]),
+    });
+    expect(trimLetterbox(ctx, 50, 100)).toEqual({ x: 0, y: 12, w: 50, h: 76 });
+  });
+
+  it('원래 어두운 화면은 번짐으로 보지 않는다', () => {
+    const ctx = letterbox({ w: 50, h: 100, top: 10, bottom: 10, content: () => [60, 60, 70] });
+    expect(trimLetterbox(ctx, 50, 100)).toEqual({ x: 0, y: 10, w: 50, h: 80 });
+  });
+
   it('좌우는 안 자른다', () => {
     const ctx = letterbox({ w: 50, h: 100, top: 0, bottom: 0, content: (x) => (x < 5 ? [0, 0, 0] : [0, 80, 160]) });
     expect(trimLetterbox(ctx, 50, 100)).toEqual({ x: 0, y: 0, w: 50, h: 100 });
