@@ -12,7 +12,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 const nativeGallery = vi.hoisted(() => ({}));
 vi.mock('@capacitor/core', () => ({ registerPlugin: () => nativeGallery }));
 
-const { isGalleryScanSupported, scanGallery, scanRangeOptions, rangeStartOf, markPassed, deepScan } = await import('../utils/gallery');
+const { isGalleryScanSupported, scanGallery, scanRangeOptions, rangeStartOf, markPassed } = await import('../utils/gallery');
 
 const DAY = 24 * 60 * 60;
 const now = () => Math.floor(Date.now() / 1000);
@@ -154,22 +154,5 @@ describe('다음 사진 미리 받기', () => {
     expect(scan.scanned).toBe(3);
     // 한 장씩만 앞서 받는다 — 같은 사진을 두 번 달라고 하지 않는다.
     expect(nativeGallery.readImage).toHaveBeenCalledTimes(3);
-  });
-});
-
-// 2번 제안(2026-09-28): 카카오톡 사진은 막대가 보인 것만 정밀 탐색한다.
-describe('정밀 탐색', () => {
-  it('카카오톡 사진은 막대가 보인 것만 다시 보고, 나머지는 바코드 없음으로 적는다', async () => {
-    nativeGallery.readImage = vi.fn(() => Promise.reject(new Error('시험')));
-    await deepScan({
-      pending: [
-        { id: 'k1', bucket: 'KakaoTalk', bars: false },
-        { id: 'k2', bucket: 'KakaoTalk', bars: true },
-        { id: 's1', bucket: 'Screenshots', bars: false },
-      ],
-    });
-    expect(nativeGallery.readImage.mock.calls.map(([arg]) => arg.id).sort()).toEqual(['k2', 's1']);
-    const saved = JSON.parse(localStorage.getItem('moacon:gallery-no-barcode'));
-    expect(saved.ids).toContain('k1');
   });
 });

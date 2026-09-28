@@ -1467,31 +1467,15 @@ export async function scanGallery({ isRegistered, onProgress, onCandidate, signa
  * 화면이 이미 결과를 보여준 뒤에 조용히 돈다. 여기서 나오는 것은 목록에 얹힌다.
  * 끝까지 돌았을 때만 '바코드 없음'을 적는다 — 중간에 그만두면 다음에 다시 본다.
  */
-// 카카오톡 사진은 막대가 보인 것만 정밀 탐색한다.
-//
-// 카카오톡 폴더의 대부분은 대화방에서 받은 가족 사진·밥 사진이다. 정밀 탐색은 얕은 판이
-// 못 읽은 사진을 전부 크게 키워 다시 보는 일이라, 그 시간의 대부분이 거기서 나왔다.
-// 선물함에서 저장한 기프티콘은 발행사가 만든 선명한 그림이라 얕은 판에서 읽힌다.
-//
-// 다만 대화방에 '사진'으로 보낸 기프티콘은 카톡이 압축해서 흐릴 수 있다. 그런 것은
-// 얕은 판이 막대 모양은 봤을 것이라(looksLikeBarcode) 그것만 남긴다. 막대 모양은 얕은
-// 판에서 이미 재둔 값이라 더 드는 것이 없다. 다운로드·스크린샷은 지금처럼 다 본다
-// (2026-09-28 태수님과 정한 것). 돈은 원래 안 든다 — 폰 안에서 바코드만 다시 보는 일이다.
-const KAKAO_NAMES = FOLDERS.find((folder) => folder.key === 'kakaotalk').names;
-
-function skipDeep(image) {
-  return !image.bars && KAKAO_NAMES.some((name) => matchesName(image.bucket, name));
-}
-
 export async function deepScan({ pending, isRegistered, skipCodes, onProgress, onCandidate, signal } = {}) {
   if (!pending?.length) return { candidates: [] };
 
-  // 건너뛴 사진은 여기서 '바코드 없음'으로 적는다. 안 적으면 다음 훑기에서 또 얕은 판부터
-  // 다시 본다.
-  const passed = pending.filter(skipDeep);
-  if (passed.length > 0) rememberNoBarcode(passed);
-  pending = pending.filter((image) => !skipDeep(image));
-  if (pending.length === 0) return { candidates: [] };
+  // 폴더를 가리지 않고 얕은 판이 못 읽은 사진을 전부 다시 본다.
+  //
+  // 카카오톡은 막대·QR이 보이는 것만 보게 줄여봤다가 되돌렸다(2026-09-28 태수님). 이 판은
+  // 결과를 보여준 뒤에 뒤에서 돌아서 등록을 막지 않고, 한 번 본 사진은 '바코드 없음'으로
+  // 남아 다음부터 안 본다 — 아끼는 것은 처음 한 번의 뒤쪽 시간뿐인데, 그 대신 흐린 QR을
+  // 놓칠 여지가 생긴다. 빠르게 하는 일은 얕은 판의 '다음 사진 미리 받기'가 맡는다.
 
   // 막대처럼 보이는 사진을 앞에 세운다.
   //
