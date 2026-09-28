@@ -242,6 +242,20 @@ describe('GalleryScanSheet', () => {
     expect(markPassed).toHaveBeenLastCalledWith(['x3']);
   });
 
+  // 아이폰 사진첩에는 폴더가 없어 설치일 이후 사진 전체를 본다. '세 곳만 봐요'는 거기서
+  // 사실이 아니다(2026-09-28, 1.0.2 심사 메모를 쓰다 알았다).
+  it('아이폰에서는 폴더 세 곳 이야기를 하지 않는다', async () => {
+    window.Capacitor = { isNativePlatform: () => true, getPlatform: () => 'ios' };
+    scanGallery.mockImplementationOnce(() => new Promise(() => {}));
+    try {
+      render(<GalleryScanSheet onRegistered={() => {}} onClose={() => {}} />);
+      expect(await screen.findByText('바코드가 있는 사진만 골라요')).toBeTruthy();
+      expect(screen.queryByText(/세 곳만 봐요/)).toBeNull();
+    } finally {
+      delete window.Capacitor;
+    }
+  });
+
   // 결과는 탭 넷으로 나뉜다. 이미 목록에 있는 것은 '이미 등록'에서 보인다.
   it('이미 등록된 것은 이미 등록 탭에서 보인다', async () => {
     findGifticonByCode.mockImplementation(async (_family, code) =>

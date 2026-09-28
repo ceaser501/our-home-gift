@@ -193,6 +193,20 @@ const HINTS = [
   '앱을 설치한 날 이후에 담긴 사진만 봐요',
 ];
 
+// 아이폰의 안내. 첫 줄만 다르다.
+//
+// 아이폰 사진첩에는 폴더가 없어서, 훑기는 설치한 날 이후의 사진 전체를 본다
+// (app/ios/App/App/GalleryPlugin.swift의 listImages — 기간으로만 자른다). 그런데 첫 줄이
+// 「다운로드 · 카카오톡 · 스크린샷, 이 세 곳만 봐요」로 그대로 나가고 있었다 — 아이폰에서는
+// 사실이 아닌 말이다(2026-09-28, 1.0.2 심사 메모를 쓰다 알았다). 위 HINTS 주석대로 여기
+// 적힌 말은 다 사실이어야 한다.
+const IOS_HINTS = [
+  // collect() — 바코드가 읽힌 사진만 후보가 된다.
+  '바코드가 있는 사진만 골라요',
+  HINTS[1],
+  HINTS[2],
+];
+
 // 받아 온 사진(수기등록)일 때의 안내. 위 HINTS는 사진첩 훑기의 이야기라(어느 폴더를
 // 보는지, 언제 이후를 보는지) 받아 온 사진에는 거짓이 된다. 여기는 고른 사진에게
 // 무슨 일이 일어나는지만 적는다 — 역시 다 사실이어야 한다.
@@ -2264,9 +2278,20 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
               {/* 폴더 이름을 한 줄로 몰아둔다. 그냥 흘려 쓰면 "…스크린샷 폴더에서 새 /
                   기프티콘을 찾아드려요"로 끊겨서, 굵게 해둔 세 이름이 뒷말과 엉킨다. */}
               <p className="m-0 text-base leading-relaxed break-keep text-muted-foreground">
-                <b className="font-semibold text-foreground">{KOREAN_BUCKETS}</b>
-                <br />
-                폴더에서 새 기프티콘을 찾아드려요.
+                {/* 아이폰은 폴더가 없어 설치일 이후 사진 전체를 본다(IOS_HINTS 주석). */}
+                {isIosApp() ? (
+                  <>
+                    <b className="font-semibold text-foreground">설치한 날 이후 사진</b>에서
+                    <br />
+                    새 기프티콘을 찾아드려요.
+                  </>
+                ) : (
+                  <>
+                    <b className="font-semibold text-foreground">{KOREAN_BUCKETS}</b>
+                    <br />
+                    폴더에서 새 기프티콘을 찾아드려요.
+                  </>
+                )}
               </p>
               {/* 사진 권한은 사람들이 가장 망설이는 권한이다. 무엇을 보고 무엇을 안 보내는지
                   먼저 적어두면, 눌러도 되는 것인지 판단할 근거가 생긴다. */}
@@ -2650,7 +2675,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                    애니메이션이 다시 돈다. */
                 <ul className="m-0 flex list-none flex-col gap-2 p-0">
                   {arrived.map((candidate) => renderCandidate(candidate, { entering: true }))}
-                  {arrived.length === 0 && <CandidateSlot at={hint} hints={picked ? PICKED_HINTS : HINTS} />}
+                  {arrived.length === 0 && <CandidateSlot at={hint} hints={picked ? PICKED_HINTS : isIosApp() ? IOS_HINTS : HINTS} />}
                 </ul>
               ) : tabs.every((item) => item.count === 0) ? (
                 <div className="flex flex-col items-center gap-2 py-8 text-center">
