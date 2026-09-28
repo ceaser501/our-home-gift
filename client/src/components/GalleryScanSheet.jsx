@@ -32,6 +32,8 @@ import {
   scanGallery,
   scanRangeOptions,
   summarizeFolders,
+  countDismissed,
+  forgetDismissed,
   undismissImages,
 } from '../utils/gallery';
 import { createGifticon, findGifticonByCode, removeImages, uploadGifticonImages } from '../api';
@@ -1542,10 +1544,65 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
   //
   // 이름이 '상세내역'이던 자리다. 안에 든 것은 사진 목록이 아니라 개수 표이고, 명사
   // 하나만으로는 열어볼 이유가 생기지 않는다. 무엇을 알려주는지를 그대로 적는다.
+  // 지금보다 더 예전으로 가는 기간만. '최근 1개월'로 찾은 뒤에는 '최근 3개월'만 남는다.
+  const rangeDays = { install: 0, '1m': 30, '3m': 90 }[range] ?? 0;
+  const widerRanges = scanRangeOptions(installedAt).filter((option) => option.days > rangeDays);
+  const dismissedCount = !picked && complete ? countDismissed() : 0;
+
+  // 결과 화면 맨 아래, 주 버튼(등록하기 / 목록으로 가기) 밑에 두는 둘째 줄.
+  //
+  // 위에 두었더니 결과보다 먼저 눈에 걸렸다. 찾은 것을 먼저 보고, 그다음에 "더 찾을까"다.
+  // 찾은 게 있어도 둔다 — 등록하기 전에 더 예전 것까지 한꺼번에 보고 싶을 수 있다.
+  // 다시 찾으면 지금 찾은 것도 다시 나온다(넓힌 기간이 지금 기간을 품는다).
+  //
+  // '아니라고 한 사진 다시 보기'도 여기다. 설정에 있던 '전부 다시 찾기'를 옮겼다 —
+  // 치우기를 잘못 누른 것은 이 화면에서 알게 되니 되돌리는 길도 여기 있어야 한다.
+  const rangeRow =
+    !picked && complete && (more > 0 || widerRanges.length > 0 || dismissedCount > 0) ? (
+      <div className="flex flex-col gap-2 pt-1">
+        {more > 0 ? (
+          <Button type="button" variant="outline" className="h-11 w-full rounded-[12px] text-[14.5px] font-semibold" onClick={() => start(range)}>
+            남은 사진 {more}장 이어서 찾기
+          </Button>
+        ) : (
+          widerRanges.length > 0 && (
+            <>
+              <p className="m-0 text-center text-[13px] font-medium text-muted-foreground">더 예전 사진 찾기</p>
+              <div className="flex gap-2">
+                {widerRanges.map((option) => (
+                  <Button
+                    key={option.key}
+                    type="button"
+                    variant="outline"
+                    className="h-11 flex-1 rounded-[12px] text-[14.5px] font-semibold"
+                    onClick={() => start(option.key)}
+                  >
+                    {option.label}
+                  </Button>
+                ))}
+              </div>
+            </>
+          )
+        )}
+        {dismissedCount > 0 && (
+          <button
+            type="button"
+            className="py-1.5 text-center text-[13px] font-medium text-muted-foreground underline underline-offset-2"
+            onClick={() => {
+              forgetDismissed();
+              start(range);
+            }}
+          >
+            아니라고 한 사진 {dismissedCount}장 다시 보기
+          </button>
+        )}
+      </div>
+    ) : null;
+
   const panelBody = tally ? (
     <FoldBox
       tone={BLOCK_TONES.dismissed}
-      title="어디서 몇 장을 봤는지 알려드려요"
+      title={isIosApp() && !picked ? '몇 장을 봤는지 알려드려요' : '어디서 몇 장을 봤는지 알려드려요'}
       open={panelOpen}
       onToggle={() => setPanelOpen((open) => !open)}
     >
@@ -1557,9 +1614,10 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
             되는데, 실제로는 볼 게 없었던 것이다. 기기에 있는 다른 사진첩은 적지 않는다 —
             안 보는 것을 늘어놓으면 그걸 뒤진다는 뜻으로 읽힌다. */}
         {/* 받아 온 사진은 어느 폴더에서 왔는지 모른다. 그 줄 대신 몇 장을 봤는지만 적는다. */}
-        {picked ? (
+        {/* 아이폰은 사진첩에 폴더가 없어서 폴더 칸이 늘 0이었다. 본 장수 한 칸만 둔다. */}
+        {picked || isIosApp() ? (
           <div className="flex flex-col gap-0.5 rounded-[10px] bg-muted/50 px-2.5 py-2.5">
-            <span className="text-xs font-medium text-muted-foreground">고른 사진</span>
+            <span className="text-xs font-medium text-muted-foreground">{picked ? '고른 사진' : '본 사진'}</span>
             <span className="text-base font-bold tracking-[-0.02em] tabular-nums text-foreground">{scanned}</span>
           </div>
         ) : (
@@ -1596,7 +1654,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
 
         {/* 셋 다 0장이면 사진첩 이름이 우리 목록과 다를 수 있다. 그때만 기기에 있는
             이름을 보여준다 — 그게 유일한 단서다. */}
-        {!picked && summary.watched.every((folder) => folder.count === 0) && summary.others.length > 0 && (
+        {!picked && !isIosApp() && summary.watched.every((folder) => folder.count === 0) && summary.others.length > 0 && (
           <p className="m-0 border-t border-border/60 pt-2.5 text-sm break-keep text-muted-foreground">
             폰에 있는 사진첩: {summary.others.map((f) => `${f.name} ${f.count}`).join(' · ')}
           </p>
@@ -1646,10 +1704,10 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                   같은 기프티콘이 여러 사진첩에 있을 때 무엇을 집었는지 알기 위해서다. */}
               <div className="flex items-baseline gap-2">
                 <span className="truncate text-[12.5px] font-medium text-muted-foreground">
-                  {info?.brand || candidate.bucket}
+                  {info?.brand || folderLabel(candidate.bucket) || candidate.bucket}
                 </span>
                 {info?.brand && (
-                  <span className="shrink-0 text-[12.5px] text-muted-foreground/70">{candidate.bucket}</span>
+                  <span className="shrink-0 text-[12.5px] text-muted-foreground/70">{folderLabel(candidate.bucket) || candidate.bucket}</span>
                 )}
               </div>
               <span className="mt-0.5 truncate text-[15.5px] leading-snug font-semibold tracking-[-0.015em] text-foreground">
@@ -2001,41 +2059,10 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
               <br />
               {more > 0
                 ? `아직 못 본 사진이 ${more}장 남았어요.`
-                : scanRangeOptions(installedAt).length > 0
-                  ? '더 예전 사진도 찾을 수 있어요.'
+                : widerRanges.length > 0
+                  ? '더 예전 사진은 아래에서 찾을 수 있어요.'
                   : '이전 사진은 + 로 올려주세요.'}
             </p>
-          </div>
-        )}
-
-        {/* 더 예전 것 찾기 / 이어서 찾기.
-            기본은 설치한 날부터라 그 전에 받아둔 기프티콘은 안 나온다. 그걸 찾는 길을
-            여기 둔다 — 설정 깊은 곳에 두면 "예전 건 왜 안 나오지"에서 멈춘다.
-            한 번에 200장까지만 보므로, 남은 것이 있으면 이어서 보는 버튼이 먼저다. */}
-        {!picked && complete && stage === 'done' && (more > 0 || scanRangeOptions(installedAt).length > 0) && (
-          <div className="mx-5 mt-2 flex flex-wrap gap-2">
-            {more > 0 ? (
-              <Button type="button" variant="outline" className="h-10 flex-1 rounded-[11px] text-[14px] font-semibold" onClick={() => start(range)}>
-                이어서 찾기
-              </Button>
-            ) : (
-              scanRangeOptions(installedAt).map((option) => (
-                <Button
-                  key={option.key}
-                  type="button"
-                  variant="outline"
-                  aria-pressed={range === option.key}
-                  className={
-                    range === option.key
-                      ? 'h-10 flex-1 rounded-[11px] border-primary text-[14px] font-semibold text-primary'
-                      : 'h-10 flex-1 rounded-[11px] text-[14px] font-semibold'
-                  }
-                  onClick={() => start(option.key)}
-                >
-                  {option.label}
-                </Button>
-              ))
-            )}
           </div>
         )}
 
@@ -2408,6 +2435,8 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                 <Button type="button" className="h-[52px] w-full rounded-[14px] text-[15.5px]" onClick={onClose}>
                   목록으로 가기
                 </Button>
+                {/* 등록을 마친 뒤에도 더 예전 것을 찾으러 갈 수 있다. */}
+                {rangeRow}
               </div>
             </>
           )}
@@ -2663,6 +2692,8 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                     목록으로 가기
                   </Button>
                 )}
+
+                {stage === 'done' && rangeRow}
               </div>
             </>
           )}

@@ -19,6 +19,8 @@ vi.mock('../utils/gallery', async () => {
     FOLDERS: actual.FOLDERS,
     summarizeFolders: actual.summarizeFolders,
     scanRangeOptions: actual.scanRangeOptions,
+    countDismissed: vi.fn(() => 0),
+    forgetDismissed: vi.fn(),
     canOpenAppSettings: vi.fn(() => false),
     openAppSettings: vi.fn(),
     getGalleryStatus: vi.fn(async () => ({ supported: true, granted: true, partial: false })),
@@ -143,6 +145,20 @@ describe('GalleryScanSheet', () => {
     expect(await screen.findByText('상품 222')).toBeTruthy();
     // 다 끝난 화면이라 제목이 진행형일 이유가 없다. 몇 개를 찾았는지가 소식이다.
     expect(await screen.findByText('기프티콘 2개를 찾았어요')).toBeTruthy();
+  });
+
+  // 2026-09-28: 더 예전 사진 찾기를 결과 아래 둘째 줄로 옮겼다. 찾은 게 있어도 둔다 —
+  // 등록하기 전에 더 예전 것까지 한꺼번에 보고 싶을 수 있다.
+  it('찾은 게 있어도 등록 버튼 아래에서 더 예전 사진을 찾을 수 있다', async () => {
+    render(<GalleryScanSheet onRegistered={() => {}} onClose={() => {}} />);
+    (await screen.findByRole('button', { name: /사진 허용하고 찾기/ })).click();
+    await screen.findByRole('button', { name: /2개 등록/ }, { timeout: 3000 });
+
+    expect(screen.getByText('더 예전 사진 찾기')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: '최근 1개월' }));
+    await waitFor(() =>
+      expect(scanGallery).toHaveBeenLastCalledWith(expect.objectContaining({ range: '1m' }))
+    );
   });
 
   // 기한이 비었다고만 적으면 어느 것인지 알 수가 없다. 여럿일 수 있어 특정 화면으로

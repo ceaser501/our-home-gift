@@ -7,7 +7,6 @@ import {
   MapPin,
   Megaphone,
   Receipt,
-  RotateCcw,
   Scale,
   ScanSearch,
   ShieldCheck,
@@ -27,7 +26,7 @@ import { useFamily } from '../FamilyContext';
 import { leaveFamily, renameMember } from '../family';
 import { OWNER_TAG_PALETTE, memberTagColorClass } from '../utils/tagColor';
 import useBackClose from '../utils/useBackClose';
-import { isGalleryScanSupported, isAutoScanOn, setAutoScanOn, countSkipped, forgetSkipped } from '../utils/gallery';
+import { isGalleryScanSupported, isAutoScanOn, setAutoScanOn } from '../utils/gallery';
 import { isNearbyBannerOn, setNearbyBannerOn } from '../utils/geolocation';
 import { SUPPORT_EMAIL, openSupportMail } from '../utils/support';
 import { currentUiScale } from '../utils/uiScale';
@@ -55,8 +54,6 @@ export default function ProfileMenu({ onClose }) {
   const [scanSupported] = useState(() => isGalleryScanSupported());
   const [autoScan, setAutoScan] = useState(() => isAutoScanOn());
   // 찾기에서 '아니다'라고 해둔 사진 수. 줄에 그 수를 적는다.
-  const [skipped, setSkipped] = useState(() => countSkipped());
-  const [forgetAsking, setForgetAsking] = useState(false);
   // 목록 위 '내 주변' 띠. 여기는 앱·브라우저 둘 다 있어서 줄을 감추지 않는다.
   const [nearby, setNearby] = useState(() => isNearbyBannerOn());
   /* 알림 테스트 줄. 확인이 끝나서 접어둔다 — 걷어내지 않고 남겨두는 것은 이걸 세 번
@@ -209,30 +206,9 @@ export default function ProfileMenu({ onClose }) {
               />
             )}
 
-            {/* 찾기 결과 화면 아래에 있던 '전부 다시 찾기'를 여기로 옮겼다.
-                거기서는 등록 버튼 바로 밑이라, 넣으려고 연 사람 손에 128장을 다시 읽는
-                버튼이 닿았다. 실제로 쓰는 때는 '기프티콘 아님'을 잘못 눌렀을 때뿐이라
-                자주 올 자리가 아니다.
-                여기서는 기록만 지운다. 다음에 찾기를 열면 처음부터 다시 본다 —
-                설정에서 갑자기 사진첩을 훑기 시작하면 무슨 일인지 알 수가 없다. */}
-            {/* 되살릴 것이 있을 때만 그리다가, 늘 그리는 것으로 바꿨다.
-                줄이 있다 없다 하면 "어제 있던 게 왜 없지"가 된다 — 실제로 그 말을
-                들었다. 되살릴 것이 없다는 사실도 이 줄이 말해주면 될 일이다. */}
-            {isGalleryScanSupported() && (
-              <SettingLinkRow
-                icon={RotateCcw}
-                label="전부 다시 찾기"
-                hint={
-                  skipped > 0
-                    ? `아니라고 해둔 사진 ${skipped}장을 다시 봐요`
-                    : '아니라고 해둔 사진이 아직 없어요'
-                }
-                onClick={() => setForgetAsking(true)}
-              />
-            )}
-
-            {/* 줄 차례: 찾기 둘 → 알림 둘 → 주변 안내. 같은 일끼리 붙여 둔다(2026-09-27).
-                '전부 다시 찾기'가 맨 아래에 따로 떨어져 있으면 무엇을 다시 찾는지 안 읽혔다. */}
+            {/* 줄 차례: 자동 찾기 → 알림 → 주변 안내(2026-09-27).
+                '전부 다시 찾기'는 찾기 결과 화면 맨 아래로 옮겼다(2026-09-28, GalleryScanSheet).
+                설정은 켜고 끄는 곳인데 그 줄만 무언가를 지우는 동작이었다. */}
             <NotificationToggle asRow />
 
             {/* 목록 위에 뜨는 '이 근처에 쓸 수 있는 게 있어요' 띠. 띠의 X는 그날 하루만
@@ -414,30 +390,6 @@ export default function ProfileMenu({ onClose }) {
 
         {/* 되살리는 일이라 위험하지는 않다. 다만 다음 찾기가 처음부터 다시 도는 것은
             폰이 한동안 뜨거운 일이라, 그건 미리 말해둔다. */}
-        {forgetAsking && (
-          <AlertDialog
-            tone="info"
-            icon={RotateCcw}
-            title="전부 다시 찾을까요?"
-            details={[
-              `아니라고 해둔 ${skipped}장을 다음 찾기에서 다시 봐요`,
-              '기프티콘 아님을 잘못 눌렀을 때 쓰는 거예요',
-              '처음 한 번은 오래 걸려요',
-            ]}
-            confirmLabel="다시 찾기"
-            onConfirm={() => {
-              forgetSkipped();
-              setSkipped(0);
-              setForgetAsking(false);
-              setNotice({
-                tone: 'success',
-                title: '다음 찾기부터 전부 봐요',
-                description: '기프티콘 찾기를 열면 처음부터 다시 봐요.',
-              });
-            }}
-            onClose={() => setForgetAsking(false)}
-          />
-        )}
 
         {leaveAsking && (
           <AlertDialog

@@ -423,6 +423,26 @@ export function forgetSkipped() {
   }
 }
 
+// 「기프티콘 아님」으로 치운 사진만 센다 / 되살린다.
+//
+// 찾기 결과 화면 맨 아래의 '아니라고 한 사진 N장 다시 보기'가 쓴다. 설정에 있던
+// '전부 다시 찾기'(forgetSkipped)를 여기로 옮겼다(2026-09-28) — 설정은 켜고 끄는 곳인데
+// 이 줄만 무언가를 지우는 동작이었고, 쓸 일은 치우기를 잘못 눌렀을 때뿐이다.
+//
+// '바코드 없음' 기록은 건드리지 않는다. 그건 사람이 누른 것이 아니라 판독이 남긴 것이라
+// 되살려도 또 없다고 나오고, 지우면 사진첩 전체를 처음부터 다시 읽는다.
+export function countDismissed() {
+  return readIdSet(DISMISSED_KEY).size;
+}
+
+export function forgetDismissed() {
+  try {
+    localStorage.removeItem(DISMISSED_KEY);
+  } catch {
+    // 지우지 못했으면 그 사진들은 계속 빠질 뿐이다.
+  }
+}
+
 export function undismissImages(ids) {
   try {
     const kept = readIdSet(DISMISSED_KEY);
