@@ -4,14 +4,15 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 //
 //   - 아이폰 앱에서도 훑기가 켜진다
 //   - 기본은 설치한 날 0시부터, 더 예전은 '최근 1개월 · 최근 3개월'로 늘린다
-//   - 한 번에 200장까지만 읽고, 남은 장수를 돌려줘 다음에 이어서 본다
+//   - 한 번에 200장까지만 읽고, 남은 장수를 돌려준다. 이어서 보는 건 그 창 안에서만이고,
+//     남긴 채 닫으면 다음 기본 찾기는 그 사진을 건너뛴다(markPassed)
 //
 // 네이티브는 없다. listImages가 무엇을 받았는지와 무엇을 돌려줬는지만 본다.
 
 const nativeGallery = vi.hoisted(() => ({}));
 vi.mock('@capacitor/core', () => ({ registerPlugin: () => nativeGallery }));
 
-const { isGalleryScanSupported, scanGallery, scanRangeOptions, rangeStartOf } = await import('../utils/gallery');
+const { isGalleryScanSupported, scanGallery, scanRangeOptions, rangeStartOf, markPassed } = await import('../utils/gallery');
 
 const DAY = 24 * 60 * 60;
 const now = () => Math.floor(Date.now() / 1000);
@@ -107,5 +108,28 @@ describe('이어서 찾기', () => {
     stop.abort();
     const scan = await scanGallery({ signal: stop.signal, skipIds: new Set(['p0', 'p1']) });
     expect(scan.scanned).toBe(3);
+  });
+});
+
+describe('남기고 닫은 사진', () => {
+  const images = Array.from({ length: 5 }, (_, i) => ({ id: `p${i}`, name: '', addedAt: now() - i, bucket: '' }));
+  const stopped = () => {
+    const stop = new AbortController();
+    stop.abort();
+    return stop.signal;
+  };
+
+  it('200장을 넘는 것은 leftIds로 돌려준다', async () => {
+    const many = Array.from({ length: 203 }, (_, i) => ({ id: `q${i}`, name: '', addedAt: now() - i, bucket: '' }));
+    nativeGallery.listImages = vi.fn(async () => ({ images: many, since: 0, folders: [] }));
+    const scan = await scanGallery({ signal: stopped() });
+    expect(scan.leftIds).toEqual(['q200', 'q201', 'q202']);
+  });
+
+  it('⚠️ 기본 찾기는 건너뛰고, 기간을 직접 고르면 다시 본다', async () => {
+    nativeGallery.listImages = vi.fn(async () => ({ images, since: 0, folders: [] }));
+    markPassed(['p3', 'p4']);
+    expect((await scanGallery({ signal: stopped(), skipPassed: true })).scanned).toBe(3);
+    expect((await scanGallery({ signal: stopped(), range: '1m' })).scanned).toBe(5);
   });
 });

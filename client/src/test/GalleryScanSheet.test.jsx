@@ -22,6 +22,7 @@ vi.mock('../utils/gallery', async () => {
     rangeStartOf: actual.rangeStartOf,
     countDismissed: vi.fn(() => 0),
     forgetDismissed: vi.fn(),
+    markPassed: vi.fn(),
     canOpenAppSettings: vi.fn(() => false),
     openAppSettings: vi.fn(),
     getGalleryStatus: vi.fn(async () => ({ supported: true, granted: true, partial: false })),
@@ -74,6 +75,7 @@ vi.mock('../FamilyContext', () => ({
 }));
 
 const { default: GalleryScanSheet } = await import('../components/GalleryScanSheet');
+const { markPassed } = await import('../utils/gallery');
 
 function candidate(id, code) {
   return {
@@ -198,6 +200,46 @@ describe('GalleryScanSheet', () => {
     expect(screen.getByRole('button', { name: /설치한 날부터/ })).toBeTruthy();
     expect(screen.getByRole('button', { name: /최근 1개월/ })).toBeTruthy();
     expect(screen.getByRole('button', { name: /최근 3개월/ })).toBeTruthy();
+  });
+
+  // 200장을 넘어 남으면 등록 버튼 바로 위에 이어서 찾기. 등록을 먼저 눌렀어도 등록 뒤
+  // 화면에 한 번 더 있다. 거기서도 안 누르고 닫으면 남은 사진은 다음 기본 찾기에서
+  // 건너뛴다 — 다음에 열었더니 예전 걸 읽고 있으면 고장 난 줄 안다(2026-09-28 태수님).
+  it('남은 사진은 등록 버튼 위와 등록 뒤 화면에서 이어 찾고, 닫으면 다음엔 건너뛴다', async () => {
+    const left = {
+      candidates: [candidate('a', '111'), candidate('b', '222')],
+      pending: [],
+      scanned: 200,
+      more: 388,
+      leftIds: ['x1', 'x2'],
+      since: 1_770_000_000,
+      folders: [],
+      tally: { readFailed: 0, found: 2, alreadyHave: 0 },
+    };
+    scanGallery.mockResolvedValueOnce(left);
+    const { unmount } = render(<GalleryScanSheet onRegistered={() => {}} onClose={() => {}} />);
+    (await screen.findByRole('button', { name: /사진 허용하고 찾기/ })).click();
+    await screen.findByRole('button', { name: /2개 등록/ }, { timeout: 3000 });
+    // 창을 열 때의 기본 찾기만 남겨뒀던 사진을 건너뛴다.
+    expect(scanGallery.mock.calls[0][0].skipPassed).toBe(true);
+    expect(screen.getByRole('button', { name: '아직 못 본 사진 388장 이어서 찾기' })).toBeTruthy();
+
+    // 실수로 등록부터 눌렀다.
+    screen.getByRole('button', { name: /2개 등록/ }).click();
+    await screen.findByText('2개를 등록했어요', {}, { timeout: 3000 });
+
+    // 등록 뒤 화면에서 이어 찾으면 방금 넣은 것은 건너뛰고, 목록은 새로 시작한다.
+    scanGallery.mockResolvedValueOnce({ ...left, candidates: [candidate('c', '333')], more: 188, leftIds: ['x3'] });
+    fireEvent.click(screen.getByRole('button', { name: '아직 못 본 사진 388장 이어서 찾기' }));
+    await screen.findByRole('button', { name: /1개 등록/ }, { timeout: 3000 });
+    const again = scanGallery.mock.calls.at(-1)[0];
+    expect([...again.skipIds].sort()).toEqual(['a', 'b']);
+    expect(again.skipPassed).toBe(false);
+    expect(screen.queryByText('상품 111')).toBeNull();
+
+    // 여기서 닫으면 이번에 남긴 것만 적는다.
+    unmount();
+    expect(markPassed).toHaveBeenLastCalledWith(['x3']);
   });
 
   // 결과는 탭 넷으로 나뉜다. 이미 목록에 있는 것은 '이미 등록'에서 보인다.

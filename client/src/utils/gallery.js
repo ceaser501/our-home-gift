@@ -248,6 +248,17 @@ const DISMISSED_KEY = 'moacon:gallery-dismissed';
 // 사진은 지워도 id가 재사용되지 않아서, 남은 기록이 다른 사진을 가릴 일은 없다.
 const NO_BARCODE_KEY = 'moacon:gallery-no-barcode';
 
+// 한 번에 다 못 보고 남긴 채 창을 닫은 사진. 다음 기본 찾기에서는 건너뛴다.
+//
+// 한 번에 200장까지만 읽는다. 남은 것은 그 창 안에서 '이어서 찾기'로 볼 수 있다.
+// 그걸 안 누르고 닫으면, 다음에 찾기를 열었을 때 그 남은 사진을 이어서 읽지 않는다 —
+// "새로 담긴 것만 보는 줄 알았는데 갑자기 예전 걸 읽네"가 되면 고장 난 줄 안다
+// (2026-09-28 태수님). 끊긴 자리에서 한 번 더 이어갈 길은 그 창에만 둔다.
+//
+// 기간 설정(1개월 · 3개월 · 설치한 날부터)을 직접 고르면 이 기록은 안 본다.
+// 그 기간을 보겠다고 고른 것이라, 남겨뒀던 사진도 그 안에 들어간다.
+const PASSED_KEY = 'moacon:gallery-passed';
+
 // 이 기록을 만든 판독기의 버전. 판독 방식을 고칠 때마다 올린다.
 //
 // 예전에는 못 읽던 사진을 지금은 읽을 수 있게 되는 일이 실제로 있었다(작은 이미지를
@@ -431,6 +442,12 @@ export function forgetSkipped() {
 //
 // '바코드 없음' 기록은 건드리지 않는다. 그건 사람이 누른 것이 아니라 판독이 남긴 것이라
 // 되살려도 또 없다고 나오고, 지우면 사진첩 전체를 처음부터 다시 읽는다.
+// 남기고 닫은 사진을 적는다(PASSED_KEY 주석).
+export function markPassed(ids) {
+  if (!ids?.length) return;
+  addIds(PASSED_KEY, readIdSet(PASSED_KEY), ids);
+}
+
 export function countDismissed() {
   return readIdSet(DISMISSED_KEY).size;
 }
@@ -1354,7 +1371,8 @@ const LIST_LIMIT = 2000;
 
 // skipIds · skipCodes: 이어서 찾거나 기간을 넓혀 다시 찾을 때, 이 창에 이미 올라와 있는
 // 후보의 사진과 번호. 다시 읽지 않고 건너뛰어, 찾은 것 위에 새것만 더해진다.
-export async function scanGallery({ isRegistered, onProgress, onCandidate, signal, range = 'install', skipIds, skipCodes } = {}) {
+// skipPassed: 남기고 닫은 사진을 건너뛸지. 창을 열 때의 기본 찾기만 켠다(PASSED_KEY).
+export async function scanGallery({ isRegistered, onProgress, onCandidate, signal, range = 'install', skipIds, skipCodes, skipPassed = false } = {}) {
   const status = await getGalleryStatus();
   if (!status.supported) return { supported: false, candidates: [] };
   if (!status.granted && !status.partial) return { ...status, candidates: [], needsPermission: true };
@@ -1378,14 +1396,18 @@ export async function scanGallery({ isRegistered, onProgress, onCandidate, signa
   // 아니라고 치운 것과, 바코드가 없다고 이미 확인된 것은 읽지 않는다.
   const dismissed = readIdSet(DISMISSED_KEY);
   const noBarcode = readIdSet(NO_BARCODE_KEY);
+  const passed = skipPassed ? readIdSet(PASSED_KEY) : new Set();
   const unseen = images.filter(
     (image) =>
       !dismissed.has(String(image.id)) &&
       !noBarcode.has(String(image.id)) &&
+      !passed.has(String(image.id)) &&
       !skipIds?.has(String(image.id))
   );
   const fresh = unseen.slice(0, MAX_IMAGES);
   const more = unseen.length - fresh.length;
+  // 이번에 못 보고 남긴 사진. 창이 이어서 찾지 않고 닫히면 markPassed로 적는다.
+  const leftIds = unseen.slice(MAX_IMAGES).map((image) => String(image.id));
 
   const { candidates, missed, knownCodes, readFailed } = await collect({
     images: fresh,
@@ -1413,7 +1435,7 @@ export async function scanGallery({ isRegistered, onProgress, onCandidate, signa
   // 안내에는 계속 나와야 한다(readBarsRemembered 주석 참고).
   const barsRemembered = readBarsRemembered().filter((entry) => !dismissed.has(String(entry.id)));
 
-  return { ...status, candidates, pending: missed, scanned: fresh.length, more, since, folders, tally, barsRemembered };
+  return { ...status, candidates, pending: missed, scanned: fresh.length, more, leftIds, since, folders, tally, barsRemembered };
 }
 
 /**

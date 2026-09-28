@@ -35,6 +35,7 @@ import {
   summarizeFolders,
   countDismissed,
   forgetDismissed,
+  markPassed,
   undismissImages,
 } from '../utils/gallery';
 import { createGifticon, findGifticonByCode, removeImages, uploadGifticonImages } from '../api';
@@ -654,6 +655,8 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
   const tipButtonRef = useRef(null);
   // 말풍선 꼭지를 ⓘ 바로 아래에 두기 위한 자리(px). 제목 길이에 따라 ⓘ가 움직인다.
   const [tipX, setTipX] = useState(0);
+  // 지난 훑기에서 200장을 넘어 못 보고 남긴 사진. 창을 닫을 때 적어둔다.
+  const leftIdsRef = useRef([]);
   // 이어서 찾기 전에 이미 목록에 있던 후보. 도는 동안에는 새로 들어오는 것만 쌓아 보여준다.
   const priorIdsRef = useRef(new Set());
   const abortRef = useRef(null);
@@ -687,6 +690,8 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
       // 미리 올려두고 등록하지 않은 사진을 지운다. 여기서 놓치면 아무 줄도 가리키지
       // 않는 파일이 남는다.
       sweepUploads();
+      // 이어서 찾지 않고 닫았으면 남은 사진은 다음 기본 찾기에서 건너뛴다(markPassed 주석).
+      markPassed(leftIdsRef.current);
     };
     // sweepUploads는 매번 새로 만들어지는 함수지만, 여기서는 창을 닫을 때 한 번만
     // 부르면 되고 필요한 것은 전부 ref에 들어 있다.
@@ -745,10 +750,18 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
   // append: 지금 목록을 비우지 않고 새로 찾은 것만 더한다. 기간을 넓히거나 이어서 찾을
   // 때다. 이 창에 이미 올라온 사진과 번호는 건너뛰어서, 먼저 찾은 카드가 하나씩 다시
   // 쌓이는 일이 없다(2026-09-28 태수님). 읽은 정보도 그대로다(readCacheRef).
-  async function start(nextRange, { append = false } = {}) {
+  //
+  // afterRegister: 등록을 마친 화면에서 남은 사진을 이어서 볼 때다. 목록은 새로 시작하되
+  // (방금 넣은 것이 '등록' 탭에 또 서면 안 된다) 이 창에서 본 사진과 번호는 그대로 건너뛴다.
+  async function start(nextRange, { append = false, afterRegister = false } = {}) {
     setError('');
+    // 앞 판을 이어 가는가. 건너뛸 것, 본 장수, 날짜를 앞 판에서 물려받는다.
+    const carry = append || afterRegister;
     const scanRange = typeof nextRange === 'string' ? nextRange : range;
-    setRange((current) => (append && RANGE_RANK[current] > RANGE_RANK[scanRange] ? current : scanRange));
+    // 창을 열 때의 기본 찾기만 남겨뒀던 사진을 건너뛴다. 기간을 직접 고르거나 이어서
+    // 찾을 때는 그 사진도 본다(gallery.js의 PASSED_KEY).
+    const skipPassed = typeof nextRange !== 'string' && !carry;
+    setRange((current) => (carry && RANGE_RANK[current] > RANGE_RANK[scanRange] ? current : scanRange));
     if (!picked) {
       const status = await requestGalleryAccess();
       if (!status.granted && !status.partial) {
@@ -760,8 +773,11 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
     }
     // 이어서 찾을 때 건너뛸 것. 비우기 전에 떠둔다.
     const prior = append ? candidates : [];
-    const skipIds = new Set(prior.flatMap((c) => c.imageIds || [String(c.id)]));
-    const skipCodes = new Set([...prior.map((c) => c.code), ...knownRef.current.keys()].filter(Boolean));
+    const passOver = carry ? candidates : [];
+    const skipIds = new Set(passOver.flatMap((c) => c.imageIds || [String(c.id)]));
+    const skipCodes = new Set(
+      [...passOver.map((c) => c.code), ...(carry ? knownRef.current.keys() : [])].filter(Boolean)
+    );
     priorIdsRef.current = new Set(prior.map((c) => c.id));
 
     setStage('scanning');
@@ -774,9 +790,11 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
       setVoucherIds([]);
       setVoucherLooks([]);
       setTab('ok');
-      knownRef.current = new Map();
-      setKnown([]);
-      setScannedTotal(0);
+      if (!carry) {
+        knownRef.current = new Map();
+        setKnown([]);
+        setScannedTotal(0);
+      }
       setPrevDismissed(picked ? 0 : countDismissed());
     }
     setMissedShots([]);
@@ -849,6 +867,7 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
             range: scanRange,
             skipIds,
             skipCodes,
+            skipPassed,
           });
       if (controller.signal.aborted) return;
 
@@ -898,10 +917,11 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
       }));
       setMissedShots([...pending, ...remembered]);
       setScanned(scan.scanned ?? 0);
-      setScannedTotal((total) => (append ? total : 0) + (scan.scanned ?? 0));
+      setScannedTotal((total) => (carry ? total : 0) + (scan.scanned ?? 0));
       // 이어서 찾았으면 둘 중 더 예전 날을 적는다. 목록에는 그때부터의 것이 다 있다.
-      setSince((prev) => (append && prev && scan.since ? Math.min(prev, scan.since) : scan.since ?? 0));
+      setSince((prev) => (carry && prev && scan.since ? Math.min(prev, scan.since) : scan.since ?? 0));
       setMore(scan.more ?? 0);
+      leftIdsRef.current = scan.leftIds ?? [];
       setFolders(scan.folders ?? []);
       setTally(scan.tally ?? null);
       setComplete(true);
@@ -1665,6 +1685,27 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
     ...scanRangeOptions(installedAt).map((option) => ({ ...option, from: rangeStartOf(option.key) })),
   ];
 
+  // 한 번에 200장까지만 읽는다. 남으면 맨 아래 주 버튼 바로 위에 이어서 찾는 버튼을 둔다.
+  // 결과 위 기간 줄에 글자로 뒀더니 버튼으로 안 보였고, 목록을 내려 보는 동안 화면 밖에
+  // 있었다. 등록을 누르려는 그 순간이 '더 찾을까'를 정하는 순간이라 거기 둔다.
+  // 테두리만 둔다 — 등록 버튼과 무게가 같으면 어느 쪽이 주 버튼인지 흐려진다.
+  //
+  // 등록을 먼저 눌렀어도 등록 뒤 화면에 한 번 더 둔다. 거기서도 안 누르고 닫으면 남은
+  // 사진은 거기까지다 — 다음 찾기는 늘 새로 담긴 것만 본다(gallery.js의 PASSED_KEY).
+  function continueButton(onClick) {
+    if (picked || more <= 0) return null;
+    return (
+      <Button
+        type="button"
+        variant="outline"
+        className="h-12 w-full rounded-[14px] border-[1.5px] border-primary bg-card text-[15px] font-semibold text-primary"
+        onClick={onClick}
+      >
+        아직 못 본 사진 <span className="tabular-nums">{more}</span>장 이어서 찾기
+      </Button>
+    );
+  }
+
   // ⓘ 말풍선의 폴더별 장수. 갤럭시만 — 아이폰 사진첩에는 폴더가 없어서 늘 0이었다.
   const showFolderTip = !picked && !isIosApp() && Boolean(tally);
 
@@ -2141,17 +2182,6 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
               </button>
             </div>
 
-            {/* 한 번에 다 못 본 사진이 남았을 때만. 누르면 지금 기간 그대로 이어서 본다. */}
-            {more > 0 && (
-              <button
-                type="button"
-                onClick={() => start(range, { append: true })}
-                className="self-start p-0 text-left text-[13.5px] font-semibold text-primary"
-              >
-                아직 못 본 사진 <span className="tabular-nums">{more}</span>장 · 이어서 찾기
-              </button>
-            )}
-
             {/* 메뉴는 버튼 바로 아래, 오른쪽 끝을 맞춘다. 멀리 떨어져 뜨면 무엇을 눌러
                 나온 것인지 잇지 못한다. */}
             {rangeOpen && (
@@ -2555,8 +2585,10 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
 
               {/* '새 기프티콘 찾기'를 뺐다. 방금 훑고 나온 자리라 그 사이에 새로 담긴
                   사진이 있을 리 없고, 눌러도 같은 목록이 다시 나온다. 나가는 길 하나면
-                  된다. */}
+                  된다. 200장을 넘어 남긴 사진이 있을 때만 그 위에 이어서 찾기를 둔다
+                  (continueButton 주석). */}
               <div className="flex shrink-0 flex-col gap-2 pt-1">
+                {continueButton(() => start(range, { afterRegister: true }))}
                 <Button type="button" className="h-[52px] w-full rounded-[14px] text-[15.5px]" onClick={onClose}>
                   목록으로 가기
                 </Button>
@@ -2880,6 +2912,8 @@ export default function GalleryScanSheet({ onRegistered, onClose, onNext, files 
                     그만 찾기
                   </Button>
                 )}
+
+                {stage === 'done' && continueButton(() => start(range, { append: true }))}
 
                 {stage === 'done' && keptCount > 0 && (
                   <Button
