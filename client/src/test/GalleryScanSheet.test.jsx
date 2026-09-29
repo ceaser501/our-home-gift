@@ -249,7 +249,7 @@ describe('GalleryScanSheet', () => {
     scanGallery.mockImplementationOnce(() => new Promise(() => {}));
     try {
       render(<GalleryScanSheet onRegistered={() => {}} onClose={() => {}} />);
-      expect(await screen.findByText('바코드가 있는 사진만 골라요')).toBeTruthy();
+      expect(await screen.findByText('바코드 사진만 찾고, 나머진 안 읽어요')).toBeTruthy();
       expect(screen.queryByText(/세 곳만 봐요/)).toBeNull();
     } finally {
       delete window.Capacitor;
