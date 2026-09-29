@@ -325,3 +325,33 @@ var STORE_URL_ANDROID = 'https://play.google.com/store/apps/details?id=' + PACKA
 - [ ] 카카오 개발자센터 사용량 알림
 - [ ] TMAP 사용량 알림
 - [ ] Supabase 스토리지·대역폭 알림 (1번이 늦어질 때의 안전망)
+
+---
+
+## 11. 안드로이드 코드 줄이기(R8) ⏰ 2027년 2월 전
+
+Play 콘솔 프로덕션 출시 대시보드에 「확인 필요」로 떴다(2026-09-30, 출시 197 · 0.0.190).
+
+> DEX 코드 최적화가 기준점 미만입니다 — 난독화(2%).
+> 비율이 25% 미만인 앱 카테고리가 있으면 Google Play에서 앱의 공개 상태와 게시 기능이
+> 영향을 받을 수 있습니다. 해결 기한 2027년 2월.
+
+**원인은 한 줄이다.** `app/android/app/build.gradle:51`의 `minifyEnabled false`. 처음부터
+꺼 두었다. 켜면 R8이 쓰지 않는 코드를 걷어내고 이름을 줄인다.
+
+**켜는 것보다 확인이 일이다.** 이름으로 코드를 찾아 쓰는 곳이 깨질 수 있다 — 우리가 만든
+`GalleryPlugin.java`, 푸시(`@capacitor-firebase/messaging`), 그 밖의 Capacitor 플러그인.
+깨지면 `app/android/app/proguard-rules.pro`에 keep 규칙을 더한다.
+
+순서:
+
+1. `minifyEnabled true`(+ `shrinkResources true`)로 바꾸고 `npm run release`
+2. **비공개 테스트 트랙에 먼저** 올려 폰에서 한 번씩 눌러본다 — 로그인(구글·이메일),
+   사진첩 찾기, 저장, 푸시 알림, 초대 링크, 매장 찾기
+3. 멀쩡하면 프로덕션. 다음 업데이트에 같이 싣는다
+
+「자세히 알아보기」의 원문은 아직 못 읽었다(이 환경에서 Google 고객센터가 막힌다).
+기한이 지나면 정확히 무엇이 막히는지는 그 글로 확인한다.
+
+- [ ] R8 켜고 비공개 테스트로 확인
+- [ ] 프로덕션에 싣기
