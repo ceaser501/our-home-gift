@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>모아콘 광고</title>
+<style>
+@font-face{font-family:P;src:url(assets/Pretendard-Medium.ttf);font-weight:500}
+@font-face{font-family:P;src:url(assets/Pretendard-SemiBold.ttf);font-weight:600}
+@font-face{font-family:P;src:url(assets/Pretendard-Bold.ttf);font-weight:700}
+*{box-sizing:border-box}
+html,body{margin:0;background:#000}
+#root{position:relative;width:1080px;height:1920px;overflow:hidden;font-family:P,sans-serif}
+.abs{position:absolute}
+.w{display:inline-block;will-change:transform,filter,opacity}
+.hl{font-size:124px;font-weight:700;letter-spacing:-5.5px;line-height:140px;white-space:nowrap}
+.eyebrow{font-size:28px;font-weight:600;letter-spacing:7px}
+#dev{position:absolute;left:164px;top:640px;width:752px;height:1495px;border-radius:92px;padding:16px;transform-origin:376px 0}
+.scr{position:relative;width:100%;height:100%;border-radius:78px;overflow:hidden;background:#fff}
+.scr img.f{position:absolute;left:0;top:0;width:720px;height:1463px}
+.cam{position:absolute;left:50%;top:22px;width:24px;height:24px;margin-left:-12px;border-radius:50%;background:#0A0A0D;z-index:6}
+.sb{position:absolute;left:0;right:0;top:0;height:66px;z-index:5;display:flex;align-items:center;justify-content:space-between;padding:6px 40px 0 44px;font-size:26px;font-weight:600;color:#15151A}
+.push{position:absolute;border-radius:40px;background:rgba(255,255,255,.98);padding:26px 28px;display:flex;gap:22px;width:688px}
+.push img{width:64px;height:64px;border-radius:16px;flex:none}
+.push .t1{font-size:22px;color:#6B6E7E;font-weight:600}
+.push .t2{font-size:28px;font-weight:700;color:#15151A;margin-top:4px;letter-spacing:-.4px}
+.push .t3{font-size:24px;color:#3F414C;margin-top:6px;line-height:1.42;font-weight:500}
+.pill{display:inline-flex;align-items:center;justify-content:center;height:112px;padding:0 50px;border-radius:32px;font-size:38px;font-weight:600;letter-spacing:-.4px}
+</style>
+</head>
+<body>
+<div id="root">
+  <div id="bg" class="abs" style="inset:0"></div>
+  <div id="fx" class="abs" style="inset:0"></div>
+  <div id="eyebrow" class="abs eyebrow" style="left:92px;top:176px;z-index:20">MOACON</div>
+  <div id="head" class="abs" style="left:88px;top:224px;z-index:20;transform-origin:0 0"></div>
+  <div id="dev">
+    <div class="scr" id="scr">
+      <img class="f" id="fb"><img class="f" id="fa">
+      <div class="cam"></div>
+      <div class="sb"><span>9:41</span><span id="sbicons"></span></div>
+      <div id="shine" class="abs" style="inset:0;z-index:9;pointer-events:none"></div>
+      <div id="inscr" class="abs" style="inset:0;z-index:8"></div>
+      <div id="dim" class="abs" style="inset:0;z-index:10;background:#000;opacity:0"></div>
+    </div>
+  </div>
+  <div id="pop" class="abs" style="inset:0;z-index:15"></div>
+  <div id="end" class="abs" style="inset:0;z-index:18"></div>
+</div>
+<script>
+const Q = new URLSearchParams(location.search);
+const THEME = Q.get('theme') || 'a';
+const V = Q.get('v') || '20';
+
+const T = {
+  a: { bg: 'radial-gradient(120% 75% at 50% 72%,#231B63 0%,#110D2E 45%,#07060F 100%)', ink: '#FFFFFF', accent: '#A99CFF',
+       dev: 'linear-gradient(145deg,#3a3a44,#101014 40%,#2a2a33)', devShadow: '0 80px 160px rgba(0,0,0,.6),0 0 160px rgba(124,108,255,.28),inset 0 0 0 3px #55555f',
+       pill: 'background:#FFFFFF;color:#0B0B12', small: 'rgba(255,255,255,.6)', popShadow: '0 50px 110px rgba(0,0,0,.55),0 0 90px rgba(124,108,255,.35)',
+       glowA: 'rgba(124,108,255,.45)', glowB: 'rgba(66,120,255,.28)' },
+  b: { bg: '#FFFFFF', ink: '#0B0B12', accent: '#5B4FE8',
+       dev: 'linear-gradient(145deg,#2c2c34,#0d0d11 45%,#24242c)', devShadow: '0 70px 140px rgba(20,20,40,.20),inset 0 0 0 3px #4a4a54',
+       pill: 'background:#0B0B12;color:#FFFFFF', small: '#6B6E7E', popShadow: '0 50px 110px rgba(30,25,90,.25)',
+       glowA: 'rgba(124,108,255,.16)', glowB: 'rgba(120,170,255,.12)' },
+}[THEME];
+
+// ── 장면 ────────────────────────────────────────────────────────────────
+// cam: [x, y, 배율] — 이 장면에서 폰이 머무는 자리. 장면 사이에서는 멈추지 않고 옮겨 간다.
+// pop: 화면에서 떠올라 폰 밖으로 튀어나오는 부분 [x0,y0,x1,y1](화면 720 기준), 들어오고 나가는 시각(장면 안 비율), 올라갈 높이.
+const S = {
+  intro:   { dur: 2.4, head: ['기프티콘,', '또 <a>날렸어요?</a>'] },
+  scan:    { dur: 3.8, clip: 'scan', src: [0.3, 9.5], segs: [[1.0, 3.7, .68], [8.75, 9.55, .32]], n: 288, head: ['사진첩에서', '<a>알아서</a> 찾고.'], cam: [0, 0, 1] },
+  fill:    { dur: 3.4, clip: 'fill', src: [1.0, 5.7], n: 174, head: ['사진 한 장이면', '<a>등록 끝.</a>'], cam: [0, -40, 1.03] },
+  alert:   { dur: 3.6, clip: 'list', src: [0.0, 5.5], n: 240, head: ['기한 임박?', '<a>먼저</a> 알려줘요.'], cam: [0, 30, .97], push: 'expiry' },
+  barcode: { dur: 2.8, clip: 'barcode', still: true, head: ['매장에선', '<a>보여주기만.</a>'], cam: [0, -60, 1.02] },
+  map:     { dur: 3.4, clip: 'map', src: [4.5, 13.4], segs: [[4.5, 5.9, .4], [11.35, 13.4, .6]], n: 450, head: ['쓸 곳도', '<a>바로</a> 찾아요.'], cam: [0, -20, 1] },
+  family:  { dur: 4.0, clip: 'approve', src: [0.6, 5.6], segs: [[0.6, 4.1, .6], [4.1, 5.6, .4]], n: 171, head: ['초대하고 승인하면', '<a>가족 서랍</a> 완성.'], cam: [0, -40, 1], push: 'join', tap: [3.5, 432, 672],
+             // 승인 뒤 폰을 조금 물려 아래의 가족 목록이 보이게 하고, 새로 들어온 딸 줄을 짚는다.
+             pan: { at: [2.55, 3.1], cam: [0, -40, .84] }, mark: { at: 2.95, box: [20, 1312, 700, 1418] } },
+  stats:   { dur: 3.0, clip: 'stats', src: [0.3, 3.4], n: 105, head: ['누가 뭘 썼는지', '<a>한눈에.</a>'], cam: [0, -40, 1.02] },
+  end:     { dur: 3.0 },
+};
+const PLAN = { '20': ['intro', 'scan', 'fill', 'alert', 'family', 'end'], '30': ['intro', 'scan', 'fill', 'alert', 'barcode', 'map', 'family', 'stats', 'end'] }[V];
+if (V === '20') { S.scan.dur = 3.8; S.fill.dur = 3.4; S.alert.dur = 3.6; S.family.dur = 3.8; S.end.dur = 3.0; }
+if (V === '30') { S.scan.dur = 4.0; S.fill.dur = 3.3; S.alert.dur = 3.3; S.barcode.dur = 2.5; S.map.dur = 3.2; S.family.dur = 4.6; S.stats.dur = 3.0; S.end.dur = 3.7; }
+const TOTAL = PLAN.reduce((s, k) => s + S[k].dur, 0);
+window.TOTAL = TOTAL;
+const START = {}; { let a = 0; for (const k of PLAN) { START[k] = a; a += S[k].dur; } }
+
+// ── 곡선 ────────────────────────────────────────────────────────────────
+const cl = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const seg = (t, a, b) => cl((t - a) / (b - a));
+const expo = (x) => (x >= 1 ? 1 : 1 - Math.pow(2, -10 * x));
+const io = (x) => (x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
+const lerp = (a, b, x) => a + (b - a) * x;
+const $ = (id) => document.getElementById(id);
+
+// ── 고정 요소 ────────────────────────────────────────────────────────────
+$('bg').style.background = T.bg;
+$('eyebrow').style.color = T.accent;
+$('dev').style.background = T.dev;
+$('dev').style.boxShadow = T.devShadow;
+$('sbicons').innerHTML = `<svg width="118" height="28" viewBox="0 0 118 28"><g fill="#15151A">
+  <rect x="0" y="16" width="5" height="10" rx="1.5"/><rect x="8" y="11" width="5" height="15" rx="1.5"/><rect x="16" y="6" width="5" height="20" rx="1.5"/><rect x="24" y="1" width="5" height="25" rx="1.5"/>
+  <path d="M52 24a3 3 0 1 0 .01 0zM43 16.5a13 13 0 0 1 18 0l-2.4 2.4a9.6 9.6 0 0 0-13.2 0zM38 11.5a20 20 0 0 1 28 0l-2.4 2.4a16.6 16.6 0 0 0-23.2 0z"/>
+  <rect x="76" y="4" width="36" height="20" rx="5" fill="none" stroke="#15151A" stroke-width="2.4"/><rect x="79.5" y="7.5" width="29" height="13" rx="2.5"/><rect x="113.5" y="10" width="3" height="8" rx="1.5"/></g></svg>`;
+
+const PUSH = {
+  expiry: ['모아콘 · 지금', '기프티콘 2개가 곧 만료돼요', '스타벅스 · 아이스 카페 아메리카노 T 2잔 · 3일 남음<br>BBQ · 황올반+BBQ양념반+콜라1.25L · 오늘까지'],
+  join: ['모아콘 · 지금', '우리가족 · 참여 신청이 왔어요', '딸님이 참여를 기다리고 있어요.<br>가족 구성원 목록에서 승인할 수 있어요.'],
+};
+
+// ── 글자: 한 단어씩 흐릿하게 떠오르고, 나갈 때 흐려지며 빠진다 ─────────────────
+function words(lines, lt, dur) {
+  let k = 0;
+  const out = seg(lt, dur - .34, dur - .04);
+  return lines.map((l) => {
+    const html = l.replace(/<a>(.*?)<\/a>/g, (_, s) => s.split(' ').map((w) => `\u0001${w}`).join(' '));
+    const ws = html.split(' ').map((w) => {
+      const acc = w.startsWith('\u0001');
+      const txt = acc ? w.slice(1) : w;
+      const p = expo(seg(lt, .05 + k * .07, .65 + k * .07)); k++;
+      const blur = lerp(18, 0, p) + out * 16;
+      const y = lerp(46, 0, p) - out * 34;
+      const o = p * (1 - out);
+      return `<span class="w" style="color:${acc ? T.accent : T.ink};opacity:${o};filter:blur(${blur}px);transform:translateY(${y}px)">${txt}</span>`;
+    }).join('<span class="w" style="width:.26em"></span>');
+    return `<div class="hl">${ws}</div>`;
+  }).join('');
+}
+
+// ── 폰의 자리: 장면마다 머무는 자리를 두고, 장면 사이에서 이어서 옮긴다 ─────────
+const TR = .36; // 장면 경계 앞뒤로 옮기는 시간
+function camAt(t) {
+  const P = PLAN.filter((k) => S[k].cam);
+  for (let i = 1; i < P.length; i++) {
+    const a = START[P[i]];
+    if (t >= a - TR && t < a + TR) {
+      const p = io(seg(t, a - TR, a + TR));
+      const [x0, y0, s0] = endCam(P[i - 1]), [x1, y1, s1] = S[P[i]].cam;
+      return { x: lerp(x0, x1, p), y: lerp(y0, y1, p), s: lerp(s0, s1, p) * (1 - .07 * Math.sin(Math.PI * p)), sw: p, from: P[i - 1], to: P[i] };
+    }
+  }
+  let cur = P[0];
+  for (const k of P) if (t >= START[k] - TR) cur = k;
+  let [x, y, s0] = S[cur].cam;
+  const pn = S[cur].pan;
+  if (pn) {
+    const p = io(seg(t - START[cur], pn.at[0], pn.at[1]));
+    x = lerp(x, pn.cam[0], p); y = lerp(y, pn.cam[1], p); s0 = lerp(s0, pn.cam[2], p);
+  }
+  return { x, y, s: s0 + Math.max(0, t - START[cur] - TR) * .01, sw: 1, from: null, to: cur };
+}
+function endCam(k) {
+  const sc = S[k], pn = sc.pan;
+  const [x, y, s] = pn ? pn.cam : sc.cam;
+  return [x, y, s + Math.max(0, sc.dur - TR) * .01];
+}
+
+// 화면 위의 한 점이 캔버스에서 어디에 있나
+function toCanvas(u, v, c) {
+  const px = 16 + u, py = 16 + v;
+  return { X: 164 + 376 + (px - 376) * c.s + c.x + c.rx, Y: 640 + py * c.s + c.y + c.ry };
+}
+
+function frameSrc(k, lt) {
+  const sc = S[k];
+  if (sc.still) return `shots/${sc.clip}/00000.jpg`;
+  const i = Math.min(sc.n - 1, Math.max(0, Math.round(srcTime(k, lt) * 30)));
+  return `shots/${sc.clip}/${String(i).padStart(5, '0')}.jpg`;
+}
+function srcTime(k, lt) {
+  const sc = S[k];
+  let st;
+  if (sc.segs) {
+    // 구간을 이어 붙인다. 찾는 앞부분은 원래 속도로 두고, 기다리는 가운데는 건너뛴다.
+    let f = cl(lt / sc.dur), acc = 0;
+    st = sc.segs[sc.segs.length - 1][1];
+    for (const [a, b, part] of sc.segs) {
+      if (f <= acc + part) { st = lerp(a, b, (f - acc) / part); break; }
+      acc += part;
+    }
+  } else {
+    const [a, b] = sc.src;
+    st = lerp(a, b, cl(lt / sc.dur));
+  }
+  return st;
+}
+async function setImg(el, src) {
+  if (el.getAttribute('src') !== src) { el.src = src; try { await el.decode(); } catch (e) {} }
+}
+
+function background(t) {
+  const g1x = 540 + Math.sin(t * .35) * 260, g1y = 1320 + Math.cos(t * .3) * 160;
+  const g2x = 260 + Math.cos(t * .28) * 200, g2y = 420 + Math.sin(t * .4) * 140;
+  return `<div class="abs" style="left:${g1x - 650}px;top:${g1y - 650}px;width:1300px;height:1300px;border-radius:50%;background:radial-gradient(closest-side,${T.glowA},transparent);filter:blur(20px)"></div>
+          <div class="abs" style="left:${g2x - 500}px;top:${g2y - 500}px;width:1000px;height:1000px;border-radius:50%;background:radial-gradient(closest-side,${T.glowB},transparent);filter:blur(20px)"></div>`;
+}
+
+// ── 그리기 ───────────────────────────────────────────────────────────────
+window.render = async function (t) {
+  let k = PLAN[PLAN.length - 1];
+  for (const n of PLAN) if (t >= START[n] && t < START[n] + S[n].dur) { k = n; break; }
+  const sc = S[k], lt = t - START[k];
+  let fx = background(t);
+
+  // 제목
+  const introLike = k === 'intro';
+  $('head').innerHTML = sc.head ? words(sc.head, lt, sc.dur) : '';
+  if (introLike) {
+    // 처음에는 가운데 크게, 폰이 떠오르며 제자리(왼쪽 위)로 줄어든다
+    const p = io(seg(lt, 1.35, 2.25));
+    $('head').style.transform = `translate(${lerp(40, 0, p)}px,${lerp(520, 0, p)}px) scale(${lerp(1.3, 1, p)})`;
+  } else $('head').style.transform = '';
+  $('eyebrow').style.opacity = k === 'end' ? 1 - seg(lt, 0, .3) : k === 'intro' ? seg(lt, 1.4, 2.0) : 1;
+
+  // 폰
+  const first = PLAN.find((n) => S[n].cam);
+  const rise = t < START[first] - .6 ? 0 : expo(seg(t, START[first] - .6, START[first] + .5));
+  const sink = k === 'end' ? io(seg(lt, 0, .7)) : 0;
+  const c = camAt(t);
+  c.rx = 0; c.ry = lerp(1500, 0, rise) + sink * 1600;
+  $('dev').style.transform = `translate(${c.x + c.rx}px,${c.y + c.ry}px) scale(${c.s})`;
+  $('dev').style.opacity = rise > 0 ? 1 : 0;
+
+  // 화면: 장면이 바뀌면 옆으로 밀려 넘어간다
+  const fa = $('fa'), fb = $('fb');
+  const cur = c.to || k;
+  if (S[cur] && S[cur].clip) {
+    await setImg(fa, frameSrc(cur, t - START[cur]));
+    if (c.from && S[c.from].clip && c.sw < 1) {
+      await setImg(fb, frameSrc(c.from, Math.min(S[c.from].dur, t - START[c.from])));
+      const p = c.sw;
+      fb.style.display = 'block';
+      fb.style.transform = `translateX(${-p * 720}px)`;
+      fa.style.transform = `translateX(${(1 - p) * 720}px)`;
+      const bl = Math.sin(Math.PI * p) * 3;
+      fa.style.filter = fb.style.filter = `blur(${bl}px)`;
+    } else {
+      fb.style.display = 'none';
+      fa.style.transform = ''; fa.style.filter = '';
+    }
+  }
+
+  // 화면 위로 빛이 한 번 스친다(장면이 바뀐 직후)
+  {
+    let since = t - START[cur];
+    const sg = S[cur].segs;
+    if (sg) { let acc = 0; for (const [, , part] of sg.slice(0, -1)) { acc += part; const at = acc * S[cur].dur; if (since >= at - .15) since = since - at + .15; } }
+    const p = seg(since, .15, .95);
+    $('shine').innerHTML = p > 0 && p < 1 ? `<div class="abs" style="left:${lerp(-500, 900, io(p))}px;top:-200px;width:260px;height:1900px;transform:rotate(18deg);background:linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent)"></div>` : '';
+  }
+
+  // 알림: 폰 위쪽으로 내려왔다가, 크게 폰 밖으로 떠오른다
+  let pop = '', inscr = '', dim = 0;
+  if (sc.push) {
+    const [a, b, cc] = PUSH[sc.push];
+    const drop = expo(seg(lt, .45, .95));
+    const lift = io(seg(lt, 1.05, 1.6));
+    const back = io(seg(lt, sc.push === 'join' ? 1.95 : sc.dur - .75, sc.push === 'join' ? 2.35 : sc.dur - .35));
+    const inside = toCanvas(16, lerp(-260, 78, drop), c);
+    const tgtX = 540 - 688 * 1.28 / 2, tgtY = 820;
+    const x = lerp(inside.X, tgtX, lift), y = lerp(inside.Y, tgtY, lift) - back * 40;
+    const s = lerp(c.s, 1.28, lift);
+    const o = drop > 0 ? (1 - back) : 0;
+    dim = Math.max(dim, lift * (1 - back) * .35);
+    if (o > 0) pop += `<div class="push" style="left:${x}px;top:${y}px;transform-origin:0 0;transform:scale(${s});opacity:${o};box-shadow:${T.popShadow}"><img src="assets/icon.svg"><div style="min-width:0;flex:1"><div class="t1">${a}</div><div class="t2">${b}</div><div class="t3">${cc}</div></div></div>`;
+  }
+
+  // 화면의 한 부분이 떠올라 폰 밖으로
+  if (sc.pop) {
+    const { box, at, y: ty, s: ts } = sc.pop;
+    const [x0, y0, x1, y1] = box;
+    const pin = io(seg(lt / sc.dur, at[0], at[0] + .16));
+    const pout = seg(lt / sc.dur, at[1] - .08, at[1]);
+    if (pin > 0 && pout < 1) {
+      const src = frameSrc(k, lt);
+      const from = toCanvas(x0, y0, c);
+      const w = (x1 - x0), h = (y1 - y0);
+      const s = lerp(c.s, ts, pin);
+      const X = lerp(from.X, 540 - w * ts / 2, pin), Y = lerp(from.Y, ty - h * ts / 2, pin) - pout * 30;
+      const float = Math.sin(lt * 2.2) * 6 * pin;
+      dim = Math.max(dim, pin * .42 * (1 - pout));
+      pop += `<div class="abs" style="left:${X}px;top:${Y + float}px;width:${w}px;height:${h}px;transform-origin:0 0;transform:scale(${s});border-radius:${lerp(0, 26, pin)}px;overflow:hidden;opacity:${1 - pout};box-shadow:${T.popShadow};background:url(${src}) -${x0}px -${y0}px / 720px 1463px no-repeat"></div>`;
+    }
+  }
+
+  // 누르는 표시
+  if (sc.tap) {
+    const [tt, x, y] = sc.tap;
+    const p = seg(srcTime(k, lt), tt - .3, tt + .35);
+    if (p > 0 && p < 1) inscr += `<div class="abs" style="left:${x - 70}px;top:${y - 70}px;width:140px;height:140px;border-radius:50%;background:rgba(255,255,255,${.5 * (1 - p)});border:4px solid rgba(91,79,232,${.7 * (1 - p)});transform:scale(${lerp(.3, 1.4, expo(p))})"></div>`;
+  }
+  // 새로 생긴 줄을 테두리로 짚는다
+  if (sc.mark) {
+    const [x0, y0, x1, y1] = sc.mark.box;
+    const p = expo(seg(lt, sc.mark.at, sc.mark.at + .5));
+    const pulse = .5 + .5 * Math.sin(Math.max(0, lt - sc.mark.at) * 5);
+    if (p > 0) inscr += `<div class="abs" style="left:${x0}px;top:${y0}px;width:${x1 - x0}px;height:${y1 - y0}px;border-radius:28px;border:5px solid rgba(91,79,232,${.85 * p});box-shadow:0 0 ${lerp(10, 34, pulse)}px rgba(124,108,255,${.55 * p});background:rgba(124,108,255,${.07 * p});transform:scale(${lerp(1.06, 1, p)})"></div>`;
+  }
+  $('inscr').innerHTML = inscr;
+  $('dim').style.opacity = dim;
+  $('pop').innerHTML = pop;
+
+  // 끝: 가운데에 로고, 이름, 두 스토어
+  if (k === 'end') {
+    const a = expo(seg(lt, .35, 1.2)), ring = seg(lt, .35, 1.6), b = expo(seg(lt, .7, 1.4)), cc = expo(seg(lt, 1.0, 1.7)), d = expo(seg(lt, 1.3, 2.0));
+    const wordP = (i) => expo(seg(lt, .7 + i * .09, 1.3 + i * .09));
+    const name = ['모', '아', '콘'].map((ch, i) => `<span class="w" style="opacity:${wordP(i)};filter:blur(${lerp(16, 0, wordP(i))}px);transform:translateY(${lerp(40, 0, wordP(i))}px)">${ch}</span>`).join('');
+    fx += `<div class="abs" style="left:540px;top:760px;width:10px;height:10px;transform:translate(-50%,-50%) scale(${lerp(20, 120, ring)});border-radius:50%;border:1px solid ${T.accent};opacity:${(1 - ring) * .7}"></div>`;
+    // 배지는 공식 파일 그대로. 어두운 A에서만 뒤에 은은한 빛을 깔아 띄운다.
+    const badgeFx = THEME === 'a' ? 'filter:drop-shadow(0 0 36px rgba(124,108,255,.45))' : '';
+    $('end').innerHTML = `
+      <div class="abs" style="left:0;right:0;top:${lerp(640, 600, a)}px;text-align:center;opacity:${a}">
+        <img src="assets/icon.svg" style="width:260px;height:260px;border-radius:60px;transform:scale(${lerp(.7, 1, a)});box-shadow:${THEME === 'a' ? '0 0 120px rgba(124,108,255,.6)' : '0 36px 70px rgba(91,79,232,.28)'}">
+      </div>
+      <div class="abs" style="left:0;right:0;top:940px;text-align:center;color:${T.ink}">
+        <div style="font-size:184px;font-weight:700;letter-spacing:-8px;line-height:1">${name}</div>
+        <div style="margin-top:30px;font-size:62px;font-weight:600;letter-spacing:-2px;color:${T.accent};opacity:${b};transform:translateY(${lerp(24, 0, b)}px)">우리가족 기프티콘 서랍</div>
+      </div>
+      <div class="abs" style="left:0;right:0;top:${lerp(1440, 1400, cc)}px;display:flex;justify-content:center;gap:40px;opacity:${cc}">
+        <img src="assets/badge-apple.svg" style="height:124px;${badgeFx}">
+        <img src="assets/badge-google.svg" style="height:124px;${badgeFx}">
+      </div>
+      <div class="abs" style="left:0;right:0;top:1600px;text-align:center;font-size:40px;font-weight:500;color:${T.small};opacity:${d}">지금 무료로 받아보세요</div>`;
+  } else $('end').innerHTML = '';
+  $('fx').innerHTML = fx;
+};
+
+window.sceneAt = (name, frac) => START[name] + S[name].dur * frac;
+window.PLAN = PLAN;
+render(0);
+</script>
+</body>
+</html>

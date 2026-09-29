@@ -1,0 +1,8 @@
+# 원본 녹화와 거기서 뽑은 프레임은 실제 바코드·이메일·초대코드가 찍혀 있어 올리지 않는다.
+src/
+shots/
+tmp/
+frames/
+*.mp4
+preview-*.png
+assets/*.ttf
