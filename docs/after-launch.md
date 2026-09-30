@@ -427,11 +427,11 @@ Play 콘솔 프로덕션 출시 대시보드에 「확인 필요」로 떴다(20
 - 업데이트한 뒤 처음 켰을 때 "이런 게 바뀌었어요"를 한 번 보여주는 것도 같은 자리에서 할 수
   있다(지난번에 켠 버전을 폰에 적어 두고 비교). 이건 나중에 붙여도 된다
 
-- [ ] Supabase 테이블 + SQL (읽기는 모두, 고치기는 태수님 계정만)
-- [ ] 값을 고치는 화면 (「모두 강제」 스위치)
-- [ ] 앱 쪽 안내 창
+- [x] Supabase 테이블 + SQL — `supabase/app-versions.sql` (읽기는 모두, 고치기는 주인 계정만). **실행은 아직**
+- [x] 값을 고치는 화면 — 관리자 화면 → 앱 버전 (`admin/index.html`, `admin-stats` 함수의 `resource=versions`). **함수 배포는 아직**
+- [x] 앱 쪽 안내 창 — `client/src/components/UpdatePrompt.jsx`, 판단은 `client/src/utils/appVersion.js`
 - [ ] R8 판과 같이 싣기 (11번)
-- [ ] 출시 체크리스트(`docs/release.md`)에 "공개된 뒤 버전 줄 고치기" 넣기
+- [x] 출시 체크리스트(`docs/release.md`)에 "공개된 뒤 버전 줄 고치기" 넣기
 
 ---
 
@@ -457,5 +457,5 @@ Play 콘솔 프로덕션 출시 대시보드에 「확인 필요」로 떴다(20
 각 스토어 번호를 그대로 보여준다. 맞추려고 안드로이드 번호 매기는 법(`scripts/release.sh`)을
 바꾸지 않는다. 12번(새 버전 안내)도 플랫폼별로 한 줄씩이라 이대로 맞는다.
 
-- [ ] 화면 % 빼기
-- [ ] 앱에서는 `App.getInfo()`의 번호 쓰기
+- [x] 화면 % 빼기
+- [x] 앱에서는 `App.getInfo()`의 번호 쓰기 (`client/src/utils/appVersion.js`의 `installedVersion`)

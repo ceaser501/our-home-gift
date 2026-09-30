@@ -63,6 +63,15 @@ function row(text) {
 }
 
 describe('내 메뉴', () => {
+  // 화면 배율(%)은 사용자에게 뜻 모를 숫자라 뺐다(2026-09-30). 번호와 날짜만 남는다.
+  it('맨 아래 버전 줄에 화면 배율이 없다', () => {
+    render(<ProfileMenu onClose={() => {}} />);
+
+    const line = screen.getByText(/^버전 /);
+    expect(line.textContent).toMatch(/^버전 [\d.]+ \(\d{4}\.\d{2}\.\d{2}\)$/);
+    expect(line.textContent).not.toMatch(/화면|%/);
+  });
+
   it('로그아웃이 목록 줄이 아니라 버튼이다', () => {
     render(<ProfileMenu onClose={() => {}} />);
 

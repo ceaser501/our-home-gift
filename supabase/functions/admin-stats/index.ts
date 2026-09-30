@@ -22,6 +22,23 @@ const corsHeaders = {
 };
 const jsonHeaders = { ...corsHeaders, 'Content-Type': 'application/json' };
 
+// 앱 버전 번호: 숫자와 점만(1.0.2, 0.0.190). 스토어가 쓰는 꼴 그대로다.
+function isVersion(v: string) {
+  return /^\d+(\.\d+){0,3}$/.test(v);
+}
+
+// 칸마다 숫자로 견준다. 글자로 견주면 0.0.190 < 0.0.99 가 된다.
+// 앱 쪽 client/src/utils/appVersion.js의 compareVersions와 같은 규칙이다.
+function compareVersions(a: string, b: string) {
+  const pa = a.split('.').map(Number);
+  const pb = b.split('.').map(Number);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const d = (pa[i] || 0) - (pb[i] || 0);
+    if (d !== 0) return d > 0 ? 1 : -1;
+  }
+  return 0;
+}
+
 function priceFromEnv(name: string, fallback: number) {
   const raw = Number(Deno.env.get(name));
   return Number.isFinite(raw) && raw >= 0 ? raw : fallback;
@@ -177,6 +194,94 @@ Deno.serve(async (req) => {
       .select('id, title, body, starts_at, ends_at, is_important, blocks_upload, created_at')
       .order('starts_at', { ascending: false });
     if (e) return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: jsonHeaders });
+    return new Response(JSON.stringify({ rows }), { headers: jsonHeaders });
+  }
+
+  // 앱 버전: 「새 버전이 있어요」 안내가 읽는 값(supabase/app-versions.sql). 목록은 GET,
+  // 저장은 POST. 이 값 하나로 모든 사용자의 앱을 막을 수 있어서(강제 업데이트) 주인
+  // 계정만 연다. 관리자 관리와 같은 확인이다 — 메뉴를 감추는 것만으로는 막는 게 아니다.
+  if (resource === 'versions') {
+    const { data: isOwner, error: ownerError } = await admin.rpc('is_admin_owner', {
+      check_email: (auth.user.email || '').trim().toLowerCase(),
+    });
+    if (ownerError) {
+      return new Response(
+        JSON.stringify({ error: `주인 계정인지 확인하지 못했어요: ${ownerError.message} (supabase/admin-users.sql을 실행했는지 확인해주세요)` }),
+        { status: 500, headers: jsonHeaders },
+      );
+    }
+    if (!isOwner) {
+      return new Response(JSON.stringify({ error: '이 화면은 주인 계정만 볼 수 있어요.', reason: 'not_owner' }), {
+        status: 403,
+        headers: jsonHeaders,
+      });
+    }
+
+    if (req.method === 'POST') {
+      let payload: {
+        platform?: string;
+        latest_version?: string;
+        released_on?: string | null;
+        min_version?: string;
+        force?: boolean;
+      };
+      try {
+        payload = await req.json();
+      } catch {
+        return new Response(JSON.stringify({ error: '요청 형식이 올바르지 않아요.' }), { status: 400, headers: jsonHeaders });
+      }
+      const bad = (message: string) =>
+        new Response(JSON.stringify({ error: message }), { status: 400, headers: jsonHeaders });
+
+      const platform = String(payload.platform || '');
+      if (platform !== 'ios' && platform !== 'android') return bad('플랫폼이 올바르지 않아요.');
+
+      const latest = String(payload.latest_version || '').trim();
+      if (!isVersion(latest)) return bad('최신 버전은 1.0.2처럼 숫자와 점으로 적어주세요.');
+
+      const releasedOn = payload.released_on ? String(payload.released_on).trim() : null;
+      if (releasedOn && !/^\d{4}-\d{2}-\d{2}$/.test(releasedOn)) return bad('출시 날짜가 올바르지 않아요.');
+
+      // 「모두 강제」는 최소 버전을 최신 버전과 같게 넣는 것이다. 칸을 따로 두지 않는다.
+      const min = payload.force ? latest : String(payload.min_version || '').trim() || '0.0.0';
+      if (!isVersion(min)) return bad('최소 버전은 1.0.0처럼 숫자와 점으로 적어주세요.');
+      // 최소가 최신보다 높으면 스토어에 없는 버전을 요구하게 된다 — 모두가 갇힌다.
+      if (compareVersions(min, latest) > 0) return bad('최소 버전이 최신 버전보다 높아요.');
+
+      const { data: saved, error: e } = await admin
+        .from('app_versions')
+        .upsert(
+          {
+            platform,
+            latest_version: latest,
+            released_on: releasedOn,
+            min_version: min,
+            updated_at: new Date().toISOString(),
+            updated_by: auth.user.email || null,
+          },
+          { onConflict: 'platform' },
+        )
+        .select('platform');
+      if (e) return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: jsonHeaders });
+      if (!saved || saved.length === 0) {
+        return new Response(JSON.stringify({ error: '저장하지 못했어요. supabase/app-versions.sql을 실행했는지 확인해주세요.' }), {
+          status: 500,
+          headers: jsonHeaders,
+        });
+      }
+      return new Response(JSON.stringify({ ok: true }), { headers: jsonHeaders });
+    }
+
+    const { data: rows, error: e } = await admin
+      .from('app_versions')
+      .select('platform, latest_version, released_on, min_version, updated_at, updated_by')
+      .order('platform');
+    if (e) {
+      return new Response(JSON.stringify({ error: `${e.message} (supabase/app-versions.sql을 실행했는지 확인해주세요)` }), {
+        status: 500,
+        headers: jsonHeaders,
+      });
+    }
     return new Response(JSON.stringify({ rows }), { headers: jsonHeaders });
   }
 

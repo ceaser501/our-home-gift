@@ -411,6 +411,8 @@ body.has-bar .auth-main{min-height:calc(100vh - 58px)}
       <a data-page="families">가족 관리</a>
       <a data-page="storage">미아 사진</a>
       <!-- 주인 계정에만 세운다. 서버도 다시 확인하므로, 이 줄을 손으로 되살려도 못 들어간다. -->
+      <!-- 앱 버전도 주인 계정에만 세운다. 강제 업데이트로 모든 사용자의 앱을 막을 수 있는 값이다. -->
+      <a data-page="versions" id="nav-versions" style="display:none">앱 버전</a>
       <a data-page="admins" id="nav-admins" style="display:none">관리자 관리</a>
     </nav>
     <div class="side-foot"><span id="side-email"></span></div>
@@ -583,6 +585,24 @@ body.has-bar .auth-main{min-height:calc(100vh - 58px)}
         </table>
       </div>
     </div>
+  </div>
+
+  <!-- ===== 앱 버전 화면 =====
+       앱의 「새 버전이 있어요」 안내가 읽는 값(supabase/app-versions.sql).
+       깔린 버전 < 최신 → 안내(닫을 수 있다), 깔린 버전 < 최소 → 강제(닫을 수 없다).
+       「모두 강제」는 최소 버전을 최신과 같게 저장하는 것뿐이다 — DB에 강제 칸은 따로 없다. -->
+  <div id="page-versions" style="display:none">
+    <div class="card">
+      <div class="card-head"><h2>새 버전 안내</h2>
+        <span class="card-note">스토어에 공개된 뒤에 고쳐주세요</span></div>
+      <p class="muted" style="margin:0">
+        깔린 버전이 <b>최신 버전</b>보다 낮으면 앱에 「새 버전이 있어요」가 뜹니다. [그대로 사용하기]로 닫을 수 있어요.<br>
+        <b>최소 버전</b>보다 낮으면 [업데이트 하러 가기]만 나오고 닫을 수 없습니다.<br>
+        <b>먼저 고치면 안 됩니다.</b> 스토어에 아직 없는 버전으로 보내면 사람들이 업데이트 없는 스토어 화면만 봐요.
+        공개 뒤에도 퍼지는 데 하루 안팎 걸립니다.
+      </p>
+    </div>
+    <div id="versions-cards"></div>
   </div>
 
   <!-- ===== 대시보드 화면 ===== -->
@@ -1582,6 +1602,120 @@ async function dropAdmin(btn){
   }
 }
 
+// ===== 앱 버전 =====
+// 플랫폼마다 카드 하나. 아이폰과 안드로이드는 스토어 번호가 따로 간다(1.0.2 / 0.0.190).
+const VERSION_PLATFORMS=[
+  {key:'ios',label:'아이폰',store:'App Store'},
+  {key:'android',label:'안드로이드',store:'Google Play'},
+];
+const VERSION_RE=/^\d+(\.\d+){0,3}$/;
+// 칸마다 숫자로 견준다. 글자로 견주면 0.0.190 < 0.0.99 가 된다(앱·서버와 같은 규칙).
+function compareVersions(a,b){
+  const pa=String(a||'0').split('.').map(n=>Number(n)||0), pb=String(b||'0').split('.').map(n=>Number(n)||0);
+  for(let i=0;i<Math.max(pa.length,pb.length);i++){
+    const d=(pa[i]||0)-(pb[i]||0);
+    if(d!==0) return d>0?1:-1;
+  }
+  return 0;
+}
+
+function versionCard(p,row){
+  const r=row||{latest_version:'',released_on:'',min_version:'0.0.0'};
+  // 저장된 최소 버전이 최신과 같으면 「모두 강제」로 열어 보여준다. DB에 강제 칸은 없다.
+  const forced=Boolean(r.latest_version)&&compareVersions(r.min_version,r.latest_version)===0;
+  const id=s=>`v-${p.key}-${s}`;
+  return `
+    <div class="card" style="margin-top:16px" data-platform="${p.key}">
+      <div class="card-head"><h2>${p.label}</h2>
+        <span class="card-note">${p.store} · ${r.updated_at?'마지막 저장 '+dtm(r.updated_at)+(r.updated_by?' · '+esc(r.updated_by):''):'아직 저장한 적 없음'}</span></div>
+      <div class="field-row" style="align-items:flex-end">
+        <label class="field" style="max-width:180px">최신 버전
+          <input id="${id('latest')}" class="search" value="${esc(r.latest_version||'')}" placeholder="1.0.2" autocomplete="off">
+        </label>
+        <label class="field" style="max-width:200px">출시 날짜
+          <input id="${id('date')}" class="search" type="date" value="${esc((r.released_on||'').slice(0,10))}">
+        </label>
+      </div>
+      <div class="field-row" style="margin-top:12px;align-items:center;gap:18px">
+        <span style="font-size:12.5px;font-weight:650">모두 강제</span>
+        <label class="field-check" style="align-items:center"><input type="radio" name="${id('force')}" value="0" ${forced?'':'checked'}><span>아니오</span></label>
+        <label class="field-check" style="align-items:center"><input type="radio" name="${id('force')}" value="1" ${forced?'checked':''}><span>예 - 최신 버전보다 낮으면 모두 업데이트해야 써요</span></label>
+      </div>
+      <div class="field-row" style="margin-top:12px;align-items:flex-end">
+        <label class="field" style="max-width:180px">최소 버전 <span class="muted-inline">(이보다 낮으면 강제)</span>
+          <input id="${id('min')}" class="search" value="${esc(forced?r.latest_version:(r.min_version||'0.0.0'))}" placeholder="0.0.0" autocomplete="off" ${forced?'disabled':''}>
+        </label>
+      </div>
+      <div class="form-actions" style="margin-top:12px">
+        <span class="form-err" id="${id('err')}" style="display:none"></span>
+        <span class="muted" id="${id('ok')}"></span>
+        <button class="save-btn" id="${id('save')}">저장</button>
+      </div>
+    </div>`;
+}
+
+// 「예」면 최소 버전 칸을 최신 버전과 같게 채우고 잠근다. 최신을 고치면 따라 바뀐다.
+function wireVersionCard(p){
+  const $=s=>document.getElementById(`v-${p.key}-${s}`);
+  const radios=document.querySelectorAll(`input[name="v-${p.key}-force"]`);
+  let freeMin=$('min').disabled?'0.0.0':$('min').value;
+  const sync=()=>{
+    const forced=document.querySelector(`input[name="v-${p.key}-force"]:checked`)?.value==='1';
+    if(forced){
+      if(!$('min').disabled) freeMin=$('min').value;
+      $('min').value=$('latest').value.trim();
+      $('min').disabled=true;
+    }else{
+      if($('min').disabled) $('min').value=freeMin;
+      $('min').disabled=false;
+    }
+  };
+  radios.forEach(r=>r.addEventListener('change',sync));
+  $('latest').addEventListener('input',()=>{ if($('min').disabled) $('min').value=$('latest').value.trim(); });
+  $('save').addEventListener('click',()=>saveVersion(p));
+}
+
+async function loadVersions(){
+  const box=document.getElementById('versions-cards');
+  box.innerHTML='<div class="card" style="margin-top:16px"><p class="muted" style="margin:0">불러오는 중…</p></div>';
+  try{
+    const data=await callApi('?resource=versions');
+    const rows=Object.fromEntries((data.rows||[]).map(r=>[r.platform,r]));
+    box.innerHTML=VERSION_PLATFORMS.map(p=>versionCard(p,rows[p.key])).join('');
+    VERSION_PLATFORMS.forEach(wireVersionCard);
+  }catch(err){
+    box.innerHTML=`<div class="card" style="margin-top:16px"><p class="form-err" style="margin:0">불러오지 못했어요: ${esc(err.message)}</p></div>`;
+  }
+}
+
+async function saveVersion(p){
+  const $=s=>document.getElementById(`v-${p.key}-${s}`);
+  const errId=`v-${p.key}-err`;
+  hideErr(errId);
+  $('ok').textContent='';
+  const latest=$('latest').value.trim();
+  const force=document.querySelector(`input[name="v-${p.key}-force"]:checked`)?.value==='1';
+  const min=force?latest:($('min').value.trim()||'0.0.0');
+  const released=$('date').value||null;
+  if(!VERSION_RE.test(latest)){ showErr(errId,'최신 버전은 1.0.2처럼 숫자와 점으로 적어주세요.'); return; }
+  if(!VERSION_RE.test(min)){ showErr(errId,'최소 버전은 1.0.0처럼 숫자와 점으로 적어주세요.'); return; }
+  if(compareVersions(min,latest)>0){ showErr(errId,'최소 버전이 최신 버전보다 높아요.'); return; }
+  // 강제는 되돌리기 전까지 옛 버전 사용자를 전부 막는다. 한 번 되묻는다.
+  if(compareVersions(min,'0.0.0')>0 && !confirm(
+    `${p.label}에서 ${min}보다 낮은 버전은 업데이트하기 전까지 앱을 쓸 수 없어요.\n\n`+
+    `${p.store}에 ${latest}가 공개된 것을 확인했나요?`)) return;
+  const btn=$('save');
+  btn.disabled=true;
+  try{
+    await callApi('?resource=versions',{platform:p.key,latest_version:latest,released_on:released,min_version:min,force});
+    await loadVersions();
+    document.getElementById(`v-${p.key}-ok`).textContent='저장했어요. 앱을 다시 열면 반영돼요.';
+  }catch(err){
+    showErr(errId,'저장하지 못했어요: '+err.message);
+    btn.disabled=false;
+  }
+}
+
 let CURRENT_PAGE='dash';
 function openPage(name){
   CURRENT_PAGE=name;
@@ -1589,17 +1723,18 @@ function openPage(name){
   const isDashLike=name==='dash'||name==='sample';
   // ''로 두어 CSS의 display(flex 등)가 그대로 살게 한다. 'block'을 박으면 카드 간격(gap)이 죽는다.
   document.getElementById('page-dash').style.display=isDashLike?'':'none';
-  const ownPage=name==='notices'||name==='storage'||name==='admins';
+  const ownPage=name==='notices'||name==='storage'||name==='admins'||name==='versions';
   document.getElementById('page-list').style.display=(isDashLike||ownPage)?'none':'block';
   document.getElementById('page-notices').style.display=name==='notices'?'':'none';
   document.getElementById('page-storage').style.display=name==='storage'?'':'none';
   document.getElementById('page-admins').style.display=name==='admins'?'':'none';
+  document.getElementById('page-versions').style.display=name==='versions'?'':'none';
   document.getElementById('mode-seg').style.display=isDashLike?'':'none';
   document.getElementById('sample-note').style.display=name==='sample'?'':'none';
   document.getElementById('page-title').textContent=
     name==='dash'?'대시보드':name==='sample'?'대시보드 샘플'
       :name==='notices'?'공지사항':name==='storage'?'미아 사진'
-      :name==='admins'?'관리자 관리':PAGES[name].title;
+      :name==='admins'?'관리자 관리':name==='versions'?'앱 버전':PAGES[name].title;
 
   if(isDashLike){
     LIST.page=null;
@@ -1610,6 +1745,7 @@ function openPage(name){
   if(name==='notices'){ LIST.page=null; resetNoticeForm(); loadNotices(); return; }
   if(name==='storage'){ LIST.page=null; loadOrphans(); return; }
   if(name==='admins'){ LIST.page=null; resetAdminForm(); loadAdmins(); return; }
+  if(name==='versions'){ LIST.page=null; loadVersions(); return; }
 
   const def=PAGES[name];
   // 다른 화면으로 옮기면 검색어·페이지는 처음부터 시작한다. 회원에서 걸어둔 검색어가
@@ -1675,6 +1811,7 @@ async function connect(){
     // 관리자 관리는 주인 계정에만 세운다. 감추는 것은 눈에 안 띄게 하는 일이지 막는 일이
     // 아니라서, 그 메뉴가 부르는 자리에서 서버가 다시 확인한다.
     document.getElementById('nav-admins').style.display=STATS.viewer?.owner?'':'none';
+    document.getElementById('nav-versions').style.display=STATS.viewer?.owner?'':'none';
     fillKpis();
     renderAll();
   }catch(err){

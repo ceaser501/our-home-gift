@@ -4,6 +4,7 @@ import './index.css'
 import App from './App.jsx'
 import AuthGate from './components/AuthGate.jsx'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
+import UpdatePrompt from './components/UpdatePrompt.jsx'
 import { watchForUpdates } from './utils/appUpdate.js'
 import { registerServiceWorker } from './utils/serviceWorker.js'
 import { watchLoginRedirects } from './utils/deepLink.js'
@@ -65,6 +66,8 @@ createRoot(document.getElementById('root')).render(
       <AuthGate>
         <App />
       </AuthGate>
+      {/* 로그인 바깥에 둔다 — 강제 업데이트는 로그인보다 앞선다. 앱에서만 뜬다. */}
+      <UpdatePrompt />
     </ErrorBoundary>
   </StrictMode>,
 )

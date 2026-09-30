@@ -1272,6 +1272,37 @@ create policy "notices select all" on public.notices
   for select to authenticated
   using (starts_at <= now());
 
+-- ===================== 앱 버전 (새 버전 안내) =====================
+
+-- 앱이 켜질 때 자기 플랫폼 줄을 읽어 「새 버전이 있어요」를 띄운다. 자세한 이유는
+-- supabase/app-versions.sql 머리말. 여기 있는 것은 그 파일과 같은 정의다.
+--   깔린 버전 < latest_version → 안내(닫을 수 있다)
+--   깔린 버전 < min_version    → 강제(닫을 수 없다)
+-- 강제 여부 칸은 따로 두지 않는다. "모두 강제"는 min_version = latest_version 이다.
+create table if not exists public.app_versions (
+  platform text primary key check (platform in ('ios', 'android')),
+  latest_version text not null,
+  released_on date,
+  min_version text not null default '0.0.0',
+  updated_at timestamptz not null default now(),
+  updated_by text
+);
+
+alter table public.app_versions enable row level security;
+
+-- 읽기는 로그인 전에도 된다(강제 업데이트는 로그인보다 앞선다). 쓰는 정책은 두지 않는다 —
+-- 관리자 화면이 admin-stats 함수(서비스 롤)를 거쳐서만 고친다. 공지와 같은 방식이다.
+drop policy if exists "app_versions read all" on public.app_versions;
+create policy "app_versions read all" on public.app_versions
+  for select to anon, authenticated
+  using (true);
+
+insert into public.app_versions (platform, latest_version, released_on, min_version)
+values
+  ('ios', '1.0.2', '2026-09-30', '0.0.0'),
+  ('android', '0.0.0', null, '0.0.0')
+on conflict (platform) do nothing;
+
 -- ===================== 공지 읽음 =====================
 
 -- 어느 공지를 읽었는지. 기기가 아니라 계정에 적는다.

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   DoorOpen,
   FileText,
@@ -29,7 +29,7 @@ import useBackClose from '../utils/useBackClose';
 import { isGalleryScanSupported, isAutoScanOn, setAutoScanOn } from '../utils/gallery';
 import { isNearbyBannerOn, setNearbyBannerOn } from '../utils/geolocation';
 import { SUPPORT_EMAIL, openSupportMail } from '../utils/support';
-import { currentUiScale } from '../utils/uiScale';
+import { installedVersion } from '../utils/appVersion';
 
 export default function ProfileMenu({ onClose }) {
   // 뒤로가기로 이 창을 닫는다. 안 그러면 설치해서 쓸 때 앱이 통째로 꺼진다.
@@ -47,6 +47,15 @@ export default function ProfileMenu({ onClose }) {
   const [leaving, setLeaving] = useState(false);
   const [leaveAsking, setLeaveAsking] = useState(false);
   const [notice, setNotice] = useState(null);
+  // 처음에는 웹 번호로 그리고, 앱이 자기 번호를 알려주면 바꾼다(한 번 묻는 데 몇 ms).
+  const [version, setVersion] = useState(__APP_VERSION__);
+  useEffect(() => {
+    let alive = true;
+    installedVersion().then((v) => alive && setVersion(v));
+    return () => {
+      alive = false;
+    };
+  }, []);
   // 탈퇴는 되돌릴 수 없어서 두 번 묻는다. null → 'what'(무엇이 없어지는지) → 'sure'(정말로).
   const [deleteStep, setDeleteStep] = useState(null);
   const [deleting, setDeleting] = useState(false);
@@ -362,10 +371,12 @@ export default function ProfileMenu({ onClose }) {
           {/* 버전은 화면 맨 끝이다. 누를 것도 없고 알아야 할 일도 없는 값이라, 무엇보다
               뒤에 있어야 한다. 남겨두는 이유는 하나뿐 — 문의를 받았을 때 "어떤 코드를
               쓰고 계신가"를 물어볼 수 있어야 해서다. */}
+          {/* 앱이면 스토어에 나간 번호(아이폰 1.0.2, 안드로이드 0.0.190 — 둘은 따로 간다),
+              웹이면 웹 설정 파일의 번호. 예전에는 늘 웹 번호(1.0.0)가 나와서 아이폰 1.0.2에서도
+              1.0.0으로 보였다. 날짜는 빌드한 날이라 저절로 맞는다.
+              화면 배율(%)은 뺐다 — 글씨 크기 문의에 쓰려던 값인데 사용자에게는 뜻 모를 숫자다. */}
           <p className="m-0 pb-1 text-center text-[12.5px] font-medium tabular-nums text-muted-foreground">
-            {/* 화면 배율을 함께 적는다. 폰 설정에 따라 85~115% 사이에서 움직이는데,
-                그 값이 안 보이면 "크다/작다"를 말할 기준이 없다(utils/uiScale.js). */}
-            버전 {__APP_VERSION__} ({__BUILD_DATE__}) · 화면 {Math.round(currentUiScale() * 100)}%
+            버전 {version} ({__BUILD_DATE__})
           </p>
         </div>
 
