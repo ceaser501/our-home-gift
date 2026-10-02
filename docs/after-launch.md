@@ -212,7 +212,7 @@ var STORE_URL_ANDROID = 'https://play.google.com/store/apps/details?id=' + PACKA
 초대 링크는 웹 페이지라 앱과 따로 돈다. 태그만 따서는 안 바뀐다 — 반대로, 이걸
 고치자고 앱을 다시 낼 일도 없다.
 
-- [ ] Play 프로덕션 열린 뒤 한 줄 채우기
+- [x] Play 프로덕션 열린 뒤 한 줄 채우기 (2026-10-02 출시)
 - [ ] main에 밀기
 - [ ] 안드로이드 폰에서 앱을 지우고 초대 링크를 눌러 Play로 가는지 보기
 

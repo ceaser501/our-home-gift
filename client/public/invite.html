@@ -130,10 +130,9 @@
         // 애플 주소가 들어가서, 앱 없는 안드로이드 사용자가 App Store 로 간다.
         // 비어 있는 쪽은 웹으로 보낸다(위 주석 참고).
         var STORE_URL_IOS = 'https://apps.apple.com/app/id6808555980';
-        // Play 는 아직 비공개 테스트다. 프로덕션이 열리기 전에 채우면 초대받은 사람이
-        // '찾을 수 없는 페이지'를 본다. 열리면 아랫줄로 바꾼다.
-        //   var STORE_URL_ANDROID = 'https://play.google.com/store/apps/details?id=' + PACKAGE;
-        var STORE_URL_ANDROID = '';
+        // Play 프로덕션은 2026-10-02 16:32에 출시됐다. 그 전에는 비워 두어 웹으로 보냈다 —
+        // 출시 전에 채우면 초대받은 사람이 '찾을 수 없는 페이지'를 봤다.
+        var STORE_URL_ANDROID = 'https://play.google.com/store/apps/details?id=' + PACKAGE;
 
         var params = new URLSearchParams(location.search);
         var code = (params.get('join') || params.get('code') || '').trim().toUpperCase().slice(0, 12);
