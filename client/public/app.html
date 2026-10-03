@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="only light" />
+    <title>모아콘 설치</title>
+    <meta property="og:title" content="모아콘 — 우리 가족 기프티콘 서랍" />
+    <meta property="og:description" content="받아 두고 못 쓴 기프티콘, 가족이 같이 봅니다." />
+    <meta property="og:image" content="https://ceaser501.github.io/our-home-gift/og-1200x630.png" />
+
+    <!--
+      설치 링크 하나로 두 스토어를 가른다. 인스타 스토리의 링크 스티커처럼 주소를 하나만
+      걸 수 있는 곳에 쓴다.
+
+        아이폰       → App Store
+        안드로이드   → Play 스토어
+        그 밖(PC 등) → 두 스토어 버튼과 웹 소개를 보여준다
+
+      앱이 깔렸는지는 보지 않는다. 깔린 사람도 스토어에서 [열기]를 누르면 된다 — 초대 링크
+      (invite.html)처럼 실어 갈 값이 없으니 앱을 직접 열어볼 까닭이 없다.
+
+      스토어 주소는 client/src/utils/appVersion.js의 STORE_URL, invite.html과 같은 값이다.
+      바로 넘기지 못하는 경우(인앱 브라우저가 막는 등)를 위해 아래 버튼도 늘 그려 둔다.
+    -->
+    <style>
+      :root { color-scheme: only light; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100dvh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #fbfbfd;
+        color: #1c1e27;
+        font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Segoe UI', Roboto, sans-serif;
+      }
+      main {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        padding: 32px 24px;
+        text-align: center;
+        width: 100%;
+        max-width: 360px;
+      }
+      img { width: 72px; height: 72px; border-radius: 18px; }
+      h1 { margin: 6px 0 0; font-size: 20px; font-weight: 700; letter-spacing: -0.028em; word-break: keep-all; }
+      p { margin: 0; font-size: 14.5px; line-height: 1.6; color: #71717f; word-break: keep-all; }
+      .buttons { margin-top: 14px; display: flex; flex-direction: column; gap: 9px; width: 100%; }
+      a.btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 52px;
+        border-radius: 13px;
+        background: #5b4fe8;
+        color: #fff;
+        font-size: 16px;
+        font-weight: 700;
+        text-decoration: none;
+      }
+      a.btn.dark { background: #1c1e27; }
+      a.quiet { margin-top: 4px; color: #71717f; font-size: 14.5px; font-weight: 600; text-decoration: none; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <img src="icon-192.png" alt="" />
+      <h1>모아콘</h1>
+      <p>우리 가족 기프티콘 서랍</p>
+      <div class="buttons">
+        <a class="btn dark" id="ios" href="https://apps.apple.com/app/id6808555980">App Store에서 받기</a>
+        <a class="btn" id="android" href="https://play.google.com/store/apps/details?id=io.github.ceaser501.ourhomegift">Play 스토어에서 받기</a>
+      </div>
+      <a class="quiet" href="intro.html">모아콘 소개 보기</a>
+    </main>
+    <script>
+      (function () {
+        var ua = navigator.userAgent;
+        // 아이패드는 데스크톱 사파리처럼 'Macintosh'로 자신을 밝힌다. 터치가 되면 아이패드로 본다.
+        var isIos = /iphone|ipad|ipod/i.test(ua) || (/macintosh/i.test(ua) && navigator.maxTouchPoints > 1);
+        var isAndroid = /android/i.test(ua);
+        var target = isIos ? 'ios' : isAndroid ? 'android' : null;
+        if (target) location.replace(document.getElementById(target).href);
+      })();
+    </script>
+  </body>
+</html>
