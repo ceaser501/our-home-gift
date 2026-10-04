@@ -80,4 +80,8 @@ python3 docs/guide/build.py
 
 ## 띄운 곳
 
-https://claude.ai/artifact/HeQprS16rbQbwxSchFLYAa — `guide.html`을 다시 만들면 이 주소에 다시 올린다.
+- 우리 웹: https://ceaser501.github.io/our-home-gift/brochure.html — `client/public/brochure.html`.
+  `build.py`가 같이 만든다. 카톡·인스타 미리보기에 모아콘 그림이 뜨는 쪽이라 **밖에 나눠줄 때는 이 주소**를 쓴다.
+  main에 반영해야 바뀐다.
+- claude.ai: https://claude.ai/artifact/HeQprS16rbQbwxSchFLYAa — `guide.html`을 다시 만들면 이 주소에도 다시 올린다.
+  미리보기 그림은 Claude 로고로 고정이다.

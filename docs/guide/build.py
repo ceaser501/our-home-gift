@@ -1,4 +1,4 @@
-# 안내서를 배포본으로 굽는다. guide.src.html → guide.html
+# 안내서를 배포본으로 굽는다. guide.src.html → guide.html, client/public/brochure.html
 #
 #   python3 docs/guide/build.py
 #
@@ -20,6 +20,26 @@ import sys
 HERE = pathlib.Path(__file__).parent
 SRC = HERE / 'guide.src.html'
 OUT = HERE / 'guide.html'
+# 우리 웹에도 같은 것을 띄운다. 카톡·인스타에 링크를 붙이면 미리보기 그림과 문구가 모아콘 것으로
+# 뜨게 하려고(claude.ai 주소는 Claude 그림이 뜬다). 머리에 미리보기 태그만 더 붙인다.
+WEB = HERE.parent.parent / 'client/public/brochure.html'
+WEB_HEAD = '''<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="사진첩에서 알아서 찾고, 기한 전에 먼저 알려줘요. 가족이 함께 쓰는 기프티콘 서랍.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="모아콘 — 우리 가족 기프티콘 서랍">
+<meta property="og:description" content="사진첩에서 알아서 찾고, 기한 전에 먼저 알려줘요.">
+<meta property="og:image" content="https://ceaser501.github.io/our-home-gift/og-1200x630.png">
+<meta property="og:url" content="https://ceaser501.github.io/our-home-gift/brochure.html">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="./icon-192.png">
+<link rel="apple-touch-icon" href="./icon-192.png">
+</head>
+<body>
+'''
 
 
 def inline(match):
@@ -36,6 +56,7 @@ def main():
     html = SRC.read_text(encoding='utf-8')
     html, n = re.subn(r'src="(shots/[^"]+)"', inline, html)
     OUT.write_text(html, encoding='utf-8')
+    WEB.write_text(WEB_HEAD + html + '\n</body>\n</html>\n', encoding='utf-8')
     size = OUT.stat().st_size / 1024 / 1024
     print(f'그림 {n}장을 넣어 {OUT.name}을 만들었어요 · {size:.2f}MB')
     # Artifact는 16MB까지 받는다. 그 앞에서 미리 알려준다.
