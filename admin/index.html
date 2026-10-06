@@ -106,6 +106,12 @@ h2{font-size:13.5px;font-weight:650;color:var(--ink)}
 .watch li:last-child{border-bottom:0}
 .watch b{font-size:14px;color:var(--ink);font-variant-numeric:tabular-nums}
 .foot{text-align:center;font-size:11px;color:var(--muted);padding-top:6px}
+/* 예상 금액 산출: 금액 KPI 바로 밑의 얇은 띠. 주인 계정에만 보인다. */
+.est-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--card);border:1px dashed var(--border);border-radius:var(--radius);padding:12px 16px;font-size:12.5px;color:var(--ink2)}
+.est-bar b{color:var(--ink);font-variant-numeric:tabular-nums}
+.est-bar .est-text{flex:1;min-width:220px}
+.est-bar .est-note{flex-basis:100%;font-size:11px;color:var(--muted)}
+.est-bar .est-err{flex-basis:100%;font-size:12px;color:var(--bad)}
 .sample-note{background:color-mix(in srgb,#e69008 10%,transparent);border:1px solid color-mix(in srgb,#e69008 30%,transparent);border-radius:var(--radius);padding:10px 14px;font-size:12.5px;color:var(--ink2)}
 
 /* ----- 공지사항 폼 ----- */
@@ -618,10 +624,20 @@ body.has-bar .auth-main{min-height:calc(100vh - 58px)}
   </section>
 
   <section class="kpis kpis-4">
-    <div class="kpi"><span class="kpi-label">기프티콘 총액</span><span class="kpi-value" id="k-amt-total"></span><span class="kpi-sub">금액 미입력 <b id="k-no-amount"></b>건 제외</span></div>
-    <div class="kpi accent-good"><span class="kpi-label">미사용(사용 가능) 총액</span><span class="kpi-value" id="k-amt-unused"></span></div>
-    <div class="kpi"><span class="kpi-label">사용완료 총액</span><span class="kpi-value" id="k-amt-used"></span></div>
-    <div class="kpi accent-bad"><span class="kpi-label">기간만료 총액</span><span class="kpi-value" id="k-amt-expired"></span></div>
+    <div class="kpi"><span class="kpi-label">기프티콘 총액</span><span class="kpi-value" id="k-amt-total"></span><span class="kpi-sub" id="k-amt-total-sub"></span></div>
+    <div class="kpi accent-good"><span class="kpi-label">미사용(사용 가능) 총액</span><span class="kpi-value" id="k-amt-unused"></span><span class="kpi-sub" id="k-amt-unused-sub"></span></div>
+    <div class="kpi"><span class="kpi-label">사용완료 총액</span><span class="kpi-value" id="k-amt-used"></span><span class="kpi-sub" id="k-amt-used-sub"></span></div>
+    <div class="kpi accent-bad"><span class="kpi-label">기간만료 총액</span><span class="kpi-value" id="k-amt-expired"></span><span class="kpi-sub" id="k-amt-expired-sub"></span></div>
+  </section>
+
+  <!-- 금액이 비어 있는 상품형 기프티콘(커피, 치킨)의 판매가를 웹 검색으로 찾아 통계에만 더한다.
+       사용자 화면에는 나가지 않는다. 한 종에 약 $0.05라 주인 계정에만 세운다(서버도 다시 확인한다). -->
+  <section class="est-bar" id="est-bar" hidden>
+    <span class="est-text" id="est-text">예상 금액 상태를 불러오는 중…</span>
+    <button class="icon-btn" id="est-retry" hidden>못 찾은 것 다시 찾기</button>
+    <button class="save-btn" id="est-run" disabled>예상 금액 산출</button>
+    <span class="est-err" id="est-err" hidden></span>
+    <span class="est-note">웹 검색으로 찾은 판매가라 실제와 다를 수 있어요. 통계에만 더하고, 사용자 화면에는 나가지 않아요.</span>
   </section>
 
   <section class="cards cards-2">
@@ -873,7 +889,10 @@ function hBarChart(host, items, opts={}){
     row.innerHTML='<span class="hbar-name" title="'+it.name+'">'+it.name+'</span>'
       +'<span class="hbar-track"><span class="hbar-fill" style="width:'+(it.count/max*100)+'%;background:'+(opts.color||css('--s1'))+'"></span></span>'
       +'<span class="hbar-val">'+nf.format(it.count)+'</span>'
-      +'<span class="hbar-amt">'+won(it.amount||0)+'</span>';
+      // 예상 금액이 섞인 칸은 ≈를 붙이고, 얼마가 예상인지 마우스를 올리면 보여준다.
+      +(it.est>0
+        ?'<span class="hbar-amt" title="예상 '+won(it.est)+' 포함">≈'+won(it.amount||0)+'</span>'
+        :'<span class="hbar-amt">'+won(it.amount||0)+'</span>');
     wrap.appendChild(row);
   });
   host.appendChild(wrap);
@@ -981,6 +1000,11 @@ function pivotApiDaily(){
     const o=map.get(r.day);
     if(o[r.action]!==undefined) o[r.action]+=Number(r.count)||0; else o.other+=Number(r.count)||0;
   });
+  // 관리자의 예상 금액 산출은 호출 수(api_usage)에는 안 잡히고 토큰 기록(ai_usage_log)에만 남는다.
+  // 그날 다른 호출이 하나도 없으면 비용 계산에서 빠지므로, 토큰 기록이 있는 날도 줄을 세운다.
+  (STATS.ai_usage_daily||[]).forEach(r=>{
+    if(!map.has(r.day)) map.set(r.day,{day:r.day,analyze:0,price:0,places:0,join_attempt:0,other:0});
+  });
   return [...map.values()].sort((a,b)=>a.day<b.day?-1:1);
 }
 
@@ -1072,9 +1096,9 @@ function renderAll(){
   lineChart(document.getElementById('chart-signup'),su,{label:'신규 가입',color:css('--accent-chart')});
 
   hBarChart(document.getElementById('chart-categories'),
-    (g.categories||[]).map(c=>({name:c.category,count:Number(c.count)||0,amount:Number(c.amount)||0})));
+    (g.categories||[]).map(c=>({name:c.category,count:Number(c.count)||0,amount:Number(c.amount)||0,est:Number(c.est_amount)||0})));
   hBarChart(document.getElementById('chart-brands'),
-    (g.brands||[]).map(b=>({name:b.brand,count:Number(b.count)||0,amount:Number(b.amount)||0})),{color:css('--s3')});
+    (g.brands||[]).map(b=>({name:b.brand,count:Number(b.count)||0,amount:Number(b.amount)||0,est:Number(b.est_amount)||0})),{color:css('--s3')});
 }
 
 function fillKpis(){
@@ -1089,11 +1113,18 @@ function fillKpis(){
   set('k-g-unused',nf.format(g.unused||0));
   set('k-g-used',nf.format(g.used||0));
   set('k-g-expired',nf.format(g.expired||0));
+  // 총액에는 예상 금액(price_estimates)이 더해져 있다. 얼마가 예상인지 밑에 적는다.
   set('k-amt-total',won(g.amount_total||0));
   set('k-amt-unused',won(g.amount_unused||0));
   set('k-amt-used',won(g.amount_used||0));
   set('k-amt-expired',won(g.amount_expired||0));
-  set('k-no-amount',nf.format(g.no_amount||0));
+  const estSub=v=>Number(v)>0?'예상 '+won(v)+' 포함':'';
+  set('k-amt-total-sub',(Number(g.est_amount_total)>0?'예상 '+won(g.est_amount_total)+' 포함 · ':'')
+    +'금액 없음 '+nf.format(g.no_amount||0)+'건 제외');
+  set('k-amt-unused-sub',estSub(g.est_amount_unused));
+  set('k-amt-used-sub',estSub(g.est_amount_used));
+  set('k-amt-expired-sub',estSub(g.est_amount_expired));
+  loadEstimates();
   set('k-expiring7',nf.format(e.expiring_7d||0));
   set('k-expiring30',nf.format(e.expiring_30d||0));
   set('k-pending',nf.format(e.pending_join_requests||0));
@@ -1800,6 +1831,64 @@ async function logout(){
   location.reload();
 }
 
+// ===================== 예상 금액 =====================
+// 금액 없는 상품형 기프티콘의 판매가를 서버가 웹 검색으로 찾는다(admin-stats, resource=price-estimates).
+// 한 번에 다 돌리지 않고 두 종씩 되풀이 부른다 — 한 종에 10~30초라 한 요청에 다 넣으면 시간
+// 제한에 끊긴다. 끊겨도 이미 찾은 것은 서버에 남고, 다시 누르면 남은 것부터 한다.
+let EST=null, EST_RUNNING=false;
+
+function renderEst(){
+  const bar=document.getElementById('est-bar');
+  const isReal=STATS && STATS===REAL_STATS;
+  bar.hidden=!(isReal && STATS.viewer?.owner && EST);
+  if(bar.hidden) return;
+  const run=document.getElementById('est-run'), retry=document.getElementById('est-retry');
+  const text=document.getElementById('est-text');
+  if(EST_RUNNING){
+    const total=EST.items, doneN=EST.found+EST.not_found;
+    text.innerHTML='산출 중 <b>'+nf.format(doneN)+' / '+nf.format(total)+'</b>종 · 찾음 <b>'+nf.format(EST.found)+'</b> · 못 찾음 <b>'+nf.format(EST.not_found)+'</b>';
+  }else{
+    text.innerHTML='금액 없는 기프티콘 <b>'+nf.format(EST.missing_gifticons)+'</b>건 ('+nf.format(EST.items)+'종) 중 '
+      +'예상 금액 반영 <b>'+nf.format(EST.filled_gifticons)+'</b>건 · 남은 상품 <b>'+nf.format(EST.pending)+'</b>종'
+      +(EST.not_found?' · 못 찾음 <b>'+nf.format(EST.not_found)+'</b>종':'')
+      +(EST.pending?' · 예상 비용 약 <b>'+usd(EST.pending*((STATS.pricing?.estimate_usd_per_call?.price)||0.05))+'</b>':'');
+  }
+  run.textContent=EST_RUNNING?'산출 중…':'예상 금액 산출';
+  run.disabled=EST_RUNNING || !EST.pending;
+  retry.hidden=EST_RUNNING || !EST.not_found || EST.pending>0;
+}
+
+async function loadEstimates(){
+  if(!(STATS && STATS===REAL_STATS && STATS.viewer?.owner)){ renderEst(); return; }
+  try{ EST=await callApi('?resource=price-estimates'); }
+  catch(err){ EST=null; }
+  renderEst();
+}
+
+async function runEstimates(retryNotFound=false){
+  if(EST_RUNNING) return;
+  const err=document.getElementById('est-err');
+  err.hidden=true;
+  EST_RUNNING=true; renderEst();
+  try{
+    // 다시 찾기는 지금 시각보다 먼저 '못 찾음'이 된 것만 고르게 한다(서버가 거른다). 그래야 방금
+    // 다시 찾아 또 못 찾은 것을 같은 바퀴에서 또 찾지 않고, 한 바퀴 돌면 끝난다.
+    const retryBefore=retryNotFound?new Date().toISOString():null;
+    while(true){
+      const res=await callApi('?resource=price-estimates',{limit:2,retry_before:retryBefore});
+      EST=res; renderEst();
+      if(!res.results || res.results.length===0) break;
+    }
+  }catch(e){
+    err.textContent='멈췄어요: '+(e.message||e)+' — 찾은 것은 저장됐어요. 다시 누르면 남은 것부터 해요.';
+    err.hidden=false;
+  }finally{
+    EST_RUNNING=false;
+    // 통계를 다시 받아 총액·그래프에 반영한다.
+    try{ STATS=await fetchStats(); REAL_STATS=STATS; fillKpis(); renderAll(); }catch(_e){ renderEst(); }
+  }
+}
+
 // ===================== 흐름 =====================
 async function connect(){
   show('view-loading');
@@ -1861,6 +1950,9 @@ async function start(){
     disarmOrphanDelete();
     renderOrphans();
   });
+
+  document.getElementById('est-run').addEventListener('click',()=>runEstimates(false));
+  document.getElementById('est-retry').addEventListener('click',()=>runEstimates(true));
 
   document.getElementById('btn-refresh').addEventListener('click',()=>{
     if(CURRENT_PAGE==='storage') loadOrphans();

@@ -67,6 +67,41 @@ create index if not exists ai_usage_log_created_at_idx on public.ai_usage_log (c
 -- (RLS는 켜져 있고 정책이 없으면 아무것도 통과하지 못한다) 서버만 다룬다.
 alter table public.ai_usage_log enable row level security;
 
+-- ===================== 예상 금액 =====================
+
+-- 금액이 비어 있는 상품형 기프티콘(커피 한 잔, 치킨 한 마리)의 예상 판매가. 관리자 통계의
+-- "예상 금액 산출" 버튼이 웹 검색으로 찾아 여기에 적는다(admin-stats, resource=price-estimates).
+--
+-- 기프티콘 표에 직접 쓰지 않는 이유: 이 값은 추정이다. 사용자가 보는 카드에 금액으로
+-- 나가면 "모아콘이 이 가격이라고 했다"가 된다. 사용자 화면에는 가격 검색이 없고(꺼둠),
+-- 이 값은 관리자 통계에서만 "예상"으로 따로 더한다.
+--
+-- 상품 하나에 한 줄. 같은 상품이 여러 가족에 있어도 한 번만 찾는다 — 그게 비용을 정한다.
+-- 못 찾은 것(not_found)도 적어둔다. 안 적으면 버튼을 누를 때마다 다시 찾아 돈이 나간다.
+create table if not exists public.price_estimates (
+  key text primary key,                  -- price_key(brand, name)
+  brand text,
+  name text not null,
+  amount integer,                        -- 못 찾으면 null
+  source text,                           -- 근거로 삼은 곳
+  status text not null check (status in ('found', 'not_found')),
+  estimated_at timestamptz not null default now()
+);
+
+-- 서버(서비스 롤)만 쓴다. 정책이 없으면 브라우저는 아무것도 못 읽는다.
+alter table public.price_estimates enable row level security;
+
+-- 같은 상품을 한 줄로 묶는 열쇠. 대소문자와 띄어쓰기만 무시한다 — "아이스 카페 아메리카노 T"와
+-- "아이스카페아메리카노T"는 같은 상품이다. 더 느슨하게 묶으면(사이즈·개수 무시) 다른 상품이
+-- 같은 값을 받는다. Edge Function(admin-stats)의 priceKey와 같은 규칙이어야 한다.
+create or replace function public.price_key(brand text, name text)
+returns text
+language sql
+immutable
+as $$
+  select regexp_replace(lower(coalesce(brand, '') || '|' || coalesce(name, '')), '\s+', '', 'g')
+$$;
+
 -- ===================== 통계 함수 =====================
 
 -- 대시보드가 그리는 모든 숫자를 한 번에 돌려준다. 화면에서 쿼리를 여러 번 나눠 부르면
@@ -105,6 +140,16 @@ as $$
   -- ---------- 기프티콘 ----------
   -- hidden_at이 있는 것(가족을 나간 사람 것)은 앱 화면에는 안 보이지만, "지금까지 업로드된
   -- 수"에는 포함해서 센다. 대신 hidden 수를 따로 알려줘서 구분할 수 있게 한다.
+  -- 금액이 비어 있으면 예상 금액(price_estimates)을 대신 쓴다. 사용자가 적은 금액은 늘 그대로다.
+  -- is_est가 참인 줄의 금액은 추정이라, 화면이 "예상 포함"으로 따로 보여줄 수 있게 나눠 센다.
+  ge as (
+    select gi.*,
+           case when coalesce(gi.amount, 0) > 0 then gi.amount else pe.amount end as eamount,
+           (coalesce(gi.amount, 0) = 0 and pe.amount is not null) as is_est
+    from public.gifticons gi
+    left join public.price_estimates pe
+      on pe.key = public.price_key(gi.brand, gi.name) and pe.status = 'found'
+  ),
   g as (
     select
       count(*) as total,
@@ -114,14 +159,23 @@ as $$
                        and expires_at < (select today from kst)) as expired,
       count(*) filter (where status <> 'used' and (expires_at is null
                        or expires_at >= (select today from kst))) as unused,
-      coalesce(sum(amount), 0) as amount_total,
-      coalesce(sum(amount) filter (where status = 'used'), 0) as amount_used,
-      coalesce(sum(amount) filter (where status <> 'used' and expires_at is not null
-                                   and expires_at < (select today from kst)), 0) as amount_expired,
-      coalesce(sum(amount) filter (where status <> 'used' and (expires_at is null
-                                   or expires_at >= (select today from kst))), 0) as amount_unused,
-      count(*) filter (where amount is null) as no_amount
-    from public.gifticons
+      -- 총액은 예상 금액까지 더한 값, est_는 그중 예상으로 채운 몫이다.
+      coalesce(sum(eamount), 0) as amount_total,
+      coalesce(sum(eamount) filter (where status = 'used'), 0) as amount_used,
+      coalesce(sum(eamount) filter (where status <> 'used' and expires_at is not null
+                                    and expires_at < (select today from kst)), 0) as amount_expired,
+      coalesce(sum(eamount) filter (where status <> 'used' and (expires_at is null
+                                    or expires_at >= (select today from kst))), 0) as amount_unused,
+      coalesce(sum(eamount) filter (where is_est), 0) as est_amount_total,
+      coalesce(sum(eamount) filter (where is_est and status = 'used'), 0) as est_amount_used,
+      coalesce(sum(eamount) filter (where is_est and status <> 'used' and expires_at is not null
+                                    and expires_at < (select today from kst)), 0) as est_amount_expired,
+      coalesce(sum(eamount) filter (where is_est and status <> 'used' and (expires_at is null
+                                    or expires_at >= (select today from kst))), 0) as est_amount_unused,
+      count(*) filter (where is_est) as est_count,
+      -- 예상으로도 못 채운 것
+      count(*) filter (where eamount is null or eamount = 0) as no_amount
+    from ge
   ),
   g_by_day as (
     select (created_at at time zone 'Asia/Seoul')::date as day,
@@ -149,14 +203,16 @@ as $$
     group by 1 order by 1
   ),
   g_categories as (
-    select category, count(*) as count, coalesce(sum(amount), 0) as amount
-    from public.gifticons
+    select category, count(*) as count, coalesce(sum(eamount), 0) as amount,
+           coalesce(sum(eamount) filter (where is_est), 0) as est_amount
+    from ge
     group by 1 order by count(*) desc
   ),
   g_brands as (
     select coalesce(nullif(btrim(brand), ''), '(브랜드 없음)') as brand,
-           count(*) as count, coalesce(sum(amount), 0) as amount
-    from public.gifticons
+           count(*) as count, coalesce(sum(eamount), 0) as amount,
+           coalesce(sum(eamount) filter (where is_est), 0) as est_amount
+    from ge
     group by 1 order by count(*) desc
     limit 10
   ),
@@ -245,6 +301,11 @@ as $$
       'amount_unused', (select amount_unused from g),
       'amount_used', (select amount_used from g),
       'amount_expired', (select amount_expired from g),
+      'est_count', (select est_count from g),
+      'est_amount_total', (select est_amount_total from g),
+      'est_amount_unused', (select est_amount_unused from g),
+      'est_amount_used', (select est_amount_used from g),
+      'est_amount_expired', (select est_amount_expired from g),
       'avg_days_to_use', (select days from g_avg_use),
       'by_day', (select coalesce(json_agg(d), '[]'::json) from g_by_day d),
       'by_month', (select coalesce(json_agg(m), '[]'::json) from g_by_month m),

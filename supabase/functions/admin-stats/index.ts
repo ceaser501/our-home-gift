@@ -12,7 +12,8 @@
 //
 // 숫자를 실제로 세는 일은 데이터베이스의 admin_dashboard_stats()가 한다.
 
-import { adminClient } from '../_shared/guard.ts';
+import { adminClient, logAiUsage } from '../_shared/guard.ts';
+import { PRICE_MODEL, findPrice } from '../_shared/price-search.ts';
 
 // 대시보드가 어디서 열릴지(Pages 주소, 로컬 파일) 정해져 있지 않다. 인증이 Origin이 아니라
 // 로그인 토큰이므로 CORS는 열어도 지켜진다.
@@ -37,6 +38,12 @@ function compareVersions(a: string, b: string) {
     if (d !== 0) return d > 0 ? 1 : -1;
   }
   return 0;
+}
+
+// 같은 상품을 한 줄로 묶는 열쇠. supabase/admin-stats.sql의 price_key()와 같은 규칙이다 —
+// 대소문자와 띄어쓰기만 무시한다. 둘이 어긋나면 산출해 둔 값이 통계에 안 붙는다.
+function priceKey(brand: string | null, name: string | null) {
+  return `${brand || ''}|${name || ''}`.toLowerCase().replace(/\s+/g, '');
 }
 
 function priceFromEnv(name: string, fallback: number) {
@@ -283,6 +290,144 @@ Deno.serve(async (req) => {
       });
     }
     return new Response(JSON.stringify({ rows }), { headers: jsonHeaders });
+  }
+
+  // 예상 금액: 금액이 비어 있는 상품형 기프티콘의 판매가를 웹 검색으로 찾아 price_estimates에
+  // 적는다. 통계(admin_dashboard_stats)가 그 값을 "예상"으로 따로 더한다. 사용자 카드에는 안 나간다.
+  //
+  //   GET  → 몇 개가 비었고, 몇 종을 더 찾아야 하는지
+  //   POST → 아직 안 찾은 상품을 몇 개(limit, 최대 3) 찾는다. 화면이 다 끝날 때까지 되풀이 부른다.
+  //
+  // 한 번에 다 돌리지 않는 이유: 상품 하나 찾는 데 10~30초 걸린다. 69종을 한 요청에 넣으면
+  // 함수 시간 제한에 걸려 중간에 끊기고, 어디까지 했는지도 잃는다. 조금씩 나눠 부르면 끊겨도
+  // 이미 적힌 것은 남고, 다시 누르면 남은 것부터 한다.
+  //
+  // 한 번에 약 $0.05가 나간다(웹 검색 포함). 그래서 주인 계정만 연다.
+  if (resource === 'price-estimates') {
+    const { data: isOwner, error: ownerError } = await admin.rpc('is_admin_owner', {
+      check_email: (auth.user.email || '').trim().toLowerCase(),
+    });
+    if (ownerError) {
+      return new Response(JSON.stringify({ error: `주인 계정인지 확인하지 못했어요: ${ownerError.message}` }), {
+        status: 500,
+        headers: jsonHeaders,
+      });
+    }
+    if (!isOwner) {
+      return new Response(JSON.stringify({ error: '예상 금액 산출은 주인 계정만 할 수 있어요.', reason: 'not_owner' }), {
+        status: 403,
+        headers: jsonHeaders,
+      });
+    }
+
+    // 못 찾은 것 다시 찾기: 화면이 다시 찾기를 시작한 시각을 보낸다. 그보다 먼저 '못 찾음'이 된
+    // 것만 다시 찾는다 — 방금 다시 찾아 또 못 찾은 것을 같은 바퀴에서 또 고르지 않게.
+    let retryBefore: string | null = null;
+    let limit = 2;
+    if (req.method === 'POST') {
+      try {
+        const body = await req.json();
+        retryBefore = body?.retry_before ? String(body.retry_before) : null;
+        limit = Math.min(Math.max(Number(body?.limit) || 2, 1), 3);
+      } catch {
+        // 본문이 없으면 기본값으로 한다
+      }
+    }
+
+    // 금액이 없는 기프티콘을 상품별로 묶는다. 같은 상품은 한 번만 찾는다.
+    const { data: missing, error: missingError } = await admin
+      .from('gifticons')
+      .select('brand, name')
+      .or('amount.is.null,amount.eq.0');
+    if (missingError) {
+      return new Response(JSON.stringify({ error: missingError.message }), { status: 500, headers: jsonHeaders });
+    }
+    const items = new Map<string, { brand: string | null; name: string; count: number }>();
+    for (const g of missing || []) {
+      const name = (g.name || '').trim();
+      if (!name) continue; // 상품명이 없으면 찾을 수가 없다
+      const key = priceKey(g.brand, name);
+      const it = items.get(key);
+      if (it) it.count += 1;
+      else items.set(key, { brand: g.brand ? String(g.brand).trim() : null, name, count: 1 });
+    }
+
+    const { data: done, error: doneError } = await admin.from('price_estimates').select('key, status, estimated_at');
+    if (doneError) {
+      return new Response(
+        JSON.stringify({ error: `${doneError.message} (supabase/admin-stats.sql을 다시 실행했는지 확인해주세요)` }),
+        { status: 500, headers: jsonHeaders },
+      );
+    }
+    const status = new Map((done || []).map((r) => [r.key, r.status]));
+    const estimatedAt = new Map((done || []).map((r) => [r.key, r.estimated_at]));
+
+    const summarize = () => {
+      let found = 0, notFound = 0, pending = 0, filled = 0;
+      for (const [key, it] of items) {
+        const st = status.get(key);
+        if (st === 'found') { found += 1; filled += it.count; }
+        else if (st === 'not_found') notFound += 1;
+        else pending += 1;
+      }
+      return { missing_gifticons: (missing || []).length, items: items.size, found, not_found: notFound, pending, filled_gifticons: filled };
+    };
+
+    if (req.method !== 'POST') {
+      return new Response(JSON.stringify(summarize()), { headers: jsonHeaders });
+    }
+
+    const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
+    if (!apiKey) {
+      return new Response(JSON.stringify({ error: '가격 검색 서버 설정이 아직 완료되지 않았어요.' }), {
+        status: 500,
+        headers: jsonHeaders,
+      });
+    }
+
+    const todo = [...items.entries()]
+      .filter(([key]) => {
+        const st = status.get(key);
+        return !st || (retryBefore !== null && st === 'not_found'
+          && new Date(String(estimatedAt.get(key))).getTime() < new Date(retryBefore).getTime());
+      })
+      .slice(0, limit);
+
+    const results: { brand: string | null; name: string; amount: number | null; source: string | null }[] = [];
+    for (const [key, it] of todo) {
+      let found;
+      try {
+        found = await findPrice(apiKey, it.brand, it.name);
+      } catch (err) {
+        // 검색이 실패하면(일시 오류) 적지 않는다 — 적으면 '못 찾음'으로 굳어 다시 안 찾는다.
+        const message = err instanceof Error ? err.message : '가격 검색에 실패했어요.';
+        return new Response(JSON.stringify({ error: message, results, ...summarize() }), {
+          status: 502,
+          headers: jsonHeaders,
+        });
+      }
+      await logAiUsage(admin, 'price', PRICE_MODEL, found.spent, found.webSearches);
+      const row = {
+        key,
+        brand: it.brand,
+        name: it.name,
+        amount: found.amount,
+        source: found.source,
+        status: found.amount ? 'found' : 'not_found',
+        estimated_at: new Date().toISOString(),
+      };
+      const { error: saveError } = await admin.from('price_estimates').upsert(row, { onConflict: 'key' });
+      if (saveError) {
+        return new Response(JSON.stringify({ error: saveError.message, results, ...summarize() }), {
+          status: 500,
+          headers: jsonHeaders,
+        });
+      }
+      status.set(key, row.status);
+      results.push({ brand: it.brand, name: it.name, amount: found.amount, source: found.source });
+    }
+
+    return new Response(JSON.stringify({ results, ...summarize() }), { headers: jsonHeaders });
   }
 
   // 미아 사진: 어느 기프티콘도 가리키지 않는 파일. 목록은 GET, 지우기는 POST.
