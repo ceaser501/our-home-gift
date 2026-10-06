@@ -1,0 +1,97 @@
+<!doctype html>
+<!-- 2026-10-06 스레드 글의 카드 3장. file:// 경로는 저장소를 /home/user/our-home-gift에 받았을 때 기준이다. -->
+<html lang="ko"><head><meta charset="utf-8">
+<link rel="stylesheet" href="file:///home/user/our-home-gift/assets/marketing/threads/kit/base.css">
+<style>
+/* 1 — 숫자 */
+#s1 .kicker{position:absolute;left:72px;top:104px}
+#s1 h1{position:absolute;left:72px;top:160px;font-size:96px;line-height:1.16;font-weight:700;letter-spacing:-.05em}
+#s1 h1 em{font-style:normal;color:var(--glow)}
+#s1 .stats{position:absolute;left:72px;right:72px;top:560px;display:grid;grid-template-columns:1fr;gap:20px}
+#s1 .stat{display:flex;align-items:baseline;justify-content:space-between;border-top:1px solid rgba(255,255,255,.16);padding-top:26px}
+#s1 .stat span{font-size:34px;color:var(--on2)}
+#s1 .stat b{font-size:84px;font-weight:700;letter-spacing:-.04em;font-variant-numeric:tabular-nums}
+#s1 .stat b small{font-size:40px;font-weight:600;color:var(--on2);margin-left:6px}
+
+/* 2 — 영수증 */
+#s2 .kicker{position:absolute;left:72px;top:104px}
+#s2 h2{position:absolute;left:72px;top:150px;font-size:66px;line-height:1.2;font-weight:700;letter-spacing:-.045em}
+#s2 .rc{position:absolute;left:110px;right:110px;top:330px;background:#fff;border-radius:18px;padding:52px 54px 46px;box-shadow:0 30px 70px -26px rgba(40,30,120,.35)}
+#s2 .rc h3{font-size:34px;font-weight:700;text-align:center;letter-spacing:.02em}
+#s2 .rc .meta{text-align:center;font-size:23px;color:var(--muted);margin-top:8px}
+#s2 .rc hr{border:0;border-top:3px dashed #D9D6E8;margin:28px 0}
+#s2 .row{display:flex;align-items:baseline;gap:14px;font-size:33px;padding:14px 0}
+#s2 .row .n{flex:none;color:var(--ink)}
+#s2 .row .dots{flex:1;border-bottom:3px dotted #CFCBE0;transform:translateY(-8px)}
+#s2 .row .v{flex:none;font-weight:700;font-variant-numeric:tabular-nums}
+#s2 .row.odd .n,#s2 .row.odd .v{color:var(--warn)}
+#s2 .pair{border-left:6px solid var(--warn);margin-left:-26px;padding-left:20px}
+#s2 .miss{font-size:26px;color:var(--muted);line-height:1.5}
+#s2 .foot{position:absolute;left:0;right:0;top:1110px;text-align:center;font-size:40px;font-weight:700}
+#s2 .foot em{font-style:normal;color:var(--warn)}
+
+/* 3 — 앱 */
+#s3 .kicker{position:absolute;left:72px;top:104px}
+#s3 h2{position:absolute;left:72px;top:150px;font-size:72px;line-height:1.2;font-weight:700;letter-spacing:-.045em}
+#s3 h2 em{font-style:normal;color:var(--accent)}
+#s3 .lead{position:absolute;left:72px;top:344px;font-size:32px;line-height:1.5;color:var(--sub)}
+#s3 .ph{left:600px;top:470px;width:420px;height:910px;transform:rotate(5deg)}
+#s3 .list{position:absolute;left:72px;top:560px;width:470px;display:grid;gap:18px}
+#s3 .list div{background:#fff;border-radius:24px;padding:24px 28px;font-size:29px;font-weight:600;box-shadow:0 14px 34px -18px rgba(40,30,120,.3)}
+#s3 .list div span{display:block;font-size:23px;font-weight:500;color:var(--sub);margin-top:6px}
+</style></head><body>
+
+<section id="s1" class="dark">
+  <p class="kicker">모아콘 만들면서 생긴 일</p>
+  <h1>금액 없는 기프티콘<br><em>84개</em>,<br>AI한테 맡겨봤다</h1>
+  <div class="stats">
+    <div class="stat"><span>맡긴 상품</span><b>69<small>종</small></b></div>
+    <div class="stat"><span>찾아온 가격</span><b>62<small>종</small></b></div>
+    <div class="stat"><span>걸린 시간 · 비용</span><b>6<small>분</small> · $2.82</b></div>
+  </div>
+  <div class="brand"><i></i>모아콘</div>
+  <p class="page">1 / 3</p>
+</section>
+
+<section id="s2" class="light">
+  <div class="g1"></div><div class="g2"></div>
+  <p class="kicker">AI가 찾아온 가격</p>
+  <h2>대부분은 맞았는데,</h2>
+  <div class="rc">
+    <h3>판매가 검색 결과</h3>
+    <p class="meta">웹 검색 · 상품 69종</p>
+    <hr>
+    <div class="row"><span class="n">아이스 아메리카노 T</span><span class="dots"></span><span class="v">4,700</span></div>
+    <div class="row"><span class="n">배스킨라빈스 파인트</span><span class="dots"></span><span class="v">9,800</span></div>
+    <div class="row"><span class="n">애플망고치즈설빙</span><span class="dots"></span><span class="v">14,500</span></div>
+    <div class="pair">
+      <div class="row odd"><span class="n">BBQ 황올 + 콜라</span><span class="dots"></span><span class="v">20,000</span></div>
+      <div class="row odd"><span class="n">[BBQ] 황올 + 콜라</span><span class="dots"></span><span class="v">25,500</span></div>
+    </div>
+    <hr>
+    <p class="miss">못 찾음 7종 — 무료 쿠폰, 동네 아이스크림 가게, 편의점 과자 몇 개</p>
+  </div>
+  <p class="foot">같은 세트, <em>다른 가격.</em> 확인은 결국 사람 몫</p>
+  <p class="page">2 / 3</p>
+</section>
+
+<section id="s3" class="light">
+  <div class="g1"></div><div class="g2"></div>
+  <p class="kicker">어디에 쓰냐면</p>
+  <h2>가족 기프티콘 서랍,<br><em>모아콘</em></h2>
+  <p class="lead">총액이 보여야 "우리 집에 이만큼 있었네"가 되니까.</p>
+  <div class="list">
+    <div>사진첩에서 알아서 찾고<span>바코드 사진만 골라 읽어요</span></div>
+    <div>기한 전에 먼저 알려주고<span>7일 전부터 하루 한 번</span></div>
+    <div>가족이 같이 봐요<span>누가 뭘 썼는지 한눈에</span></div>
+  </div>
+  <div class="ph" style="background-image:url(file:///home/user/our-home-gift/assets/marketing/threads/kit/img/screen-list.png)"></div>
+  <div class="brand"><i></i>모아콘</div>
+  <p class="page" style="right:auto;left:900px;bottom:auto;top:104px">3 / 3</p>
+</section>
+
+<script>
+const n = new URLSearchParams(location.search).get('n') || '1';
+document.getElementById('s' + n).style.display = 'block';
+</script>
+</body></html>

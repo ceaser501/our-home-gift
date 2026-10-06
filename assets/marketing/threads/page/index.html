@@ -1,0 +1,138 @@
+<title>모아콘 스레드</title>
+<style>
+/* 날마다 올릴 스레드 글을 모아 보는 페이지. 내용은 같은 자리의 posts.json에서 읽는다.
+   새 날이 오면 posts.json과 그날 이미지만 더해 다시 올린다(PLAYBOOK.md). */
+:root{
+  --bg:#F6F5FB; --card:#FFFFFF; --ink:#1B1830; --sub:#5D5A72; --muted:#8A86A3;
+  --line:#E6E3F2; --accent:#5B4FE8; --accent-ink:#FFFFFF; --chip:#ECEAFE; --ok:#1E8E5A;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#121022; --card:#1C1931; --ink:#EEEDF7; --sub:#B4B0CC; --muted:#8D89A8;
+    --line:#2D2948; --accent:#8F86FF; --accent-ink:#121022; --chip:#2A2550; --ok:#4CC38A;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#121022; --card:#1C1931; --ink:#EEEDF7; --sub:#B4B0CC; --muted:#8D89A8;
+  --line:#2D2948; --accent:#8F86FF; --accent-ink:#121022; --chip:#2A2550; --ok:#4CC38A;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Pretendard","Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif;font-size:16px;line-height:1.55;word-break:keep-all;-webkit-font-smoothing:antialiased}
+.wrap{max-width:640px;margin:0 auto;padding:28px 16px 64px;display:flex;flex-direction:column;gap:20px}
+header h1{margin:0;font-size:22px;letter-spacing:-.02em;display:flex;align-items:center;gap:10px}
+header h1 img{width:30px;height:30px;border-radius:8px}
+header p{margin:4px 0 0;color:var(--sub);font-size:14px}
+.post{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:14px}
+.post-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.date{font-weight:700;font-size:17px}
+.chip{background:var(--chip);color:var(--accent);font-weight:700;font-size:13px;border-radius:99px;padding:3px 10px}
+.today{color:var(--ok);font-size:13px;font-weight:700}
+.label{font-size:12.5px;font-weight:700;color:var(--muted);letter-spacing:.04em;margin-bottom:6px}
+.text{white-space:pre-wrap;background:var(--bg);border-radius:12px;padding:14px;font-size:15.5px;-webkit-user-select:text;user-select:text}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+button{font:inherit;cursor:pointer}
+.btn{border:0;background:var(--accent);color:var(--accent-ink);font-weight:700;font-size:14px;border-radius:10px;padding:9px 16px}
+.btn.ghost{background:transparent;color:var(--accent);border:1px solid var(--line)}
+.btn:focus-visible,.save:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.done{color:var(--ok);font-size:13px;font-weight:700}
+.tip{font-size:13px;color:var(--sub)}
+.media{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.media figure{margin:0;display:flex;flex-direction:column;gap:6px}
+.media img,.media video{width:100%;border-radius:10px;border:1px solid var(--line);display:block;background:var(--bg)}
+.save{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:8px;padding:6px 10px;font-size:13px;font-weight:600}
+.save[hidden]{display:none}
+.empty{color:var(--sub);text-align:center;padding:40px 0}
+@media (min-width:560px){.media{grid-template-columns:repeat(3,minmax(0,1fr))}}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1><img src="icon.png" alt="">모아콘 스레드</h1>
+    <p>매일 아침 올릴 글과 이미지예요. 본문을 복사하고, 이미지를 저장해서 올리면 돼요.</p>
+  </header>
+  <main id="list"><p class="empty">불러오는 중…</p></main>
+</div>
+
+<script>
+const list = document.getElementById('list');
+let downloads = null;
+
+function el(tag, attrs = {}, ...kids) {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === 'class') n.className = v; else if (k === 'text') n.textContent = v; else n.setAttribute(k, v);
+  }
+  for (const k of kids) if (k) n.append(k);
+  return n;
+}
+
+async function copy(text, done) {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    // 액자 안에서는 클립보드가 막힐 때가 있다. 그때는 예전 방식으로 한 번 더 해 본다.
+    const t = el('textarea'); t.value = text; document.body.append(t); t.select();
+    const ok = document.execCommand('copy'); t.remove();
+    if (!ok) { done.textContent = '복사가 안 돼요. 글을 길게 눌러 복사해주세요.'; done.hidden = false; return; }
+  }
+  done.textContent = '복사했어요'; done.hidden = false;
+  setTimeout(() => { done.hidden = true; }, 2000);
+}
+
+async function save(path, name, btn) {
+  btn.disabled = true;
+  try {
+    const blob = await (await fetch(path)).blob();
+    await downloads.save({ filename: name, data: blob });
+    btn.textContent = '저장했어요';
+  } catch (e) {
+    btn.textContent = e?.code === 'declined' ? '저장' : '다시 저장';
+  } finally { btn.disabled = false; }
+}
+
+function render(posts) {
+  list.textContent = '';
+  if (!posts.length) { list.append(el('p', { class: 'empty', text: '아직 글이 없어요.' })); return; }
+  const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' });
+  const box = el('div', { style: 'display:flex;flex-direction:column;gap:20px' });
+  for (const p of posts) {
+    const done = el('span', { class: 'done', hidden: '' });
+    const fullText = p.text;
+    const copyBtn = el('button', { class: 'btn', type: 'button', text: '본문 복사' });
+    copyBtn.onclick = () => copy(fullText, done);
+
+    const media = el('div', { class: 'media' });
+    for (const m of p.media || []) {
+      const view = m.type === 'video'
+        ? el('video', { src: m.path, controls: '', playsinline: '', muted: '', preload: 'metadata' })
+        : el('img', { src: m.path, alt: m.alt || '', loading: 'lazy' });
+      const btn = el('button', { class: 'save', type: 'button', text: '저장' });
+      if (!downloads) btn.hidden = true;
+      btn.onclick = () => save(m.path, m.name || m.path.split('/').pop(), btn);
+      media.append(el('figure', {}, view, btn));
+    }
+
+    box.append(el('article', { class: 'post', id: p.date },
+      el('div', { class: 'post-head' },
+        el('span', { class: 'date', text: p.label || p.date }),
+        el('span', { class: 'chip', text: '주제 · ' + p.topic }),
+        p.date === today ? el('span', { class: 'today', text: '오늘' }) : null),
+      el('div', {}, el('div', { class: 'label', text: '본문' }), el('div', { class: 'text', text: fullText })),
+      el('div', { class: 'row' }, copyBtn, done),
+      p.tip ? el('p', { class: 'tip', text: p.tip }) : null,
+      (p.media || []).length ? el('div', {}, el('div', { class: 'label', text: '이미지 ' + p.media.length + '장 · 이 순서대로 올려요' }), media) : null,
+      downloads ? null : el('p', { class: 'tip', text: '이미지는 길게 눌러 저장할 수 있어요.' })));
+  }
+  list.append(box);
+  if (location.hash) document.getElementById(location.hash.slice(1))?.scrollIntoView();
+}
+
+let posts = [];
+fetch('posts.json?ts=' + Date.now())
+  .then((r) => r.json())
+  .then((d) => { posts = d.posts || []; render(posts); })
+  .catch(() => { list.textContent = ''; list.append(el('p', { class: 'empty', text: '글을 불러오지 못했어요. 새로고침해주세요.' })); });
+
+// 저장 버튼은 이 기능이 되는 화면에서만 세운다. 늦게 와도 다시 그린다.
+window.claude?.use?.('downloads').then((d) => { downloads = d; if (d && posts.length) render(posts); }).catch(() => {});
+</script>

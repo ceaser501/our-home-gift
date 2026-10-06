@@ -1,0 +1,22 @@
+/* 스레드 카드 공통 바탕. 1080×1350(4:5) 한 장 = <section> 하나.
+   날마다 만드는 카드 HTML이 이 파일을 불러 쓴다(PLAYBOOK.md 참고). */
+@font-face{font-family:P;src:url(fonts/Pretendard-Medium.ttf);font-weight:500}
+@font-face{font-family:P;src:url(fonts/Pretendard-SemiBold.ttf);font-weight:600}
+@font-face{font-family:P;src:url(fonts/Pretendard-Bold.ttf);font-weight:700}
+:root{--ink:#1B1830;--sub:#5D5A72;--muted:#8A86A3;--accent:#5B4FE8;--deep:#15123A;--deep2:#2A2170;--glow:#8F86FF;--on2:#C9C4F2;--paper:#F4F2FF;--warn:#E5484D}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1080px;height:1350px;overflow:hidden;font-family:P,sans-serif;font-weight:500;-webkit-font-smoothing:antialiased;letter-spacing:-.02em;word-break:keep-all}
+.abs{position:absolute}
+section{display:none;position:relative;width:1080px;height:1350px;overflow:hidden}
+.dark{background:radial-gradient(120% 70% at 85% 0%,var(--deep2) 0%,transparent 60%),radial-gradient(90% 60% at 0% 100%,#231c5c 0%,transparent 65%),var(--deep);color:#fff}
+.light{background:var(--paper);color:var(--ink)}
+.light .g1{position:absolute;width:900px;height:900px;left:-300px;top:-260px;border-radius:50%;background:radial-gradient(#D3CCFF 0,#D3CCFF00 68%)}
+.light .g2{position:absolute;width:900px;height:900px;right:-360px;bottom:-300px;border-radius:50%;background:radial-gradient(#FFD9EC 0,#FFD9EC00 66%)}
+.kicker{font-size:30px;font-weight:700;color:var(--accent)}
+.dark .kicker{color:var(--glow)}
+.brand{position:absolute;left:72px;bottom:60px;display:flex;align-items:center;gap:14px;font-size:28px;font-weight:700}
+.brand i{width:48px;height:48px;border-radius:12px;background:url(img/icon.png) center/cover}
+.page{position:absolute;right:72px;bottom:68px;font-size:24px;font-weight:600;color:var(--muted)}
+.dark .page{color:var(--on2)}
+/* 폰 틀. background-image로 kit/img/screen-*.png를 넣는다 */
+.ph{position:absolute;width:400px;height:866px;border-radius:52px;border:11px solid #17151F;background-size:100% auto;background-position:top center;background-repeat:no-repeat;background-color:#fff;box-shadow:0 40px 80px -24px rgba(40,30,120,.35)}
