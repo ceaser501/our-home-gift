@@ -14,17 +14,19 @@
 import Anthropic from 'npm:@anthropic-ai/sdk@0.115.0';
 import { corsFor, limitFromEnv, logAiUsage, requireUser, tooManyMessage, withinDailyLimit } from '../_shared/guard.ts';
 
-// 어느 모델로 읽을지. 값을 안 넣으면 지금 쓰는 것 그대로다.
+// 어느 모델로 읽을지. 소네트로 정했다(docs/running-cost.md).
 //
-//   supabase secrets set ANALYZE_MODEL=claude-sonnet-5     # 재볼 때
+// 하이쿠로 시작해 8월에 소네트를 시크릿으로 끼워 재봤고, 9월부터는 운영이 시크릿으로
+// 소네트를 써 왔다. 하이쿠면 건당 36원이 16원으로 내려가지만, 읽어내는 정확도가 이 앱의
+// 값어치라 바꾸지 않는다. 그래서 기본값도 소네트로 박는다 — 시크릿에만 두면 함수를 새
+// 환경에 올릴 때 빠뜨리기 쉽고, 빠뜨려도 화면은 멀쩡히 돌아 하이쿠로 읽는 줄 모른다.
+// 아래 ANALYZE_VERIFY_MODEL을 기본값으로 박은 것과 같은 이유다.
+//
+// 다른 모델을 재볼 때만 시크릿으로 바꿔 끼운다. 재보고 나면 반드시 지운다.
+//
+//   supabase secrets set ANALYZE_MODEL=claude-haiku-4-5    # 재볼 때
 //   supabase secrets unset ANALYZE_MODEL                   # 되돌릴 때
-//
-// 코드에 박아두면 재볼 때마다 고치고 배포하고 되돌려야 한다. 지금 재봐야 하는 것이
-// "이 사진의 상품명을 더 센 모델은 읽는가" 하나뿐이라, 값만 바꿔 끼울 수 있게 뺀다.
-//
-// 값 차이가 크다(한 건 6원 → 18원). 재보고 나면 반드시 되돌리거나, 올릴지 말지를
-// 정해서 여기 기본값을 바꾼다 — 시험하려고 켜둔 것이 그대로 남는 일이 없게.
-const MODEL = Deno.env.get('ANALYZE_MODEL') || 'claude-haiku-4-5';
+const MODEL = Deno.env.get('ANALYZE_MODEL') || 'claude-sonnet-5';
 const MAX_IMAGES = 5;
 
 // 상품명만 한 번 더 읽는 모델.
