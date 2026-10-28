@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="only dark" />
+    <title>모아콘 영상</title>
+    <meta property="og:title" content="모아콘 — 우리 가족 기프티콘 서랍" />
+    <meta property="og:description" content="30초 영상으로 보는 모아콘." />
+    <meta property="og:image" content="https://ceaser501.github.io/our-home-gift/og-1200x630.png" />
+    <meta property="og:url" content="https://ceaser501.github.io/our-home-gift/video.html" />
+
+    <!--
+      홍보 영상 두 편을 보여주는 곳. 강의 슬라이드·포스터의 QR이 여기로 온다
+      (assets/marketing/qr/moacon-qr-video*.png).
+
+        video.html             두 편 다
+        video.html?v=family    가족 단톡방 편만 (42초)
+        video.html?v=feature   기능 소개 편만 (30초)
+
+      영상은 H.264로 다시 뽑아 둔 것이다(client/public/video/). 원본은 아이폰이 찍은
+      HEVC라 갤럭시 일부와 PC 브라우저에서 재생이 안 된다.
+
+      자동 재생은 하지 않는다. 소리가 있는 영상은 휴대폰이 자동 재생을 막고, 소리를 끄고
+      틀면 음악을 못 듣는다. 크게 [재생]을 누르게 한다.
+    -->
+    <style>
+      :root { color-scheme: only dark; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100dvh;
+        background: radial-gradient(120% 60% at 85% 0%, #2a2170 0%, transparent 60%), #15123a;
+        color: #fff;
+        font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Segoe UI', Roboto, sans-serif;
+        word-break: keep-all;
+        -webkit-font-smoothing: antialiased;
+      }
+      main {
+        max-width: 440px;
+        margin: 0 auto;
+        padding: max(28px, env(safe-area-inset-top)) 20px max(36px, env(safe-area-inset-bottom));
+        display: flex;
+        flex-direction: column;
+        gap: 26px;
+      }
+      header { display: flex; align-items: center; gap: 12px; }
+      header img { width: 44px; height: 44px; border-radius: 11px; }
+      header b { display: block; font-size: 21px; letter-spacing: -0.02em; }
+      header span { display: block; font-size: 14px; color: #c9c4f2; margin-top: 2px; }
+      figure { margin: 0; display: flex; flex-direction: column; gap: 10px; }
+      figcaption { font-size: 18px; font-weight: 700; }
+      figcaption small { font-weight: 500; color: #c9c4f2; font-size: 15px; margin-left: 6px; }
+      .frame { position: relative; border-radius: 20px; overflow: hidden; background: #0b0920; aspect-ratio: 9 / 16; }
+      video { width: 100%; height: 100%; display: block; object-fit: contain; background: #0b0920; }
+      .play {
+        position: absolute; inset: 0; margin: auto;
+        width: 96px; height: 96px; border-radius: 50%;
+        border: 0; cursor: pointer;
+        background: rgba(91, 79, 232, 0.92);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+        display: flex; align-items: center; justify-content: center;
+      }
+      .play::before { content: ''; margin-left: 8px; border-style: solid; border-width: 20px 0 20px 32px; border-color: transparent transparent transparent #fff; }
+      .play span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+      .play:focus-visible { outline: 3px solid #fff; outline-offset: 4px; }
+      .actions { display: flex; flex-direction: column; gap: 12px; }
+      .actions a {
+        display: block; text-align: center; text-decoration: none;
+        padding: 18px; border-radius: 16px; font-size: 18px; font-weight: 700;
+      }
+      .primary { background: #fff; color: #15123a; }
+      .secondary { border: 1px solid rgba(255, 255, 255, 0.35); color: #fff; }
+      .actions a:focus-visible { outline: 3px solid #8f86ff; outline-offset: 3px; }
+      .foot { text-align: center; font-size: 14px; color: #c9c4f2; margin: 0; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <img src="icon.png" alt="" />
+        <div><b>모아콘</b><span>우리 가족 기프티콘 서랍</span></div>
+      </header>
+
+      <figure id="family">
+        <figcaption>가족 단톡방 편<small>42초</small></figcaption>
+        <div class="frame">
+          <video src="video/moacon-family.mp4" poster="video/moacon-family.jpg" controls playsinline preload="metadata"></video>
+          <button class="play" type="button"><span>가족 단톡방 편 재생</span></button>
+        </div>
+      </figure>
+
+      <figure id="feature">
+        <figcaption>기능 소개 편<small>30초</small></figcaption>
+        <div class="frame">
+          <video src="video/moacon-feature.mp4" poster="video/moacon-feature.jpg" controls playsinline preload="metadata"></video>
+          <button class="play" type="button"><span>기능 소개 편 재생</span></button>
+        </div>
+      </figure>
+
+      <div class="actions">
+        <a class="primary" href="app.html">모아콘 설치하기</a>
+        <a class="secondary" href="brochure.html">모아콘 소개 보기</a>
+      </div>
+      <p class="foot">무료 · 광고 없음 · 아이폰과 갤럭시</p>
+    </main>
+
+    <script>
+      // ?v=family / ?v=feature 로 오면 그 편만 보여준다.
+      const only = new URLSearchParams(location.search).get('v');
+      if (only === 'family' || only === 'feature') {
+        document.querySelectorAll('figure').forEach((f) => { if (f.id !== only) f.remove(); });
+      }
+
+      // 큰 재생 버튼: 누르면 사라지고 영상의 기본 조작줄로 넘긴다.
+      // 한 편을 틀면 다른 편은 멈춘다 — 두 소리가 겹치지 않게.
+      const videos = [...document.querySelectorAll('video')];
+      document.querySelectorAll('.frame').forEach((frame) => {
+        const video = frame.querySelector('video');
+        const play = frame.querySelector('.play');
+        play.addEventListener('click', () => { video.play(); });
+        video.addEventListener('play', () => {
+          play.hidden = true;
+          videos.forEach((v) => { if (v !== video) v.pause(); });
+        });
+        video.addEventListener('ended', () => { play.hidden = false; });
+      });
+    </script>
+  </body>
+</html>
